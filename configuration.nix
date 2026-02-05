@@ -24,7 +24,20 @@
   boot.kernelParams = ["nvidia.NVreg_PreserveVideoMemoryAllocations=1"];
 
   # Disk Encryption
+  boot.initrd.luks.devices."luks-b09a5bbd-396d-4ce6-a15f-989ed1554773".device = "/dev/disk/by-uuid/b09a5bbd-396d-4ce6-a15f-989ed1554773";
   boot.initrd.luks.devices."luks-a2df8182-4853-442b-ba7c-6ca18af8696a".device = "/dev/disk/by-uuid/a2df8182-4853-442b-ba7c-6ca18af8696a";
+  boot.initrd.luks.devices."luks-a96ee21e-bc18-42ab-864c-d3ec22f4247a".device = "/dev/disk/by-uuid/a96ee21e-bc18-42ab-864c-d3ec22f4247a";
+
+  # File Systems
+  fileSystems."/home/stefan/Games" = {
+    device = "/dev/disk/by-uuid/af2d7832-b398-49d2-ab40-61aa312dbf83";
+    fsType = "ext4";
+  };
+
+  # Ensure user ownership of the Games folder
+  systemd.tmpfiles.rules = [
+    "d /home/stefan/Games 0755 stefan users - -"
+  ];
 
   # Networking
   networking.hostName = "nixos";
