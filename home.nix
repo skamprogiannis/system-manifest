@@ -13,13 +13,14 @@
     protonmail-bridge
     
     # CLI / Tools
-    neovim
     fastfetch
     btop
     ripgrep
     fd
     wl-clipboard
     curl
+    gh
+    opencode
     alejandra
 
     # Hyprland Ecosystem
@@ -49,13 +50,35 @@
   # --- GIT CONFIG ---
   programs.git = {
     enable = true;
-    extraConfig = {
+    settings = {
       user = {
         name = "Stefan";
-        email = "your-email@proton.me";
+        email = "boot.stefan.os@proton.me";
     };
   };
 };
+
+  # --- OPENCODE CONFIG ---
+  home.file.".config/opencode/opencode.json".text = ''
+    {
+      "$schema": "https://opencode.ai/config.json",
+      "plugin": ["opencode-gemini-auth@latest"]
+    }
+  '';
+
+  # --- NEOVIM CONFIG ---
+  programs.neovim = {
+    enable = true;
+    defaultEditor = true;
+    viAlias = true;
+    vimAlias = true;
+    
+    plugins = with pkgs.vimPlugins; [
+      nvim-treesitter.withAllGrammars  # Better syntax highlighting
+      telescope-nvim                   # Fuzzy finder
+      opencode-nvim                    # vscode style sidebar for opencode
+    ];
+  };
 
   # --- HYPRLAND CONFIG (Cyberpunk Vibes) ---
   wayland.windowManager.hyprland = {
