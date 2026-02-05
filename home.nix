@@ -26,6 +26,7 @@
     obsidian
     protonmail-bridge
     spotify
+    geary
 
     # CLI / Tools
     fastfetch

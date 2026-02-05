@@ -16,8 +16,27 @@
   system.configurationRevision = inputs.self.rev or inputs.self.dirtyRev or null;
 
   # Bootloader
-  boot.loader.systemd-boot.enable = true;
-  boot.loader.systemd-boot.configurationLimit = 20;
+  boot.loader.grub = {
+    enable = true;
+    efiSupport = true;
+    device = "nodev";
+    configurationLimit = 20;
+    theme = pkgs.stdenv.mkDerivation {
+      pname = "hollow-knight-grub-theme";
+      version = "1.0";
+      src = pkgs.fetchFromGitHub {
+        owner = "sergoncano";
+        repo = "hollow-knight-grub-theme";
+        rev = "9515f805f72dc214e3da59967f0b678d9910adf1";
+        sha256 = "sha256-0hn3MFC+OtfwtA//pwjnWz7Oz0Cos3YzbgUlxKszhyA=";
+      };
+      installPhase = ''
+        mkdir -p $out
+        cp -r hollow-grub/* $out
+      '';
+    };
+  };
+  boot.loader.systemd-boot.enable = false;
   boot.loader.efi.canTouchEfiVariables = true;
   # Use LTS kernel for better stability with Nvidia
   boot.kernelPackages = pkgs.linuxPackages;
