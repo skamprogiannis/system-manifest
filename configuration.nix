@@ -75,7 +75,7 @@
   # Gaming Specialisation (Steam Big Picture Mode)
   specialisation = {
     gaming-box.configuration = {
-      system.nixos.tags = [ "gaming-box" ];
+      system.nixos.tags = ["gaming-box"];
       services.desktopManager.gnome.enable = lib.mkForce false;
       services.displayManager.gdm.enable = lib.mkForce false;
       programs.steam = {
@@ -89,11 +89,11 @@
   # Allow the user to rebuild the system without a password
   security.sudo.extraRules = [
     {
-      users = [ "stefan" ];
+      users = ["stefan"];
       commands = [
         {
           command = "/run/current-system/sw/bin/nixos-rebuild";
-          options = [ "NOPASSWD" ];
+          options = ["NOPASSWD"];
         }
       ];
     }
