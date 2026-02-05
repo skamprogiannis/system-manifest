@@ -1,19 +1,22 @@
 # Edit this configuration file to define what should be installed on
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running ‘nixos-help’).
-
-{ config, pkgs, ... }:
-
 {
-  imports =
-    [
-      ./hardware-configuration.nix
-    ];
+  config,
+  pkgs,
+  ...
+}: {
+  imports = [
+    ./hardware-configuration.nix
+  ];
 
   # Bootloader
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
-  boot.kernelPackages = pkgs.linuxPackages_latest;
+  # Use LTS kernel for better stability with Nvidia
+  boot.kernelPackages = pkgs.linuxPackages;
+  # Fix for Nvidia suspend/wake issues
+  boot.kernelParams = ["nvidia.NVreg_PreserveVideoMemoryAllocations=1"];
 
   # Disk Encryption
   boot.initrd.luks.devices."luks-a2df8182-4853-442b-ba7c-6ca18af8696a".device = "/dev/disk/by-uuid/a2df8182-4853-442b-ba7c-6ca18af8696a";
@@ -41,12 +44,12 @@
     LC_NUMERIC = "en_GB.UTF-8";
     LC_TIME = "en_GB.UTF-8";
   };
-  
+
   # Enable OpenGL
   hardware.graphics.enable = true;
 
   # Load the NVIDIA driver
-  services.xserver.videoDrivers = [ "nvidia" ];
+  services.xserver.videoDrivers = ["nvidia"];
 
   hardware.nvidia = {
     modesetting.enable = true;
@@ -59,6 +62,14 @@
 
   # Enable the X11 windowing system
   services.xserver.enable = true;
+
+  # Enable nix-ld to run dynamic binaries (CRITICAL for Opencode & other unpatched tools)
+  programs.nix-ld.enable = true;
+  programs.nix-ld.libraries = with pkgs; [
+    stdenv.cc.cc.lib
+    zlib
+    openssl
+  ];
 
   # Enable the GNOME Desktop Environment
   services.displayManager.gdm.enable = true;
@@ -99,9 +110,9 @@
   users.users.stefan = {
     isNormalUser = true;
     description = "Stefan";
-    extraGroups = [ "networkmanager" "wheel" ];
+    extraGroups = ["networkmanager" "wheel"];
     packages = with pkgs; [
-    #  thunderbird
+      #  thunderbird
     ];
   };
 
@@ -144,5 +155,4 @@
   # Before changing this value read the documentation for this option
   # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
   system.stateVersion = "25.11"; # Did you read the comment?
-
 }
