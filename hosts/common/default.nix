@@ -37,6 +37,12 @@
         # Center the keybinds description and move it below options
         sed -i '/#Keybinds/,/}/ s/left = 10%/left = 0\n\twidth = 100%/' $out/theme.txt
         sed -i '/#Keybinds/,/}/ s/top = 82%/top = 85%/' $out/theme.txt
+
+        # Center the logo (956px wide on 1920px screen -> left=482)
+        sed -i '/#Title/,/}/ s/left = 20%/left = 482/' $out/theme.txt
+
+        # Center the boot menu (540px wide on 1920px screen -> left=690)
+        sed -i '/#Boot menu/,/}/ s/left = 35%/left = 690/' $out/theme.txt
       '';
     };
   };
