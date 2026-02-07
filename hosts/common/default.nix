@@ -9,7 +9,7 @@
   ...
 }: {
   imports = [
-    ./hardware-configuration.nix
+    # hardware-configuration.nix is imported by the specific host
   ];
 
   # Track configuration revision
@@ -38,10 +38,8 @@
   };
   boot.loader.systemd-boot.enable = false;
   boot.loader.efi.canTouchEfiVariables = true;
-  # Use LTS kernel for better stability with Nvidia
+  # Use LTS kernel for better stability
   boot.kernelPackages = pkgs.linuxPackages;
-  # Fix for Nvidia suspend/wake issues
-  boot.kernelParams = ["nvidia.NVreg_PreserveVideoMemoryAllocations=1"];
 
   # Disk Encryption
   boot.initrd.luks.devices."luks-b09a5bbd-396d-4ce6-a15f-989ed1554773".device = "/dev/disk/by-uuid/b09a5bbd-396d-4ce6-a15f-989ed1554773";
@@ -60,7 +58,7 @@
   ];
 
   # Networking
-  networking.hostName = "nixos";
+  # HostName is defined in host specific config
   networking.networkmanager.enable = true;
 
   # Time & Locales
@@ -81,18 +79,6 @@
   # Enable OpenGL
   hardware.graphics.enable = true;
 
-  # Load the NVIDIA driver
-  services.xserver.videoDrivers = ["nvidia"];
-
-  hardware.nvidia = {
-    modesetting.enable = true;
-    powerManagement.enable = true;
-    powerManagement.finegrained = false;
-    open = false;
-    nvidiaSettings = true;
-    package = config.boot.kernelPackages.nvidiaPackages.stable;
-  };
-
   # Enable the X11 windowing system
   services.xserver.enable = true;
 
@@ -103,36 +89,6 @@
     zlib
     openssl
   ];
-
-  # Enable the GNOME Desktop Environment
-  services.displayManager.gdm.enable = true;
-  services.desktopManager.gnome.enable = true;
-
-  # Exclude GNOME bloat
-  environment.gnome.excludePackages = with pkgs; [
-    gnome-maps
-    gnome-weather
-    gnome-contacts
-    gnome-photos
-    gnome-tour
-    cheese # Old GNOME Camera
-    snapshot # New GNOME Camera
-  ];
-
-  # Gaming Specialisation (Steam Big Picture Mode)
-  specialisation = {
-    gaming-box.configuration = {
-      system.nixos.tags = ["gaming-box"];
-      services.desktopManager.gnome.enable = lib.mkForce false;
-      services.displayManager.gdm.enable = lib.mkForce false;
-      programs.hyprland.enable = lib.mkForce false;
-      programs.steam = {
-        enable = true;
-        gamescopeSession.enable = true;
-      };
-      programs.gamemode.enable = true;
-    };
-  };
 
   # Allow the user to rebuild the system without a password
   security.sudo.extraRules = [
@@ -147,9 +103,6 @@
     }
   ];
 
-  # Enable Hyprland
-  programs.hyprland.enable = true;
-
   # Configure keymap in X11
   services.xserver.xkb = {
     layout = "us";
@@ -158,9 +111,6 @@
 
   # Enable CUPS to print documents
   services.printing.enable = true;
-
-  # Enable touchpad support (enabled default in most desktopManager)
-  services.libinput.enable = true;
 
   # Enable sound with pipewire
   services.pulseaudio.enable = false;
@@ -172,10 +122,6 @@
     pulse.enable = true;
     # If you want to use JACK applications, uncomment this
     #jack.enable = true;
-
-    # use the example session manager (no others are packaged yet so this is enabled by default,
-    # no need to redefine it in your config for now)
-    #media-session.enable = true;
   };
 
   # Define a user account. Don't forget to set a password with ‘passwd’
