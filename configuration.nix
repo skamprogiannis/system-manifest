@@ -94,6 +94,8 @@
     gnome-weather
     gnome-contacts
     gnome-photos
+    gnome-tour
+    snapshot # GNOME Camera
     geary # Already discussed using Thunderbird
   ];
 
