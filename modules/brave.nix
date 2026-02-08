@@ -3,19 +3,13 @@
   pkgs,
   ...
 }: {
-  home.packages = with pkgs; [
-    (brave.override {
+  programs.brave = {
+    enable = true;
+    package = pkgs.brave.override {
       commandLineArgs = [
         "--disable-features=HardwareMediaKeyHandling"
       ];
-    })
-  ];
-
-  # Declarative Brave Extensions
-  # PearPass: pdeffakfmcdnjjafophphgmddmigpejh
-  # Vimium: dbepclhmjogiooabhcaphlbebaymabck
-  programs.brave = {
-    enable = true;
+    };
     extensions = [
       {id = "pdeffakfmcdnjjafophphgmddmigpejh";} # PearPass
       {id = "dbepclhmjogiooabhcaphlbebaymabck";} # Vimium
