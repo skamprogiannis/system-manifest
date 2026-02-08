@@ -1,6 +1,7 @@
 {
   config,
   pkgs,
+  inputs,
   ...
 }: {
   home.username = "stefan";
@@ -44,6 +45,11 @@
     python3
     zellij
     pacvim
+
+    # Fonts
+    pkgs.nerd-fonts.jetbrains-mono
+    pkgs.nerd-fonts.fira-code
+    pkgs.nerd-fonts.hack
   ];
 
   # --- GNOME KEYBINDINGS ---
