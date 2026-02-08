@@ -18,6 +18,19 @@
 
     extraConfig = ''
       colorscheme dracula
+
+      " Move lines with Alt+Up/Down
+      " Normal mode
+      nnoremap <A-Down> :m .+1<CR>==
+      nnoremap <A-Up> :m .-2<CR>==
+
+      " Visual mode
+      vnoremap <A-Down> :m '>+1<CR>gv=gv
+      vnoremap <A-Up> :m '<-2<CR>gv=gv
+
+      " Insert mode
+      inoremap <A-Down> <Esc>:m .+1<CR>==gi
+      inoremap <A-Up> <Esc>:m .-2<CR>==gi
     '';
   };
 
