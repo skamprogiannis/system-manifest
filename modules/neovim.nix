@@ -3,42 +3,115 @@
   pkgs,
   ...
 }: {
-  programs.neovim = {
+  programs.nixvim = {
     enable = true;
     defaultEditor = true;
     viAlias = true;
     vimAlias = true;
 
-    plugins = with pkgs.vimPlugins; [
-      nvim-treesitter.withAllGrammars # Better syntax highlighting
-      telescope-nvim # Fuzzy finder
+    colorschemes.dracula.enable = true;
+
+    plugins = {
+      treesitter = {
+        enable = true;
+        settings = {
+          ensure_installed = "all";
+          highlight.enable = true;
+        };
+      };
+      telescope.enable = true;
+      # vim-be-good is not a standard module yet, adding to extraPlugins
+    };
+
+    extraPlugins = with pkgs.vimPlugins; [
       opencode-nvim # vscode style sidebar for opencode
-      dracula-nvim
       vim-be-good
     ];
 
-    extraConfig = ''
-      colorscheme dracula
+    keymaps = [
+      # --- Move Lines Down ---
+      # Alt+Down
+      {
+        mode = "n";
+        key = "<A-Down>";
+        action = ":m .+1<CR>==";
+        options.desc = "Move line down";
+      }
+      {
+        mode = "i";
+        key = "<A-Down>";
+        action = "<Esc>:m .+1<CR>==gi";
+        options.desc = "Move line down";
+      }
+      {
+        mode = "v";
+        key = "<A-Down>";
+        action = ":m '>+1<CR>gv=gv";
+        options.desc = "Move line down";
+      }
+      # Alt+j (Vimmy)
+      {
+        mode = "n";
+        key = "<A-j>";
+        action = ":m .+1<CR>==";
+        options.desc = "Move line down";
+      }
+      {
+        mode = "i";
+        key = "<A-j>";
+        action = "<Esc>:m .+1<CR>==gi";
+        options.desc = "Move line down";
+      }
+      {
+        mode = "v";
+        key = "<A-j>";
+        action = ":m '>+1<CR>gv=gv";
+        options.desc = "Move line down";
+      }
 
-      " Move lines with Alt+Up/Down
-      " Normal mode
-      nnoremap <A-Down> :m .+1<CR>==
-      nnoremap <A-Up> :m .-2<CR>==
-
-      " Visual mode
-      vnoremap <A-Down> :m '>+1<CR>gv=gv
-      vnoremap <A-Up> :m '<-2<CR>gv=gv
-
-      " Insert mode
-      inoremap <A-Down> <Esc>:m .+1<CR>==gi
-      inoremap <A-Up> <Esc>:m .-2<CR>==gi
-    '';
+      # --- Move Lines Up ---
+      # Alt+Up
+      {
+        mode = "n";
+        key = "<A-Up>";
+        action = ":m .-2<CR>==";
+        options.desc = "Move line up";
+      }
+      {
+        mode = "i";
+        key = "<A-Up>";
+        action = "<Esc>:m .-2<CR>==gi";
+        options.desc = "Move line up";
+      }
+      {
+        mode = "v";
+        key = "<A-Up>";
+        action = ":m '<-2<CR>gv=gv";
+        options.desc = "Move line up";
+      }
+      # Alt+k (Vimmy)
+      {
+        mode = "n";
+        key = "<A-k>";
+        action = ":m .-2<CR>==";
+        options.desc = "Move line up";
+      }
+      {
+        mode = "i";
+        key = "<A-k>";
+        action = "<Esc>:m .-2<CR>==gi";
+        options.desc = "Move line up";
+      }
+      {
+        mode = "v";
+        key = "<A-k>";
+        action = ":m '<-2<CR>gv=gv";
+        options.desc = "Move line up";
+      }
+    ];
   };
 
-  home.sessionVariables = {
-    EDITOR = "nvim";
-  };
-
+  # Keep aliases for muscle memory, though vi/vim alias options above handle most
   home.shellAliases = {
     vimtutor = "nvim +Tutor";
   };
