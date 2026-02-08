@@ -13,6 +13,7 @@
     ./modules/opencode.nix
     ./modules/hyprland.nix
     ./modules/pearpass.nix
+    ./modules/xdg.nix
   ];
 
   # --- PACKAGES ---
