@@ -36,6 +36,9 @@
     opencode
     alejandra
     nodejs_22
+    nodePackages.prettier
+    go
+    python3
     zellij
   ];
 
