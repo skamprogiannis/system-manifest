@@ -12,11 +12,12 @@
   };
 
   pearpassApp = pkgs.appimageTools.wrapType2 {
-    pname = "pearpass-desktop";
+    pname = "pearpass";
     version = "1.3.0";
     src = pearpassSource;
     extraPkgs = pkgs:
       with pkgs; [
+        stdenv.cc.cc.lib
         webkitgtk_6_0
         gtk4
         libadwaita
@@ -25,6 +26,7 @@
         gdk-pixbuf
         glib
         graphene
+        libsoup_2_4
         libsoup_3
         libsecret
         icu
@@ -74,13 +76,13 @@
   };
 
   pearpassExtracted = pkgs.appimageTools.extract {
-    pname = "pearpass-desktop";
+    pname = "pearpass";
     version = "1.3.0";
     src = pearpassSource;
   };
 
   pearpassNativeWrapper = pkgs.writeShellScript "pearpass-native" ''
-    exec ${pearpassApp}/bin/pearpass-desktop run --trusted pear://rdy3nr56u7k13dppa3sirj4qk3kfz6k7sss6zms3m5rspwr9wery "$@"
+    exec ${pearpassApp}/bin/pearpass run --trusted pear://rdy3nr56u7k13dppa3sirj4qk3kfz6k7sss6zms3m5rspwr9wery "$@"
   '';
 
   pearpassManifest = pkgs.writeText "pearpass-manifest.json" (builtins.toJSON {
@@ -97,10 +99,13 @@ in {
 
   xdg.desktopEntries.pearpass = {
     name = "PearPass";
-    exec = "pearpass-desktop";
-    icon = "${pearpassExtracted}/usr/share/icons/PearPass.png";
+    exec = "pearpass";
+    icon = "${pearpassExtracted}/PearPass.png";
     comment = "PearPass Password Manager";
     categories = ["Utility"];
+    settings = {
+      StartupWMClass = "pear-pass";
+    };
   };
 
   home.file = {
