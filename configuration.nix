@@ -4,11 +4,16 @@
 {
   config,
   pkgs,
+  inputs,
+  lib,
   ...
 }: {
   imports = [
     ./hardware-configuration.nix
   ];
+
+  # Track configuration revision
+  system.configurationRevision = inputs.self.rev or inputs.self.dirtyRev or null;
 
   # Bootloader
   boot.loader.systemd-boot.enable = true;
@@ -63,17 +68,23 @@
   # Enable the X11 windowing system
   services.xserver.enable = true;
 
-  # Enable nix-ld to run dynamic binaries (CRITICAL for Opencode & other unpatched tools)
-  programs.nix-ld.enable = true;
-  programs.nix-ld.libraries = with pkgs; [
-    stdenv.cc.cc.lib
-    zlib
-    openssl
-  ];
-
   # Enable the GNOME Desktop Environment
   services.displayManager.gdm.enable = true;
   services.desktopManager.gnome.enable = true;
+
+  # Gaming Specialisation (Steam Big Picture Mode)
+  specialisation = {
+    gaming-box.configuration = {
+      system.nixos.tags = ["gaming-box"];
+      services.xserver.desktopManager.gnome.enable = lib.mkForce false;
+      services.displayManager.gdm.enable = lib.mkForce false;
+      programs.steam = {
+        enable = true;
+        gamescopeSession.enable = true;
+      };
+      programs.gamemode.enable = true;
+    };
+  };
 
   # Enable Hyprland
   programs.hyprland.enable = true;
@@ -118,6 +129,14 @@
 
   # Install firefox.
   programs.firefox.enable = true;
+
+  # Enable Steam & Gamemode globally
+  programs.steam = {
+    enable = true;
+    remotePlay.openFirewall = true; # Open ports for Steam Remote Play
+    dedicatedServer.openFirewall = true; # Open ports for Source Dedicated Server
+  };
+  programs.gamemode.enable = true;
 
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
