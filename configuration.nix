@@ -95,8 +95,8 @@
     gnome-contacts
     gnome-photos
     gnome-tour
-    cheese # Old GNOME Camera
-    snapshot # New GNOME Camera
+    snapshot # GNOME Camera
+    geary # Already discussed using Thunderbird
   ];
 
   # Gaming Specialisation (Steam Big Picture Mode)
