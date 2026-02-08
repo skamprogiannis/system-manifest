@@ -86,6 +86,19 @@
     };
   };
 
+  # Allow the user to rebuild the system without a password
+  security.sudo.extraRules = [
+    {
+      users = ["stefan"];
+      commands = [
+        {
+          command = "/run/current-system/sw/bin/nixos-rebuild";
+          options = ["NOPASSWD"];
+        }
+      ];
+    }
+  ];
+
   # Enable Hyprland
   programs.hyprland.enable = true;
 
