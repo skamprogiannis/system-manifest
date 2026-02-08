@@ -15,6 +15,9 @@
   # Track configuration revision
   system.configurationRevision = inputs.self.rev or inputs.self.dirtyRev or null;
 
+  # Enable experimental features natively
+  nix.settings.experimental-features = ["nix-command" "flakes"];
+
   # Bootloader
   boot.loader.grub = {
     enable = true;
@@ -42,6 +45,7 @@
         sed -i '/#Title/,/}/ s/left = 20%/left = 482/' $out/theme.txt
 
         # Center the boot menu (540px wide on 1920px screen -> left=690)
+        # 1920/2 - 540/2 = 690px
         sed -i '/#Boot menu/,/}/ s/left = 35%/left = 690/' $out/theme.txt
       '';
     };
@@ -169,7 +173,6 @@
   environment.systemPackages = with pkgs; [
     wget
     git
-    tree
   ];
 
   # This value determines the NixOS release from which the default

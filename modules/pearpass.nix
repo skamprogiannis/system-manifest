@@ -67,6 +67,9 @@
         vulkan-loader
         xdg-utils
         zlib
+        webkitgtk_6_0
+        libsoup_3
+        graphene
       ];
   };
 

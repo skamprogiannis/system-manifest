@@ -17,8 +17,11 @@
       cursor-style-blink = true;
       shell-integration-features = "no-cursor";
 
-      # Brave Harmony: Jump to specific tabs
+      # Fix Numpad Enter
+      # Mapping to standard Enter keycode for better application compatibility
       keybind = [
+        "kp_enter=text:\\r"
+        # Brave Harmony: Jump to specific tabs
         "ctrl+1=goto_tab:1"
         "ctrl+2=goto_tab:2"
         "ctrl+3=goto_tab:3"
