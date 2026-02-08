@@ -40,15 +40,6 @@
   };
 
   home.shellAliases = {
-    vimtutor = "nvim +Tutor";
-  };
-
-  # Directly override the vimtutor binary to be sure
-  home.file.".local/bin/vimtutor" = {
-    executable = true;
-    text = ''
-      #!/bin/sh
-      exec nvim +Tutor
-    '';
+    vimtutor = "nvim -c Tutor";
   };
 }
