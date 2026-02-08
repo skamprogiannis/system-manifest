@@ -3,7 +3,7 @@
   pkgs,
   ...
 }: {
-  # Opencode Configuration
+  # OpenCode Configuration
   home.file.".config/opencode/opencode.json".text = ''
     {
       "$schema": "https://opencode.ai/config.json",

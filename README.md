@@ -1,4 +1,4 @@
-# Stefan's NixOS System Manifest
+# NixOS System Manifest
 
 This repository contains the declarative configuration for my NixOS system, managed via **Nix Flakes** and **Home Manager**.
 
@@ -8,8 +8,8 @@ This repository contains the declarative configuration for my NixOS system, mana
     *   **GNOME:** Stable, daily driver environment.
     *   **Hyprland:** Tiling window manager with a custom "Cyberpunk" aesthetic.
 *   **Gaming Mode:** A dedicated "Specialisation" (`gaming-box`) that strips away the desktop environment and boots directly into Steam Big Picture Mode for maximum performance.
-*   **AI Integrated:** Built-in configuration for **Opencode** (AI Terminal Agent) with Gemini 3 Pro authentication and Context7 documentation support.
-*   **Dev Ready:** Pre-configured environment for Node.js, Python, Go, and Neovim (Dracula theme).
+*   **Dev Ready:** Pre-configured environment for Node.js, Python, Go, and Neovim.
+*   **AI Integrated:** Built-in configuration for **OpenCode** (AI Terminal Agent) with Context7 documentation support. (Note: Personal AI model authentication required).
 *   **Modular Architecture:** Configuration split into `modules/` for maintainability.
 
 ## 🛠️ Usage
@@ -34,7 +34,7 @@ Select **"NixOS - gaming-box"** from the bootloader menu (GRUB/systemd-boot).
     *   `opencode.nix`: AI agent configuration.
     *   `pearpass.nix`: Custom wrapper for PearPass password manager.
 
-## 🤖 AI Workflow (Opencode)
-This repository works hand-in-hand with the **Opencode** agent.
+## 🤖 AI Workflow (OpenCode)
+This repository works hand-in-hand with the **OpenCode** agent.
 *   **Generations:** Git commits are kept 1:1 with NixOS generations (`gen(1)`, `gen(2)`, etc.).
 *   **Agents:** See `AGENTS.md` for operational rules and tips.

@@ -1,4 +1,4 @@
-# Opencode Agents & Workflows
+# OpenCode Agents & Workflows
 
 ## Useful Commands
 - **Dry Run Build:** `nixos-rebuild dry-build --flake .#nixos` (Checks for evaluation errors without applying changes)
@@ -6,7 +6,7 @@
 - **List Generations:** `nixos-rebuild list-generations`
 - **Garbage Collect:** `nix-collect-garbage -d` (Deletes old generations)
 
-## Opencode Tips
+## OpenCode Tips
 - **Session Info:** `/session` command.
 - **Model Variants:** `Ctrl+T` toggles between High (Reasoning) and Low (Speed) models.
 - **Git & Gens:** Keep git commits 1:1 with system generations for clean history.
