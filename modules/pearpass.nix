@@ -27,8 +27,37 @@
         libsecret
         icu
         libGL
+        libglvnd
         vulkan-loader
         libayatana-appindicator
+        libnotify
+        udev
+        alsa-lib
+        nss
+        nspr
+        at-spi2-atk
+        libdrm
+        mesa
+        libxkbcommon
+        wayland
+        libxshmfence
+        libX11
+        libXcursor
+        libXdamage
+        libXext
+        libXfixes
+        libXi
+        libXrender
+        libXtst
+        libXcomposite
+        libXrandr
+        libXScrnSaver
+        gst_all_1.gstreamer
+        gst_all_1.gst-plugins-base
+        gst_all_1.gst-plugins-good
+        gst_all_1.gst-plugins-bad
+        libva
+        libvdpau
       ];
   };
 
