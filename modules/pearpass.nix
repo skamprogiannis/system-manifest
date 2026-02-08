@@ -75,6 +75,8 @@
         # Added for tray support / potential missing deps
         libdbusmenu-gtk3
         libappindicator-gtk3
+        # Tools
+        strace
       ];
   };
 
@@ -84,8 +86,9 @@
     src = pearpassSource;
   };
 
+  # Modified wrapper to use strace for debugging silent exits
   pearpassNativeWrapper = pkgs.writeShellScript "pearpass-native" ''
-    exec ${pearpassApp}/bin/pearpass run --trusted pear://rdy3nr56u7k13dppa3sirj4qk3kfz6k7sss6zms3m5rspwr9wery "$@" 2>>/tmp/pearpass-error.log
+    exec ${pkgs.strace}/bin/strace -f -o /tmp/pearpass-strace.log ${pearpassApp}/bin/pearpass run --trusted pear://rdy3nr56u7k13dppa3sirj4qk3kfz6k7sss6zms3m5rspwr9wery "$@"
   '';
 
   pearpassManifest = pkgs.writeText "pearpass-manifest.json" (builtins.toJSON {
