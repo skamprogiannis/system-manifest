@@ -13,7 +13,10 @@
   # Bootloader
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
-  boot.kernelPackages = pkgs.linuxPackages_latest;
+  # Use LTS kernel for better stability with Nvidia
+  boot.kernelPackages = pkgs.linuxPackages;
+  # Fix for Nvidia suspend/wake issues
+  boot.kernelParams = ["nvidia.NVreg_PreserveVideoMemoryAllocations=1"];
 
   # Disk Encryption
   boot.initrd.luks.devices."luks-a2df8182-4853-442b-ba7c-6ca18af8696a".device = "/dev/disk/by-uuid/a2df8182-4853-442b-ba7c-6ca18af8696a";
@@ -59,6 +62,14 @@
 
   # Enable the X11 windowing system
   services.xserver.enable = true;
+
+  # Enable nix-ld to run dynamic binaries (CRITICAL for Opencode & other unpatched tools)
+  programs.nix-ld.enable = true;
+  programs.nix-ld.libraries = with pkgs; [
+    stdenv.cc.cc.lib
+    zlib
+    openssl
+  ];
 
   # Enable the GNOME Desktop Environment
   services.displayManager.gdm.enable = true;
