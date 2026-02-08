@@ -201,6 +201,9 @@
 
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
+  nixpkgs.config.permittedInsecurePackages = [
+    "libsoup-2.74.3"
+  ];
 
   # Required for Home Manager XDG portals
   environment.pathsToLink = ["/share/applications" "/share/xdg-desktop-portal"];
