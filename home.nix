@@ -74,6 +74,10 @@
       switch-input-source = ["<Super>space"];
       switch-input-source-backward = ["<Shift><Super>space"];
     };
+    # Re-enable auto-suspend now that we're using open modules
+    # "org/gnome/settings-daemon/plugins/power" = {
+    #   sleep-inactive-ac-type = "nothing";
+    # };
   };
 
   # Let Home Manager manage itself
