@@ -64,6 +64,10 @@
         xdg-utils
         libz
         openssl
+        gnome-themes-extra
+        gtk3
+        glib-networking
+        at-spi2-core
       ];
   };
 
