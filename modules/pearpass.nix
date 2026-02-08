@@ -87,8 +87,15 @@
 in {
   home.packages = [pearpassApp];
 
+  xdg.desktopEntries.pearpass = {
+    name = "PearPass";
+    exec = "pearpass-desktop";
+    icon = "pearpass";
+    comment = "PearPass Password Manager";
+    categories = ["Utility"];
+  };
+
   home.file = {
-    ".local/share/applications/pearpass.desktop".source = "${pearpassApp}/share/applications/pearpass-desktop.desktop";
     ".config/google-chrome/NativeMessagingHosts/${pearpassNativeHostName}.json".source = pearpassManifest;
     ".config/chromium/NativeMessagingHosts/${pearpassNativeHostName}.json".source = pearpassManifest;
     ".config/BraveSoftware/Brave-Browser/NativeMessagingHosts/${pearpassNativeHostName}.json".source = pearpassManifest;
