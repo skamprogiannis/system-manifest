@@ -17,6 +17,7 @@
 
   # Bootloader
   boot.loader.systemd-boot.enable = true;
+  boot.loader.systemd-boot.configurationLimit = 20;
   boot.loader.efi.canTouchEfiVariables = true;
   # Use LTS kernel for better stability with Nvidia
   boot.kernelPackages = pkgs.linuxPackages;
@@ -105,6 +106,7 @@
       system.nixos.tags = ["gaming-box"];
       services.desktopManager.gnome.enable = lib.mkForce false;
       services.displayManager.gdm.enable = lib.mkForce false;
+      programs.hyprland.enable = lib.mkForce false;
       programs.steam = {
         enable = true;
         gamescopeSession.enable = true;
@@ -180,6 +182,9 @@
 
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
+
+  # Required for Home Manager XDG portals
+  environment.pathsToLink = ["/share/applications" "/share/xdg-desktop-portal"];
 
   # List packages installed in system profile.
   environment.systemPackages = with pkgs; [
