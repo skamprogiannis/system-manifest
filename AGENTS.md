@@ -16,6 +16,7 @@
 - **Autonomy:** You are authorized to run `sudo nixos-rebuild switch --flake .#nixos` autonomously when requested or implied by the workflow (e.g., "rebuild").
 - **Revision Tracking:** Always set `system.configurationRevision = inputs.self.rev or inputs.self.dirtyRev or null;` in `configuration.nix` so `nixos-rebuild list-generations` shows the commit hash.
 - **Dry Run:** Always use `nixos-rebuild dry-build` before asking the user to build, especially for complex derivations.
+- **AppImages:** When wrapping AppImages with `appimageTools`, ensure common libraries like `webkitgtk`, `gtk4`, `libadwaita`, `graphene`, and `libsoup_3` are included in `extraPkgs` if the app has a GUI.
 - **Code Organization:** Modularize configurations into `modules/` (e.g., `modules/git.nix`, `modules/hyprland.nix`) to keep `home.nix` clean.
 - **Comments:** Keep comments focused on "why" or "what" (e.g., "# Wrapper for native messaging"). Do NOT add meta-comments about your actions (e.g., "# I added this because user asked").
 
