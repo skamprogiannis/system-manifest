@@ -1,0 +1,52 @@
+5825541247a7585307471562cc19d4479ee997c4|Initial commit
+24b9c1e938d0aae58b9a9417aa75d97dbae334dc|gen(1): fresh nixos install using calamares
+2e94a0c71f2bdf302a17e3d4e81aba8caedd58f2|gen(2): add neovim, brave, discord
+11f6f4194974fbfdd3a4e0ae40f6215d549e5260|gen(3): migrate to flakes, home-manager, and hyprland
+49da03ebd80b4ce3f057b222d6943250fda1d826|gen(4): add opencode and gh
+095c367287e30275d708323a544f73f9d42d0c00|gen(5): minor tweaks
+9aa896f11afd9b7918d5898c9a1a08269caf9467|gen(6): testing config
+e2cdbb99cbd23d67be63e6cd83e109b2ac68a273|gen(7): fix suspend, add spotify, ghostty bind
+b15ace44ae567a7fb85b42bc32f20373dd0d178f|gen(8): modularize config, pearpass & keybinds
+41a1709ca62862c59edcbe89c16bdaa15be20cc6|gen(9): add steam, gamemode, revision tracking & specialisation
+e89586e0a6fa2130eb25bd3b89ac03e5741fdc17|gen(11): enable passwordless rebuild & fix spec option
+e61a2c3b108398bff7dd3c1947b97d966529cc69|gen(12): dracula theme for nvim & config fixes
+c3f415d06e7372afc24d9cd149f2f51b6508fb1e|gen(13): add go, python, prettier & opencode theme
+38d8d6b75c5bdc560c4e474f75fe960ee02dbe8a|docs: add readme and update agents rules
+0035ca020db662cb9f7135feae7666fd5517de7c|gen(14): fix mcp config schema
+5ec59eefdfee67a63537637ee1f1843ccd17e682|gen(15): fix hyprland shadow syntax & update agents rules
+2d5936a7eff171b7fe4e31d0ac201fbe1604abe3|gen(16): manage xdg user dirs & cleanup agents.md
+24b682a58658b8dc746d47a3c7aff942c7ddf9d3|gen(17): enable home-manager backups
+81a49de02563c37f3e09fa4dd4cfc692bc4583bd|gen(18): set brave default & add pre-commit hook
+a19de0a7acd2d1a94b149a8e665d743f2ee57fdc|gen(19): cleanup config & enable nix-ld
+0a177d9689032aeed059cad441d114939a661c70|gen(20): enable touchpad & update agents rules
+d744605f34aa7f21b80868279cadb63d3a8cd016|gen(21): update terminology & fix hyprland kbd variant
+511281e3dd2a925fd3a4a8d7151fc042c9c71016|gen(22): add nvim alt+up/down line movement
+1d0b13baa599b88c549a2657069fe2a2a3a30bf7|gen(23): mount games disk, add vim tools & icon themes
+570c6a33688d146aba944d5d298e6c68191a99e3|gen(24): remove GNOME bloat, fix vimtutor alias & hide nvim wrapper
+3d54c03714d5abb761d60d316502f2259ce63606|gen(25): fix vimtutor, remove more GNOME bloat & add cyberpunk wallpaper
+75bbb78076f248b816c94b9def14633b49715182|gen(26): fix PearPass dependencies & finalize vimtutor alias
+5c60f863f06fc762979e3e297f96e9e707e8fcd1|gen(35): unhide geary, add ruff & opencode formatters
+c047bb64d1ed8d3245cdde7b4bbed8a00100f557|gen(36): add nerd-fonts to home-manager
+217ec93bad11d1bf2d4b08f411ff194673ea7821|gen(37): switch to GRUB with Hollow Knight theme & unhide geary
+c5b0acc9cfc809e98e2a9252a6d9f0b9aad827a2|gen(38): fix pearpass libs, add local bin to path & cleanup
+00c71b0a4adb04a9aeb5997c5016c984b421e329|gen(39): add more pearpass libs, fix path for vimtutor & update agents docs
+4826a57968ab41ed540f953c7abfa8add4df7f9c|gen(40): add PearPass desktop entry & finalize config
+5796dc360740af8222bc6a854e31875032f7aba3|gen(41): minor tweaks
+2ef0bf431f53b5e015e9590501c85dcfe4cc1361|gen(42): fix pearpass pairing & icon, add context sync rule
+6d82935a20f59d065c90e5e44cf0b8bb8aee747f|gen(43): minor tweaks & log cleanup
+f2c8546d568700e73e492ed096a6e44d8287f407|gen(44): minor tweaks
+e5e7abd91c7c7fc538ef6ad9acbb3e46ca85ec20|gen(45): minor tweaks
+91c88f189800d7632f899503cf5af9b66ccc3a44|gen(46): fix pearpass native host, icon & naming
+8f77ca4fd25ed2d00761cb1ddd156413cf6a01d1|gen(47): fix pearpass native host, icon & naming
+17056d747ba5a0860f27b86042d2f4c493fb93c0|gen(1): refactor into multi-host flake structure
+b7d13abdef2bd94ce2a3433ce0919ada6067bce8|fix: resolve gnome deprecation warnings
+40392a5b409adceff08a4d1b55eef10c0b552940|fix(grub): force 1920x1080 resolution to center theme
+ab82668153f9fa654dda39b35219e9e3ea8386ac|fix(desktop): move grub keybinds and downgrade nvidia to production
+0761305c6418d2c6c1faf7156482f6f11e5fb061|fix(grub): perfectly center logo and menu elements
+28f46d8444f7762ae9993734f891fc5353581835|feat: add greek keyboard layout (Super+Space)
+5da902e9817c63a32740627a6b517f7d288148ec|fix(desktop): switch to open nvidia modules and fix pearpass icon/runtime
+5fa8ae21988daa9c847d1cdf89f86c30905d42ea|fix(desktop): force s2idle for nvidia, center grub, debug pearpass
+c56d9b7a42433e5c58d1a558933e741a7a368cd9|fix: update pearpass to use robust FHS environment
+3bfee1f7a135160ff0184e683836c16a5d18020b|fix: ghostty keybind syntax and pearpass dependencies
+9468f554f6db7534fb7e7899683e1e6bf1bc98c8|gen(6): add bug reporting workflow and update ghostty keybinds
+d0c6684fd8d150e7178b12b44a7f34bc4a9952c7|fix: remove temporary test files
