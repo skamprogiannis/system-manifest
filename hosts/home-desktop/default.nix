@@ -20,7 +20,7 @@
     modesetting.enable = true;
     powerManagement.enable = true;
     powerManagement.finegrained = false;
-    open = false;
+    open = true; # Switch to open kernel modules for better suspend stability on RTX 3080
     nvidiaSettings = true;
     package = config.boot.kernelPackages.nvidiaPackages.production;
   };
