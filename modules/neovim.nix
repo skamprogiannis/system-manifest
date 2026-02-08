@@ -38,4 +38,8 @@
   home.sessionVariables = {
     EDITOR = "nvim";
   };
+
+  home.shellAliases = {
+    vimtutor = "nvim +Tutor";
+  };
 }
