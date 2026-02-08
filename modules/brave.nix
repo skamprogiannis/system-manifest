@@ -4,8 +4,23 @@
   ...
 }: {
   home.packages = with pkgs; [
-    brave
+    (brave.override {
+      commandLineArgs = [
+        "--disable-features=HardwareMediaKeyHandling"
+      ];
+    })
   ];
+
+  # Declarative Brave Extensions
+  # PearPass: pdeffakfmcdnjjafophphgmddmigpejh
+  # Vimium: dbepclhmjogiooabhcaphlbebaymabck
+  programs.brave = {
+    enable = true;
+    extensions = [
+      {id = "pdeffakfmcdnjjafophphgmddmigpejh";} # PearPass
+      {id = "dbepclhmjogiooabhcaphlbebaymabck";} # Vimium
+    ];
+  };
 
   xdg.mimeApps = {
     enable = true;
