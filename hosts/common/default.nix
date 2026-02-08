@@ -20,6 +20,7 @@
     enable = true;
     efiSupport = true;
     device = "nodev";
+    gfxmodeEfi = "1920x1080";
     configurationLimit = 20;
     theme = pkgs.stdenv.mkDerivation {
       pname = "hollow-knight-grub-theme";
