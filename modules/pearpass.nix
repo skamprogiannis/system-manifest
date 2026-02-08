@@ -58,6 +58,12 @@
         gst_all_1.gst-plugins-bad
         libva
         libvdpau
+        # Added for stability
+        dbus
+        dconf
+        xdg-utils
+        libz
+        openssl
       ];
   };
 
