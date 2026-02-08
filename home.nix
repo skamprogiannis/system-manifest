@@ -2,6 +2,7 @@
   config,
   pkgs,
   inputs,
+  lib,
   ...
 }: {
   home.username = "stefan";
@@ -64,6 +65,14 @@
       binding = "<Super>Return";
       command = "ghostty";
       name = "Ghostty";
+    };
+    # Input sources for GNOME
+    "org/gnome/desktop/input-sources" = {
+      sources = [(lib.hm.gvariant.mkTuple ["xkb" "us+altgr-intl"]) (lib.hm.gvariant.mkTuple ["xkb" "gr"])];
+    };
+    "org/gnome/desktop/wm/keybindings" = {
+      switch-input-source = ["<Super>space"];
+      switch-input-source-backward = ["<Shift><Super>space"];
     };
   };
 

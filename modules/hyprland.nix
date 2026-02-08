@@ -27,7 +27,7 @@
       input = {
         kb_layout = "us,gr";
         kb_variant = "altgr-intl,";
-        kb_options = "grp:alt_shift_toggle";
+        kb_options = "grp:win_space_toggle";
       };
 
       general = {
