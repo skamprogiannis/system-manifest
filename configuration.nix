@@ -95,7 +95,8 @@
     gnome-contacts
     gnome-photos
     gnome-tour
-    snapshot # GNOME Camera
+    cheese # Old GNOME Camera
+    snapshot # New GNOME Camera
     geary # Already discussed using Thunderbird
   ];
 
