@@ -72,6 +72,9 @@
         gtk3
         glib-networking
         at-spi2-core
+        # Added for tray support / potential missing deps
+        libdbusmenu-gtk3
+        libappindicator-gtk3
       ];
   };
 
@@ -82,7 +85,7 @@
   };
 
   pearpassNativeWrapper = pkgs.writeShellScript "pearpass-native" ''
-    exec ${pearpassApp}/bin/pearpass run --trusted pear://rdy3nr56u7k13dppa3sirj4qk3kfz6k7sss6zms3m5rspwr9wery "$@"
+    exec ${pearpassApp}/bin/pearpass run --trusted pear://rdy3nr56u7k13dppa3sirj4qk3kfz6k7sss6zms3m5rspwr9wery "$@" 2>>/tmp/pearpass-error.log
   '';
 
   pearpassManifest = pkgs.writeText "pearpass-manifest.json" (builtins.toJSON {
@@ -104,7 +107,7 @@ in {
     comment = "PearPass Password Manager";
     categories = ["Utility"];
     settings = {
-      StartupWMClass = "pear-pass";
+      StartupWMClass = "pear-runtime";
     };
   };
 
