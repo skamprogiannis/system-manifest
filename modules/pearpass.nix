@@ -4,15 +4,17 @@
   ...
 }: let
   pearpassExtensionId = "pdeffakfmcdnjjafophphgmddmigpejh";
-  pearpassNativeHostName = "com.tetherto.pearpass";
+  pearpassNativeHostName = "com.pears.pass";
+
+  pearpassSource = pkgs.fetchurl {
+    url = "https://github.com/tetherto/pearpass-app-desktop/releases/download/v1.3.0/PearPass-Desktop-Linux-x64-v1.3.0.AppImage";
+    sha256 = "1fl5g4jb7k6y5j50cm8dfdib2kw31g4c0akz4svkbwf4szwlm1dn";
+  };
 
   pearpassApp = pkgs.appimageTools.wrapType2 {
     pname = "pearpass-desktop";
     version = "1.3.0";
-    src = pkgs.fetchurl {
-      url = "https://github.com/tetherto/pearpass-app-desktop/releases/download/v1.3.0/PearPass-Desktop-Linux-x64-v1.3.0.AppImage";
-      sha256 = "1fl5g4jb7k6y5j50cm8dfdib2kw31g4c0akz4svkbwf4szwlm1dn";
-    };
+    src = pearpassSource;
     extraPkgs = pkgs:
       with pkgs; [
         webkitgtk_6_0
@@ -71,8 +73,14 @@
       ];
   };
 
+  pearpassExtracted = pkgs.appimageTools.extract {
+    pname = "pearpass-desktop";
+    version = "1.3.0";
+    src = pearpassSource;
+  };
+
   pearpassNativeWrapper = pkgs.writeShellScript "pearpass-native" ''
-    exec ${pearpassApp}/bin/pearpass-desktop "$@"
+    exec ${pearpassApp}/bin/pearpass-desktop run --trusted pear://rdy3nr56u7k13dppa3sirj4qk3kfz6k7sss6zms3m5rspwr9wery "$@"
   '';
 
   pearpassManifest = pkgs.writeText "pearpass-manifest.json" (builtins.toJSON {
@@ -90,7 +98,7 @@ in {
   xdg.desktopEntries.pearpass = {
     name = "PearPass";
     exec = "pearpass-desktop";
-    icon = "pearpass";
+    icon = "${pearpassExtracted}/usr/share/icons/PearPass.png";
     comment = "PearPass Password Manager";
     categories = ["Utility"];
   };
