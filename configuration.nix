@@ -42,6 +42,21 @@
     LC_TIME = "en_GB.UTF-8";
   };
 
+  # Enable OpenGL
+  hardware.graphics.enable = true;
+
+  # Load the NVIDIA driver
+  services.xserver.videoDrivers = ["nvidia"];
+
+  hardware.nvidia = {
+    modesetting.enable = true;
+    powerManagement.enable = true;
+    powerManagement.finegrained = false;
+    open = false;
+    nvidiaSettings = true;
+    package = config.boot.kernelPackages.nvidiaPackages.stable;
+  };
+
   # Enable the X11 windowing system
   services.xserver.enable = true;
 
