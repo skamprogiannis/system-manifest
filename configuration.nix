@@ -16,7 +16,27 @@
   system.configurationRevision = inputs.self.rev or inputs.self.dirtyRev or null;
 
   # Bootloader
-  boot.loader.systemd-boot.enable = true;
+  boot.loader.grub = {
+    enable = true;
+    efiSupport = true;
+    device = "nodev";
+    configurationLimit = 20;
+    theme = pkgs.stdenv.mkDerivation {
+      pname = "hollow-knight-grub-theme";
+      version = "1.0";
+      src = pkgs.fetchFromGitHub {
+        owner = "sergoncano";
+        repo = "hollow-knight-grub-theme";
+        rev = "9515f805f72dc214e3da59967f0b678d9910adf1";
+        sha256 = "sha256-0hn3MFC+OtfwtA//pwjnWz7Oz0Cos3YzbgUlxKszhyA=";
+      };
+      installPhase = ''
+        mkdir -p $out
+        cp -r hollow-grub/* $out
+      '';
+    };
+  };
+  boot.loader.systemd-boot.enable = false;
   boot.loader.efi.canTouchEfiVariables = true;
   # Use LTS kernel for better stability with Nvidia
   boot.kernelPackages = pkgs.linuxPackages;
@@ -105,6 +125,7 @@
       system.nixos.tags = ["gaming-box"];
       services.desktopManager.gnome.enable = lib.mkForce false;
       services.displayManager.gdm.enable = lib.mkForce false;
+      programs.hyprland.enable = lib.mkForce false;
       programs.steam = {
         enable = true;
         gamescopeSession.enable = true;
@@ -180,6 +201,9 @@
 
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
+
+  # Required for Home Manager XDG portals
+  environment.pathsToLink = ["/share/applications" "/share/xdg-desktop-portal"];
 
   # List packages installed in system profile.
   environment.systemPackages = with pkgs; [

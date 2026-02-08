@@ -1,6 +1,7 @@
 {
   config,
   pkgs,
+  inputs,
   ...
 }: {
   home.username = "stefan";
@@ -25,6 +26,7 @@
     obsidian
     protonmail-bridge
     spotify
+    geary
 
     # CLI / Tools
     fastfetch
@@ -44,6 +46,11 @@
     python3
     zellij
     pacvim
+
+    # Fonts
+    pkgs.nerd-fonts.jetbrains-mono
+    pkgs.nerd-fonts.fira-code
+    pkgs.nerd-fonts.hack
   ];
 
   # --- GNOME KEYBINDINGS ---
