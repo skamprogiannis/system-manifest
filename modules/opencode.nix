@@ -14,6 +14,16 @@
           "type": "local",
           "command": ["npx", "-y", "@upstash/context7-mcp"]
         }
+      },
+      "formatter": {
+        "prettier": {
+          "command": ["npx", "prettier", "--write", "$FILE"],
+          "extensions": [".js", ".ts", ".jsx", ".tsx", ".json", ".css", ".md"]
+        },
+        "ruff": {
+          "command": ["ruff", "format", "$FILE"],
+          "extensions": [".py", ".pyi"]
+        }
       }
     }
   '';
