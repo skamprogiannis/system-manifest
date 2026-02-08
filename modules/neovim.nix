@@ -13,7 +13,12 @@
       nvim-treesitter.withAllGrammars # Better syntax highlighting
       telescope-nvim # Fuzzy finder
       opencode-nvim # vscode style sidebar for opencode
+      dracula-nvim
     ];
+
+    extraConfig = ''
+      colorscheme dracula
+    '';
   };
 
   home.sessionVariables = {
