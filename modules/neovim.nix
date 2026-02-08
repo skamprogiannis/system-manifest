@@ -14,6 +14,7 @@
       telescope-nvim # Fuzzy finder
       opencode-nvim # vscode style sidebar for opencode
       dracula-nvim
+      vim-be-good
     ];
 
     extraConfig = ''
