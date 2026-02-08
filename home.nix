@@ -14,12 +14,12 @@
     ./modules/hyprland.nix
     ./modules/pearpass.nix
     ./modules/xdg.nix
+    ./modules/brave.nix
   ];
 
   # --- PACKAGES ---
   home.packages = with pkgs; [
     # GUI
-    brave
     discord
     obsidian
     protonmail-bridge
