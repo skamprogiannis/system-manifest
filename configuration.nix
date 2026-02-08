@@ -88,6 +88,15 @@
   services.displayManager.gdm.enable = true;
   services.desktopManager.gnome.enable = true;
 
+  # Exclude GNOME bloat
+  environment.gnome.excludePackages = with pkgs; [
+    gnome-maps
+    gnome-weather
+    gnome-contacts
+    gnome-photos
+    geary # Already discussed using Thunderbird
+  ];
+
   # Gaming Specialisation (Steam Big Picture Mode)
   specialisation = {
     gaming-box.configuration = {

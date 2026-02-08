@@ -37,4 +37,12 @@
     platformTheme.name = "gtk";
     style.name = "adwaita-dark";
   };
+
+  # Hide the "Neovim (wrapper)" entry from app launchers
+  xdg.desktopEntries = {
+    nvim = {
+      name = "Neovim";
+      noDisplay = true;
+    };
+  };
 }
