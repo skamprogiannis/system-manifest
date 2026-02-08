@@ -15,6 +15,7 @@
     ./modules/pearpass.nix
     ./modules/xdg.nix
     ./modules/brave.nix
+    ./modules/theme.nix
   ];
 
   # --- PACKAGES ---
@@ -41,6 +42,8 @@
     go
     python3
     zellij
+    vim
+    pacvim
   ];
 
   # --- GNOME KEYBINDINGS ---
