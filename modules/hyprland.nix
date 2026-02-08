@@ -106,4 +106,14 @@
     dunst
     hyprpaper
   ];
+
+  services.hyprpaper = {
+    enable = true;
+    settings = {
+      ipc = "on";
+      splash = false;
+      preload = ["/home/stefan/Pictures/Wallpapers/cyberpunk.png"];
+      wallpaper = [",/home/stefan/Pictures/Wallpapers/cyberpunk.png"];
+    };
+  };
 }

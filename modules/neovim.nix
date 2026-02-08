@@ -40,6 +40,6 @@
   };
 
   home.shellAliases = {
-    vimtutor = "nvim +Tutor";
+    vimtutor = "nvim -c Tutor";
   };
 }
