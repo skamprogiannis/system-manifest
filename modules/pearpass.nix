@@ -13,6 +13,23 @@
       url = "https://github.com/tetherto/pearpass-app-desktop/releases/download/v1.3.0/PearPass-Desktop-Linux-x64-v1.3.0.AppImage";
       sha256 = "1fl5g4jb7k6y5j50cm8dfdib2kw31g4c0akz4svkbwf4szwlm1dn";
     };
+    extraPkgs = pkgs:
+      with pkgs; [
+        webkitgtk_6_0
+        gtk4
+        libadwaita
+        pango
+        cairo
+        gdk-pixbuf
+        glib
+        graphene
+        libsoup_3
+        libsecret
+        icu
+        libGL
+        vulkan-loader
+        libayatana-appindicator
+      ];
   };
 
   pearpassNativeWrapper = pkgs.writeShellScript "pearpass-native" ''
@@ -29,6 +46,8 @@
     ];
   });
 in {
+  home.packages = [pearpassApp];
+
   home.file = {
     ".local/share/applications/pearpass.desktop".source = "${pearpassApp}/share/applications/pearpass-desktop.desktop";
     ".config/google-chrome/NativeMessagingHosts/${pearpassNativeHostName}.json".source = pearpassManifest;
