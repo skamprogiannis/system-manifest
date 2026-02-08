@@ -39,6 +39,7 @@
     alejandra
     nodejs_22
     nodePackages.prettier
+    ruff
     go
     python3
     zellij
