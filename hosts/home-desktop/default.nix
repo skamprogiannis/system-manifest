@@ -26,7 +26,10 @@
   };
 
   # Fix for Nvidia suspend/wake issues
-  boot.kernelParams = ["nvidia.NVreg_PreserveVideoMemoryAllocations=1"];
+  boot.kernelParams = [
+    "nvidia.NVreg_PreserveVideoMemoryAllocations=1"
+    "mem_sleep_default=s2idle"
+  ];
 
   # Gaming Specialisation (Steam Big Picture Mode)
   specialisation = {
