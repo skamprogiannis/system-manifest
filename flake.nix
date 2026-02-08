@@ -9,6 +9,11 @@
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    nixvim = {
+      url = "github:nix-community/nixvim";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = {
@@ -28,7 +33,12 @@
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
             home-manager.backupFileExtension = "backup";
-            home-manager.users.stefan = import ./home.nix;
+            home-manager.users.stefan = {
+              imports = [
+                ./home.nix
+                inputs.nixvim.homeManagerModules.nixvim
+              ];
+            };
           }
         ];
       };
@@ -43,7 +53,12 @@
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
             home-manager.backupFileExtension = "backup";
-            home-manager.users.stefan = import ./home.nix;
+            home-manager.users.stefan = {
+              imports = [
+                ./home.nix
+                inputs.nixvim.homeManagerModules.nixvim
+              ];
+            };
           }
         ];
       };
