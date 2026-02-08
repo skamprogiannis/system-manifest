@@ -42,7 +42,6 @@
     go
     python3
     zellij
-    vim
     pacvim
   ];
 
