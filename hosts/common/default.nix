@@ -34,6 +34,9 @@
       installPhase = ''
         mkdir -p $out
         cp -r hollow-grub/* $out
+        # Center the keybinds description and move it below options
+        sed -i '/#Keybinds/,/}/ s/left = 10%/left = 0\n\twidth = 100%/' $out/theme.txt
+        sed -i '/#Keybinds/,/}/ s/top = 82%/top = 85%/' $out/theme.txt
       '';
     };
   };
