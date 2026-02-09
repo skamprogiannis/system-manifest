@@ -25,6 +25,9 @@
     package = config.boot.kernelPackages.nvidiaPackages.production;
   };
 
+  # Use X11 for GDM to avoid wake crashes on Wayland/Nvidia
+  services.xserver.displayManager.gdm.wayland = false;
+
   # Fix for Nvidia suspend/wake issues
   boot.kernelParams = [
     "nvidia.NVreg_PreserveVideoMemoryAllocations=1"
