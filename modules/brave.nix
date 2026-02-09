@@ -3,6 +3,15 @@
   pkgs,
   ...
 }: {
+  # Chromium settings often apply to Brave as well
+  programs.chromium = {
+    enable = true;
+    extensions = [
+      {id = "pdeffakfmcdnjjafophphgmddmigpejh";} # PearPass
+      {id = "hfjnimnojonndamibeoponojhlghnbpl";} # Vimium C
+    ];
+  };
+
   programs.brave = {
     enable = true;
     package = pkgs.brave.override {
@@ -10,10 +19,6 @@
         "--disable-features=HardwareMediaKeyHandling"
       ];
     };
-    extensions = [
-      {id = "pdeffakfmcdnjjafophphgmddmigpejh";} # PearPass
-      {id = "hfjnimnojonndamibeoponojhlghnbpl";} # Vimium C
-    ];
   };
 
   xdg.mimeApps = {
@@ -25,5 +30,12 @@
       "x-scheme-handler/about" = "brave-browser.desktop";
       "x-scheme-handler/unknown" = "brave-browser.desktop";
     };
+  };
+
+  # Hide the duplicate Brave entry
+  xdg.desktopEntries."com.brave.Browser" = {
+    name = "Brave Web Browser";
+    exec = "brave";
+    noDisplay = true;
   };
 }
