@@ -41,11 +41,11 @@
         sed -i '/#Keybinds/,/}/ s/left = 10%/left = 0\n\twidth = 100%/' $out/theme.txt
         sed -i '/#Keybinds/,/}/ s/top = 82%/top = 85%/' $out/theme.txt
 
-        # Center the logo (Nudged left from 20% to fix slight right bias)
-        sed -i '/#Title/,/}/ s/left = 20%/left = 15%/' $out/theme.txt
+        # Center the logo (Nudged further left from 10% to fix bias)
+        sed -i '/#Title/,/}/ s/left = 20%/left = 5%/' $out/theme.txt
 
-        # Center the boot menu (Reverted to the 'mostly centered' 35%)
-        sed -i '/#Boot menu/,/}/ s/left = 35%/left = 35%/' $out/theme.txt
+        # Center the boot menu (Restore to Gen 75's centered position)
+        sed -i '/#Boot menu/,/}/ s/left = 35%/left = 25%/' $out/theme.txt
       '';
     };
   };
