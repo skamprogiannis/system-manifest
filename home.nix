@@ -28,6 +28,7 @@
     protonmail-bridge
     spotify
     geary
+    protonvpn-gui
 
     # CLI / Tools
     fastfetch

@@ -18,20 +18,16 @@
 
   hardware.nvidia = {
     modesetting.enable = true;
-    powerManagement.enable = true;
-    powerManagement.finegrained = false; # Help with power transitions on RTX 3080
+    powerManagement.enable = true; # Fixes suspend/resume issues
+    powerManagement.finegrained = false;
     open = true; # Switch to open kernel modules for better suspend stability on RTX 3080
     nvidiaSettings = true;
     package = config.boot.kernelPackages.nvidiaPackages.production;
   };
 
-  # Use X11 for GDM to avoid wake crashes on Wayland/Nvidia
-  services.displayManager.gdm.wayland = false;
-
   # Fix for Nvidia suspend/wake issues
   boot.kernelParams = [
     "nvidia.NVreg_PreserveVideoMemoryAllocations=1"
-    "mem_sleep_default=s2idle"
   ];
 
   # Gaming Specialisation (Steam Big Picture Mode)

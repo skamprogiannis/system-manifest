@@ -3,15 +3,6 @@
   pkgs,
   ...
 }: {
-  # Chromium settings often apply to Brave as well
-  programs.chromium = {
-    enable = true;
-    extensions = [
-      {id = "pdeffakfmcdnjjafophphgmddmigpejh";} # PearPass
-      {id = "hfjnimnojonndamibeoponojhlghnbpl";} # Vimium C
-    ];
-  };
-
   programs.brave = {
     enable = true;
     package = pkgs.brave.override {
