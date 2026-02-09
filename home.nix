@@ -47,8 +47,8 @@
     python3
     zellij
     pacvim
-    pandoc # Added for document conversion
-    glow # Added for markdown preview
+    pandoc
+    glow
 
     # Fonts
     pkgs.nerd-fonts.jetbrains-mono
