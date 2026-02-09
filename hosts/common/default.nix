@@ -18,6 +18,21 @@
   # Enable experimental features natively
   nix.settings.experimental-features = ["nix-command" "flakes"];
 
+  # Managed policy to force extensions in Brave
+  # Using ExtensionSettings for more robust installation control
+  environment.etc."brave/policies/managed/extensions.json".text = builtins.toJSON {
+    ExtensionSettings = {
+      "pdeffakfmcdnjjafophphgmddmigpejh" = {
+        installation_mode = "force_installed";
+        update_url = "https://clients2.google.com/service/update2/crx";
+      };
+      "hfjnimnojonndamibeoponojhlghnbpl" = {
+        installation_mode = "force_installed";
+        update_url = "https://clients2.google.com/service/update2/crx";
+      };
+    };
+  };
+
   # Bootloader
   boot.loader.grub = {
     enable = true;
@@ -41,11 +56,11 @@
         sed -i '/#Keybinds/,/}/ s/left = 10%/left = 0\n\twidth = 100%/' $out/theme.txt
         sed -i '/#Keybinds/,/}/ s/top = 82%/top = 85%/' $out/theme.txt
 
-        # Pull logo left (Previously 25% was too far right)
-        sed -i '/#Title/,/}/ s/left = 20%/left = 10%/' $out/theme.txt
+        # Center the logo (Nudged further left to fix bias)
+        sed -i '/#Title/,/}/ s/left = 20%/left = 2%/' $out/theme.txt
 
-        # Pull boot menu left (Previously 35% was too far right)
-        sed -i '/#Boot menu/,/}/ s/left = 35%/left = 20%/' $out/theme.txt
+        # Center the boot menu (Reverted to the 'mostly centered' 25%)
+        sed -i '/#Boot menu/,/}/ s/left = 35%/left = 25%/' $out/theme.txt
       '';
     };
   };
