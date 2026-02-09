@@ -12,7 +12,7 @@
     };
     extensions = [
       {id = "pdeffakfmcdnjjafophphgmddmigpejh";} # PearPass
-      {id = "dbepclhmjogiooabhcaphlbebaymabck";} # Vimium
+      {id = "hfjnimnojonndamibeoponojhlghnbpl";} # Vimium C
     ];
   };
 
