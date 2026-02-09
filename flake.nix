@@ -36,7 +36,7 @@
             home-manager.users.stefan = {
               imports = [
                 ./home.nix
-                inputs.nixvim.homeManagerModules.nixvim
+                inputs.nixvim.homeModules.nixvim
               ];
             };
           }
@@ -56,7 +56,7 @@
             home-manager.users.stefan = {
               imports = [
                 ./home.nix
-                inputs.nixvim.homeManagerModules.nixvim
+                inputs.nixvim.homeModules.nixvim
               ];
             };
           }
