@@ -3,15 +3,6 @@
   pkgs,
   ...
 }: {
-  # Chromium settings often apply to Brave as well
-  programs.chromium = {
-    enable = true;
-    extensions = [
-      {id = "pdeffakfmcdnjjafophphgmddmigpejh";} # PearPass
-      {id = "hfjnimnojonndamibeoponojhlghnbpl";} # Vimium C
-    ];
-  };
-
   programs.brave = {
     enable = true;
     package = pkgs.brave.override {
@@ -19,6 +10,14 @@
         "--disable-features=HardwareMediaKeyHandling"
       ];
     };
+  };
+
+  # Managed policy to force extensions in Brave
+  home.file.".config/BraveSoftware/Brave-Browser/policies/managed/extensions.json".text = builtins.toJSON {
+    ExtensionInstallForcelist = [
+      "pdeffakfmcdnjjafophphgmddmigpejh;https://clients2.google.com/service/update2/crx" # PearPass
+      "hfjnimnojonndamibeoponojhlghnbpl;https://clients2.google.com/service/update2/crx" # Vimium C
+    ];
   };
 
   xdg.mimeApps = {
