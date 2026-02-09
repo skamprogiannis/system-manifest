@@ -12,14 +12,6 @@
     };
   };
 
-  # Managed policy to force extensions in Brave
-  home.file.".config/BraveSoftware/Brave-Browser/policies/managed/extensions.json".text = builtins.toJSON {
-    ExtensionInstallForcelist = [
-      "pdeffakfmcdnjjafophphgmddmigpejh;https://clients2.google.com/service/update2/crx" # PearPass
-      "hfjnimnojonndamibeoponojhlghnbpl;https://clients2.google.com/service/update2/crx" # Vimium C
-    ];
-  };
-
   xdg.mimeApps = {
     enable = true;
     defaultApplications = {
