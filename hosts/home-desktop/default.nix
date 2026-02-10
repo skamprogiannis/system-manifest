@@ -18,7 +18,7 @@
 
   hardware.nvidia = {
     modesetting.enable = true;
-    powerManagement.enable = true;
+    powerManagement.enable = true; # Fixes suspend/resume issues
     powerManagement.finegrained = false;
     open = true; # Switch to open kernel modules for better suspend stability on RTX 3080
     nvidiaSettings = true;
@@ -28,7 +28,6 @@
   # Fix for Nvidia suspend/wake issues
   boot.kernelParams = [
     "nvidia.NVreg_PreserveVideoMemoryAllocations=1"
-    "mem_sleep_default=s2idle"
   ];
 
   # Gaming Specialisation (Steam Big Picture Mode)
