@@ -18,21 +18,6 @@
   # Enable experimental features natively
   nix.settings.experimental-features = ["nix-command" "flakes"];
 
-  # Managed policy to force extensions in Brave
-  # Using ExtensionSettings for more robust installation control
-  environment.etc."brave/policies/managed/extensions.json".text = builtins.toJSON {
-    ExtensionSettings = {
-      "pdeffakfmcdnjjafophphgmddmigpejh" = {
-        installation_mode = "force_installed";
-        update_url = "https://clients2.google.com/service/update2/crx";
-      };
-      "hfjnimnojonndamibeoponojhlghnbpl" = {
-        installation_mode = "force_installed";
-        update_url = "https://clients2.google.com/service/update2/crx";
-      };
-    };
-  };
-
   # Bootloader
   boot.loader.grub = {
     enable = true;
