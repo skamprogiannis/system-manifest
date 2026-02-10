@@ -75,14 +75,14 @@
         libadwaita
         gnome-themes-extra
         gtk3
-        # Additional libraries for P2P/Crypto/Native messaging
+        # Use OpenSSL 1.1 for AppImage compatibility
+        openssl_1_1
         libgcrypt
         libgpg-error
         libxml2
         libxslt
-        libcap
-        libselinux
-        openssl
+        libsecret
+        libnotify
       ];
   };
 
