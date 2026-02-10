@@ -68,6 +68,7 @@
         xdg-utils
         zlib
         webkitgtk_6_0
+        libsoup_2_4
         libsoup_3
         graphene
       ];

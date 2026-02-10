@@ -19,12 +19,18 @@
   nix.settings.experimental-features = ["nix-command" "flakes"];
 
   # Managed policy to force extensions in Brave
-  # This must be at the system level (/etc) for Brave to respect it on Linux
+  # Using ExtensionSettings for more robust installation control
   environment.etc."brave/policies/managed/extensions.json".text = builtins.toJSON {
-    ExtensionInstallForcelist = [
-      "pdeffakfmcdnjjafophphgmddmigpejh;https://clients2.google.com/service/update2/crx" # PearPass
-      "hfjnimnojonndamibeoponojhlghnbpl;https://clients2.google.com/service/update2/crx" # Vimium C
-    ];
+    ExtensionSettings = {
+      "pdeffakfmcdnjjafophphgmddmigpejh" = {
+        installation_mode = "force_installed";
+        update_url = "https://clients2.google.com/service/update2/crx";
+      };
+      "hfjnimnojonndamibeoponojhlghnbpl" = {
+        installation_mode = "force_installed";
+        update_url = "https://clients2.google.com/service/update2/crx";
+      };
+    };
   };
 
   # Bootloader
@@ -50,11 +56,11 @@
         sed -i '/#Keybinds/,/}/ s/left = 10%/left = 0\n\twidth = 100%/' $out/theme.txt
         sed -i '/#Keybinds/,/}/ s/top = 82%/top = 85%/' $out/theme.txt
 
-        # Center the logo (Nudged further left to fix right-side bias)
-        sed -i '/#Title/,/}/ s/left = 20%/left = 0%/' $out/theme.txt
+        # Center the logo (Nudged further left to fix bias)
+        sed -i '/#Title/,/}/ s/left = 20%/left = 2%/' $out/theme.txt
 
-        # Center the boot menu (Reverted to the 'mostly centered' 35%)
-        sed -i '/#Boot menu/,/}/ s/left = 35%/left = 35%/' $out/theme.txt
+        # Center the boot menu (Reverted to the 'mostly centered' 25%)
+        sed -i '/#Boot menu/,/}/ s/left = 35%/left = 25%/' $out/theme.txt
       '';
     };
   };
