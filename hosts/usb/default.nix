@@ -14,7 +14,7 @@
   networking.hostName = "nixos-usb";
 
   # ISO naming
-  isoImage.isoName = lib.mkForce "nixos-usb.iso";
+  image.fileName = "nixos-usb.iso";
   isoImage.volumeID = "NixOS-USB";
 
   # Speed up booting by not compressing the squashfs
