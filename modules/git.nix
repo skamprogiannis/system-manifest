@@ -3,6 +3,8 @@
   pkgs,
   ...
 }: {
+  home.packages = [pkgs.git-credential-manager];
+
   programs.git = {
     enable = true;
     settings = {
@@ -15,14 +17,12 @@
         sshCommand = "ssh -o AddKeysToAgent=yes";
       };
       credential = {
-        helper = "";
+        helper = "libsecret";
+        "https://github.com".helper = "${pkgs.gh}/bin/gh auth git-credential";
       };
       url = {
         "git@github.com:" = {
           insteadOf = "https://github.com/";
-        };
-        "git@platform.zone01.gr:" = {
-          insteadOf = "https://platform.zone01.gr/";
         };
       };
     };
