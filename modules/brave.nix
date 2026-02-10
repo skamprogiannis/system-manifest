@@ -8,8 +8,6 @@
     package = pkgs.brave.override {
       commandLineArgs = [
         "--disable-features=HardwareMediaKeyHandling"
-        "--enable-extensions=1"
-        "--extension-allow-list=*"
       ];
     };
   };
