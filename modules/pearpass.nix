@@ -68,9 +68,13 @@
         xdg-utils
         zlib
         webkitgtk_6_0
-        libsoup_2_4 # Stick to v2 only to avoid symbol conflict
-        # libsoup_3 # Removed to test conflict theory
+        libsoup_2_4 # Keep v2 for compatibility
+        libsoup_3 # Add v3 for PearPass native host
         graphene
+        # Additional GUI libraries for PearPass
+        libadwaita
+        gnome-themes-extra
+        gtk3
       ];
   };
 
