@@ -68,8 +68,8 @@
         xdg-utils
         zlib
         webkitgtk_6_0
-        libsoup_2_4
-        libsoup_3
+        libsoup_2_4 # Stick to v2 only to avoid symbol conflict
+        # libsoup_3 # Removed to test conflict theory
         graphene
       ];
   };

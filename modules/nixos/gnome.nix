@@ -14,7 +14,9 @@
     gnome-contacts
     gnome-photos
     gnome-tour
-    cheese # Old GNOME Camera
-    snapshot # New GNOME Camera
+    gnome-console
+    gnome-terminal
+    cheese
+    snapshot
   ];
 }
