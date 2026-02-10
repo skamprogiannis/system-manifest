@@ -12,6 +12,7 @@
     colorschemes.dracula.enable = true;
 
     plugins = {
+      web-devicons.enable = true;
       treesitter = {
         enable = true;
         settings = {
