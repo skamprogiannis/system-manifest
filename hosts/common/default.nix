@@ -18,57 +18,8 @@
   # Enable experimental features natively
   nix.settings.experimental-features = ["nix-command" "flakes"];
 
-  # Bootloader
-  boot.loader.grub = {
-    enable = true;
-    efiSupport = true;
-    device = "nodev";
-    gfxmodeEfi = "1920x1080";
-    configurationLimit = 20;
-    theme = pkgs.stdenv.mkDerivation {
-      pname = "hollow-knight-grub-theme";
-      version = "1.0";
-      src = pkgs.fetchFromGitHub {
-        owner = "sergoncano";
-        repo = "hollow-knight-grub-theme";
-        rev = "9515f805f72dc214e3da59967f0b678d9910adf1";
-        sha256 = "sha256-0hn3MFC+OtfwtA//pwjnWz7Oz0Cos3YzbgUlxKszhyA=";
-      };
-      installPhase = ''
-        mkdir -p $out
-        cp -r hollow-grub/* $out
-        # Center the keybinds description and move it below options
-        sed -i '/#Keybinds/,/}/ s/left = 10%/left = 0\n\twidth = 100%/' $out/theme.txt
-        sed -i '/#Keybinds/,/}/ s/top = 82%/top = 85%/' $out/theme.txt
-
-        # Center the logo (Nudged further left to fix bias)
-        sed -i '/#Title/,/}/ s/left = 20%/left = 2%/' $out/theme.txt
-
-        # Center the boot menu (Reverted to the 'mostly centered' 25%)
-        sed -i '/#Boot menu/,/}/ s/left = 35%/left = 25%/' $out/theme.txt
-      '';
-    };
-  };
-  boot.loader.systemd-boot.enable = false;
-  boot.loader.efi.canTouchEfiVariables = true;
   # Use LTS kernel for better stability
   boot.kernelPackages = pkgs.linuxPackages;
-
-  # Disk Encryption
-  boot.initrd.luks.devices."luks-b09a5bbd-396d-4ce6-a15f-989ed1554773".device = "/dev/disk/by-uuid/b09a5bbd-396d-4ce6-a15f-989ed1554773";
-  boot.initrd.luks.devices."luks-a2df8182-4853-442b-ba7c-6ca18af8696a".device = "/dev/disk/by-uuid/a2df8182-4853-442b-ba7c-6ca18af8696a";
-  boot.initrd.luks.devices."luks-a96ee21e-bc18-42ab-864c-d3ec22f4247a".device = "/dev/disk/by-uuid/a96ee21e-bc18-42ab-864c-d3ec22f4247a";
-
-  # File Systems
-  fileSystems."/home/stefan/Games" = {
-    device = "/dev/disk/by-uuid/af2d7832-b398-49d2-ab40-61aa312dbf83";
-    fsType = "ext4";
-  };
-
-  # Ensure user ownership of the Games folder
-  systemd.tmpfiles.rules = [
-    "d /home/stefan/Games 0755 stefan users - -"
-  ];
 
   # Networking
   # HostName is defined in host specific config
