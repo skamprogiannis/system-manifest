@@ -10,6 +10,10 @@
         "--disable-features=HardwareMediaKeyHandling"
       ];
     };
+    extensions = [
+      {id = "dbepggeogbaibhgnhhndojpepiihcmeb";} # Vimium C
+      {id = "pdeffakfmcdnjjafophphgmddmigpejh";} # PearPass
+    ];
   };
 
   xdg.mimeApps = {
