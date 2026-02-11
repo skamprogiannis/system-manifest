@@ -13,6 +13,16 @@ This repository contains the declarative configuration for my NixOS system, mana
 - **AI Integrated:** Built-in configuration for **OpenCode** (AI Terminal Agent) with Context7 documentation support.
 - **Modular Architecture:** Configuration split into `hosts/` and `modules/` for maintainability.
 
+## 🎨 Typography ("Cattle Mode")
+
+Fonts are treated as infrastructure, not pets. We enforce a strictly consistent typography stack across all environments (Desktop, Laptop, Live USB, TTY).
+
+- **Monospace:** `JetBrains Mono Nerd Font` (For Terminals, Code, and GNOME UI)
+- **UI/Sans:** `Adwaita` (GNOME Default)
+- **Serif:** `Noto Serif`
+
+This is enforced via `fontconfig` for the system and explicit `dconf` locks for GNOME and Terminal profiles, ensuring no configuration drift occurs between reinstalls or new machines.
+
 ## 🛠️ Usage
 
 ### Rebuild System
@@ -42,4 +52,3 @@ This repository works hand-in-hand with the **OpenCode** agent.
 
 - **Generations:** Git commits are strictly kept 1:1 with NixOS generations (`gen(N)`).
 - **Agents:** See `AGENTS.md` for operational rules and bug reporting workflows.
-- **Self-Correction:** Automated history reconstruction scripts ensure commit history matches system generations.

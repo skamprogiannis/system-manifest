@@ -51,10 +51,13 @@
     pandoc
     glow
 
+    # Disk Utilities
+    parted
+    dosfstools
+    e2fsprogs
+
     # Fonts
     pkgs.nerd-fonts.jetbrains-mono
-    pkgs.nerd-fonts.fira-code
-    pkgs.nerd-fonts.hack
   ];
 
   # --- GNOME KEYBINDINGS ---
