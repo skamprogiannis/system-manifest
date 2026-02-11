@@ -1,0 +1,18 @@
+# Nix
+result
+result-*
+
+# Secrets
+.env
+*.pem
+id_rsa
+id_ed25519
+/private/
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# OpenCode
+.opencode/plans/

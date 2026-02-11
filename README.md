@@ -13,7 +13,21 @@ This repository contains the declarative configuration for my NixOS system, mana
 - **AI Integrated:** Built-in configuration for **OpenCode** (AI Terminal Agent) with Context7 documentation support.
 - **Modular Architecture:** Configuration split into `hosts/` and `modules/` for maintainability.
 
+## 🎨 Typography ("Cattle Mode")
+
+Fonts are treated as infrastructure, not pets. We enforce a strictly consistent typography stack across all environments (Desktop, Laptop, Live USB, TTY).
+
+- **Monospace:** `JetBrains Mono Nerd Font` (For Terminals, Code, and GNOME UI)
+- **UI/Sans:** `Adwaita` (GNOME Default)
+- **Serif:** `Noto Serif`
+
+This is enforced via `fontconfig` for the system and explicit `dconf` locks for GNOME and Terminal profiles, ensuring no configuration drift occurs between reinstalls or new machines.
+
 ## 🛠️ Usage
+
+### Helper Scripts
+
+- **`restore-browser-state`**: Automates fetching Brave Bookmarks from a private URL (e.g. Gist) to avoid committing personal data to this public repository.
 
 ### Rebuild System
 
