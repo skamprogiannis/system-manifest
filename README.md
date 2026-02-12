@@ -25,10 +25,6 @@ This is enforced via `fontconfig` for the system and explicit `dconf` locks for 
 
 ## 🛠️ Usage
 
-### Helper Scripts
-
-- **`restore-browser-state`**: Automates fetching Brave Bookmarks from a private URL (e.g. Gist) to avoid committing personal data to this public repository.
-
 ### Rebuild System
 
 ```bash
@@ -56,4 +52,3 @@ This repository works hand-in-hand with the **OpenCode** agent.
 
 - **Generations:** Git commits are strictly kept 1:1 with NixOS generations (`gen(N)`).
 - **Agents:** See `AGENTS.md` for operational rules and bug reporting workflows.
-- **Self-Correction:** Automated history reconstruction scripts ensure commit history matches system generations.

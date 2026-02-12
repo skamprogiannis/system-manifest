@@ -51,6 +51,11 @@
     pandoc
     glow
 
+    # Disk Utilities
+    parted
+    dosfstools
+    e2fsprogs
+
     # Fonts
     pkgs.nerd-fonts.jetbrains-mono
   ];
