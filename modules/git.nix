@@ -22,7 +22,7 @@
         helper = "manager";
         credentialStore = "secretservice";
         "https://github.com".helper = "${pkgs.gh}/bin/gh auth git-credential";
-        "https://platform.zone01.gr".provider = "generic";
+        "https://platform.zone01.gr".helper = "store";
       };
       push = {
         autoSetupRemote = true;
