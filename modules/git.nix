@@ -24,6 +24,11 @@
         "https://github.com".helper = "${pkgs.gh}/bin/gh auth git-credential";
         "https://platform.zone01.gr".helper = "store";
       };
+
+      # Force SSH for Zone01 Gitea to use the SSH key configuration below
+      url = {
+        "git@platform.zone01.gr:".insteadOf = "https://platform.zone01.gr/git/";
+      };
       push = {
         autoSetupRemote = true;
       };

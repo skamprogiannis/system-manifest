@@ -15,7 +15,7 @@
 - **Commit Format:** Use `gen(N): message` format for all commit messages.
 - **System Git:** Ensure `git` is always in `environment.systemPackages` in `configuration.nix` (required for Flakes).
 - **Git Push:** Always `git push` (or force push if history was rewritten) immediately after creating a new commit.
-- **Autonomy:** You are authorized to run `sudo nixos-rebuild switch --flake .#nixos` autonomously when requested or implied by the workflow (e.g., "rebuild").
+- **Autonomy:** You are authorized to run `sudo nixos-rebuild switch --flake` autonomously when requested or implied by the workflow (e.g., "rebuild").
 - **Revision Tracking:** Always set `system.configurationRevision = inputs.self.rev or inputs.self.dirtyRev or null;` in `configuration.nix` so `nixos-rebuild list-generations` shows the commit hash.
 - **Dry Run:** Always use `nixos-rebuild dry-build` before asking the user to build, especially for complex derivations.
 - **AppImages:** When wrapping AppImages with `appimageTools`, ensure common libraries like `webkitgtk`, `gtk4`, `libadwaita`, `graphene`, and `libsoup_3` are included in `extraPkgs` if the app has a GUI. Also include `gnome-themes-extra` and `gtk3` if theme errors occur.
