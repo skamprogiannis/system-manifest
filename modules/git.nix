@@ -20,8 +20,9 @@
       };
       credential = {
         helper = "manager";
-        credentialStore = "libsecret";
+        credentialStore = "secretservice";
         "https://github.com".helper = "${pkgs.gh}/bin/gh auth git-credential";
+        "https://platform.zone01.gr".provider = "generic";
       };
       push = {
         autoSetupRemote = true;
