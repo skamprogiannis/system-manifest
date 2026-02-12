@@ -22,8 +22,8 @@
         helper = "manager";
         credentialStore = "secretservice";
         "https://github.com".helper = "${pkgs.gh}/bin/gh auth git-credential";
-        "https://platform.zone01.gr".provider = "generic";
       };
+
       push = {
         autoSetupRemote = true;
       };
@@ -41,13 +41,6 @@
       "github.com" = {
         host = "github.com";
         identityFile = "~/.ssh/id_ed25519_github";
-        addKeysToAgent = "yes";
-        identitiesOnly = true;
-      };
-      # Kept Gitea SSH config just in case, but Git will default to HTTPS now without the insteadOf rule
-      "platform.zone01.gr" = {
-        host = "platform.zone01.gr";
-        identityFile = "~/.ssh/id_ed25519_gitea";
         addKeysToAgent = "yes";
         identitiesOnly = true;
       };
