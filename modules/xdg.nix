@@ -42,10 +42,10 @@
     set_icon "$HOME/templates" "folder-templates"
     set_icon "$HOME/videos" "folder-videos"
     set_icon "$HOME/games" "folder-games"
-    set_icon "$HOME/repositories" "folder-development"
+    set_icon "$HOME/repositories" "folder-code"
     set_icon "$HOME/pictures/screenshots" "applets-screenshooter"
     set_icon "$HOME/pictures/wallpapers" "preferences-desktop-wallpaper"
     set_icon "$HOME/system_manifest" "folder-development"
-    set_icon "$HOME/tabletop_games" "folder-documents"
+    set_icon "$HOME/tabletop_games" "folder-books"
   '';
 }
