@@ -25,6 +25,7 @@
     # GUI
     discord
     obsidian
+
     protonmail-bridge
     spotify
     geary
@@ -87,4 +88,8 @@
   home.stateVersion = "24.11";
 
   home.sessionPath = ["$HOME/.local/bin"];
+
+  home.shellAliases = {
+    pearpass-dev = "cd ~/repositories/pearpass-app-desktop && npx pear run -d .";
+  };
 }
