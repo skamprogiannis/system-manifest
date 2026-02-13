@@ -87,6 +87,10 @@
   programs.home-manager.enable = true;
   home.stateVersion = "24.11";
 
+  home.sessionVariables = {
+    NIXOS_OZONE_WL = "1";
+  };
+
   home.sessionPath = ["$HOME/.local/bin"];
 
   home.shellAliases = {
