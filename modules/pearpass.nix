@@ -106,7 +106,6 @@
   # Wrapper for Native Messaging (headless mode)
   pearpassNativeWrapper = pkgs.writeShellScript "pearpass-native" ''
     unset NIXOS_OZONE_WL
-    export NIXOS_OZONE_WL=0
     
     # Log startup for debugging
     exec 2>/tmp/pearpass-native-error.log
@@ -116,9 +115,8 @@
     # General: pear://i49831s3quatekogbc411cdfmg6xmjt1dycxxr3kt1b1qms5x8ro
     # Archive: (missing, please provide if known)
     
-    # We explicitly force X11 platform to avoid Wayland crashes in headless mode
+    # We rely on unsetting NIXOS_OZONE_WL (handled above) rather than forcing flags
     exec ${pearpassFHS}/bin/pearpass run \
-      --ozone-platform=x11 \
       --trusted pear://i49831s3quatekogbc411cdfmg6xmjt1dycxxr3kt1b1qms5x8ro \
       "$@"
   '';
