@@ -112,8 +112,8 @@
     settings = {
       ipc = "on";
       splash = false;
-      preload = ["/home/stefan/Pictures/Wallpapers/cyberpunk.png"];
-      wallpaper = [",/home/stefan/Pictures/Wallpapers/cyberpunk.png"];
+      preload = ["/home/stefan/pictures/wallpapers/cyberpunk.png"];
+      wallpaper = [",/home/stefan/pictures/wallpapers/cyberpunk.png"];
     };
   };
 }
