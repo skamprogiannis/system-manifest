@@ -88,7 +88,10 @@
 
   # Wrapper for Native Messaging (headless mode)
   pearpassNativeWrapper = pkgs.writeShellScript "pearpass-native" ''
-    exec ${pearpassFHS}/bin/pearpass run --trusted pear://rdy3nr56u7k13dppa3sirj4qk3kfz6k7sss6zms3m5rspwr9wery "$@"
+    # Trusted URLs for PearPass:
+    # General: pear://i49831s3quatekogbc411cdfmg6xmjt1dycxxr3kt1b1qms5x8ro
+    # Archive: (missing, please provide if known)
+    exec ${pearpassFHS}/bin/pearpass run --trusted pear://i49831s3quatekogbc411cdfmg6xmjt1dycxxr3kt1b1qms5x8ro "$@"
   '';
 
   pearpassManifest = pkgs.writeText "pearpass-manifest.json" (builtins.toJSON {
