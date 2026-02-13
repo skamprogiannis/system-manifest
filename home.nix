@@ -88,7 +88,7 @@
   home.stateVersion = "24.11";
 
   home.sessionVariables = {
-    NIXOS_OZONE_WL = "1";
+    # NIXOS_OZONE_WL = "1"; # Disabled to fix Discord/PearPass black screen
   };
 
   home.sessionPath = ["$HOME/.local/bin"];
