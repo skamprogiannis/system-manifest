@@ -51,7 +51,7 @@
   boot.initrd.luks.devices."luks-a96ee21e-bc18-42ab-864c-d3ec22f4247a".device = "/dev/disk/by-uuid/a96ee21e-bc18-42ab-864c-d3ec22f4247a";
 
   # File Systems
-  fileSystems."/home/stefan/Games" = {
+  fileSystems."/home/stefan/games" = {
     device = "/dev/disk/by-uuid/af2d7832-b398-49d2-ab40-61aa312dbf83";
     fsType = "ext4";
   };
