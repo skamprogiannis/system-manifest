@@ -21,8 +21,11 @@
       credential = {
         helper = "manager";
         credentialStore = "secretservice";
-        "https://github.com".helper = "${pkgs.gh}/bin/gh auth git-credential";
+        "https://github.com".helper = ["" "${pkgs.gh}/bin/gh auth git-credential"]; # Clear global helper (manager) to force gh
+        "https://platform.zone01.gr".helper = ["" "store"]; # Clear global helper (manager) to force local store
       };
+
+      safe.directory = "/home/stefan/system_manifest";
 
       push = {
         autoSetupRemote = true;
