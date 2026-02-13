@@ -97,8 +97,15 @@
       ];
   };
 
+  # Launcher to force XWayland by unsetting OZONE
+  pearpassLauncher = pkgs.writeShellScriptBin "pearpass-gui" ''
+    unset NIXOS_OZONE_WL
+    exec ${pearpassFHS}/bin/pearpass "$@"
+  '';
+
   # Wrapper for Native Messaging (headless mode)
   pearpassNativeWrapper = pkgs.writeShellScript "pearpass-native" ''
+    unset NIXOS_OZONE_WL
     # Trusted URLs for PearPass:
     # General: pear://i49831s3quatekogbc411cdfmg6xmjt1dycxxr3kt1b1qms5x8ro
     # Archive: (missing, please provide if known)
@@ -115,11 +122,11 @@
     ];
   });
 in {
-  home.packages = [pearpassFHS];
+  home.packages = [pearpassFHS pearpassLauncher];
 
   xdg.desktopEntries.pearpass = {
     name = "PearPass";
-    exec = "pearpass";
+    exec = "pearpass-gui";
     icon = "${pearpassExtracted}/PearPass.png";
     comment = "PearPass Password Manager";
     categories = ["Utility"];
