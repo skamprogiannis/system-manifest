@@ -106,10 +106,21 @@
   # Wrapper for Native Messaging (headless mode)
   pearpassNativeWrapper = pkgs.writeShellScript "pearpass-native" ''
     unset NIXOS_OZONE_WL
+    export NIXOS_OZONE_WL=0
+    
+    # Log startup for debugging
+    exec 2>/tmp/pearpass-native-error.log
+    echo "Starting PearPass Native Host..." >&2
+
     # Trusted URLs for PearPass:
     # General: pear://i49831s3quatekogbc411cdfmg6xmjt1dycxxr3kt1b1qms5x8ro
     # Archive: (missing, please provide if known)
-    exec ${pearpassFHS}/bin/pearpass run --trusted pear://i49831s3quatekogbc411cdfmg6xmjt1dycxxr3kt1b1qms5x8ro "$@"
+    
+    # We explicitly force X11 platform to avoid Wayland crashes in headless mode
+    exec ${pearpassFHS}/bin/pearpass run \
+      --ozone-platform=x11 \
+      --trusted pear://i49831s3quatekogbc411cdfmg6xmjt1dycxxr3kt1b1qms5x8ro \
+      "$@"
   '';
 
   pearpassManifest = pkgs.writeText "pearpass-manifest.json" (builtins.toJSON {
