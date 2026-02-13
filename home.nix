@@ -88,7 +88,7 @@
   home.stateVersion = "24.11";
 
   home.sessionVariables = {
-    NIXOS_OZONE_WL = "1"; # Enabled for Wayland support
+    # NIXOS_OZONE_WL = "1"; # Removed: handled automatically by NixOS/XDG
   };
 
   home.sessionPath = ["$HOME/.local/bin"];
