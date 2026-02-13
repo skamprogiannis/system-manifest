@@ -2,7 +2,7 @@
 
 This repository contains the declarative configuration for my NixOS system, managed via **Nix Flakes** and **Home Manager**.
 
-## 🚀 Features
+## Features
 
 - **Multi-Host Configuration:** Shared common configuration with host-specific overrides for `home-desktop` and `laptop`.
 - **Dual Desktop Environment:**
@@ -13,7 +13,7 @@ This repository contains the declarative configuration for my NixOS system, mana
 - **AI Integrated:** Built-in configuration for **OpenCode** (AI Terminal Agent) with Context7 documentation support.
 - **Modular Architecture:** Configuration split into `hosts/` and `modules/` for maintainability.
 
-## 🎨 Typography ("Cattle Mode")
+## Typography ("Cattle Mode")
 
 Fonts are treated as infrastructure, not pets. We enforce a strictly consistent typography stack across all environments (Desktop, Laptop, Live USB, TTY).
 
@@ -23,7 +23,7 @@ Fonts are treated as infrastructure, not pets. We enforce a strictly consistent 
 
 This is enforced via `fontconfig` for the system and explicit `dconf` locks for GNOME and Terminal profiles, ensuring no configuration drift occurs between reinstalls or new machines.
 
-## 🛠️ Usage
+## Usage
 
 ### Rebuild System
 
@@ -46,7 +46,7 @@ Select **"NixOS - gaming-box"** from the bootloader menu (GRUB).
 - `home.nix`: User-level config entry point.
 - `modules/`: Feature-specific modules (Brave, Ghostty, Hyprland, Neovim, etc.).
 
-## 🤖 AI Workflow (OpenCode)
+## AI Workflow (OpenCode)
 
 This repository works hand-in-hand with the **OpenCode** agent.
 
