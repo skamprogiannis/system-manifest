@@ -81,8 +81,19 @@
         libgpg-error
         libxml2
         libxslt
-        libsecret
         libnotify
+        libsecret
+        libxslt
+        libxml2
+        libgpg-error
+        libgcrypt
+        openssl_1_1
+        icu
+        libglvnd
+        libGL
+        xorg.libXxf86vm
+        libxshmfence
+        sqlite
       ];
   };
 
