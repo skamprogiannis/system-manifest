@@ -61,6 +61,20 @@
     "d /home/stefan/games 0755 stefan users - -"
   ];
 
+  # Migration script to handle the Games -> games move
+  system.activationScripts.migrateGames = ''
+    umount /home/stefan/Games || true
+    if [ -L /home/stefan/games ]; then
+      rm /home/stefan/games
+    fi
+    if [ -d /home/stefan/Games ] && [ ! -d /home/stefan/games ]; then
+      mv /home/stefan/Games /home/stefan/games
+    fi
+    if [ -d /home/stefan/games ]; then
+      chown stefan:users /home/stefan/games
+    fi
+  '';
+
   # Load the NVIDIA driver
   services.xserver.videoDrivers = ["nvidia"];
 
