@@ -45,5 +45,7 @@
     set_icon "$HOME/repositories" "folder-development"
     set_icon "$HOME/pictures/screenshots" "applets-screenshooter"
     set_icon "$HOME/pictures/wallpapers" "preferences-desktop-wallpaper"
+    set_icon "$HOME/system_manifest" "preferences-system"
+    set_icon "$HOME/tabletop_games" "applications-games"
   '';
 }
