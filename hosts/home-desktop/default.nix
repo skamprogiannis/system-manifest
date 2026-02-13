@@ -58,7 +58,7 @@
 
   # Ensure user ownership of the Games folder
   systemd.tmpfiles.rules = [
-    "d /home/stefan/Games 0755 stefan users - -"
+    "d /home/stefan/games 0755 stefan users - -"
   ];
 
   # Load the NVIDIA driver
