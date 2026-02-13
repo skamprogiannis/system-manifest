@@ -18,10 +18,10 @@
     templates = "${config.home.homeDirectory}/templates";
     videos = "${config.home.homeDirectory}/videos";
     extraConfig = {
-      XDG_SCREENSHOTS_DIR = "${config.home.homeDirectory}/pictures/screenshots";
-      XDG_GAMES_DIR = "${config.home.homeDirectory}/games";
-      XDG_PROJECTS_DIR = "${config.home.homeDirectory}/repositories";
-      XDG_WALLPAPERS_DIR = "${config.home.homeDirectory}/pictures/wallpapers";
+      SCREENSHOTS = "${config.home.homeDirectory}/pictures/screenshots";
+      GAMES = "${config.home.homeDirectory}/games";
+      PROJECTS = "${config.home.homeDirectory}/repositories";
+      WALLPAPERS = "${config.home.homeDirectory}/pictures/wallpapers";
     };
   };
 
@@ -33,7 +33,7 @@
       fi
     }
 
-    set_icon "$HOME/desktop" "user-desktop"
+    set_icon "$HOME/desktop" "folder-desktop"
     set_icon "$HOME/documents" "folder-documents"
     set_icon "$HOME/downloads" "folder-download"
     set_icon "$HOME/music" "folder-music"
@@ -42,8 +42,10 @@
     set_icon "$HOME/templates" "folder-templates"
     set_icon "$HOME/videos" "folder-videos"
     set_icon "$HOME/games" "folder-games"
-    set_icon "$HOME/repositories" "folder-development"
+    set_icon "$HOME/repositories" "folder-code"
     set_icon "$HOME/pictures/screenshots" "applets-screenshooter"
     set_icon "$HOME/pictures/wallpapers" "preferences-desktop-wallpaper"
+    set_icon "$HOME/system_manifest" "folder-development"
+    set_icon "$HOME/tabletop_games" "folder-books"
   '';
 }
