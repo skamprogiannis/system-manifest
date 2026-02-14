@@ -39,6 +39,7 @@
     targetPkgs = pkgs:
       with pkgs; (pkgs.appimageTools.defaultFhsEnvArgs.targetPkgs pkgs) ++ [
         gtk4 # REQUIRED
+        graphene
         webkitgtk_6_0
         libsoup_3
         libadwaita
@@ -56,6 +57,7 @@
     targetPkgs = pkgs:
       with pkgs; (pkgs.appimageTools.defaultFhsEnvArgs.targetPkgs pkgs) ++ [
         gtk4 # REQUIRED
+        graphene
         webkitgtk_6_0
         libsoup_3
         libsoup_2_4 # REQUIRED for native host binary compatibility
