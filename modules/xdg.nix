@@ -47,5 +47,15 @@
     set_icon "$HOME/pictures/wallpapers" "preferences-desktop-wallpaper"
     set_icon "$HOME/system_manifest" "folder-development"
     set_icon "$HOME/tabletop_games" "folder-books"
+    
+    # Ensure Screenshots folder is lowercase and symlinked
+    # GNOME Shell is hardcoded to use "Screenshots" (capital S)
+    if [ -d "$HOME/pictures/Screenshots" ] && [ ! -L "$HOME/pictures/Screenshots" ]; then
+      mv "$HOME/pictures/Screenshots"/* "$HOME/pictures/screenshots/" 2>/dev/null || true
+      rmdir "$HOME/pictures/Screenshots"
+    fi
+    if [ ! -e "$HOME/pictures/Screenshots" ]; then
+      ln -s "$HOME/pictures/screenshots" "$HOME/pictures/Screenshots"
+    fi
   '';
 }

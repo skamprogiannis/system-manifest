@@ -79,6 +79,18 @@
     "nvidia.NVreg_PreserveVideoMemoryAllocations=1"
   ];
 
+  # Disable USB Wakeup to prevent immediate resume loops
+  systemd.services.disable-usb-wakeup = {
+    description = "Disable USB wakeup triggers in ACPI";
+    wantedBy = ["multi-user.target"];
+    script = ''
+      if grep -q '^XHC.*enabled' /proc/acpi/wakeup; then
+        echo XHC > /proc/acpi/wakeup
+      fi
+    '';
+    serviceConfig.Type = "oneshot";
+  };
+
   # Gaming Specialisation (Steam Big Picture Mode)
   specialisation = {
     gaming-box.configuration = {

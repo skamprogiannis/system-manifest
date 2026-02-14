@@ -25,6 +25,7 @@
 
 - **Subagent Rebuilds:** Use a subagent (task tool) to handle `nixos-rebuild` commands (dry-run and switch) to keep the main context clean and handle potential long output.
 - **Bug Reporting:** When a bug is reported, prioritize writing a reproduction test before attempting a fix. Use subagents to implement the fix and verify it with the passing test.
+- **Self-Testing:** Always attempt to verify changes yourself before asking the user. For visual changes (like icons), use tools like `imagemagick` (e.g., `identify -verbose image.png | grep Alpha`) to confirm transparency or other properties. Trust your tools' output.
 
 ## Known Issues / Fixes
 
