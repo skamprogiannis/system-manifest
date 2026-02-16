@@ -23,22 +23,22 @@
     buildInputs = [pkgs.imagemagick];
   } ''
     mkdir -p $out
-    # Remove background (#232323), trim, and resize to fill standard icon space (Larger)
+    # Remove background (#232323), trim, and resize to fill standard icon space
     convert ${pearpassExtracted}/PearPass.png \
       -fuzz 20% -transparent "#232323" \
       -trim \
-      -resize 512x512 \
+      -resize 600x600 \
       -background none -gravity center -extent 512x512 \
       -unsharp 0x1 \
       $out/PearPass.png
   '';
 
-  # Create an FHS environment for the GUI App (Clean environment, no conflicts)
+  # FHS Environment for the GUI (Modern libs)
   pearpassGUIEnv = pkgs.buildFHSEnv (pkgs.appimageTools.defaultFhsEnvArgs // {
     name = "pearpass-gui-env";
     targetPkgs = pkgs:
       with pkgs; (pkgs.appimageTools.defaultFhsEnvArgs.targetPkgs pkgs) ++ [
-        gtk4 # REQUIRED
+        gtk4
         graphene
         webkitgtk_6_0
         libsoup_3
@@ -47,47 +47,50 @@
         openssl_1_1
         harfbuzz
         icu
+        libsecret
+        libnotify
       ];
     runScript = "${pearpassExtracted}/AppRun";
   });
 
-  # Create an FHS environment for the Native Host (Compatibility environment)
+  # FHS Environment for the Native Host (Compatibility libs)
   pearpassNativeEnv = pkgs.buildFHSEnv (pkgs.appimageTools.defaultFhsEnvArgs // {
     name = "pearpass-native-env";
     targetPkgs = pkgs:
       with pkgs; (pkgs.appimageTools.defaultFhsEnvArgs.targetPkgs pkgs) ++ [
-        gtk4 # REQUIRED
+        gtk4
         graphene
         webkitgtk_6_0
         libsoup_3
-        libsoup_2_4 # REQUIRED for native host binary compatibility
+        libsoup_2_4 # REQUIRED
         libadwaita
         gnome-themes-extra
         openssl_1_1
         harfbuzz
         icu
+        libsecret
+        libnotify
       ];
     runScript = "${pearpassExtracted}/AppRun";
   });
 
   # Launcher for the GUI App (Uses Clean Env)
   pearpassLauncher = pkgs.writeShellScriptBin "pearpass-gui" ''
-    # Some Electron apps on Wayland need this
     export NIXOS_OZONE_WL=1
     exec ${pearpassGUIEnv}/bin/pearpass-gui-env "$@"
   '';
 
   # Wrapper for Native Messaging (Uses Compat Env)
+  # We use the FHS env directly to avoid any wrapper noise on STDOUT
   pearpassNativeWrapper = pkgs.writeShellScript "pearpass-native" ''
+    # Redirect ALL output to a debug log except STDIN/STDOUT used for protocol
+    exec 2>/tmp/pearpass-native-error.log
+    
+    # Unset Wayland flags for headless mode
     unset NIXOS_OZONE_WL
     
-    # Log startup for debugging
-    exec 2>/tmp/pearpass-native-error.log
-    echo "Starting PearPass Native Host..." >&2
-
-    # Trusted URLs for PearPass:
-    # General: pear://i49831s3quatekogbc411cdfmg6xmjt1dycxxr3kt1b1qms5x8ro
-    
+    # Launch in 'run' mode with trusted URL
+    # We call the FHS env binary directly
     exec ${pearpassNativeEnv}/bin/pearpass-native-env run \
       --trusted pear://i49831s3quatekogbc411cdfmg6xmjt1dycxxr3kt1b1qms5x8ro \
       "$@"
@@ -103,7 +106,7 @@
     ];
   });
 in {
-  home.packages = [pearpassGUIEnv pearpassLauncher];
+  home.packages = [pearpassLauncher];
 
   xdg.desktopEntries.pearpass = {
     name = "PearPass";
@@ -112,7 +115,7 @@ in {
     comment = "PearPass Password Manager";
     categories = ["Utility"];
     settings = {
-      StartupWMClass = "pear-runtime-app";
+      StartupWMClass = "pear-runtime";
     };
   };
 
