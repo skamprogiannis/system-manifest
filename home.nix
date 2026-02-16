@@ -18,6 +18,7 @@
     ./modules/xdg.nix
     ./modules/brave.nix
     ./modules/theme.nix
+    ./modules/obsidian.nix
   ];
 
   # --- PACKAGES ---
@@ -59,6 +60,8 @@
 
     # Fonts
     pkgs.nerd-fonts.jetbrains-mono
+    # Torrents
+    fragments
   ];
 
   # --- GNOME KEYBINDINGS ---
@@ -80,6 +83,16 @@
     "org/gnome/desktop/wm/keybindings" = {
       switch-input-source = ["<Super>space"];
       switch-input-source-backward = ["<Shift><Super>space"];
+      close = ["<Super>q"];
+    };
+    "org/gnome/gnome-screenshot" = {
+      auto-save-directory = "file:///home/stefan/pictures/screenshots";
+    };
+    "org/gnome/shell" = {
+      last-screenshot-directory = "file:///home/stefan/pictures/screenshots";
+    };
+    "org/gnome/shell/screenshot" = {
+      last-save-directory = "file:///home/stefan/pictures/screenshots";
     };
   };
 
