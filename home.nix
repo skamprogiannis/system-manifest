@@ -52,6 +52,7 @@
     pacvim
     pandoc
     glow
+    dig
 
     # Disk Utilities
     parted
