@@ -91,6 +91,19 @@
         gamescopeSession.enable = true;
       };
       programs.gamemode.enable = true;
+      environment.sessionVariables = lib.mkForce {};
+    };
+  };
+
+  # WireGuard VPN
+  networking.wg-quick.interfaces = {
+    wg-gr = {
+      autostart = false;
+      configFile = "/etc/wireguard/nixos-desktop-GR-26.conf";
+    };
+    wg-us = {
+      autostart = false;
+      configFile = "/etc/wireguard/nixos-desktop-US-FREE-33.conf";
     };
   };
 }
