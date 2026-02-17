@@ -43,7 +43,10 @@
 
   # Generic hardware support for portability
   hardware.enableAllFirmware = true;
-  boot.initrd.availableKernelModules = ["xhci_pci" "ehci_pci" "ahci" "usb_storage" "sd_mod" "usbhid"];
+  boot.initrd.availableKernelModules = ["xhci_pci" "ehci_pci" "ahci" "usb_storage" "sd_mod" "usbhid" "nvme" "uas" "virtio_pci" "virtio_blk"];
+
+  # Ensure the USB doesn't try to load Nvidia drivers from the host
+  services.xserver.videoDrivers = lib.mkForce ["modesetting" "fbdev"];
 
   # Performance Tweaks for USB (reduce write wear)
   fileSystems."/".options = ["noatime" "nodiratime"];
