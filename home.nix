@@ -26,9 +26,7 @@
     # GUI
     discord
     obsidian
-
     protonmail-bridge
-    spotify
     geary
     protonvpn-gui
 
@@ -53,6 +51,7 @@
     pandoc
     glow
     dig
+    spotify-player
 
     # Disk Utilities
     parted
@@ -97,13 +96,8 @@
     };
   };
 
-  # Let Home Manager manage itself
   programs.home-manager.enable = true;
   home.stateVersion = "24.11";
-
-  home.sessionVariables = {
-    # NIXOS_OZONE_WL = "1"; # Removed: handled automatically by NixOS/XDG
-  };
 
   home.sessionPath = ["$HOME/.local/bin"];
 
