@@ -9,6 +9,10 @@
     viAlias = true;
     vimAlias = true;
 
+    opts = {
+      hlsearch = true;
+    };
+
     colorschemes.dracula.enable = true;
 
     plugins = {
