@@ -103,5 +103,9 @@
 
   home.shellAliases = {
     pearpass-dev = "cd ~/repositories/pearpass-app-desktop && npx pear run -d .";
+    vpn-gr = "sudo wg-quick down wg-us 2>/dev/null; sudo wg-quick up wg-gr";
+    vpn-us = "sudo wg-quick down wg-gr 2>/dev/null; sudo wg-quick up wg-us";
+    vpn-off = "sudo wg-quick down wg-gr; sudo wg-quick down wg-us";
+    vpn-status = "sudo wg";
   };
 }
