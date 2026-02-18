@@ -17,6 +17,7 @@
     ./modules/pearpass.nix
     ./modules/xdg.nix
     ./modules/brave.nix
+    ./modules/firefox.nix
     ./modules/theme.nix
     ./modules/obsidian.nix
   ];
@@ -103,6 +104,7 @@
 
   home.shellAliases = {
     pearpass-dev = "cd ~/repositories/pearpass-app-desktop && npx pear run -d .";
+    vpn-on = "vpn-gr"; # Default to Greece
     vpn-gr = "sudo wg-quick down wg-us 2>/dev/null; sudo wg-quick up wg-gr";
     vpn-us = "sudo wg-quick down wg-gr 2>/dev/null; sudo wg-quick up wg-us";
     vpn-off = "sudo wg-quick down wg-gr; sudo wg-quick down wg-us";

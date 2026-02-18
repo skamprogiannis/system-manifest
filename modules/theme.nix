@@ -43,12 +43,11 @@
     # Favorites Bar (Sync USB to Desktop)
     "org/gnome/shell" = {
       favorite-apps = [
-        "brave-browser.desktop"
         "com.mitchellh.ghostty.desktop"
+        "brave-browser.desktop"
         "discord.desktop"
-        "spotify.desktop"
         "pearpass.desktop"
-        "proton.vpn.app.gtk.desktop"
+        "org.gnome.Software.desktop"
       ];
     };
   };

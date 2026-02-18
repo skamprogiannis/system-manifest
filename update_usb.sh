@@ -2,7 +2,9 @@
 set -e
 
 # Define paths and devices
-USB_ROOT_DEV="/dev/mapper/luks-51e2d6a1-27ac-4721-933b-eb37c40a59df"
+USB_ROOT_PART="/dev/sdc2"
+USB_MAPPER_NAME="luks-51e2d6a1-27ac-4721-933b-eb37c40a59df"
+USB_ROOT_DEV="/dev/mapper/$USB_MAPPER_NAME"
 USB_BOOT_DEV="/dev/sdc1"
 MOUNT_POINT="/mnt"
 FLAKE_DIR="/home/stefan/system_manifest"
@@ -13,6 +15,12 @@ echo "Updating NixOS USB Persistent Drive..."
 if [ "$EUID" -ne 0 ]; then
   echo "Please run as root (sudo)"
   exit 1
+fi
+
+# Check if LUKS is open
+if [ ! -e "$USB_ROOT_DEV" ]; then
+    echo "Opening LUKS container on $USB_ROOT_PART..."
+    cryptsetup open "$USB_ROOT_PART" "$USB_MAPPER_NAME"
 fi
 
 # Unmount if already mounted elsewhere
