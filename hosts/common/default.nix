@@ -85,8 +85,6 @@
     alsa.enable = true;
     alsa.support32Bit = true;
     pulse.enable = true;
-    # If you want to use JACK applications, uncomment this
-    #jack.enable = true;
   };
 
   # Define a user account. Don't forget to set a password with ‘passwd’
@@ -94,9 +92,6 @@
     isNormalUser = true;
     description = "Stefan";
     extraGroups = ["networkmanager" "wheel"];
-    packages = with pkgs; [
-      #  thunderbird
-    ];
   };
 
   # Allow unfree packages
