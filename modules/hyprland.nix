@@ -101,7 +101,6 @@
 
   # Hyprland Ecosystem Packages
   home.packages = with pkgs; [
-    waybar
     wofi
     dunst
     hyprpaper

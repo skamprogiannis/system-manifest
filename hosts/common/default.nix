@@ -99,17 +99,6 @@
     ];
   };
 
-  # Install firefox.
-  programs.firefox.enable = true;
-
-  # Enable Steam & Gamemode globally
-  programs.steam = {
-    enable = true;
-    remotePlay.openFirewall = true; # Open ports for Steam Remote Play
-    dedicatedServer.openFirewall = true; # Open ports for Source Dedicated Server
-  };
-  programs.gamemode.enable = true;
-
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
   nixpkgs.config.permittedInsecurePackages = [
