@@ -122,6 +122,9 @@
   programs.bash = {
     enable = true;
     enableCompletion = true;
+    initExtra = ''
+      set -o vi
+    '';
   };
   home.stateVersion = "24.11";
 
