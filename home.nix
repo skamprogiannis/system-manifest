@@ -141,7 +141,7 @@
             sudo systemctl stop wg-quick-wg-us
             ;;
           status)
-            sudo systemctl status wg-quick-wg-gr wg-quick-wg-us
+            systemctl status wg-quick-wg-gr wg-quick-wg-us --no-pager | grep -E "●|○|Active:"
             ;;
           *)
             echo "Usage: vpn {on|off|status|gr|us}"
