@@ -104,6 +104,7 @@
   };
 
   # WireGuard VPN
+  networking.networkmanager.unmanaged = ["wg-gr" "wg-us"];
   sops.defaultSopsFile = ../../secrets/secrets.yaml;
   sops.age.keyFile = "/home/stefan/.config/sops/age/keys.txt";
 
