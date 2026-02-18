@@ -11,8 +11,12 @@
 
 - **Session Info:** `/session` command.
 - **Model Variants:** `Ctrl+T` toggles between High (Reasoning) and Low (Speed) models.
-- **Git & Gens:** Keep git commits 1:1 with system generations for clean history.
-- **Commit Format:** Use `gen(N): message` format for all commit messages.
+- **Git & Gens:** Keep git commits atomic and descriptive.
+- **Commit Format:** Use **Conventional Commits** (`type(scope): message`).
+  - Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`.
+  - Scopes: `desktop`, `laptop`, `usb`, `common`, `home`, `system`, or specific module names.
+  - Example: `feat(desktop): enable steam and gamemode`
+  - Example: `fix(usb): correct luks mounting path`
 - **System Git:** Ensure `git` is always in `environment.systemPackages` in `configuration.nix` (required for Flakes).
 - **Git Push:** Always `git push` (or force push if history was rewritten) immediately after creating a new commit.
 - **Autonomy:** You are authorized to run `sudo nixos-rebuild switch --flake` autonomously when requested or implied by the workflow (e.g., "rebuild").
