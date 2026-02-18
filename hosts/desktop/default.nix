@@ -11,7 +11,7 @@
     ./hardware-configuration.nix
   ];
 
-  networking.hostName = "home-desktop";
+  networking.hostName = "desktop";
 
   # Bootloader
   boot.loader.grub = {
