@@ -132,10 +132,10 @@
 
   home.shellAliases = {
     pearpass-dev = "cd ~/repositories/pearpass-app-desktop && npx pear run -d .";
-    vpn-on = "vpn-gr"; # Default to Greece
-    vpn-gr = "sudo wg-quick down wg-us 2>/dev/null; sudo wg-quick up wg-gr";
-    vpn-us = "sudo wg-quick down wg-gr 2>/dev/null; sudo wg-quick up wg-us";
-    vpn-off = "sudo wg-quick down wg-gr; sudo wg-quick down wg-us";
-    vpn-status = "sudo wg";
+    vpn-on = "vpn-gr";
+    vpn-gr = "sudo systemctl stop wg-quick-wg-us 2>/dev/null; sudo systemctl start wg-quick-wg-gr";
+    vpn-us = "sudo systemctl stop wg-quick-wg-gr 2>/dev/null; sudo systemctl start wg-quick-wg-us";
+    vpn-off = "sudo systemctl stop wg-quick-wg-gr; sudo systemctl stop wg-quick-wg-us";
+    vpn-status = "systemctl status wg-quick-wg-gr wg-quick-wg-us";
   };
 }
