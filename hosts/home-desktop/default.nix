@@ -79,6 +79,14 @@
     "nvidia.NVreg_PreserveVideoMemoryAllocations=1"
   ];
 
+  # Enable Steam & Gamemode
+  programs.steam = {
+    enable = true;
+    remotePlay.openFirewall = true; # Open ports for Steam Remote Play
+    dedicatedServer.openFirewall = true; # Open ports for Source Dedicated Server
+  };
+  programs.gamemode.enable = true;
+
   # Gaming Specialisation (Steam Big Picture Mode)
   specialisation = {
     gaming-box.configuration = {
