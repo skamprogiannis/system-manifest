@@ -31,11 +31,6 @@
         "ctrl+7=goto_tab:7"
         "ctrl+8=goto_tab:8"
         "ctrl+9=last_tab"
-
-        # Scrollback Inspector (Vim-like navigation)
-        "ctrl+shift+i=inspector:toggle"
-        "ctrl+shift+j=scroll_page_down"
-        "ctrl+shift+k=scroll_page_up"
       ];
     };
   };
