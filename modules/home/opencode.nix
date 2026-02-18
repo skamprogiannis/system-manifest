@@ -23,6 +23,20 @@
         "ruff": {
           "command": ["ruff", "format", "$FILE"],
           "extensions": [".py", ".pyi"]
+        },
+        "gofmt": {
+          "command": ["gofmt", "-w", "$FILE"],
+          "extensions": [".go"]
+        }
+      },
+      "lsp": {
+        "gopls": {
+          "command": ["gopls"],
+          "extensions": [".go"]
+        },
+        "typescript-language-server": {
+          "command": ["npx", "typescript-language-server", "--stdio"],
+          "extensions": [".ts", ".tsx", ".js", ".jsx"]
         }
       }
     }
