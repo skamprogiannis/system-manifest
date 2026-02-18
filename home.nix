@@ -98,6 +98,10 @@
   };
 
   programs.home-manager.enable = true;
+  programs.bash = {
+    enable = true;
+    enableCompletion = true;
+  };
   home.stateVersion = "24.11";
 
   home.sessionPath = ["$HOME/.local/bin"];
