@@ -9,17 +9,17 @@
   home.homeDirectory = "/home/stefan";
 
   imports = [
-    ./modules/git.nix
-    ./modules/ghostty.nix
-    ./modules/neovim.nix
-    ./modules/opencode.nix
-    ./modules/hyprland.nix
-    ./modules/pearpass.nix
-    ./modules/xdg.nix
-    ./modules/brave.nix
-    ./modules/firefox.nix
-    ./modules/theme.nix
-    ./modules/obsidian.nix
+    ./modules/home/git.nix
+    ./modules/home/ghostty.nix
+    ./modules/home/neovim.nix
+    ./modules/home/opencode.nix
+    ./modules/home/hyprland.nix
+    ./modules/home/pearpass.nix
+    ./modules/home/xdg.nix
+    ./modules/home/brave.nix
+    ./modules/home/firefox.nix
+    ./modules/home/theme.nix
+    ./modules/home/obsidian.nix
   ];
 
   # --- PACKAGES ---
