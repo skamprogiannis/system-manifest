@@ -104,14 +104,62 @@
   };
 
   # WireGuard VPN
+  sops.defaultSopsFile = ../../secrets/secrets.yaml;
+  sops.age.keyFile = "/home/stefan/.config/sops/age/keys.txt";
+
+  sops.secrets.wireguard_gr_private_key = {};
+  sops.secrets.wireguard_us_private_key = {};
+
+  sops.templates."nixos-desktop-GR-26.conf".content = ''
+    [Interface]
+    # Key for nixos-desktop
+    # Bouncing = 17
+    # NetShield = 2
+    # Moderate NAT = off
+    # NAT-PMP (Port Forwarding) = on
+    # VPN Accelerator = on
+    PrivateKey = ${config.sops.placeholder.wireguard_gr_private_key}
+    Address = 10.2.0.2/32
+    DNS = 10.2.0.1
+
+    [Peer]
+    # GR#26
+    PublicKey = BM3CQJ3Vo8L7aOeeyqADlN2tGcn2VPxZ+gnlKk5gLlg=
+    AllowedIPs = 0.0.0.0/0, ::/0
+    Endpoint = 45.92.33.162:51820
+
+    PersistentKeepalive = 25
+  '';
+
+  sops.templates."nixos-desktop-US-FREE-33.conf".content = ''
+    [Interface]
+    # Key for nixos-desktop
+    # Bouncing = 3
+    # NetShield = 2
+    # Moderate NAT = off
+    # NAT-PMP (Port Forwarding) = on
+    # VPN Accelerator = on
+    PrivateKey = ${config.sops.placeholder.wireguard_us_private_key}
+    Address = 10.2.0.2/32
+    DNS = 10.2.0.1
+
+    [Peer]
+    # US-FREE#33
+    PublicKey = SOXFyakZ9HI9TeiMRyMoy3PXYEzJJ/IDJcMvxZ3uWSE=
+    AllowedIPs = 0.0.0.0/0, ::/0
+    Endpoint = 149.102.254.90:51820
+
+    PersistentKeepalive = 25
+  '';
+
   networking.wg-quick.interfaces = {
     wg-gr = {
       autostart = false;
-      configFile = "/etc/wireguard/nixos-desktop-GR-26.conf";
+      configFile = config.sops.templates."nixos-desktop-GR-26.conf".path;
     };
     wg-us = {
       autostart = false;
-      configFile = "/etc/wireguard/nixos-desktop-US-FREE-33.conf";
+      configFile = config.sops.templates."nixos-desktop-US-FREE-33.conf".path;
     };
   };
 }

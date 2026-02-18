@@ -33,6 +33,7 @@
         specialArgs = {inherit inputs;};
         modules = [
           ./hosts/desktop/default.nix
+          inputs.sops-nix.nixosModules.sops
           home-manager.nixosModules.home-manager
           {
             home-manager.useGlobalPkgs = true;
