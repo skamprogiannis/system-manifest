@@ -67,6 +67,24 @@
     }
   ];
 
+  # Allow the user to manage WireGuard services and NetworkManager without a password via Polkit
+  security.polkit.extraConfig = ''
+    polkit.addRule(function(action, subject) {
+      if (subject.user == "stefan") {
+        if (action.id == "org.freedesktop.systemd1.manage-units") {
+          var unit = action.lookup("unit");
+          if (unit && unit.indexOf("wg-quick-") === 0) {
+            return polkit.Result.YES;
+          }
+        }
+        if (action.id == "org.freedesktop.NetworkManager.network-control" ||
+            action.id == "org.freedesktop.NetworkManager.settings.modify.system") {
+          return polkit.Result.YES;
+        }
+      }
+    });
+  '';
+
   # Configure keymap in X11
   services.xserver.xkb = {
     layout = "us,gr";

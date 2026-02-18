@@ -20,6 +20,7 @@
     ./modules/home/firefox.nix
     ./modules/home/theme.nix
     ./modules/home/obsidian.nix
+    ./modules/home/vpn.nix
   ];
 
   # --- PACKAGES ---
@@ -78,6 +79,8 @@
         [client]
         client_id = "${config.sops.placeholder.spotify_client_id}"
         client_secret = "${config.sops.placeholder.spotify_client_secret}"
+        client_port = 8888
+        login_redirect_uri = "http://127.0.0.1:8888/callback"
       '';
     };
   };
@@ -124,38 +127,6 @@
     enableCompletion = true;
     initExtra = ''
       set -o vi
-
-      # VPN Control Function with Autocompletion
-      vpn() {
-        case "$1" in
-          on|gr)
-            systemctl is-active --quiet wg-quick-wg-us && sudo systemctl stop wg-quick-wg-us
-            sudo systemctl start wg-quick-wg-gr
-            ;;
-          us)
-            systemctl is-active --quiet wg-quick-wg-gr && sudo systemctl stop wg-quick-wg-gr
-            sudo systemctl start wg-quick-wg-us
-            ;;
-          off)
-            sudo systemctl stop wg-quick-wg-gr wg-quick-wg-us
-            ;;
-          status)
-            systemctl status wg-quick-wg-gr wg-quick-wg-us -n 0 --no-pager
-            ;;
-          *)
-            echo "Usage: vpn {on|off|status|gr|us}"
-            ;;
-        esac
-      }
-
-      _vpn_completion() {
-        local cur prev opts
-        COMPREPLY=()
-        cur="''${COMP_WORDS[COMP_CWORD]}"
-        opts="on off status gr us"
-        COMPREPLY=( $(compgen -W "''${opts}" -- ''${cur}) )
-      }
-      complete -F _vpn_completion vpn
     '';
   };
   home.stateVersion = "24.11";
