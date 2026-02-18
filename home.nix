@@ -125,7 +125,7 @@
     initExtra = ''
       set -o vi
 
-      # VPN Control Function
+      # VPN Control Function with Autocompletion
       vpn() {
         case "$1" in
           on|gr)
@@ -148,6 +148,15 @@
             ;;
         esac
       }
+
+      _vpn_completion() {
+        local cur prev opts
+        COMPREPLY=()
+        cur="''${COMP_WORDS[COMP_CWORD]}"
+        opts="on off status gr us"
+        COMPREPLY=( $(compgen -W "''${opts}" -- ''${cur}) )
+      }
+      complete -F _vpn_completion vpn
     '';
   };
   home.stateVersion = "24.11";
