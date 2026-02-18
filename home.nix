@@ -53,17 +53,38 @@
     glow
     dig
     spotify-player
+    sops
 
     # Disk Utilities
-    parted
-    dosfstools
-    e2fsprogs
-
-    # Fonts
-    pkgs.nerd-fonts.jetbrains-mono
-    # Torrents
-    fragments
   ];
+
+  sops = {
+    age.keyFile = "/home/stefan/.config/sops/age/keys.txt";
+    defaultSopsFile = ./secrets/secrets.yaml;
+    secrets.spotify_client_id = {};
+    secrets.spotify_client_secret = {};
+
+    templates."app.toml" = {
+      path = "${config.xdg.configHome}/spotify-player/app.toml";
+      content = ''
+        [device]
+        name = "nixos-desktop"
+        device_type = "computer"
+        volume = 90
+        bitrate = 320
+        audio_cache = true
+        normalization = false
+
+        [client]
+        client_id = "${config.sops.placeholder.spotify_client_id}"
+        client_secret = "${config.sops.placeholder.spotify_client_secret}"
+      '';
+    };
+  };
+
+  programs.spotify-player = {
+    enable = true;
+  };
 
   # --- GNOME KEYBINDINGS ---
   dconf.settings = {
