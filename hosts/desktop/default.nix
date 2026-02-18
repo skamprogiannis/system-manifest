@@ -79,6 +79,11 @@
     "nvidia.NVreg_PreserveVideoMemoryAllocations=1"
   ];
 
+  # Disable USB wakeup for mice to prevent accidental wakeups from hibernation
+  services.udev.extraRules = ''
+    ACTION=="add", SUBSYSTEM=="usb", ATTR{product}=="*Mouse*", ATTR{power/wakeup}="disabled"
+  '';
+
   # Enable Steam & Gamemode
   programs.steam = {
     enable = true;
@@ -103,64 +108,89 @@
     };
   };
 
-  # WireGuard VPN
-  networking.networkmanager.unmanaged = ["wg-gr" "wg-us"];
+  # WireGuard VPN - Proton VPN servers
+  # Using sops-nix templates to inject private keys into config files
   sops.defaultSopsFile = ../../secrets/secrets.yaml;
   sops.age.keyFile = "/home/stefan/.config/sops/age/keys.txt";
 
-  sops.secrets.wireguard_gr_private_key = {};
-  sops.secrets.wireguard_us_private_key = {};
-
-  sops.templates."nixos-desktop-GR-26.conf".content = ''
-    [Interface]
-    # Key for nixos-desktop
-    # Bouncing = 17
-    # NetShield = 2
-    # Moderate NAT = off
-    # NAT-PMP (Port Forwarding) = on
-    # VPN Accelerator = on
-    PrivateKey = ${config.sops.placeholder.wireguard_gr_private_key}
-    Address = 10.2.0.2/32
-    DNS = 10.2.0.1
-
-    [Peer]
-    # GR#26
-    PublicKey = BM3CQJ3Vo8L7aOeeyqADlN2tGcn2VPxZ+gnlKk5gLlg=
-    AllowedIPs = 0.0.0.0/0, ::/0
-    Endpoint = 45.92.33.162:51820
-
-    PersistentKeepalive = 25
-  '';
-
-  sops.templates."nixos-desktop-US-FREE-33.conf".content = ''
-    [Interface]
-    # Key for nixos-desktop
-    # Bouncing = 3
-    # NetShield = 2
-    # Moderate NAT = off
-    # NAT-PMP (Port Forwarding) = on
-    # VPN Accelerator = on
-    PrivateKey = ${config.sops.placeholder.wireguard_us_private_key}
-    Address = 10.2.0.2/32
-    DNS = 10.2.0.1
-
-    [Peer]
-    # US-FREE#33
-    PublicKey = SOXFyakZ9HI9TeiMRyMoy3PXYEzJJ/IDJcMvxZ3uWSE=
-    AllowedIPs = 0.0.0.0/0, ::/0
-    Endpoint = 149.102.254.90:51820
-
-    PersistentKeepalive = 25
-  '';
-
-  networking.wg-quick.interfaces = {
-    wg-gr = {
-      autostart = false;
-      configFile = config.sops.templates."nixos-desktop-GR-26.conf".path;
-    };
-    wg-us = {
-      autostart = false;
-      configFile = config.sops.templates."nixos-desktop-US-FREE-33.conf".path;
-    };
+  sops.secrets = {
+    "wireguard_gr_athens_1" = {};
+    "wireguard_gr_athens_26" = {};
+    "wireguard_us_dc_42" = {};
+    "wireguard_us_seattle_33" = {};
   };
+
+  # Greece - Athens #1 (Paid)
+  sops.templates."GR-Athens-1" = {
+    path = "/etc/wireguard/GR-Athens-1.conf";
+    mode = "0600";
+    content = ''
+      [Interface]
+      PrivateKey=${config.sops.placeholder.wireguard_gr_athens_1}
+      Address = 10.2.0.2/32
+      DNS = 10.2.0.1
+
+      [Peer]
+      PublicKey = DTaJG0Ww2G2Gtv7GVlkiOIv9cv8r9yQ0ghNPQf7kDAw=
+      AllowedIPs = 0.0.0.0/0, ::/0
+      Endpoint = 185.51.134.194:51820
+      PersistentKeepalive = 25
+    '';
+  };
+
+  # Greece - Athens #26 (Paid)
+  sops.templates."GR-Athens-26" = {
+    path = "/etc/wireguard/GR-Athens-26.conf";
+    mode = "0600";
+    content = ''
+      [Interface]
+      PrivateKey=${config.sops.placeholder.wireguard_gr_athens_26}
+      Address = 10.2.0.2/32
+      DNS = 10.2.0.1
+
+      [Peer]
+      PublicKey = BM3CQJ3Vo8L7aOeeyqADlN2tGcn2VPxZ+gnlKk5gLlg=
+      AllowedIPs = 0.0.0.0/0, ::/0
+      Endpoint = 45.92.33.162:51820
+      PersistentKeepalive = 25
+    '';
+  };
+
+  # US - Washington DC #42 (Paid)
+  sops.templates."US-DC-42" = {
+    path = "/etc/wireguard/US-DC-42.conf";
+    mode = "0600";
+    content = ''
+      [Interface]
+      PrivateKey=${config.sops.placeholder.wireguard_us_dc_42}
+      Address = 10.2.0.2/32
+      DNS = 10.2.0.1
+
+      [Peer]
+      PublicKey = L/lAxBloXzDXNrWw1xtJgEMJWPct1reKQPkRsw/7Knw=
+      AllowedIPs = 0.0.0.0/0, ::/0
+      Endpoint = 104.234.212.26:51820
+      PersistentKeepalive = 25
+    '';
+  };
+
+  # US - Seattle #33 (Paid)
+  sops.templates."US-Seattle-33" = {
+    path = "/etc/wireguard/US-Seattle-33.conf";
+    mode = "0600";
+    content = ''
+      [Interface]
+      PrivateKey=${config.sops.placeholder.wireguard_us_seattle_33}
+      Address = 10.2.0.2/32
+      DNS = 10.2.0.1
+
+      [Peer]
+      PublicKey = SOXFyakZ9HI9TeiMRyMoy3PXYEzJJ/IDJcMvxZ3uWSE=
+      AllowedIPs = 0.0.0.0/0, ::/0
+      Endpoint = 149.102.254.90:51820
+      PersistentKeepalive = 25
+    '';
+  };
+
+  networking.wg-quick.interfaces = {};
 }
