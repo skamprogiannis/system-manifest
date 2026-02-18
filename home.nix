@@ -129,19 +129,18 @@
       vpn() {
         case "$1" in
           on|gr)
-            sudo systemctl stop wg-quick-wg-us 2>/dev/null
+            systemctl is-active --quiet wg-quick-wg-us && sudo systemctl stop wg-quick-wg-us
             sudo systemctl start wg-quick-wg-gr
             ;;
           us)
-            sudo systemctl stop wg-quick-wg-gr 2>/dev/null
+            systemctl is-active --quiet wg-quick-wg-gr && sudo systemctl stop wg-quick-wg-gr
             sudo systemctl start wg-quick-wg-us
             ;;
           off)
-            sudo systemctl stop wg-quick-wg-gr
-            sudo systemctl stop wg-quick-wg-us
+            sudo systemctl stop wg-quick-wg-gr wg-quick-wg-us
             ;;
           status)
-            systemctl status wg-quick-wg-gr wg-quick-wg-us --no-pager | grep -E "●|○|Active:"
+            systemctl status wg-quick-wg-gr wg-quick-wg-us -n 0 --no-pager
             ;;
           *)
             echo "Usage: vpn {on|off|status|gr|us}"
