@@ -124,6 +124,30 @@
     enableCompletion = true;
     initExtra = ''
       set -o vi
+
+      # VPN Control Function
+      vpn() {
+        case "$1" in
+          on|gr)
+            sudo systemctl stop wg-quick-wg-us 2>/dev/null
+            sudo systemctl start wg-quick-wg-gr
+            ;;
+          us)
+            sudo systemctl stop wg-quick-wg-gr 2>/dev/null
+            sudo systemctl start wg-quick-wg-us
+            ;;
+          off)
+            sudo systemctl stop wg-quick-wg-gr
+            sudo systemctl stop wg-quick-wg-us
+            ;;
+          status)
+            sudo systemctl status wg-quick-wg-gr wg-quick-wg-us
+            ;;
+          *)
+            echo "Usage: vpn {on|off|status|gr|us}"
+            ;;
+        esac
+      }
     '';
   };
   home.stateVersion = "24.11";
@@ -132,10 +156,5 @@
 
   home.shellAliases = {
     pearpass-dev = "cd ~/repositories/pearpass-app-desktop && npx pear run -d .";
-    vpn-on = "vpn-gr";
-    vpn-gr = "sudo systemctl stop wg-quick-wg-us 2>/dev/null; sudo systemctl start wg-quick-wg-gr";
-    vpn-us = "sudo systemctl stop wg-quick-wg-gr 2>/dev/null; sudo systemctl start wg-quick-wg-us";
-    vpn-off = "sudo systemctl stop wg-quick-wg-gr; sudo systemctl stop wg-quick-wg-us";
-    vpn-status = "systemctl status wg-quick-wg-gr wg-quick-wg-us";
   };
 }
