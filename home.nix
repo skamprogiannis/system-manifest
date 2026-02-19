@@ -20,7 +20,6 @@
     ./modules/home/firefox.nix
     ./modules/home/theme.nix
     ./modules/home/obsidian.nix
-    ./modules/home/vpn.nix
   ];
 
   # --- PACKAGES ---
@@ -42,10 +41,9 @@
     fastfetch
     fd
     tremc
-    gh
-    git
     glow
     go
+    jq
     nodejs_22
     opencode
     pacvim
@@ -54,11 +52,9 @@
     ripgrep
     ruff
     sops
-    spotify-player
     transmission_4
     wget
     wl-clipboard
-    zellij
 
     # Disk Utilities
     dosfstools
@@ -82,26 +78,8 @@
       content = ''
         client_id = "${config.sops.placeholder.spotify_client_id}"
         client_secret = "${config.sops.placeholder.spotify_client_secret}"
-        client_port = 8888
-        login_redirect_uri = "http://127.0.0.1:8888/callback"
-
-        [device]
-        name = "nixos-desktop"
-        device_type = "computer"
-        volume = 90
-        bitrate = 320
-        audio_cache = true
-        normalization = false
-      '';
-    };
-
-    templates."spotify-player-underscore-app-toml" = {
-      path = "${config.xdg.configHome}/spotify_player/app.toml";
-      content = ''
-        client_id = "${config.sops.placeholder.spotify_client_id}"
-        client_secret = "${config.sops.placeholder.spotify_client_secret}"
-        client_port = 8888
-        login_redirect_uri = "http://127.0.0.1:8888/callback"
+        client_port = 8899
+        login_redirect_uri = "http://127.0.0.1:8899/callback"
 
         [device]
         name = "nixos-desktop"
@@ -114,8 +92,10 @@
     };
   };
 
+
+
   # Force sops-nix to start on login to ensure secrets are rendered
-  systemd.user.services.sops-nix.Install.WantedBy = [ "default.target" ];
+  systemd.user.services.sops-nix.Install.WantedBy = [ "graphical-session.target" ];
 
   programs.spotify-player = {
     enable = true;
@@ -166,7 +146,52 @@
   home.sessionPath = ["$HOME/.local/bin"];
 
   home.shellAliases = {
+    cat = "bat";
+    find = "fd";
+    grep = "rg";
     pearpass-dev = "cd ~/repositories/pearpass-app-desktop && npx pear run -d .";
+    tremc = "systemd-inhibit --why='Downloading torrents' --who='tremc' --what='sleep:idle' tremc";
+  };
+
+  programs.bat = {
+    enable = true;
+    config = {
+      theme = "Dracula";
+      italic-text = "always";
+    };
+  };
+
+  programs.lazygit = {
+    enable = true;
+    enableBashIntegration = true;
+  };
+
+  programs.fzf = {
+    enable = true;
+    enableBashIntegration = true;
+  };
+
+  programs.yazi = {
+    enable = true;
+    enableBashIntegration = true;
+  };
+
+  programs.zoxide = {
+    enable = true;
+    enableBashIntegration = true;
+  };
+
+  programs.gh = {
+    enable = true;
+    settings = {
+      git_protocol = "ssh";
+      prompt = "enabled";
+    };
+  };
+
+  programs.zellij = {
+    enable = true;
+    enableBashIntegration = true;
   };
 
   # Systemd service for transmission-daemon
