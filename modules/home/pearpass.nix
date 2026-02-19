@@ -76,7 +76,6 @@
 
   # Launcher for the GUI App (Uses Clean Env)
   pearpassLauncher = pkgs.writeShellScriptBin "pearpass-gui" ''
-    export NIXOS_OZONE_WL=1
     exec ${pearpassGUIEnv}/bin/pearpass-gui-env "$@"
   '';
 
