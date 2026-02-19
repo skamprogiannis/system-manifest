@@ -105,6 +105,10 @@
     pulse.enable = true;
   };
 
+  # Enable GNOME Keyring for Geary and other apps
+  services.gnome.gnome-keyring.enable = true;
+  services.gnome.gnome-online-accounts.enable = true;
+
   # Define a user account. Don't forget to set a password with ‘passwd’
   users.users.stefan = {
     isNormalUser = true;
@@ -126,6 +130,7 @@
   environment.systemPackages = with pkgs; [
     wget
     git
+    transmission_4
   ];
 
   # This value determines the NixOS release from which the default
