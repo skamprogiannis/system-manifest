@@ -6,16 +6,22 @@
   gtk = {
     enable = true;
     iconTheme = {
-      name = "Papirus-Dark";
-      package = pkgs.papirus-icon-theme;
+      name = "Dracula";
+      package = pkgs.dracula-icon-theme;
     };
     theme = {
-      name = "Adwaita-dark";
-      package = pkgs.gnome-themes-extra;
+      name = "Dracula";
+      package = pkgs.dracula-theme;
     };
     cursorTheme = {
       name = "Adwaita";
       package = pkgs.adwaita-icon-theme;
+    };
+    gtk3.extraConfig = {
+      gtk-application-prefer-dark-theme = 1;
+    };
+    gtk4.extraConfig = {
+      gtk-application-prefer-dark-theme = 1;
     };
   };
 
@@ -29,6 +35,8 @@
     # System-wide Interface Settings (Fonts)
     "org/gnome/desktop/interface" = {
       color-scheme = "prefer-dark";
+      gtk-theme = "Dracula";
+      icon-theme = "Dracula";
       font-name = "Adwaita 11";
       document-font-name = "Adwaita 11";
       monospace-font-name = "JetBrainsMono Nerd Font 11";
@@ -47,7 +55,8 @@
         "brave-browser.desktop"
         "discord.desktop"
         "pearpass.desktop"
-        "org.gnome.Software.desktop"
+        "org.gnome.Geary.desktop"
+        "org.gnome.Nautilus.desktop"
       ];
     };
   };
@@ -66,7 +75,6 @@
   qt = {
     enable = true;
     platformTheme.name = "gtk";
-    style.name = "adwaita-dark";
   };
 
   # Hide the "Neovim (wrapper)" entry from app launchers
