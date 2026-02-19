@@ -27,37 +27,48 @@
   home.packages = with pkgs; [
     # GUI
     discord
-    obsidian
-    protonmail-bridge
+    evolution
     geary
+    gnome-online-accounts
+    obsidian
     protonvpn-gui
 
     # CLI / Tools
-    fastfetch
+    alejandra
     btop
-    ripgrep
-    fd
-    wl-clipboard
     cliphist
     curl
+    dig
+    fastfetch
+    fd
+    fragments
     gh
-    opencode
-    alejandra
-    nodejs_22
-    nodePackages.prettier
-    ruff
+    git
+    glow
     go
-    python3
-    zellij
+    nodejs_22
+    opencode
     pacvim
     pandoc
-    glow
-    dig
-    spotify-player
+    python3
+    ripgrep
+    ruff
     sops
+    spotify-player
+    wget
+    wl-clipboard
+    zellij
 
     # Disk Utilities
+    dosfstools
+    e2fsprogs
+    parted
+
+    # Fonts
+    nerd-fonts.jetbrains-mono
   ];
+
+  fonts.fontconfig.enable = true;
 
   sops = {
     age.keyFile = "/home/stefan/.config/sops/age/keys.txt";
@@ -65,9 +76,14 @@
     secrets.spotify_client_id = {};
     secrets.spotify_client_secret = {};
 
-    templates."app.toml" = {
+    templates."spotify-player-app-toml" = {
       path = "${config.xdg.configHome}/spotify-player/app.toml";
       content = ''
+        client_id = "${config.sops.placeholder.spotify_client_id}"
+        client_secret = "${config.sops.placeholder.spotify_client_secret}"
+        client_port = 8888
+        login_redirect_uri = "http://127.0.0.1:8888/callback"
+
         [device]
         name = "nixos-desktop"
         device_type = "computer"
@@ -75,15 +91,30 @@
         bitrate = 320
         audio_cache = true
         normalization = false
+      '';
+    };
 
-        [client]
+    templates."spotify-player-underscore-app-toml" = {
+      path = "${config.xdg.configHome}/spotify_player/app.toml";
+      content = ''
         client_id = "${config.sops.placeholder.spotify_client_id}"
         client_secret = "${config.sops.placeholder.spotify_client_secret}"
         client_port = 8888
         login_redirect_uri = "http://127.0.0.1:8888/callback"
+
+        [device]
+        name = "nixos-desktop"
+        device_type = "computer"
+        volume = 90
+        bitrate = 320
+        audio_cache = true
+        normalization = false
       '';
     };
   };
+
+  # Force sops-nix to start on login to ensure secrets are rendered
+  systemd.user.services.sops-nix.Install.WantedBy = [ "default.target" ];
 
   programs.spotify-player = {
     enable = true;
@@ -137,3 +168,5 @@
     pearpass-dev = "cd ~/repositories/pearpass-app-desktop && npx pear run -d .";
   };
 }
+
+
