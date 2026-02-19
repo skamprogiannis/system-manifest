@@ -41,7 +41,7 @@
     dig
     fastfetch
     fd
-    fragments
+    tremc
     gh
     git
     glow
@@ -167,6 +167,34 @@
 
   home.shellAliases = {
     pearpass-dev = "cd ~/repositories/pearpass-app-desktop && npx pear run -d .";
+  };
+
+  # Systemd service for transmission-daemon
+  systemd.user.services.transmission-daemon = {
+    Unit = {
+      Description = "Transmission BitTorrent Daemon";
+      After = [ "network.target" ];
+    };
+    Service = {
+      ExecStart = "${pkgs.transmission_4}/bin/transmission-daemon -f --no-auth --config-dir %h/.config/fragments --port 9091 --rpc-bind-address 127.0.0.1 --allowed 127.0.0.1";
+      Restart = "on-failure";
+    };
+    Install = {
+      WantedBy = [ "default.target" ];
+    };
+  };
+
+  # Configure default applications
+  xdg.mimeApps = {
+    enable = true;
+    associations.added = {
+      "x-scheme-handler/magnet" = ["tremc.desktop"];
+      "application/x-bittorrent" = ["tremc.desktop"];
+    };
+    defaultApplications = {
+      "x-scheme-handler/magnet" = ["tremc.desktop"];
+      "application/x-bittorrent" = ["tremc.desktop"];
+    };
   };
 }
 
