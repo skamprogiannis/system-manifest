@@ -55,6 +55,7 @@
     ruff
     sops
     spotify-player
+    transmission_4
     wget
     wl-clipboard
     zellij
