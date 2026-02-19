@@ -51,5 +51,6 @@
     set_icon "$HOME/go" "folder-development"
     set_icon "$HOME/system_manifest" "folder-development"
     set_icon "$HOME/tabletop_games" "folder-books"
+    set_icon "$HOME/scripts" "folder"
   '';
 }
