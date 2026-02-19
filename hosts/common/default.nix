@@ -130,7 +130,6 @@
   environment.systemPackages = with pkgs; [
     wget
     git
-    transmission_4
   ];
 
   # This value determines the NixOS release from which the default
