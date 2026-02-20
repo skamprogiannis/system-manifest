@@ -38,7 +38,7 @@
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
             home-manager.backupFileExtension = "backup";
-            home-manager.extraSpecialArgs = { inherit inputs; };
+            home-manager.extraSpecialArgs = { inherit inputs; hostType = "desktop"; };
             home-manager.users.stefan = {
               imports = [
                 ./home.nix
@@ -59,7 +59,7 @@
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
             home-manager.backupFileExtension = "backup";
-            home-manager.extraSpecialArgs = { inherit inputs; };
+            home-manager.extraSpecialArgs = { inherit inputs; hostType = "laptop"; };
             home-manager.users.stefan = {
               imports = [
                 ./home.nix
@@ -80,7 +80,7 @@
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
             home-manager.backupFileExtension = "backup";
-            home-manager.extraSpecialArgs = { inherit inputs; };
+            home-manager.extraSpecialArgs = { inherit inputs; hostType = "usb"; };
             home-manager.users.stefan = {
               imports = [
                 ./home.nix
