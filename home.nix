@@ -70,31 +70,21 @@
   sops = {
     age.keyFile = "/home/stefan/.config/sops/age/keys.txt";
     defaultSopsFile = ./secrets/secrets.yaml;
-    secrets.spotify_client_id = {};
-    secrets.spotify_client_secret = {};
-
-    templates."spotify-player-app-toml" = {
-      path = "${config.xdg.configHome}/spotify-player/app.toml";
-      content = ''
-        client_id = "${config.sops.placeholder.spotify_client_id}"
-        client_port = 8899
-        login_redirect_uri = "http://127.0.0.1:8899/callback"
-
-        [device]
-        name = "nixos-desktop"
-        device_type = "computer"
-        volume = 90
-        bitrate = 320
-        audio_cache = true
-        normalization = false
-      '';
-    };
   };
 
+  home.file."${config.xdg.configHome}/spotify-player/app.toml".text = ''
+    client_port = 8080
+    login_redirect_uri = "http://127.0.0.1:8989/login"
+    enable_streaming = "Always"
 
-
-  # Force sops-nix to start on login to ensure secrets are rendered
-  systemd.user.services.sops-nix.Install.WantedBy = [ "graphical-session.target" ];
+    [device]
+    name = "nixos-desktop"
+    device_type = "computer"
+    volume = 90
+    bitrate = 320
+    audio_cache = true
+    normalization = false
+  '';
 
   programs.spotify-player = {
     enable = true;
