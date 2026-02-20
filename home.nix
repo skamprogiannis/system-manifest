@@ -51,7 +51,6 @@
     python3
     ripgrep
     ruff
-    sops
     transmission_4
     wget
     wl-clipboard
@@ -66,11 +65,6 @@
   ];
 
   fonts.fontconfig.enable = true;
-
-  sops = {
-    age.keyFile = "/home/stefan/.config/sops/age/keys.txt";
-    defaultSopsFile = ./secrets/secrets.yaml;
-  };
 
   home.file."${config.xdg.configHome}/spotify-player/app.toml".text = ''
     client_port = 8080
@@ -88,6 +82,7 @@
 
   programs.spotify-player = {
     enable = true;
+    package = inputs.spotify-player.defaultPackage.${pkgs.system};
   };
 
   # --- GNOME KEYBINDINGS ---
