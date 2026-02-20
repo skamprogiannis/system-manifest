@@ -17,3 +17,8 @@ id_ed25519
 # OpenCode
 .opencode/plans/
 .opencode/Plans/
+
+# Python
+.ruff_cache/
+__pycache__/
+*.pyc
