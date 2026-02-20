@@ -3,22 +3,25 @@
   pkgs,
   ...
 }: {
+  programs.dank-material-shell = {
+    enable = true;
+    systemd.enable = true;
+    enableSystemMonitoring = true;
+    enableDynamicTheming = true;
+    enableClipboardPaste = true;
+    enableCalendarEvents = true;
+    enableVPN = true;
+    enableAudioWavelength = true;
+  };
+
   wayland.windowManager.hyprland = {
     enable = true;
 
     settings = {
       "$mod" = "SUPER";
       "$terminal" = "ghostty";
-      "$menu" = "wofi --show drun";
 
       monitor = ",preferred,auto,1";
-      exec-once = [
-        "waybar"
-        "dunst"
-        "hyprpaper"
-        "wl-paste --type text --watch cliphist store"
-        "wl-paste --type image --watch cliphist store"
-      ];
 
       env = [
         "XCURSOR_SIZE,24"
@@ -34,7 +37,6 @@
         gaps_in = 5;
         gaps_out = 10;
         border_size = 2;
-        # The Cyberpunk Colors: Neon Pink active, Grey inactive
         "col.active_border" = "rgb(ff00ff) rgb(00ffff) 45deg";
         "col.inactive_border" = "rgba(595959aa)";
         layout = "dwindle";
@@ -47,7 +49,6 @@
           size = 3;
           passes = 1;
         };
-        # Shadow for depth
         shadow = {
           enabled = true;
           range = 4;
@@ -56,7 +57,6 @@
         };
       };
 
-      # Animations (Making it feel fast)
       animations = {
         enabled = true;
         bezier = "myBezier, 0.05, 0.9, 0.1, 1.05";
@@ -75,44 +75,24 @@
       };
 
       bind = [
-        # Terminal
         "$mod, RETURN, exec, $terminal"
-
-        # Window Management
         "$mod, Q, killactive,"
-
         "$mod, M, exit,"
         "$mod, E, exec, nautilus"
         "$mod, V, togglefloating,"
-        "$mod, R, exec, $menu"
-
-        # Clipboard Manager
-        "$mod SHIFT, V, exec, cliphist list | wofi --dmenu | cliphist decode | wl-copy"
+        "$mod, R, exec, dms ipc call spotlight toggle"
+        "$mod SHIFT, V, exec, dms ipc call clipboard toggle"
         "$mod, P, pseudo,"
         "$mod, J, togglesplit,"
-        # Focus movement
         "$mod, left, movefocus, l"
         "$mod, right, movefocus, r"
         "$mod, up, movefocus, u"
         "$mod, down, movefocus, d"
+        "$mod, N, exec, dms ipc call notifications toggle"
+        "$mod, L, exec, dms ipc call lock lock"
+        "$mod, S, exec, dms ipc call settings toggle"
+        "$mod, X, exec, dms ipc call powermenu toggle"
       ];
-    };
-  };
-
-  # Hyprland Ecosystem Packages
-  home.packages = with pkgs; [
-    wofi
-    dunst
-    hyprpaper
-  ];
-
-  services.hyprpaper = {
-    enable = true;
-    settings = {
-      ipc = "on";
-      splash = false;
-      preload = ["/home/stefan/pictures/wallpapers/cyberpunk.png"];
-      wallpaper = [",/home/stefan/pictures/wallpapers/cyberpunk.png"];
     };
   };
 }

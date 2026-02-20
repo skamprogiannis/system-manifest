@@ -9,6 +9,7 @@
   home.homeDirectory = "/home/stefan";
 
   imports = [
+    inputs.dms.homeModules.dank-material-shell
     ./modules/home/git.nix
     ./modules/home/ghostty.nix
     ./modules/home/neovim.nix
@@ -36,7 +37,6 @@
     # CLI / Tools
     alejandra
     btop
-    cliphist
     curl
     dig
     fastfetch
@@ -54,7 +54,6 @@
     ruff
     transmission_4
     wget
-    wl-clipboard
 
     # Disk Utilities
     dosfstools
