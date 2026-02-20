@@ -10,13 +10,12 @@ This repository contains the declarative configuration for my NixOS system, mana
   - **Hyprland:** Tiling window manager with custom aesthetics.
 - **Gaming Mode:** A dedicated "Specialisation" (`gaming-box`) that strips away the desktop environment and boots directly into Steam Big Picture Mode with Gamescope.
 - **Media & Productivity:**
-  - **Spotify Player:** Terminal-based Spotify client with sops-nix secret management.
+  - **Spotify Player:** Terminal-based Spotify client with streaming support.
   - **Fragments:** GTK-based BitTorrent client using Transmission daemon.
   - **Evolution & Geary:** Email clients configured with GNOME Keyring.
   - **Obsidian:** Note-taking application.
 - **Dev Ready:** Pre-configured environment for Node.js, Python, Go, and Neovim (via nixvim).
 - **AI Integrated:** Built-in configuration for **OpenCode** (AI Terminal Agent) with Context7 documentation support.
-- **VPN:** WireGuard VPN management via systemd with sops-nix encrypted keys.
 - **Modular Architecture:** Configuration split into `hosts/` and `modules/` for maintainability.
 
 ## Typography
@@ -61,4 +60,3 @@ Select **"NixOS - desktop-gaming-box"** from the bootloader menu (GRUB).
 - `modules/`:
   - `home/`: User-facing configurations (Ghostty, Hyprland, Neovim, Brave, Firefox, etc.).
   - `nixos/`: System-level module configurations (GNOME, Hyprland).
-- `secrets/`: SOPS-encrypted secrets (Spotify credentials, WireGuard keys).
