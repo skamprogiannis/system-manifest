@@ -15,8 +15,8 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    sops-nix = {
-      url = "github:Mic92/sops-nix";
+    spotify-player = {
+      url = "github:aome510/spotify-player";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -33,17 +33,16 @@
         specialArgs = {inherit inputs;};
         modules = [
           ./hosts/desktop/default.nix
-          inputs.sops-nix.nixosModules.sops
           home-manager.nixosModules.home-manager
           {
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
             home-manager.backupFileExtension = "backup";
+            home-manager.extraSpecialArgs = { inherit inputs; };
             home-manager.users.stefan = {
               imports = [
                 ./home.nix
                 inputs.nixvim.homeModules.nixvim
-                inputs.sops-nix.homeManagerModules.sops
               ];
             };
           }
@@ -60,11 +59,11 @@
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
             home-manager.backupFileExtension = "backup";
+            home-manager.extraSpecialArgs = { inherit inputs; };
             home-manager.users.stefan = {
               imports = [
                 ./home.nix
                 inputs.nixvim.homeModules.nixvim
-                inputs.sops-nix.homeManagerModules.sops
               ];
             };
           }
@@ -81,11 +80,11 @@
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
             home-manager.backupFileExtension = "backup";
+            home-manager.extraSpecialArgs = { inherit inputs; };
             home-manager.users.stefan = {
               imports = [
                 ./home.nix
                 inputs.nixvim.homeModules.nixvim
-                inputs.sops-nix.homeManagerModules.sops
               ];
             };
           }
