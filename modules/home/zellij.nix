@@ -1,18 +1,30 @@
 {
   config,
   pkgs,
+  hostType ? "desktop",
   ...
-}: {
+}: let
+  isPortable = hostType == "laptop" || hostType == "usb";
+in {
   programs.zellij = {
     enable = true;
     enableBashIntegration = true;
-    settings = {
-      theme = "dracula";
-      default_shell = "bash";
-      pane_frames = false;
-      simplified_ui = true;
-      default_layout = "compact";
-    };
+    settings =
+      {
+        theme = "dracula";
+        default_shell = "bash";
+      }
+      // (
+        if isPortable
+        then {
+          pane_frames = false;
+          simplified_ui = true;
+          default_layout = "compact";
+        }
+        else {
+          pane_frames = true;
+        }
+      );
     themes = {
       dracula = {
         fg = [248 248 242];
