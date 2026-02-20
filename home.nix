@@ -67,6 +67,10 @@
 
   fonts.fontconfig.enable = true;
 
+  home.file.".inputrc".text = ''
+    set editing-mode vi
+  '';
+
   home.file."${config.xdg.configHome}/spotify-player/app.toml".text = ''
     client_port = 8080
     login_redirect_uri = "http://127.0.0.1:8989/login"
