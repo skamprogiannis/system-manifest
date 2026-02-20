@@ -62,10 +62,6 @@
     "d /home/stefan/games 0755 stefan users - -"
   ];
 
-  # List packages installed in system profile.
-  environment.systemPackages = with pkgs; [
-  ];
-
   # Load the NVIDIA driver
   services.xserver.videoDrivers = ["nvidia"];
 
@@ -112,6 +108,4 @@
       environment.sessionVariables = lib.mkForce {};
     };
   };
-
-  networking.wg-quick.interfaces = {};
 }
