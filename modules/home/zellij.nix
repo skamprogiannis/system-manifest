@@ -25,22 +25,25 @@ in {
           pane_frames = true;
         }
       );
-    themes = {
-      dracula = {
-        fg = [248 248 242];
-        bg = [40 42 54];
-        black = [0 0 0];
-        red = [255 85 85];
-        green = [80 250 123];
-        yellow = [241 250 140];
-        blue = [98 114 164];
-        magenta = [255 121 198];
-        cyan = [139 233 253];
-        white = [255 255 255];
-        orange = [255 184 108];
-      };
-    };
   };
+
+  home.file."${config.xdg.configHome}/zellij/themes/dracula.kdl".text = ''
+    themes {
+        dracula {
+            fg 248 248 242
+            bg 40 42 54
+            black 0 0 0
+            red 255 85 85
+            green 80 250 123
+            yellow 241 250 140
+            blue 98 114 164
+            magenta 255 121 198
+            cyan 139 233 253
+            white 255 255 255
+            orange 255 184 108
+        }
+    }
+  '';
 
   home.packages = [
     (pkgs.writeShellScriptBin "zs" ''
