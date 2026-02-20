@@ -77,7 +77,6 @@
       path = "${config.xdg.configHome}/spotify-player/app.toml";
       content = ''
         client_id = "${config.sops.placeholder.spotify_client_id}"
-        client_secret = "${config.sops.placeholder.spotify_client_secret}"
         client_port = 8899
         login_redirect_uri = "http://127.0.0.1:8899/callback"
 
