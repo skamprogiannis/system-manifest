@@ -86,7 +86,7 @@
 
   programs.spotify-player = {
     enable = true;
-    package = inputs.spotify-player.defaultPackage.${pkgs.system};
+    package = inputs.spotify-player.defaultPackage.${pkgs.stdenv.hostPlatform.system};
   };
 
   # --- GNOME KEYBINDINGS ---
@@ -162,6 +162,7 @@
   programs.yazi = {
     enable = true;
     enableBashIntegration = true;
+    shellWrapperName = "y";
   };
 
   programs.zoxide = {
