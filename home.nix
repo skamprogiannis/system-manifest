@@ -54,6 +54,7 @@
     ruff
     transmission_4
     wget
+    wl-clipboard
 
     # Disk Utilities
     dosfstools
