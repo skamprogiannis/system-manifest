@@ -1,0 +1,62 @@
+{
+  config,
+  pkgs,
+  ...
+}: {
+  programs.zellij = {
+    enable = true;
+    enableBashIntegration = true;
+    settings = {
+      theme = "dracula";
+      default_shell = "bash";
+      pane_frames = false;
+      simplified_ui = true;
+      default_layout = "compact";
+    };
+    themes = {
+      dracula = {
+        fg = [248 248 242];
+        bg = [40 42 54];
+        black = [0 0 0];
+        red = [255 85 85];
+        green = [80 250 123];
+        yellow = [241 250 140];
+        blue = [98 114 164];
+        magenta = [255 121 198];
+        cyan = [139 233 253];
+        white = [255 255 255];
+        orange = [255 184 108];
+      };
+    };
+  };
+
+  home.packages = [
+    (pkgs.writeShellScriptBin "zs" ''
+      paths=("''${@:-$HOME/repositories $HOME/system_manifest}")
+
+      if command -v fd &> /dev/null; then
+        selected_path=$(fd . ''${paths[@]} --min-depth 1 --max-depth 2 --type d 2>/dev/null | fzf)
+      else
+        selected_path=$(find ''${paths[@]} -mindepth 1 -maxdepth 2 -type d 2>/dev/null | fzf)
+      fi
+
+      if [[ -z "$selected_path" ]]; then
+        exit 0
+      fi
+
+      session_name=$(basename "$selected_path" | tr . _)
+
+      if [[ -z "$ZELLIJ" ]]; then
+        cd "$selected_path"
+        zellij attach "$session_name" -c
+      else
+        zellij action new-pane
+        zellij action write-chars "cd $selected_path" && zellij action write 10
+      fi
+    '')
+  ];
+
+  home.shellAliases = {
+    zellij-sessionizer = "zs ~/repositories";
+  };
+}

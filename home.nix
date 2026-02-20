@@ -20,6 +20,7 @@
     ./modules/home/firefox.nix
     ./modules/home/theme.nix
     ./modules/home/obsidian.nix
+    ./modules/home/zellij.nix
   ];
 
   # --- PACKAGES ---
@@ -171,11 +172,6 @@
       git_protocol = "ssh";
       prompt = "enabled";
     };
-  };
-
-  programs.zellij = {
-    enable = true;
-    enableBashIntegration = true;
   };
 
   # Systemd service for transmission-daemon
