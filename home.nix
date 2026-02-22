@@ -30,7 +30,6 @@
     mpvpaper
     discord
     mailspring
-    gnome-online-accounts
     obsidian
     protonvpn-gui
 

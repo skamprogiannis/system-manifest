@@ -17,7 +17,6 @@
       cursor-style-blink = true;
       shell-integration-features = "no-cursor";
 
-      # Fix Numpad Enter
       # Mapping to standard Enter keycode for better application compatibility
       keybind = [
         "kp_enter=text:\\r"
