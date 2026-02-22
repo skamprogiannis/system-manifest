@@ -55,7 +55,7 @@
         "brave-browser.desktop"
         "discord.desktop"
         "pearpass.desktop"
-        "org.gnome.Geary.desktop"
+        "Mailspring.desktop"
         "org.gnome.Nautilus.desktop"
       ];
     };
