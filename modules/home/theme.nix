@@ -14,8 +14,9 @@
       package = pkgs.dracula-theme;
     };
     cursorTheme = {
-      name = "Adwaita";
-      package = pkgs.adwaita-icon-theme;
+      name = "Dracula-cursors";
+      package = pkgs.dracula-theme;
+      size = 24;
     };
     gtk3.extraConfig = {
       gtk-application-prefer-dark-theme = 1;
@@ -29,6 +30,16 @@
   home.packages = with pkgs; [
     hicolor-icon-theme
   ];
+
+  home.pointerCursor = {
+    gtk.enable = true;
+    x11.enable = true;
+    package = pkgs.dracula-theme;
+    name = "Dracula-cursors";
+    size = 24;
+  };
+
+  home.file.".icons/Dracula-cursors".source = "${pkgs.dracula-theme}/share/icons/Dracula-cursors";
 
   # GTK 4 settings are managed via dconf
   dconf.settings = {
@@ -77,10 +88,22 @@
     platformTheme.name = "gtk";
   };
 
-  # Hide the "Neovim (wrapper)" entry from app launchers
+  # Hide CLI/TUI apps from GNOME app overview
   xdg.desktopEntries = {
     nvim = {
       name = "Neovim";
+      noDisplay = true;
+    };
+    yazi = {
+      name = "Yazi";
+      noDisplay = true;
+    };
+    khal = {
+      name = "ikhal";
+      noDisplay = true;
+    };
+    tremc = {
+      name = "tremc";
       noDisplay = true;
     };
   };

@@ -45,9 +45,21 @@
 
       env = [
         "XCURSOR_SIZE,24"
+        "XCURSOR_THEME,Dracula-cursors"
+        "WLR_NO_HARDWARE_CURSORS,1"
+        "GDK_BACKEND,wayland,x11"
+        "QT_QPA_PLATFORM,wayland;xcb"
+        "CLUTTER_BACKEND,wayland"
+        "ANKI_WAYLAND,1"
+        "MOZ_ENABLE_WAYLAND,1"
+        "XDG_CURRENT_DESKTOP,Hyprland"
+        "XDG_SESSION_TYPE,wayland"
+        "XDG_SESSION_DESKTOP,Hyprland"
       ];
 
-      exec-once = if hostType == "desktop" then ["hyprctl dispatch moveworkspacetomonitor 1 DP-1"] else [];
+      exec-once = [
+        "hyprctl setcursor Dracula-cursors 24"
+      ] ++ (if hostType == "desktop" then ["hyprctl dispatch moveworkspacetomonitor 1 DP-1"] else []);
 
       input = {
         kb_layout = "us,gr";
