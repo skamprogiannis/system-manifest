@@ -27,6 +27,7 @@
   # --- PACKAGES ---
   home.packages = with pkgs; [
     # GUI
+    mpvpaper
     discord
     mailspring
     gnome-online-accounts
@@ -71,7 +72,7 @@
   '';
 
   home.file."${config.xdg.configHome}/spotify-player/app.toml".text = ''
-    client_port = 8080
+    client_port = 8081
     login_redirect_uri = "http://127.0.0.1:8989/login"
     enable_streaming = "Always"
 
@@ -87,6 +88,23 @@
   programs.spotify-player = {
     enable = true;
     package = inputs.spotify-player.defaultPackage.${pkgs.stdenv.hostPlatform.system};
+  };
+
+  # Systemd service for spotify-player daemon
+  systemd.user.services.spotify-player = {
+    Unit = {
+      Description = "Spotify Player Daemon";
+      After = [ "network-online.target" ];
+      Wants = [ "network-online.target" ];
+    };
+    Service = {
+      ExecStart = "${inputs.spotify-player.defaultPackage.${pkgs.stdenv.hostPlatform.system}}/bin/spotify_player --daemon";
+      Restart = "on-failure";
+      RestartSec = "5s";
+    };
+    Install = {
+      WantedBy = [ "default.target" ];
+    };
   };
 
   # --- GNOME KEYBINDINGS ---
