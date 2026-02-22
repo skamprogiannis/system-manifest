@@ -16,7 +16,12 @@
       cursor-style = "block";
       cursor-style-blink = true;
       shell-integration-features = "no-cursor";
-      terminal-features = "-kitty-keyboard";
+
+      # Fix for Zellij backspace issue (disabling modern protocol for stability)
+      # Using standard TERM for best compatibility
+      env = [
+        "TERM=xterm-256color"
+      ];
 
       # Mapping to standard Enter keycode for better application compatibility
       keybind = [
