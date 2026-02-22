@@ -40,6 +40,7 @@
     dig
     fastfetch
     fd
+    ffmpegthumbnailer
     tremc
     glow
     go
