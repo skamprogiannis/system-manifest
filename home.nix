@@ -28,8 +28,7 @@
   home.packages = with pkgs; [
     # GUI
     discord
-    evolution
-    geary
+    mailspring
     gnome-online-accounts
     obsidian
     protonvpn-gui
