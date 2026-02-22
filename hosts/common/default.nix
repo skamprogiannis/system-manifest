@@ -87,7 +87,7 @@
   };
 
   # Enable CUPS to print documents
-  services.printing.enable = true;
+  services.printing.enable = false;
 
   # Enable sound with pipewire
   services.pulseaudio.enable = false;
@@ -99,9 +99,9 @@
     pulse.enable = true;
   };
 
-  # Enable GNOME Keyring for Geary and other apps
+  # Enable GNOME Keyring for email clients and other apps
   services.gnome.gnome-keyring.enable = true;
-  services.gnome.gnome-online-accounts.enable = true;
+  services.gnome.gnome-online-accounts.enable = false;
 
   # Define a user account. Don't forget to set a password with ‘passwd’
   users.users.stefan = {
