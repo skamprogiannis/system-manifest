@@ -14,6 +14,10 @@
     enableCalendarEvents = true;
     enableVPN = true;
     enableAudioWavelength = true;
+    settings = {
+      showSeconds = true;
+      useAutoLocation = true;
+    };
   };
 
   wayland.windowManager.hyprland = {
@@ -59,6 +63,7 @@
 
       exec-once = [
         "hyprctl setcursor Dracula-cursors 24"
+        "$HOME/.local/bin/wallpaper-hook &"
       ] ++ (if hostType == "desktop" then ["hyprctl dispatch moveworkspacetomonitor 1 DP-1"] else []);
 
       input = {
@@ -103,6 +108,10 @@
         ];
       };
 
+      cursor = {
+        no_hardware_cursors = true;
+      };
+
       dwindle = {
         pseudotile = true;
         preserve_split = true;
@@ -115,6 +124,7 @@
         "$mod, M, exit,"
         "$mod, E, exec, nautilus"
         "$mod, V, togglefloating,"
+        "$mod, F, fullscreen,"
         "$mod, R, exec, dms ipc call spotlight toggle"
         "$mod SHIFT, V, exec, dms ipc call clipboard toggle"
         "$mod, P, pseudo,"
