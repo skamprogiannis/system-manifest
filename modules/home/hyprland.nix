@@ -99,14 +99,14 @@
       bind = [
         "$mod, RETURN, exec, $terminal"
         "$mod, B, exec, brave"
-        "$mod, Q, killactive,"
+        "$mod, X, killactive,"
         "$mod, M, exit,"
         "$mod, E, exec, nautilus"
         "$mod, V, togglefloating,"
         "$mod, R, exec, dms ipc call spotlight toggle"
         "$mod SHIFT, V, exec, dms ipc call clipboard toggle"
         "$mod, P, pseudo,"
-        "$mod, J, togglesplit,"
+        "$mod, backslash, togglesplit,"
         "$mod, G, togglegroup,"
         "$mod, Tab, changegroupactive, f"
         "$mod, h, movefocus, l"
@@ -148,9 +148,13 @@
         "SHIFT, Print, exec, dms screenshot full"
         "CONTROL, Print, exec, dms screenshot window"
         "$mod, N, exec, dms ipc call notifications toggle"
-        "$mod, L, exec, dms ipc call lock lock"
+        "$mod, Escape, exec, dms ipc call lock lock"
         "$mod, S, exec, dms ipc call settings toggle"
-        "$mod, X, exec, dms ipc call powermenu toggle"
+        "$mod, Q, exec, dms ipc call powermenu toggle"
+      ];
+
+      bindr = [
+        ", SUPER_L, exec, dms ipc call spotlight toggle"
       ];
     };
   };
