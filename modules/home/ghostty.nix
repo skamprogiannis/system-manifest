@@ -17,9 +17,10 @@
       cursor-style-blink = true;
       shell-integration-features = "no-cursor";
 
-      # Mapping to standard Enter keycode for better application compatibility
+      # Mapping to standard Enter and Backspace for better application compatibility
       keybind = [
         "kp_enter=text:\\r"
+        "backspace=text:\\x7f"
       ];
     };
   };
