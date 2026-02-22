@@ -12,7 +12,7 @@
       font-size = 13;
       background-opacity = 0.85;
 
-      # Cyberpunk tweaks
+      # Cursor and shell settings
       cursor-style = "block";
       cursor-style-blink = true;
       shell-integration-features = "no-cursor";
