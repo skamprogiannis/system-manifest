@@ -126,7 +126,7 @@
     "org/gnome/desktop/wm/keybindings" = {
       switch-input-source = ["<Super>space"];
       switch-input-source-backward = ["<Shift><Super>space"];
-      close = ["<Super>q"];
+      close = ["<Super>x"];
     };
     "org/gnome/gnome-screenshot" = {
       auto-save-directory = "file:///home/stefan/pictures/screenshots";
