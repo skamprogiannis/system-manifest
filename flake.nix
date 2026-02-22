@@ -1,5 +1,5 @@
 {
-  description = "Stefan's Cyberpunk NixOS";
+  description = "Stefan's NixOS";
 
   inputs = {
     # We use unstable to get the latest Hyprland and Ghostty
