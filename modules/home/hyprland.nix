@@ -26,12 +26,25 @@
     enable = true;
 
     settings = {
-      "$mod" = "SUPER";
-      "$terminal" = "ghostty";
-
-      monitor = [
+      monitor = if hostType == "desktop" then [
+        "HDMI-A-1, 1920x1080@60, 0x0, 1"
+        "DP-1, 1920x1080@60, 1920x0, 1"
+      ] else [
         ",preferred,auto,1"
       ];
+
+      workspace = if hostType == "desktop" then [
+        "0, monitor:HDMI-A-1, default:true"
+        "1, monitor:DP-1, default:true"
+        "2, monitor:DP-1"
+        "3, monitor:DP-1"
+        "4, monitor:DP-1"
+        "5, monitor:DP-1"
+        "6, monitor:DP-1"
+        "7, monitor:DP-1"
+        "8, monitor:DP-1"
+        "9, monitor:DP-1"
+      ] else [];
 
       env = [
         "XCURSOR_SIZE,24"
@@ -51,7 +64,7 @@
         "hyprctl setcursor Dracula-cursors 24"
         "wallpaper-hook &"
         "dms run --session"
-      ];
+      ] ++ (if hostType == "desktop" then ["hyprctl dispatch moveworkspacetomonitor 1 DP-1"] else []);
 
       input = {
         kb_layout = "us,gr";
@@ -161,6 +174,15 @@
         "$mod, S, exec, dms ipc call settings toggle"
         "$mod, Q, exec, dms ipc call powermenu toggle"
       ];
+
+      bindr = [
+        ", SUPER_L, exec, dms ipc call overview toggle"
+      ];
     };
+
+    extraConfig = ''
+      $mod = SUPER
+      $terminal = ghostty
+    '';
   };
 }
