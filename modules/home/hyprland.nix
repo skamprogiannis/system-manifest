@@ -98,6 +98,7 @@
 
       bind = [
         "$mod, RETURN, exec, $terminal"
+        "$mod, B, exec, brave"
         "$mod, Q, killactive,"
         "$mod, M, exit,"
         "$mod, E, exec, nautilus"
@@ -106,6 +107,8 @@
         "$mod SHIFT, V, exec, dms ipc call clipboard toggle"
         "$mod, P, pseudo,"
         "$mod, J, togglesplit,"
+        "$mod, G, togglegroup,"
+        "$mod, Tab, changegroupactive, f"
         "$mod, h, movefocus, l"
         "$mod, l, movefocus, r"
         "$mod, k, movefocus, u"
@@ -141,6 +144,9 @@
         # Special workspace (scratchpad) for Spotify
         "$mod, grave, togglespecialworkspace, music"
         "$mod SHIFT, grave, movetoworkspace, special:music"
+        ", Print, exec, dms screenshot region"
+        "SHIFT, Print, exec, dms screenshot full"
+        "CONTROL, Print, exec, dms screenshot window"
         "$mod, N, exec, dms ipc call notifications toggle"
         "$mod, L, exec, dms ipc call lock lock"
         "$mod, S, exec, dms ipc call settings toggle"
