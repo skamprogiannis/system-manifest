@@ -18,5 +18,13 @@
     gnome-terminal
     cheese
     snapshot
+    rygel
+    yelp
+    simple-scan
+    gnome-color-manager
+    gnome-music
+    totem
+    epiphany
+    gnome-system-monitor
   ];
 }
