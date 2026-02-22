@@ -106,5 +106,9 @@
       name = "tremc";
       noDisplay = true;
     };
+    gnome-control-center = {
+      name = "Settings";
+      noDisplay = true;
+    };
   };
 }
