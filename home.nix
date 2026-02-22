@@ -22,6 +22,7 @@
     ./modules/home/theme.nix
     ./modules/home/obsidian.nix
     ./modules/home/zellij.nix
+    ./modules/home/scripts.nix
   ];
 
   # --- PACKAGES ---
