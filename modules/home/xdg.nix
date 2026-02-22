@@ -22,7 +22,7 @@
       SCREENCASTS = "${config.home.homeDirectory}/videos/screencasts";
       GAMES = "${config.home.homeDirectory}/games";
       PROJECTS = "${config.home.homeDirectory}/repositories";
-      WALLPAPERS = "${config.home.homeDirectory}/pictures/wallpapers";
+      WALLPAPERS = "${config.home.homeDirectory}/wallpapers";
     };
   };
 
@@ -45,12 +45,13 @@
     set_icon "$HOME/games" "folder-games"
     set_icon "$HOME/repositories" "folder-code"
     set_icon "$HOME/pictures/screenshots" "applets-screenshooter"
-    set_icon "$HOME/pictures/wallpapers" "preferences-desktop-wallpaper"
+    set_icon "$HOME/wallpapers" "preferences-desktop-wallpaper"
     set_icon "$HOME/videos/camera" "folder-videos"
     set_icon "$HOME/videos/screencasts" "camera-video"
     set_icon "$HOME/go" "folder-development"
     set_icon "$HOME/system_manifest" "folder-development"
     set_icon "$HOME/tabletop_games" "folder-books"
     set_icon "$HOME/scripts" "folder"
+    set_icon "$HOME/wallpapers/.thumbnails" "folder-pictures"
   '';
 }

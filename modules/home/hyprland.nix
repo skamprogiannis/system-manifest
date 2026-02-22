@@ -7,7 +7,7 @@
 }: {
   programs.dank-material-shell = {
     enable = true;
-    systemd.enable = true;
+    systemd.enable = false;
     enableSystemMonitoring = true;
     enableDynamicTheming = true;
     enableClipboardPaste = true;
@@ -27,25 +27,9 @@
       "$mod" = "SUPER";
       "$terminal" = "ghostty";
 
-      monitor = if hostType == "desktop" then [
-        "HDMI-A-1, 1920x1080@60, 0x0, 1"
-        "DP-1, 1920x1080@60, 1920x0, 1"
-      ] else [
+      monitor = [
         ",preferred,auto,1"
       ];
-
-      workspace = if hostType == "desktop" then [
-        "0, monitor:HDMI-A-1, default:true"
-        "1, monitor:DP-1, default:true"
-        "2, monitor:DP-1"
-        "3, monitor:DP-1"
-        "4, monitor:DP-1"
-        "5, monitor:DP-1"
-        "6, monitor:DP-1"
-        "7, monitor:DP-1"
-        "8, monitor:DP-1"
-        "9, monitor:DP-1"
-      ] else [];
 
       env = [
         "XCURSOR_SIZE,24"
@@ -64,7 +48,8 @@
       exec-once = [
         "hyprctl setcursor Dracula-cursors 24"
         "$HOME/.local/bin/wallpaper-hook &"
-      ] ++ (if hostType == "desktop" then ["hyprctl dispatch moveworkspacetomonitor 1 DP-1"] else []);
+        "dms run --session"
+      ];
 
       input = {
         kb_layout = "us,gr";
@@ -173,10 +158,6 @@
         "$mod, Escape, exec, dms ipc call lock lock"
         "$mod, S, exec, dms ipc call settings toggle"
         "$mod, Q, exec, dms ipc call powermenu toggle"
-      ];
-
-      bindr = [
-        ", SUPER_L, exec, dms ipc call spotlight toggle"
       ];
     };
   };
