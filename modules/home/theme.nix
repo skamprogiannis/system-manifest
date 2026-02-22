@@ -48,14 +48,14 @@
       color-scheme = "prefer-dark";
       gtk-theme = "Dracula";
       icon-theme = "Dracula";
-      font-name = "Adwaita 11";
-      document-font-name = "Adwaita 11";
-      monospace-font-name = "JetBrainsMono Nerd Font 11";
+      font-name = "Adwaita 9";
+      document-font-name = "Adwaita 9";
+      monospace-font-name = "JetBrainsMono Nerd Font 9";
     };
 
     # GNOME Terminal Profile (The Cattle Fix)
     "org/gnome/terminal/legacy/profiles:/:default" = {
-      font = "JetBrainsMono Nerd Font 11";
+      font = "JetBrainsMono Nerd Font 9";
       use-system-font = false;
     };
 
