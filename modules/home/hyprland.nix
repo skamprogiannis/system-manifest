@@ -17,6 +17,8 @@
     settings = {
       showSeconds = true;
       useAutoLocation = true;
+      matugenScheme = "scheme-content";
+      matugenPaletteFidelity = 1;
     };
   };
 
