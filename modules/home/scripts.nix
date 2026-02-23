@@ -88,5 +88,12 @@
       sleep 3
       echo "Done! Port $NEW_PORT is now active."
     '')
+    (pkgs.writeShellScriptBin "screenshot-path" ''
+      dest="$HOME/pictures/screenshots/$(date +%s).png"
+      mkdir -p "$(dirname "$dest")"
+      ${pkgs.grim}/bin/grim -g "$(${pkgs.slurp}/bin/slurp)" "$dest"
+      echo -n "$dest" | ${pkgs.wl-clipboard}/bin/wl-copy
+      ${pkgs.libnotify}/bin/notify-send "Screenshot" "Path copied to clipboard"
+    '')
   ];
 }

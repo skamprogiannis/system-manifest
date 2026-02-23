@@ -36,7 +36,6 @@
       ];
 
       workspace = if hostType == "desktop" then [
-        "0, monitor:HDMI-A-1, default:true"
         "1, monitor:DP-1, default:true"
         "2, monitor:DP-1"
         "3, monitor:DP-1"
@@ -46,6 +45,7 @@
         "7, monitor:DP-1"
         "8, monitor:DP-1"
         "9, monitor:DP-1"
+        "0, monitor:HDMI-A-1, default:true"
       ] else [];
 
       env = [
@@ -66,7 +66,7 @@
         "hyprctl setcursor Dracula-cursors 24"
         "wallpaper-hook &"
         "dms run --session"
-      ] ++ (if hostType == "desktop" then ["hyprctl dispatch moveworkspacetomonitor 1 DP-1"] else []);
+      ];
 
       input = {
         kb_layout = "us,gr";
@@ -169,7 +169,7 @@
         "$mod, grave, togglespecialworkspace, music"
         "$mod SHIFT, grave, movetoworkspace, special:music"
         ", Print, exec, dms screenshot region"
-        "SHIFT, Print, exec, dms screenshot full"
+        "SHIFT, Print, exec, screenshot-path"
         "CONTROL, Print, exec, dms screenshot window"
         "$mod, N, exec, dms ipc call notifications toggle"
         "$mod, Escape, exec, dms ipc call lock lock"
