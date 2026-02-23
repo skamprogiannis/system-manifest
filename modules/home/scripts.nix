@@ -89,11 +89,35 @@
       echo "Done! Port $NEW_PORT is now active."
     '')
     (pkgs.writeShellScriptBin "screenshot-path" ''
+      MODE="''${1:-region}"
       dest="$HOME/pictures/screenshots/$(date +%s).png"
       mkdir -p "$(dirname "$dest")"
-      ${pkgs.grim}/bin/grim -g "$(${pkgs.slurp}/bin/slurp)" "$dest"
-      echo -n "$dest" | ${pkgs.wl-clipboard}/bin/wl-copy
-      ${pkgs.libnotify}/bin/notify-send "Screenshot" "Path copied to clipboard"
+      
+      case "$MODE" in
+          "full")
+              ${pkgs.grim}/bin/grim "$dest"
+              ;;
+          "window")
+              ${pkgs.grim}/bin/grim -g "$(${pkgs.hyprland}/bin/hyprctl activewindow -j | ${pkgs.jq}/bin/jq -r '"\(.at[0]),\(.at[1]) \(.size[0])x\(.size[1])"')" "$dest"
+              ;;
+          *)
+              ${pkgs.grim}/bin/grim -g "$(${pkgs.slurp}/bin/slurp)" "$dest"
+              ;;
+      esac
+
+      if [ -f "$dest" ]; then
+          echo -n "$dest" | ${pkgs.wl-clipboard}/bin/wl-copy
+          ${pkgs.libnotify}/bin/notify-send "Screenshot ($MODE)" "Path copied to clipboard"
+      fi
     '')
   ];
+
+  home.file."scripts/screenshot-path.sh" = {
+    executable = true;
+    text = ''
+      #!/usr/bin/env bash
+      # This script is managed by Home Manager
+      screenshot-path "$@"
+    '';
+  };
 }
