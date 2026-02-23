@@ -164,7 +164,6 @@
         "$mod SHIFT, 7, movetoworkspace, 7"
         "$mod SHIFT, 8, movetoworkspace, 8"
         "$mod SHIFT, 9, movetoworkspace, 9"
-        "$mod, 0, workspace, 0"
         "$mod SHIFT, 0, movetoworkspace, 0"
         # Special workspace (scratchpad) for Spotify
         "$mod, grave, togglespecialworkspace, music"
