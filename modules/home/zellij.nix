@@ -58,6 +58,7 @@ in {
 
               // Pane/Tab Management
               bind "Alt n" { NewPane "Down"; }
+              bind "Alt f" { ToggleFloatingPanes; }
               bind "Alt x" { CloseFocus; }
               bind "Alt t" { NewTab; }
               bind "Alt w" { CloseTab; }
