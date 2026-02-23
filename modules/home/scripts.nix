@@ -3,6 +3,13 @@
     (pkgs.writeShellScriptBin "wallpaper-hook" ''
       # Monitor DMS for wallpaper changes and launch mpvpaper if a video exists
       CURRENT_WALL=""
+      
+      # Initial check on startup
+      NEW_WALL=$(dms ipc wallpaper get 2>/dev/null)
+      if [ -n "$NEW_WALL" ]; then
+          # Force an update even if CURRENT_WALL is empty
+          CURRENT_WALL="FORCE_UPDATE"
+      fi
 
       while true; do
           # Get current wallpaper path from DMS
