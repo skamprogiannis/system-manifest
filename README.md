@@ -17,6 +17,12 @@ This repository contains the declarative configuration for my NixOS system, mana
 - **Dev Ready:** Pre-configured environment for Node.js, Python, Go, and Neovim (via nixvim).
 - **AI Integrated:** Built-in configuration for **OpenCode** (AI Terminal Agent) with Context7 documentation support.
 - **Modular Architecture:** Configuration split into `hosts/` and `modules/` for maintainability.
+- **Workflow Optimizations (The "Polishing" Phase):**
+  - **AI-First Screenshots:** Advanced screenshot utility (`screenshot-path`) that copies absolute paths to clipboard by default (for OpenCode) and images when modified by `Shift`.
+  - **Dynamic Theming:** Matugen-powered Hyprland borders and dynamic video wallpapers (`mpvpaper`) synced via a custom `wallpaper-hook` daemon.
+  - **Zellij Navigation:** Refactored keybindings to use `Alt` for navigation, freeing up standard `Ctrl` shortcuts for internal application use.
+  - **System Cleanup:** Stripped out legacy GNOME components (`xterm`, `rygel`) to ensure a lean, stable environment.
+  - **Multi-Monitor Logic:** Explicit workspace pinning to ensure `DP-1` (Primary) and `HDMI-A-1` (Secondary) behave predictably.
 
 ## Typography
 

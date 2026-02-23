@@ -36,7 +36,6 @@
       ];
 
       workspace = if hostType == "desktop" then [
-        "0, monitor:HDMI-A-1, default:true"
         "1, monitor:DP-1, default:true"
         "2, monitor:DP-1"
         "3, monitor:DP-1"
@@ -46,6 +45,7 @@
         "7, monitor:DP-1"
         "8, monitor:DP-1"
         "9, monitor:DP-1"
+        "10, monitor:HDMI-A-1, default:true"
       ] else [];
 
       env = [
@@ -66,7 +66,7 @@
         "hyprctl setcursor Dracula-cursors 24"
         "wallpaper-hook &"
         "dms run --session"
-      ] ++ (if hostType == "desktop" then ["hyprctl dispatch moveworkspacetomonitor 1 DP-1"] else []);
+      ];
 
       input = {
         kb_layout = "us,gr";
@@ -155,7 +155,6 @@
         "$mod, 7, workspace, 7"
         "$mod, 8, workspace, 8"
         "$mod, 9, workspace, 9"
-        "$mod SHIFT, 0, movetoworkspace, 0"
         "$mod SHIFT, 1, movetoworkspace, 1"
         "$mod SHIFT, 2, movetoworkspace, 2"
         "$mod SHIFT, 3, movetoworkspace, 3"
@@ -165,12 +164,17 @@
         "$mod SHIFT, 7, movetoworkspace, 7"
         "$mod SHIFT, 8, movetoworkspace, 8"
         "$mod SHIFT, 9, movetoworkspace, 9"
+        "$mod, 0, workspace, 10"
+        "$mod SHIFT, 0, movetoworkspace, 10"
         # Special workspace (scratchpad) for Spotify
         "$mod, grave, togglespecialworkspace, music"
         "$mod SHIFT, grave, movetoworkspace, special:music"
-        ", Print, exec, dms screenshot region"
-        "SHIFT, Print, exec, dms screenshot full"
-        "CONTROL, Print, exec, dms screenshot window"
+        ", Print, exec, screenshot-path region path"
+        "SHIFT, Print, exec, screenshot-path region image"
+        "CONTROL, Print, exec, screenshot-path window path"
+        "CONTROL SHIFT, Print, exec, screenshot-path window image"
+        "ALT, Print, exec, screenshot-path full path"
+        "ALT SHIFT, Print, exec, screenshot-path full image"
         "$mod, N, exec, dms ipc call notifications toggle"
         "$mod, Escape, exec, dms ipc call lock lock"
         "$mod, S, exec, dms ipc call settings toggle"
