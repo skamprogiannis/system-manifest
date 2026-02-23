@@ -90,6 +90,7 @@
     '')
     (pkgs.writeShellScriptBin "screenshot-path" ''
       MODE="''${1:-region}"
+      TYPE="''${2:-path}"
       dest="$HOME/pictures/screenshots/$(date +%s).png"
       mkdir -p "$(dirname "$dest")"
       
@@ -106,8 +107,13 @@
       esac
 
       if [ -f "$dest" ]; then
-          echo -n "$dest" | ${pkgs.wl-clipboard}/bin/wl-copy
-          ${pkgs.libnotify}/bin/notify-send "Screenshot ($MODE)" "Path copied to clipboard"
+          if [ "$TYPE" = "image" ]; then
+              ${pkgs.wl-clipboard}/bin/wl-copy < "$dest"
+              ${pkgs.libnotify}/bin/notify-send "Screenshot ($MODE)" "Image copied to clipboard"
+          else
+              echo -n "$dest" | ${pkgs.wl-clipboard}/bin/wl-copy
+              ${pkgs.libnotify}/bin/notify-send "Screenshot ($MODE)" "Path copied to clipboard"
+          fi
       fi
     '')
   ];
