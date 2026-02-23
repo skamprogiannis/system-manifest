@@ -28,20 +28,29 @@ in {
     extraConfig = ''
       keybinds {
           shared_except "locked" {
-              // Tab Switching (Both Ctrl and Alt)
-              bind "Ctrl 1" "Alt 1" { GoToTab 1; }
-              bind "Ctrl 2" "Alt 2" { GoToTab 2; }
-              bind "Ctrl 3" "Alt 3" { GoToTab 3; }
-              bind "Ctrl 4" "Alt 4" { GoToTab 4; }
-              bind "Ctrl 5" "Alt 5" { GoToTab 5; }
-              bind "Ctrl 6" "Alt 6" { GoToTab 6; }
-              bind "Ctrl 7" "Alt 7" { GoToTab 7; }
-              bind "Ctrl 8" "Alt 8" { GoToTab 8; }
-              bind "Ctrl 9" "Alt 9" { GoToTab 9; }
+            // Tab Switching (Both Ctrl and Alt)
+            bind "Ctrl 1" { GoToTab 1; }
+            bind "Alt 1" { GoToTab 1; }
+            bind "Ctrl 2" { GoToTab 2; }
+            bind "Alt 2" { GoToTab 2; }
+            bind "Ctrl 3" { GoToTab 3; }
+            bind "Alt 3" { GoToTab 3; }
+            bind "Ctrl 4" { GoToTab 4; }
+            bind "Alt 4" { GoToTab 4; }
+            bind "Ctrl 5" { GoToTab 5; }
+            bind "Alt 5" { GoToTab 5; }
+            bind "Ctrl 6" { GoToTab 6; }
+            bind "Alt 6" { GoToTab 6; }
+            bind "Ctrl 7" { GoToTab 7; }
+            bind "Alt 7" { GoToTab 7; }
+            bind "Ctrl 8" { GoToTab 8; }
+            bind "Alt 8" { GoToTab 8; }
+            bind "Ctrl 9" { GoToTab 9; }
+            bind "Alt 9" { GoToTab 9; }
 
-              // Navigation
-              bind "Ctrl Tab" { GoToNextTab; }
-              bind "Ctrl Shift Tab" { GoToPreviousTab; }
+            // Navigation
+            bind "Ctrl Tab" { GoToNextTab; }
+            bind "Ctrl Shift Tab" { GoToPreviousTab; }
               bind "Alt h" { MoveFocus "Left"; }
               bind "Alt l" { MoveFocus "Right"; }
               bind "Alt j" { MoveFocus "Down"; }
