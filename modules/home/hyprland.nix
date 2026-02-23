@@ -184,4 +184,11 @@
       $terminal = ghostty
     '';
   };
+
+  # Default colors to prevent Hyprland errors before Matugen runs
+  home.file.".config/hypr/colors.conf".text = ''
+    $primary = rgba(bd93f9ff)
+    $secondary = rgba(ff79c6ff)
+    $surfaceContainerHighest = rgba(44475aaa)
+  '';
 }

@@ -45,6 +45,8 @@
 
   # Enable the X11 windowing system
   services.xserver.enable = true;
+  services.xserver.excludePackages = [ pkgs.xterm ];
+  services.xserver.desktopManager.xterm.enable = false;
 
   # Enable nix-ld for Opencode/dynamic binaries
   programs.nix-ld.enable = true;
@@ -102,6 +104,7 @@
   # Enable GNOME Keyring for email clients and other apps
   services.gnome.gnome-keyring.enable = true;
   services.gnome.gnome-online-accounts.enable = false;
+  services.gnome.rygel.enable = false;
 
   # Define a user account. Don't forget to set a password with ‘passwd’
   users.users.stefan = {
