@@ -28,6 +28,9 @@ in {
     extraConfig = ''
       keybinds {
           shared_except "locked" {
+            // Unbind conflicting Ctrl keys to allow them to pass through to applications
+            unbind "Ctrl h" "Ctrl j" "Ctrl k" "Ctrl l" "Ctrl p" "Ctrl t" "Ctrl n" "Ctrl s" "Ctrl o" "Ctrl q" "Ctrl g"
+
             // Tab Switching (Both Ctrl and Alt)
             bind "Ctrl 1" { GoToTab 1; }
             bind "Alt 1" { GoToTab 1; }

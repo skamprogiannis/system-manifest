@@ -25,9 +25,10 @@
   wayland.windowManager.hyprland = {
     enable = true;
 
-      settings = {
-        "$mod" = "SUPER";
-        monitor = if hostType == "desktop" then [
+    settings = {
+      source = "~/.config/hypr/colors.conf";
+      "$mod" = "SUPER";
+      monitor = if hostType == "desktop" then [
         "HDMI-A-1, 1920x1080@60, 0x0, 1"
         "DP-1, 1920x1080@60, 1920x0, 1"
       ] else [
@@ -77,8 +78,8 @@
         gaps_in = 5;
         gaps_out = 10;
         border_size = 2;
-        "col.active_border" = "rgb(ff00ff) rgb(00ffff) 45deg";
-        "col.inactive_border" = "rgba(595959aa)";
+        "col.active_border" = "$primary $secondary 45deg";
+        "col.inactive_border" = "$surfaceContainerHighest";
         layout = "dwindle";
       };
 
