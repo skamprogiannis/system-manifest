@@ -21,6 +21,15 @@
       keybind = [
         "kp_enter=text:\\r"
         "backspace=text:\\x7f"
+        "ctrl+shift+t=unbind"
+        "ctrl+shift+w=unbind"
+        "ctrl+shift+e=unbind"
+        "ctrl+shift+o=unbind"
+        "ctrl+shift+n=unbind"
+        "ctrl+shift+i=unbind"
+        "ctrl+shift+j=unbind"
+        "ctrl+shift+k=unbind"
+        "ctrl+shift+l=unbind"
       ];
     };
   };
