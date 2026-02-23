@@ -25,8 +25,9 @@
   wayland.windowManager.hyprland = {
     enable = true;
 
-    settings = {
-      monitor = if hostType == "desktop" then [
+      settings = {
+        "$mod" = "SUPER";
+        monitor = if hostType == "desktop" then [
         "HDMI-A-1, 1920x1080@60, 0x0, 1"
         "DP-1, 1920x1080@60, 1920x0, 1"
       ] else [
@@ -175,13 +176,10 @@
         "$mod, Q, exec, dms ipc call powermenu toggle"
       ];
 
-      bindr = [
-        ", SUPER_L, exec, dms ipc call spotlight toggle"
-      ];
+      bindr = [];
     };
 
     extraConfig = ''
-      $mod = SUPER
       $terminal = ghostty
     '';
   };
