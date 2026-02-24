@@ -4,6 +4,11 @@
       # Monitor DMS for wallpaper changes and launch mpvpaper if a video exists
       CURRENT_WALL=""
       
+      # Wait for DMS to be ready
+      until dms ipc wallpaper get &>/dev/null; do
+          sleep 1
+      done
+
       # Initial check on startup
       NEW_WALL=$(dms ipc wallpaper get 2>/dev/null)
       if [ -n "$NEW_WALL" ]; then
