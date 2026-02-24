@@ -28,8 +28,8 @@ in {
     extraConfig = ''
       keybinds {
           shared_except "locked" {
-            // Unbind conflicting Ctrl keys to allow them to pass through to applications
-            unbind "Ctrl h" "Ctrl j" "Ctrl k" "Ctrl l" "Ctrl p" "Ctrl t" "Ctrl n" "Ctrl s" "Ctrl o" "Ctrl q" "Ctrl g"
+            // Unbind EVERYTHING default to clean the status bar
+            unbind "Ctrl h" "Ctrl j" "Ctrl k" "Ctrl l" "Ctrl p" "Ctrl t" "Ctrl n" "Ctrl s" "Ctrl o" "Ctrl q" "Ctrl g" "Ctrl r" "Ctrl d" "Ctrl b"
 
             // Tab Switching (Both Ctrl and Alt)
             bind "Ctrl 1" { GoToTab 1; }
@@ -54,19 +54,21 @@ in {
             // Navigation
             bind "Ctrl Tab" { GoToNextTab; }
             bind "Ctrl Shift Tab" { GoToPreviousTab; }
-              bind "Alt h" { MoveFocus "Left"; }
-              bind "Alt l" { MoveFocus "Right"; }
-              bind "Alt j" { MoveFocus "Down"; }
-              bind "Alt k" { MoveFocus "Up"; }
+            bind "Alt h" { MoveFocus "Left"; }
+            bind "Alt l" { MoveFocus "Right"; }
+            bind "Alt j" { MoveFocus "Down"; }
+            bind "Alt k" { MoveFocus "Up"; }
 
-              // Pane/Tab Management
-              bind "Alt n" { NewPane "Down"; }
-              bind "Alt f" { ToggleFloatingPanes; }
-              bind "Alt x" { CloseFocus; }
-              bind "Alt t" { NewTab; }
-              bind "Alt w" { CloseTab; }
-              bind "Alt s" { SwitchToMode "Scroll"; }
-              bind "Alt o" { SwitchToMode "Session"; }
+            // Pane/Tab Management
+            bind "Alt n" { NewPane "Down"; }
+            bind "Alt f" { ToggleFloatingPanes; }
+            bind "Alt x" { CloseFocus; }
+            bind "Alt t" { NewTab; }
+            bind "Alt w" { CloseTab; }
+            bind "Alt s" { SwitchToMode "Scroll"; }
+            bind "Alt o" { SwitchToMode "Session"; }
+            bind "Alt r" { SwitchToMode "Resize"; }
+            bind "Alt p" { SwitchToMode "Pane"; }
           }
       }
     '';

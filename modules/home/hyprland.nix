@@ -51,7 +51,6 @@
       env = [
         "XCURSOR_SIZE,24"
         "XCURSOR_THEME,Dracula-cursors"
-        "WLR_NO_HARDWARE_CURSORS,1"
         "GDK_BACKEND,wayland,x11"
         "QT_QPA_PLATFORM,wayland;xcb"
         "CLUTTER_BACKEND,wayland"
@@ -67,6 +66,12 @@
         "wallpaper-hook &"
         "dms run --session"
       ];
+
+      misc = {
+        disable_hyprland_logo = true;
+        disable_splash_rendering = true;
+        force_default_wallpaper = 0;
+      };
 
       input = {
         kb_layout = "us,gr";
@@ -108,10 +113,6 @@
           "fade, 1, 7, default"
           "workspaces, 1, 6, default"
         ];
-      };
-
-      cursor = {
-        no_hardware_cursors = true;
       };
 
       dwindle = {
