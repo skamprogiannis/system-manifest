@@ -4,6 +4,11 @@
       # Monitor DMS for wallpaper changes and launch mpvpaper if a video exists
       CURRENT_WALL=""
       
+      # Wait for DMS to be ready
+      until dms ipc wallpaper get &>/dev/null; do
+          sleep 1
+      done
+
       # Initial check on startup
       NEW_WALL=$(dms ipc wallpaper get 2>/dev/null)
       if [ -n "$NEW_WALL" ]; then
@@ -109,10 +114,10 @@
       if [ -f "$dest" ]; then
           if [ "$TYPE" = "image" ]; then
               ${pkgs.wl-clipboard}/bin/wl-copy < "$dest"
-              ${pkgs.libnotify}/bin/notify-send "Screenshot ($MODE)" "Image copied to clipboard"
+              ${pkgs.libnotify}/bin/notify-send -i "$dest" "Screenshot ($MODE)" "Image copied to clipboard"
           else
               echo -n "$dest" | ${pkgs.wl-clipboard}/bin/wl-copy
-              ${pkgs.libnotify}/bin/notify-send "Screenshot ($MODE)" "Path copied to clipboard"
+              ${pkgs.libnotify}/bin/notify-send -i "$dest" "Screenshot ($MODE)" "Path copied to clipboard"
           fi
       fi
     '')

@@ -4,7 +4,7 @@ This repository contains the declarative configuration for my NixOS system, mana
 
 ## Features
 
-- **Multi-Host Configuration:** Shared common configuration with host-specific overrides for `desktop`, `laptop`, and `usb` (live system).
+- **Multi-Host Configuration:** Shared common configuration with host-specific overrides for `desktop` and `usb` (live system).
 - **Dual Desktop Environment:**
   - **GNOME:** Stable, daily driver environment.
   - **Hyprland:** Tiling window manager with custom aesthetics.
@@ -60,7 +60,6 @@ Select **"NixOS - desktop-gaming-box"** from the bootloader menu (GRUB).
 - `hosts/`: Host-specific configurations.
   - `common/`: Shared system configuration (Boot, Networking, Audio, Printing).
   - `desktop/`: Desktop-specific hardware, bootloader, and NVIDIA drivers.
-  - `laptop/`: Laptop-specific power management.
   - `usb/`: Live USB configuration.
 - `home.nix`: User-level config entry point.
 - `modules/`:

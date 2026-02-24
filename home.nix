@@ -138,6 +138,11 @@
     "org/gnome/shell/screenshot" = {
       last-save-directory = "file:///home/stefan/pictures/screenshots";
     };
+    # Disable WLR_NO_HARDWARE_CURSORS to fix cursor issues
+    "org/gnome/desktop/interface" = {
+      cursor-theme = lib.mkForce "Adwaita";
+      cursor-size = 24;
+    };
   };
 
   programs.home-manager.enable = true;
