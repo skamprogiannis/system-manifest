@@ -40,11 +40,12 @@
               
               if [ -f "$MP4_WALL" ]; then
                   echo "Video wallpaper detected: $MP4_WALL"
-                  pkill mpvpaper
+                  pkill mpvpaper || true
+                  sleep 0.3
                   mpvpaper -o "no-audio --loop" "*" "$MP4_WALL" &
               else
                   echo "Static wallpaper detected: $NEW_WALL"
-                  pkill mpvpaper
+                  pkill mpvpaper || true
               fi
           fi
           sleep 2
