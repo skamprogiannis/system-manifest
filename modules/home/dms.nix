@@ -15,7 +15,7 @@
     enableSystemMonitoring = true;
     enableDynamicTheming = true;
     enableClipboardPaste = true;
-    enableCalendarEvents = true;
+    enableCalendarEvents = false;
     enableVPN = true;
     enableAudioWavelength = true;
     settings = {

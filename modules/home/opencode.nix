@@ -9,7 +9,7 @@
       {
         "$schema": "https://opencode.ai/config.json",
         "theme": "system",
-        "plugin": ["opencode-gemini-auth@latest"],
+        "plugin": ["opencode-antigravity-auth@latest"],
         "mcp": {
           "context7": {
             "type": "local",

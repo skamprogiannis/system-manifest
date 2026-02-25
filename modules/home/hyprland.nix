@@ -51,7 +51,6 @@
       exec-once = [
         "hyprctl setcursor Dracula-cursors 24"
         "wallpaper-hook &"
-        "dms run --session"
       ];
 
       misc = {
