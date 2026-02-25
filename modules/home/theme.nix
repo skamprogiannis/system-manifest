@@ -106,7 +106,7 @@
       name = "tremc";
       noDisplay = true;
     };
-    gnome-control-center = {
+    "org.gnome.Settings" = {
       name = "Settings";
       noDisplay = true;
     };
