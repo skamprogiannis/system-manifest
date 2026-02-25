@@ -56,10 +56,25 @@
 
       ## Workflow & Quality
       - **Clarification:** ALWAYS ask clarifying questions BEFORE committing to a plan. Surface edge cases the user may not have considered.
-      - **Documentation:** Always create/update a local `.md` plan file (e.g., `PLAN.md` or `todo.md`) and link to it, so the user can see/edit your thought process.
-      - **Verification:** After editing code, **ALWAYS run the configured formatters/linters** (e.g., `prettier`, `ruff`, `gofmt` or `nixfmt`) to ensure standards.
+      - **Formatters & Linters:** After editing code, **ALWAYS run the configured formatters/linters** (e.g., `prettier`, `ruff`, `gofmt` or `nixfmt`) to ensure standards.
       - **Subagents:** Use subagents for research and long-running tasks (like builds/test runs) to keep the main context clean.
       - **Style:** Do NOT use emojis in documentation or commit messages unless explicitly requested.
+
+      ## Verification Before Done
+      - **Proof of Work:** Never mark a task complete without proving it works (tests pass, build succeeds, feature demonstrable).
+      - **Diff Behavior:** Compare behavior between main and your changes when relevant.
+      - **Staff Engineer Test:** Ask yourself, "Would a staff engineer approve this?"
+      - **Test Baseline:** Run tests before and after changes to establish baseline and catch regressions.
+
+      ## Autonomous Bug Fixing
+      - **Self-Sufficiency:** When given a bug report, analyze, fix, and verify. Don't ask for hand-holding.
+      - **Root Cause:** Point at logs, errors, and failing tests—then resolve them.
+      - **Zero Context Switching:** User requires no follow-up or hand-holding.
+
+      ## Self-Improvement Loop
+      - **Capture Corrections:** After ANY correction from the user, update `tasks/lessons.md` with the pattern that was wrong and the correct approach.
+      - **Iterate Ruthlessly:** Iterate on lessons until mistake rate drops.
+      - **Session Start Review:** Review lessons at session start for relevant project context.
 
       ## Git & Commits
       - **Gists:** Always create **private/secret** gists. Never use `--public`.
@@ -69,13 +84,17 @@
         - Body: Optional, explain the "why".
       - **Push:** `git push` immediately after committing.
 
-      ## Specific Error Handling
-      **File Edit Conflicts:**
-      If you encounter "File has been modified since read", retry with exponential backoff:
-      1. **Immediately** re-read and retry.
-      2. **Wait 10s** -> re-read -> retry.
-      3. **Wait 30s** -> re-read -> retry.
-      4. **Wait 60s** -> re-read -> retry.
+      ## Security
+      - **No Secrets:** Never commit secrets, `.env` files, API keys, or credentials.
+      - **Explicit Warnings:** Warn the user explicitly if they request to commit sensitive files.
+      - **Gitignore Check:** Review `.gitignore` to ensure sensitive patterns are excluded.
+
+      ## Dependencies & Testing
+      - **Avoid Duplication:** Before adding new packages/libraries, check if existing code already covers functionality.
+      - **Test Baseline:** If tests exist in the project, run them before and after changes to establish baseline and catch regressions.
+
+      ## Error Handling
+      - **File Edit Conflicts:** If you encounter "File has been modified since read", retry with exponential backoff (immediately, wait 10s, wait 30s, wait 60s).
     '';
   };
 }
