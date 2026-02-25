@@ -53,8 +53,6 @@
       matugenTemplateNeovim = true;
       matugenTemplateDgop = true;
       matugenTemplateKcolorscheme = true;
-      
-      # Disabled templates
       matugenTemplateNiri = false;
       matugenTemplateMangowc = false;
       matugenTemplateQt5ct = false;
