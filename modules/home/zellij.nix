@@ -28,7 +28,7 @@ in {
       keybinds {
           shared_except "locked" {
             // Unbind default Ctrl binds to avoid UI clutter in the Inverse Layout
-            unbind "Ctrl p" "Ctrl t" "Ctrl n" "Ctrl s" "Ctrl o" "Ctrl q" "Ctrl g" "Ctrl r" "Ctrl d"
+            unbind "Ctrl p" "Ctrl t" "Ctrl n" "Ctrl s" "Ctrl o" "Ctrl q" "Ctrl g" "Ctrl r" "Ctrl d" "Ctrl h" "Ctrl j" "Ctrl k" "Ctrl l"
 
             // --- INVERSE LAYOUT ---
             // Modes (Alt)
@@ -75,6 +75,12 @@ in {
 
             bind "Ctrl Tab" { GoToNextTab; }
             bind "Ctrl Shift Tab" { GoToPreviousTab; }
+            bind "Alt Tab" { GoToNextTab; }
+            bind "Alt Shift Tab" { GoToPreviousTab; }
+          }
+          tab {
+            bind "h" "k" { GoToPreviousTab; }
+            bind "l" "j" { GoToNextTab; }
           }
       }
     '';

@@ -42,10 +42,42 @@
                    echo "Video wallpaper detected: $MP4_WALL"
                    pkill mpvpaper || true
                    sleep 0.3
-                   mpvpaper -o "no-audio --loop --hwdec=auto --vd-lavc-threads=2 --cache=no" "*" "$MP4_WALL" &
+                   mpvpaper -o "no-audio --loop-file=inf --hwdec=auto --vd-lavc-threads=2 --cache=no --demuxer-max-bytes=8MiB --demuxer-max-back-bytes=1MiB" "*" "$MP4_WALL" &
                else
                    echo "Static wallpaper detected: $NEW_WALL"
                   pkill mpvpaper || true
+              fi
+
+              # Update Zathura colors from Matugen
+              if [ -f ~/.config/hypr/dms/colors.conf ]; then
+                  echo "Updating Zathura colors..."
+                  # Extract colors from hyprland dms colors.conf
+                  PRIMARY=$(grep "\$primary =" ~/.config/hypr/dms/colors.conf | cut -d'(' -f2 | cut -d')' -f1 | sed 's/ff$//')
+                  BG=$(grep "\$surface =" ~/.config/hypr/dms/colors.conf | cut -d'(' -f2 | cut -d')' -f1 | sed 's/ff$//')
+                  FG=$(grep "\$onSurface =" ~/.config/hypr/dms/colors.conf | cut -d'(' -f2 | cut -d')' -f1 | sed 's/ff$//')
+                  
+                  mkdir -p ~/.config/zathura
+                  cat <<EOF > ~/.config/zathura/zathurarc
+set recolor "true"
+set completion-bg "#$BG"
+set completion-fg "#$FG"
+set completion-highlight-bg "#$PRIMARY"
+set completion-highlight-fg "#$BG"
+set recolor-lightcolor "#$BG"
+set recolor-darkcolor "#$FG"
+set default-bg "#$BG"
+set default-fg "#$FG"
+set statusbar-bg "#$BG"
+set statusbar-fg "#$FG"
+set inputbar-bg "#$BG"
+set inputbar-fg "#$FG"
+set notification-error-bg "#ff5555"
+set notification-error-fg "#$FG"
+set notification-warning-bg "#ffb86c"
+set notification-warning-fg "#$FG"
+set highlight-color "#$PRIMARY"
+set highlight-active-color "#$PRIMARY"
+EOF
               fi
           fi
           sleep 2

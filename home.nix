@@ -38,7 +38,6 @@
     alejandra
     btop
     curl
-    dig
     fastfetch
     fd
     ffmpegthumbnailer
@@ -56,6 +55,7 @@
     transmission_4
     wget
     wl-clipboard
+    zathura
 
     # Disk Utilities
     dosfstools
@@ -95,16 +95,19 @@
   systemd.user.services.spotify-player = {
     Unit = {
       Description = "Spotify Player Daemon";
-      After = [ "network-online.target" ];
-      Wants = [ "network-online.target" ];
+      After = ["network-online.target"];
+      Wants = ["network-online.target"];
+      StartLimitIntervalSec = 300;
+      StartLimitBurst = 3;
     };
     Service = {
+      ExecStartPre = "${pkgs.util-linux}/bin/fuser -k 8081/tcp || true";
       ExecStart = "${inputs.spotify-player.defaultPackage.${pkgs.stdenv.hostPlatform.system}}/bin/spotify_player --daemon";
       Restart = "on-failure";
-      RestartSec = "5s";
+      RestartSec = "30s";
     };
     Install = {
-      WantedBy = [ "default.target" ];
+      WantedBy = ["default.target"];
     };
   };
 
