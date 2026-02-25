@@ -26,7 +26,11 @@
     enable = true;
 
     settings = {
-      source = "~/.config/hypr/colors.conf";
+      source = [
+        "~/.config/hypr/dms/colors.conf"
+        "~/.config/hypr/dms/cursor.conf"
+        "~/.config/hypr/dms/layout.conf"
+      ];
       "$mod" = "SUPER";
       monitor = if hostType == "desktop" then [
         "HDMI-A-1, 1920x1080@60, 0x0, 1"
@@ -83,8 +87,6 @@
         gaps_in = 5;
         gaps_out = 10;
         border_size = 2;
-        "col.active_border" = "$primary $secondary 45deg";
-        "col.inactive_border" = "$surfaceContainerHighest";
         layout = "dwindle";
       };
 
@@ -190,11 +192,4 @@
       $terminal = ghostty
     '';
   };
-
-  # Default colors to prevent Hyprland errors before Matugen runs
-  home.file.".config/hypr/colors.conf".text = ''
-    $primary = rgba(bd93f9ff)
-    $secondary = rgba(ff79c6ff)
-    $surfaceContainerHighest = rgba(44475aaa)
-  '';
 }
