@@ -19,6 +19,8 @@
       useAutoLocation = true;
       matugenScheme = "scheme-content";
       matugenPaletteFidelity = 1;
+      currentThemeName = "dynamic";
+      currentThemeCategory = "dynamic";
     };
   };
 
