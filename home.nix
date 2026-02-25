@@ -151,6 +151,9 @@
     enableCompletion = true;
     initExtra = ''
       set -o vi
+      # Arrow keys for history search in Vi mode
+      bind '"\e[A": history-search-backward'
+      bind '"\e[B": history-search-forward'
     '';
   };
   home.stateVersion = "24.11";
