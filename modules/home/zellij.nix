@@ -28,8 +28,27 @@ in {
     extraConfig = ''
       keybinds {
           shared_except "locked" {
-            // Unbind EVERYTHING default to clean the status bar
-            unbind "Ctrl h" "Ctrl j" "Ctrl k" "Ctrl l" "Ctrl p" "Ctrl t" "Ctrl n" "Ctrl s" "Ctrl o" "Ctrl q" "Ctrl g" "Ctrl r" "Ctrl d" "Ctrl b"
+            // --- INVERSE LAYOUT ---
+            // Modes (Alt)
+            bind "Alt p" { SwitchToMode "Pane"; }
+            bind "Alt t" { SwitchToMode "Tab"; }
+            bind "Alt r" { SwitchToMode "Resize"; }
+            bind "Alt s" { SwitchToMode "Scroll"; }
+            bind "Alt o" { SwitchToMode "Session"; }
+            bind "Alt m" { SwitchToMode "Move"; }
+            bind "Alt g" { SwitchToMode "Locked"; }
+
+            // Navigation (Alt focus)
+            bind "Alt h" { MoveFocus "Left"; }
+            bind "Alt l" { MoveFocus "Right"; }
+            bind "Alt j" { MoveFocus "Down"; }
+            bind "Alt k" { MoveFocus "Up"; }
+
+            // Global Actions (Ctrl)
+            bind "Ctrl n" { NewPane "Down"; }
+            bind "Ctrl f" { ToggleFloatingPanes; }
+            bind "Ctrl x" { CloseFocus; }
+            bind "Ctrl d" { Detach; }
 
             // Tab Switching (Both Ctrl and Alt)
             bind "Ctrl 1" { GoToTab 1; }
@@ -51,24 +70,8 @@ in {
             bind "Ctrl 9" { GoToTab 9; }
             bind "Alt 9" { GoToTab 9; }
 
-            // Navigation
             bind "Ctrl Tab" { GoToNextTab; }
             bind "Ctrl Shift Tab" { GoToPreviousTab; }
-            bind "Alt h" { MoveFocus "Left"; }
-            bind "Alt l" { MoveFocus "Right"; }
-            bind "Alt j" { MoveFocus "Down"; }
-            bind "Alt k" { MoveFocus "Up"; }
-
-            // Pane/Tab Management
-            bind "Alt n" { NewPane "Down"; }
-            bind "Alt f" { ToggleFloatingPanes; }
-            bind "Alt x" { CloseFocus; }
-            bind "Alt t" { NewTab; }
-            bind "Alt w" { CloseTab; }
-            bind "Alt s" { SwitchToMode "Scroll"; }
-            bind "Alt o" { SwitchToMode "Session"; }
-            bind "Alt r" { SwitchToMode "Resize"; }
-            bind "Alt p" { SwitchToMode "Pane"; }
           }
       }
     '';
