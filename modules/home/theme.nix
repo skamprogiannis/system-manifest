@@ -59,7 +59,7 @@
       use-system-font = false;
     };
 
-    # Favorites Bar (Sync USB to Desktop)
+    # Favorites Bar
     "org/gnome/shell" = {
       favorite-apps = [
         "com.mitchellh.ghostty.desktop"
