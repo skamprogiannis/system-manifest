@@ -11,7 +11,7 @@
 
   programs.dank-material-shell = {
     enable = true;
-    systemd.enable = false;
+    systemd.enable = true;
     enableSystemMonitoring = true;
     enableDynamicTheming = true;
     enableClipboardPaste = true;
@@ -22,7 +22,7 @@
       # --- THEME & COLOR ---
       currentThemeName = "dynamic";
       currentThemeCategory = "dynamic";
-      matugenScheme = "scheme-content";
+      matugenScheme = "scheme-fidelity";
       matugenPaletteFidelity = 1;
       
       # --- CURSOR ---
