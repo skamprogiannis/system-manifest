@@ -66,6 +66,7 @@
         "brave-browser.desktop"
         "discord.desktop"
         "pearpass.desktop"
+        "spotify-player.desktop"
         "Mailspring.desktop"
         "org.gnome.Nautilus.desktop"
       ];

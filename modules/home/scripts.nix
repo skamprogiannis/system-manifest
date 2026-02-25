@@ -4,7 +4,8 @@
       # Monitor DMS for wallpaper changes and launch mpvpaper if a video exists
       CURRENT_WALL=""
       
-      # Wait for DMS to be ready
+      # Wait for DMS to be ready and Matugen to settle
+      sleep 2
       until dms ipc wallpaper get &>/dev/null; do
           sleep 1
       done
@@ -42,7 +43,7 @@
                    echo "Video wallpaper detected: $MP4_WALL"
                    pkill mpvpaper || true
                    sleep 0.3
-                   mpvpaper -o "no-audio --loop-file=inf --hwdec=auto --vd-lavc-threads=2 --cache=no --demuxer-max-bytes=8MiB --demuxer-max-back-bytes=1MiB" "*" "$MP4_WALL" &
+                   mpvpaper -o "no-audio --loop-file=inf --hwdec=auto --vd-lavc-threads=2 --cache=no --demuxer-max-bytes=10M --demuxer-max-back-bytes=1M --keep-open=yes" "*" "$MP4_WALL" &
                else
                    echo "Static wallpaper detected: $NEW_WALL"
                   pkill mpvpaper || true

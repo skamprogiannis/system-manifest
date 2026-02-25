@@ -26,10 +26,9 @@ in {
       );
     extraConfig = ''
       keybinds {
-          shared_except "locked" {
-            // Unbind default Ctrl binds to avoid UI clutter in the Inverse Layout
-            unbind "Ctrl p" "Ctrl t" "Ctrl n" "Ctrl s" "Ctrl o" "Ctrl q" "Ctrl g" "Ctrl r" "Ctrl d" "Ctrl h" "Ctrl j" "Ctrl k" "Ctrl l"
+          unbind "Ctrl p" "Ctrl t" "Ctrl n" "Ctrl s" "Ctrl o" "Ctrl q" "Ctrl g" "Ctrl r" "Ctrl d" "Ctrl h" "Ctrl j" "Ctrl k" "Ctrl l" "Ctrl b" "Alt n" "Alt f" "Alt i" "Alt o" "Alt s" "Alt h" "Alt j" "Alt k" "Alt l"
 
+          shared_except "locked" {
             // --- INVERSE LAYOUT ---
             // Modes (Alt)
             bind "Alt p" { SwitchToMode "Pane"; }
@@ -53,7 +52,7 @@ in {
             bind "Ctrl x" { CloseFocus; }
             bind "Alt d" { Detach; }
 
-            // Tab Switching (Both Ctrl and Alt)
+            // Tab Switching
             bind "Ctrl 1" { GoToTab 1; }
             bind "Alt 1" { GoToTab 1; }
             bind "Ctrl 2" { GoToTab 2; }
@@ -77,7 +76,19 @@ in {
             bind "Ctrl Shift Tab" { GoToPreviousTab; }
             bind "Alt Tab" { GoToNextTab; }
             bind "Alt Shift Tab" { GoToPreviousTab; }
+            
+            // Fast tab navigation with Alt + hjkl (Shifted to avoid focus clash)
+            bind "Alt H" { GoToPreviousTab; }
+            bind "Alt L" { GoToNextTab; }
           }
+          
+          move {
+            bind "h" { MovePane "Left"; }
+            bind "l" { MovePane "Right"; }
+            bind "j" { MovePane "Down"; }
+            bind "k" { MovePane "Up"; }
+          }
+
           tab {
             bind "h" "k" { GoToPreviousTab; }
             bind "l" "j" { GoToNextTab; }
