@@ -28,7 +28,7 @@ in {
       keybinds {
           shared_except "locked" {
             // Unbind default Ctrl binds to avoid UI clutter in the Inverse Layout
-            unbind "Ctrl p" "Ctrl t" "Ctrl n" "Ctrl s" "Ctrl o" "Ctrl q" "Ctrl g" "Ctrl r"
+            unbind "Ctrl p" "Ctrl t" "Ctrl n" "Ctrl s" "Ctrl o" "Ctrl q" "Ctrl g" "Ctrl r" "Ctrl d"
 
             // --- INVERSE LAYOUT ---
             // Modes (Alt)
@@ -51,7 +51,7 @@ in {
             bind "Ctrl n" { NewPane "Down"; }
             bind "Ctrl f" { ToggleFloatingPanes; }
             bind "Ctrl x" { CloseFocus; }
-            bind "Ctrl d" { Detach; }
+            bind "Alt d" { Detach; }
 
             // Tab Switching (Both Ctrl and Alt)
             bind "Ctrl 1" { GoToTab 1; }
