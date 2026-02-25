@@ -5,25 +5,6 @@
   lib,
   ...
 }: {
-  programs.dank-material-shell = {
-    enable = true;
-    systemd.enable = false;
-    enableSystemMonitoring = true;
-    enableDynamicTheming = true;
-    enableClipboardPaste = true;
-    enableCalendarEvents = true;
-    enableVPN = true;
-    enableAudioWavelength = true;
-    settings = {
-      showSeconds = true;
-      useAutoLocation = true;
-      matugenScheme = "scheme-content";
-      matugenPaletteFidelity = 1;
-      currentThemeName = "dynamic";
-      currentThemeCategory = "dynamic";
-    };
-  };
-
   wayland.windowManager.hyprland = {
     enable = true;
 
