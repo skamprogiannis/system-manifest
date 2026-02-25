@@ -162,6 +162,15 @@
   home.stateVersion = "24.11";
 
   home.sessionPath = ["$HOME/.local/bin"];
+  
+  # btop desktop entry for launcher
+  xdg.desktopEntries.btop = {
+    name = "btop";
+    exec = "ghostty -e btop";
+    icon = "btop";
+    terminal = false;
+    categories = ["System" "Monitor"];
+  };
 
   home.shellAliases = {
     cat = "bat";
