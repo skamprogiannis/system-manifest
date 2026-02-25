@@ -11,7 +11,6 @@ in {
     enableBashIntegration = true;
     settings =
       {
-        theme = "dracula";
         default_shell = "bash";
       }
       // (
@@ -28,6 +27,9 @@ in {
     extraConfig = ''
       keybinds {
           shared_except "locked" {
+            // Unbind default Ctrl binds to avoid UI clutter in the Inverse Layout
+            unbind "Ctrl p" "Ctrl t" "Ctrl n" "Ctrl s" "Ctrl o" "Ctrl q" "Ctrl g" "Ctrl r"
+
             // --- INVERSE LAYOUT ---
             // Modes (Alt)
             bind "Alt p" { SwitchToMode "Pane"; }
@@ -37,6 +39,7 @@ in {
             bind "Alt o" { SwitchToMode "Session"; }
             bind "Alt m" { SwitchToMode "Move"; }
             bind "Alt g" { SwitchToMode "Locked"; }
+            bind "Alt q" { Quit; }
 
             // Navigation (Alt focus)
             bind "Alt h" { MoveFocus "Left"; }
@@ -76,24 +79,6 @@ in {
       }
     '';
   };
-
-  home.file."${config.xdg.configHome}/zellij/themes/dracula.kdl".text = ''
-    themes {
-        dracula {
-            fg 248 248 242
-            bg 40 42 54
-            black 0 0 0
-            red 255 85 85
-            green 80 250 123
-            yellow 241 250 140
-            blue 98 114 164
-            magenta 255 121 198
-            cyan 139 233 253
-            white 255 255 255
-            orange 255 184 108
-        }
-    }
-  '';
 
   home.packages = [
     (pkgs.writeShellScriptBin "zs" ''
