@@ -1,15 +1,26 @@
 {
   config,
   pkgs,
+  hostType,
   ...
 }: {
   programs.brave = {
     enable = true;
     package = pkgs.brave.override {
-      commandLineArgs = [
-        "--disable-features=HardwareMediaKeyHandling"
-        "--test-type"
-      ];
+      commandLineArgs =
+        [
+          "--disable-features=HardwareMediaKeyHandling"
+          "--test-type"
+          "--extensions-on-chrome-urls"
+        ]
+        ++ (
+          if hostType == "usb"
+          then [
+            "--ozone-platform-hint=auto"
+            "--disable-gpu"
+          ]
+          else []
+        );
     };
     extensions = [
       {id = "dbepggeogbaibhgnhhndojpepiihcmeb";} # Vimium C
