@@ -26,7 +26,11 @@ in {
       );
     extraConfig = ''
       keybinds {
-          unbind "Ctrl p" "Ctrl t" "Ctrl n" "Ctrl s" "Ctrl o" "Ctrl q" "Ctrl g" "Ctrl r" "Ctrl d" "Ctrl h" "Ctrl j" "Ctrl k" "Ctrl l" "Ctrl b" "Alt n" "Alt f" "Alt i" "Alt o" "Alt s" "Alt h" "Alt j" "Alt k" "Alt l"
+          unbind "Ctrl p" "Ctrl t" "Ctrl n" "Ctrl s" "Ctrl o" "Ctrl q" "Ctrl g" "Ctrl r" "Ctrl d" "Ctrl h" "Ctrl j" "Ctrl k" "Ctrl l" "Ctrl b" "Alt n" "Alt f" "Alt i" "Alt s" "Alt h" "Alt j" "Alt k" "Alt l"
+
+          locked {
+            bind "Alt g" { SwitchToMode "Normal"; }
+          }
 
           shared_except "locked" {
             // --- INVERSE LAYOUT ---
@@ -41,10 +45,18 @@ in {
             bind "Alt q" { Quit; }
 
             // Navigation (Alt focus)
-            bind "Alt h" { MoveFocus "Left"; }
-            bind "Alt l" { MoveFocus "Right"; }
+            bind "Alt h" { MoveFocusOrTab "Left"; }
+            bind "Alt l" { MoveFocusOrTab "Right"; }
             bind "Alt j" { MoveFocus "Down"; }
             bind "Alt k" { MoveFocus "Up"; }
+            bind "Alt Left" { MoveFocusOrTab "Left"; }
+            bind "Alt Right" { MoveFocusOrTab "Right"; }
+            bind "Alt Down" { MoveFocus "Down"; }
+            bind "Alt Up" { MoveFocus "Up"; }
+
+            // Fast Tab Navigation
+            bind "Alt H" { GoToPreviousTab; }
+            bind "Alt L" { GoToNextTab; }
 
             // Global Actions (Alt)
             bind "Alt n" { NewTab; }
@@ -77,9 +89,6 @@ in {
             bind "Alt Tab" { GoToNextTab; }
             bind "Alt Shift Tab" { GoToPreviousTab; }
             
-            // Fast tab navigation with Alt + hjkl (Shifted to avoid focus clash)
-            bind "Alt H" { GoToPreviousTab; }
-            bind "Alt L" { GoToNextTab; }
           }
           
           move {
@@ -138,13 +147,10 @@ in {
             }
         }
         
-        tab name="Development" focus=true {
-            pane split_direction="vertical" {
-                // Main Left Pane: Vim
-                pane size="70%" command="nvim" focus=true
-                
-                // Right Side: Terminal
-                pane size="30%"
+        tab name="vim" focus=true {
+            pane split_direction="horizontal" {
+                pane size="80%" command="nvim" focus=true
+                pane size="20%"
             }
         }
     }

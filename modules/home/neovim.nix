@@ -11,6 +11,8 @@
 
     opts = {
       hlsearch = true;
+      clipboard = "unnamedplus";
+      swapfile = false;
     };
 
     colorschemes.dracula.enable = true;
@@ -19,10 +21,16 @@
       web-devicons.enable = true;
       neo-tree = {
         enable = true;
-        closeIfLastWindow = true;
-        window = {
-          position = "left";
-          width = 30;
+        settings = {
+          close_if_last_window = true;
+          window = {
+            position = "right";
+            width = 30;
+            mappings = {
+              "l" = "close_node";
+              "h" = "open";
+            };
+          };
         };
       };
       treesitter = {
@@ -68,26 +76,6 @@
         action = ":m '>+1<CR>gv=gv";
         options.desc = "Move line down";
       }
-      # Alt+j (Vimmy)
-      {
-        mode = "n";
-        key = "<A-j>";
-        action = ":m .+1<CR>==";
-        options.desc = "Move line down";
-      }
-      {
-        mode = "i";
-        key = "<A-j>";
-        action = "<Esc>:m .+1<CR>==gi";
-        options.desc = "Move line down";
-      }
-      {
-        mode = "v";
-        key = "<A-j>";
-        action = ":m '>+1<CR>gv=gv";
-        options.desc = "Move line down";
-      }
-
       # --- Move Lines Up ---
       # Alt+Up
       {
@@ -105,25 +93,6 @@
       {
         mode = "v";
         key = "<A-Up>";
-        action = ":m '<-2<CR>gv=gv";
-        options.desc = "Move line up";
-      }
-      # Alt+k (Vimmy)
-      {
-        mode = "n";
-        key = "<A-k>";
-        action = ":m .-2<CR>==";
-        options.desc = "Move line up";
-      }
-      {
-        mode = "i";
-        key = "<A-k>";
-        action = "<Esc>:m .-2<CR>==gi";
-        options.desc = "Move line up";
-      }
-      {
-        mode = "v";
-        key = "<A-k>";
         action = ":m '<-2<CR>gv=gv";
         options.desc = "Move line up";
       }
