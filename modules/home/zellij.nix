@@ -41,10 +41,18 @@ in {
             bind "Alt q" { Quit; }
 
             // Navigation (Alt focus)
-            bind "Alt h" "Alt Left" { MoveFocusOrTab "Left"; }
-            bind "Alt l" "Alt Right" { MoveFocusOrTab "Right"; }
-            bind "Alt j" "Alt Down" { MoveFocus "Down"; }
-            bind "Alt k" "Alt Up" { MoveFocus "Up"; }
+            bind "Alt h" { MoveFocusOrTab "Left"; }
+            bind "Alt l" { MoveFocusOrTab "Right"; }
+            bind "Alt j" { MoveFocus "Down"; }
+            bind "Alt k" { MoveFocus "Up"; }
+            bind "Alt Left" { MoveFocusOrTab "Left"; }
+            bind "Alt Right" { MoveFocusOrTab "Right"; }
+            bind "Alt Down" { MoveFocus "Down"; }
+            bind "Alt Up" { MoveFocus "Up"; }
+
+            // Fast Tab Navigation
+            bind "Alt H" { GoToPreviousTab; }
+            bind "Alt L" { GoToNextTab; }
 
             // Global Actions (Alt)
             bind "Alt n" { NewTab; }
@@ -77,9 +85,6 @@ in {
             bind "Alt Tab" { GoToNextTab; }
             bind "Alt Shift Tab" { GoToPreviousTab; }
             
-            // Fast tab navigation with Alt + hjkl (Shifted to avoid focus clash)
-            bind "Alt H" { GoToPreviousTab; }
-            bind "Alt L" { GoToNextTab; }
           }
           
           move {

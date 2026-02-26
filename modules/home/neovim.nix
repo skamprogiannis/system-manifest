@@ -68,26 +68,6 @@
         action = ":m '>+1<CR>gv=gv";
         options.desc = "Move line down";
       }
-      # Alt+j (Vimmy)
-      {
-        mode = "n";
-        key = "<A-j>";
-        action = ":m .+1<CR>==";
-        options.desc = "Move line down";
-      }
-      {
-        mode = "i";
-        key = "<A-j>";
-        action = "<Esc>:m .+1<CR>==gi";
-        options.desc = "Move line down";
-      }
-      {
-        mode = "v";
-        key = "<A-j>";
-        action = ":m '>+1<CR>gv=gv";
-        options.desc = "Move line down";
-      }
-
       # --- Move Lines Up ---
       # Alt+Up
       {
@@ -105,25 +85,6 @@
       {
         mode = "v";
         key = "<A-Up>";
-        action = ":m '<-2<CR>gv=gv";
-        options.desc = "Move line up";
-      }
-      # Alt+k (Vimmy)
-      {
-        mode = "n";
-        key = "<A-k>";
-        action = ":m .-2<CR>==";
-        options.desc = "Move line up";
-      }
-      {
-        mode = "i";
-        key = "<A-k>";
-        action = "<Esc>:m .-2<CR>==gi";
-        options.desc = "Move line up";
-      }
-      {
-        mode = "v";
-        key = "<A-k>";
         action = ":m '<-2<CR>gv=gv";
         options.desc = "Move line up";
       }
