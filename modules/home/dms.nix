@@ -3,11 +3,18 @@
   pkgs,
   lib,
   inputs,
+  hostType,
   ...
 }: {
   imports = [
     inputs.dms.homeModules.dank-material-shell
   ];
+
+  systemd.user.services.dms.environment = lib.mkIf (hostType == "usb") {
+    QS_NO_GL = "1";
+    QT_QUICK_BACKEND = "software";
+    LIBGL_ALWAYS_SOFTWARE = "1";
+  };
 
   programs.dank-material-shell = {
     enable = true;
@@ -24,7 +31,7 @@
       currentThemeCategory = "dynamic";
       matugenScheme = "scheme-fidelity";
       matugenPaletteFidelity = 1;
-      
+
       # --- CURSOR ---
       cursorSettings = {
         theme = "System Default";
