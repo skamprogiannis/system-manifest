@@ -8,7 +8,7 @@
 in {
   programs.zellij = {
     enable = true;
-    enableBashIntegration = true;
+    enableBashIntegration = false;
     settings =
       {
         default_shell = "bash";
