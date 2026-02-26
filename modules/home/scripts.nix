@@ -41,9 +41,14 @@
               
               if [ -f "$MP4_WALL" ]; then
                    echo "Video wallpaper detected: $MP4_WALL"
+                   
+                   # Kill any existing restarter script and mpvpaper process
+                   pkill -f "mpvpaper-loop" || true
                    pkill mpvpaper || true
                    sleep 0.3
-                   mpvpaper -o "no-audio --loop-file=inf --hwdec=auto --vd-lavc-threads=2 --cache=no --demuxer-max-bytes=10M --demuxer-max-back-bytes=1M --keep-open=yes" "*" "$MP4_WALL" &
+                   
+                   # Run a loop that restarts mpvpaper every 3600s (1 hour) to fix the memory leak
+                   bash -c 'exec -a mpvpaper-loop bash -c "while true; do mpvpaper -o \"no-audio --loop-file=inf --hwdec=auto --vd-lavc-threads=2 --cache=no --demuxer-max-bytes=10M --demuxer-max-back-bytes=1M\" \"*\" \"$1\" & PID=\$!; sleep 3600; kill \$PID; wait \$PID 2>/dev/null; done"' -- "$MP4_WALL" &
                else
                    echo "Static wallpaper detected: $NEW_WALL"
                   pkill mpvpaper || true
