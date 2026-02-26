@@ -65,3 +65,20 @@ Select **"NixOS - desktop-gaming-box"** from the bootloader menu (GRUB).
 - `modules/`:
   - `home/`: User-facing configurations (Ghostty, Hyprland, Neovim, Brave, Firefox, etc.).
   - `nixos/`: System-level module configurations (GNOME, Hyprland).
+## Custom Scripts & Workflows
+
+### `zs` (Zellij Sessionizer)
+A lightning-fast project manager. Type `zs` in any terminal to fuzzy-find your repositories. It automatically launches a Zellij session with a custom horizontal layout: Neovim (with Neo-tree on the right) takes the top 80%, and a raw terminal takes the bottom 20%. It also launches an OpenCode instance in a background tab.
+
+### `desktop-widget`
+A script that uses `nwg-wrapper` and `fastfetch` to paint system statistics directly onto the Hyprland wallpaper. It runs automatically on startup.
+
+### `update_usb.sh` & `setup_persistent_usb.sh`
+*   `setup_persistent_usb.sh`: Run this ONCE to completely format a target USB drive with a LUKS-encrypted ext4 partition and a generic EFI boot sector.
+*   `update_usb.sh`: Run this to compile and push your current NixOS flake configuration onto the portable USB drive.
+
+### `sync-transmission-port`
+Updates Transmission's `settings.json` with a new port and restarts the daemon. Usage: `sync-transmission-port <port_number>`.
+
+### `generate-thumbnails`
+Scans `~/wallpapers` for MP4 files and uses `ffmpeg` to generate static PNG thumbnails in a `.thumbnails` subdirectory. These thumbnails are used by the DMS UI so you don't have to load raw video files into the wallpaper picker.
