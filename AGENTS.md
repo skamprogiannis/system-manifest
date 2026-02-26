@@ -53,3 +53,6 @@
 ## Known Issues / Fixes
 
 - **Attribute Re-definition:** Nix doesn't allow defining the same attribute set key (like `home.file`) multiple times in the same file. You must merge them into a single block.
+
+- **USB Formatting:** When formatting raw disks or running `update_usb.sh`, scripts often fail because NixOS root environments lack standard utilities (like `sgdisk`, `parted`, `mkfs.ext4`). **Always** run disk manipulation scripts inside a shell with the required tools: `sudo nix-shell -p gptfdisk parted cryptsetup dosfstools e2fsprogs util-linux --run ./script.sh`.
+- **Neovim Swap Files:** If Neovim throws an `E325: ATTENTION` error or fails to open a file from `neo-tree`, it is blocked by a `.swp` file. Do not try to debug the plugin. The solution is to delete `~/.local/state/nvim/swap/*`. (Swap files are globally disabled in `opts.swapfile = false`, but old ones may linger).

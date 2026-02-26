@@ -51,7 +51,6 @@
       exec-once = [
         "hyprctl setcursor Dracula-cursors 24"
         "wallpaper-hook &"
-        "desktop-widget &"
       ];
 
       misc = {
@@ -171,6 +170,7 @@
         "ALT SHIFT, Print, exec, dms screenshot full"
         "$mod, N, exec, dms ipc call notifications toggle"
         "$mod SHIFT, N, exec, dms ipc call notifications clearAll"
+        "$mod, Backspace, exec, dms ipc call notifications dismissAllPopups"
         "$mod, O, exec, dms ipc call hypr toggleOverview"
         ", Escape, exec, dms ipc call hypr closeOverview"
         "$mod, Escape, exec, dms ipc call lock lock"
