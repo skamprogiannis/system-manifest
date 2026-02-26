@@ -21,7 +21,7 @@
         enable = true;
         closeIfLastWindow = true;
         window = {
-          position = "left";
+          position = "right";
           width = 30;
         };
       };

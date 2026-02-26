@@ -18,12 +18,6 @@
       package = pkgs.dracula-theme;
       size = 24;
     };
-    gtk3.extraConfig = {
-      gtk-application-prefer-dark-theme = 1;
-    };
-    gtk4.extraConfig = {
-      gtk-application-prefer-dark-theme = 1;
-    };
   };
 
   # Also ensure standard hicolor icons are present for apps that need them

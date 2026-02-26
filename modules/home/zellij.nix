@@ -41,10 +41,10 @@ in {
             bind "Alt q" { Quit; }
 
             // Navigation (Alt focus)
-            bind "Alt h" { MoveFocus "Left"; }
-            bind "Alt l" { MoveFocus "Right"; }
-            bind "Alt j" { MoveFocus "Down"; }
-            bind "Alt k" { MoveFocus "Up"; }
+            bind "Alt h" "Alt Left" { MoveFocusOrTab "Left"; }
+            bind "Alt l" "Alt Right" { MoveFocusOrTab "Right"; }
+            bind "Alt j" "Alt Down" { MoveFocus "Down"; }
+            bind "Alt k" "Alt Up" { MoveFocus "Up"; }
 
             // Global Actions (Alt)
             bind "Alt n" { NewTab; }
