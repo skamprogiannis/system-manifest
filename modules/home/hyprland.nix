@@ -170,20 +170,15 @@
         "ALT, Print, exec, screenshot-path full path"
         "ALT SHIFT, Print, exec, dms screenshot full"
         "$mod, N, exec, dms ipc call notifications toggle"
+        "$mod SHIFT, N, exec, dms ipc call notifications clearAll"
         "$mod, O, exec, dms ipc call hypr toggleOverview"
-        "Escape, exec, dms ipc call hypr closeOverview"
+        ", Escape, exec, dms ipc call hypr closeOverview"
         "$mod, Escape, exec, dms ipc call lock lock"
         "$mod, S, exec, dms ipc call settings toggle"
         "$mod, Q, exec, dms ipc call powermenu toggle"
       ];
 
       bindr = [];
-
-      windowrulev2 = [
-        "noblur, class:^(nwg-wrapper)$"
-        "noshadow, class:^(nwg-wrapper)$"
-        "noborder, class:^(nwg-wrapper)$"
-      ];
     };
 
     extraConfig = ''
