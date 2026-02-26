@@ -47,7 +47,7 @@ in {
             bind "Alt k" { MoveFocus "Up"; }
 
             // Global Actions (Ctrl)
-            bind "Ctrl n" { NewPane "Down"; }
+            bind "Ctrl n" { NewTab; }
             bind "Ctrl f" { ToggleFloatingPanes; }
             bind "Ctrl x" { CloseFocus; }
             bind "Alt d" { Detach; }
