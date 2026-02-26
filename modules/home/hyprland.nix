@@ -51,6 +51,7 @@
       exec-once = [
         "hyprctl setcursor Dracula-cursors 24"
         "wallpaper-hook &"
+        "desktop-widget &"
       ];
 
       misc = {
@@ -68,12 +69,14 @@
       general = {
         gaps_in = 5;
         gaps_out = 10;
-        border_size = 2;
+        border_size = 3;
         layout = "dwindle";
       };
 
       decoration = {
         rounding = 10;
+        active_opacity = 1.0;
+        inactive_opacity = 0.85;
         blur = {
           enabled = true;
           size = 3;
@@ -174,6 +177,13 @@
       ];
 
       bindr = [];
+
+      windowrulev2 = [
+        # Exceptions to the opacity rule (keep these fully opaque always)
+        "opacity 1.0 override 1.0 override, class:^(brave-browser)$"
+        "opacity 1.0 override 1.0 override, class:^(discord)$"
+        "opacity 1.0 override 1.0 override, class:^(com.mitchellh.ghostty)$" # Keep terminal readable
+      ];
     };
 
     extraConfig = ''
