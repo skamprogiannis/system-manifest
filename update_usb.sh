@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -e
 
-# Define paths and devices
-USB_ROOT_PART="/dev/sdc4"
-USB_MAPPER_NAME="root"
+USB_DEV="/dev/sdc"
+USB_ROOT_PART="/dev/disk/by-partlabel/NIXOS_USB_CRYPT"
+USB_BOOT_DEV="/dev/disk/by-label/NIXOS_BOOT"
+USB_MAPPER_NAME="NIXOS_USB_CRYPT"
 USB_ROOT_DEV="/dev/mapper/$USB_MAPPER_NAME"
-USB_BOOT_DEV="/dev/sdc3"
 MOUNT_POINT="/mnt"
 FLAKE_DIR="/home/stefan/system_manifest"
 
@@ -25,7 +25,6 @@ fi
 
 # Unmount if already mounted elsewhere
 echo "Unmounting existing mounts for USB..."
-umount /run/media/stefan/NIXOS_USB_ROOT 2>/dev/null || true
 umount $MOUNT_POINT/boot 2>/dev/null || true
 umount $MOUNT_POINT 2>/dev/null || true
 
@@ -40,13 +39,12 @@ mount $USB_BOOT_DEV $MOUNT_POINT/boot
 
 # Install / Update
 echo "Running nixos-install..."
-# We use --no-root-passwd to avoid setting a new root password (rely on config)
-# We use --root to specify target
 nixos-install --flake "$FLAKE_DIR#usb" --root $MOUNT_POINT --no-root-passwd
 
 # Cleanup
 echo "Unmounting..."
 umount $MOUNT_POINT/boot
 umount $MOUNT_POINT
+cryptsetup close "$USB_MAPPER_NAME"
 
 echo "Done! The USB drive has been updated."
