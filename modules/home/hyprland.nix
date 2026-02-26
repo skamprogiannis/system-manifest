@@ -74,6 +74,8 @@
 
       decoration = {
         rounding = 10;
+        active_opacity = 1.0;
+        inactive_opacity = 0.75;
         blur = {
           enabled = true;
           size = 3;
@@ -167,7 +169,10 @@
         "ALT, Print, exec, screenshot-path full path"
         "ALT SHIFT, Print, exec, dms screenshot full"
         "$mod, N, exec, dms ipc call notifications toggle"
+        "$mod SHIFT, N, exec, dms ipc call notifications clearAll"
+        "$mod, Backspace, exec, dms ipc call notifications dismissAllPopups"
         "$mod, O, exec, dms ipc call hypr toggleOverview"
+        ", Escape, exec, dms ipc call hypr closeOverview"
         "$mod, Escape, exec, dms ipc call lock lock"
         "$mod, S, exec, dms ipc call settings toggle"
         "$mod, Q, exec, dms ipc call powermenu toggle"
