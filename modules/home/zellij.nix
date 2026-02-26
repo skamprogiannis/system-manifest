@@ -26,7 +26,11 @@ in {
       );
     extraConfig = ''
       keybinds {
-          unbind "Ctrl p" "Ctrl t" "Ctrl n" "Ctrl s" "Ctrl o" "Ctrl q" "Ctrl g" "Ctrl r" "Ctrl d" "Ctrl h" "Ctrl j" "Ctrl k" "Ctrl l" "Ctrl b" "Alt n" "Alt f" "Alt i" "Alt o" "Alt s" "Alt h" "Alt j" "Alt k" "Alt l"
+          unbind "Ctrl p" "Ctrl t" "Ctrl n" "Ctrl s" "Ctrl o" "Ctrl q" "Ctrl g" "Ctrl r" "Ctrl d" "Ctrl h" "Ctrl j" "Ctrl k" "Ctrl l" "Ctrl b" "Alt n" "Alt f" "Alt i" "Alt s" "Alt h" "Alt j" "Alt k" "Alt l"
+
+          locked {
+            bind "Alt g" { SwitchToMode "Normal"; }
+          }
 
           shared_except "locked" {
             // --- INVERSE LAYOUT ---
@@ -143,13 +147,10 @@ in {
             }
         }
         
-        tab name="Development" focus=true {
-            pane split_direction="vertical" {
-                // Main Left Pane: Vim
-                pane size="70%" command="nvim" focus=true
-                
-                // Right Side: Terminal
-                pane size="30%"
+        tab name="vim" focus=true {
+            pane split_direction="horizontal" {
+                pane size="80%" command="nvim" focus=true
+                pane size="20%"
             }
         }
     }
