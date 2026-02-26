@@ -46,10 +46,10 @@ in {
             bind "Alt j" { MoveFocus "Down"; }
             bind "Alt k" { MoveFocus "Up"; }
 
-            // Global Actions (Ctrl)
-            bind "Ctrl n" { NewTab; }
-            bind "Ctrl f" { ToggleFloatingPanes; }
-            bind "Ctrl x" { CloseFocus; }
+            // Global Actions (Alt)
+            bind "Alt n" { NewTab; }
+            bind "Alt f" { ToggleFloatingPanes; }
+            bind "Alt x" { CloseFocus; }
             bind "Alt d" { Detach; }
 
             // Tab Switching
@@ -115,13 +115,40 @@ in {
 
       if [[ -z "$ZELLIJ" ]]; then
         cd "$selected_path"
-        zellij attach "$session_name" -c
+        if zellij list-sessions | grep -q "^$session_name"; then
+            zellij attach "$session_name"
+        else
+            zellij --layout dev options --default-layout dev -s "$session_name"
+        fi
       else
-        zellij action new-pane
-        zellij action write-chars "cd $selected_path" && zellij action write 10
+        zellij action new-tab -l dev -c "$selected_path" -n "$session_name"
       fi
     '')
   ];
+
+  xdg.configFile."zellij/layouts/dev.kdl".text = ''
+    layout {
+        default_tab_template {
+            pane size=1 borderless=true {
+                plugin location="zellij:tab-bar"
+            }
+            children
+            pane size=2 borderless=true {
+                plugin location="zellij:status-bar"
+            }
+        }
+        
+        tab name="Development" focus=true {
+            pane split_direction="vertical" {
+                // Main Left Pane: Vim
+                pane size="70%" command="nvim" focus=true
+                
+                // Right Side: Terminal
+                pane size="30%"
+            }
+        }
+    }
+  '';
 
   home.shellAliases = {
     zellij-sessionizer = "zs ~/repositories";

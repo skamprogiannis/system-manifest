@@ -17,6 +17,14 @@
 
     plugins = {
       web-devicons.enable = true;
+      neo-tree = {
+        enable = true;
+        closeIfLastWindow = true;
+        window = {
+          position = "left";
+          width = 30;
+        };
+      };
       treesitter = {
         enable = true;
         settings = {
@@ -34,6 +42,12 @@
     ];
 
     keymaps = [
+      {
+        mode = "n";
+        key = "<C-e>";
+        action = "<cmd>Neotree toggle<cr>";
+        options.desc = "Toggle File Explorer";
+      }
       # --- Move Lines Down ---
       # Alt+Down
       {
