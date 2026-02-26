@@ -2,10 +2,10 @@
 set -e
 
 # Define paths and devices
-USB_ROOT_PART="/dev/sdc2"
-USB_MAPPER_NAME="luks-51e2d6a1-27ac-4721-933b-eb37c40a59df"
+USB_ROOT_PART="/dev/sdc4"
+USB_MAPPER_NAME="root"
 USB_ROOT_DEV="/dev/mapper/$USB_MAPPER_NAME"
-USB_BOOT_DEV="/dev/sdc1"
+USB_BOOT_DEV="/dev/sdc3"
 MOUNT_POINT="/mnt"
 FLAKE_DIR="/home/stefan/system_manifest"
 
