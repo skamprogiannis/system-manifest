@@ -23,6 +23,7 @@
     ./modules/home/obsidian.nix
     ./modules/home/zellij.nix
     ./modules/home/scripts.nix
+    ./modules/home/widget.nix
   ];
 
   # --- PACKAGES ---

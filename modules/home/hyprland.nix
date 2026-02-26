@@ -69,14 +69,14 @@
       general = {
         gaps_in = 5;
         gaps_out = 10;
-        border_size = 3;
+        border_size = 2;
         layout = "dwindle";
       };
 
       decoration = {
         rounding = 10;
         active_opacity = 1.0;
-        inactive_opacity = 0.85;
+        inactive_opacity = 0.75;
         blur = {
           enabled = true;
           size = 3;
@@ -171,6 +171,7 @@
         "ALT SHIFT, Print, exec, dms screenshot full"
         "$mod, N, exec, dms ipc call notifications toggle"
         "$mod, O, exec, dms ipc call hypr toggleOverview"
+        "Escape, exec, dms ipc call hypr closeOverview"
         "$mod, Escape, exec, dms ipc call lock lock"
         "$mod, S, exec, dms ipc call settings toggle"
         "$mod, Q, exec, dms ipc call powermenu toggle"
@@ -179,10 +180,9 @@
       bindr = [];
 
       windowrulev2 = [
-        # Exceptions to the opacity rule (keep these fully opaque always)
-        "opacity 1.0 override 1.0 override, class:^(brave-browser)$"
-        "opacity 1.0 override 1.0 override, class:^(discord)$"
-        "opacity 1.0 override 1.0 override, class:^(com.mitchellh.ghostty)$" # Keep terminal readable
+        "noblur, class:^(nwg-wrapper)$"
+        "noshadow, class:^(nwg-wrapper)$"
+        "noborder, class:^(nwg-wrapper)$"
       ];
     };
 
