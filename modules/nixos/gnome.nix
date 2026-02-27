@@ -7,6 +7,11 @@
   services.displayManager.gdm.enable = true;
   services.desktopManager.gnome.enable = true;
 
+  environment.systemPackages = with pkgs; [
+    btop
+    seahorse # GNOME Keyring GUI Manager
+  ];
+
   # Exclude GNOME bloat
   environment.gnome.excludePackages = with pkgs; [
     gnome-maps
@@ -34,8 +39,7 @@
     gnome-connections
     gnome-text-editor
     gnome-user-share
-    # papers # Keep for PDF viewing until zathura is confirmed
-    # showtime # Keep as requested for video playback
+    papers
     decibels
   ];
 }

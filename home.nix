@@ -36,7 +36,6 @@
 
     # CLI / Tools
     alejandra
-    btop
     curl
     fastfetch
     fd
@@ -162,15 +161,6 @@
   home.stateVersion = "24.11";
 
   home.sessionPath = ["$HOME/.local/bin"];
-  
-  # btop desktop entry for launcher
-  xdg.desktopEntries.btop = {
-    name = "btop";
-    exec = "ghostty -e btop";
-    icon = "btop";
-    terminal = false;
-    categories = ["System" "Monitor"];
-  };
 
   home.shellAliases = {
     cat = "bat";
@@ -249,6 +239,8 @@
       "image/bmp" = ["org.gnome.Loupe.desktop"];
       "image/tiff" = ["org.gnome.Loupe.desktop"];
       "image/svg+xml" = ["org.gnome.Loupe.desktop"];
+      "application/pdf" = ["org.pwmt.zathura.desktop"];
+      "text/plain" = ["org.gnome.TextEditor.desktop"];
     };
   };
 }

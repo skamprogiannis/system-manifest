@@ -5,6 +5,11 @@
   lib,
   ...
 }: {
+  home.packages = with pkgs; [
+    qt5.qtwayland
+    qt6.qtwayland
+  ];
+
   wayland.windowManager.hyprland = {
     enable = true;
 
@@ -49,7 +54,10 @@
       ];
 
       exec-once = [
+        "dbus-update-activation-environment --systemd --all"
+        "systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP QT_QPA_PLATFORM"
         "hyprctl setcursor Dracula-cursors 24"
+        "pkill -f 'dms run' || true; sleep 0.5; dms run --session &"
         "wallpaper-hook &"
       ];
 
@@ -61,7 +69,7 @@
 
       input = {
         kb_layout = "us,gr";
-        kb_variant = "altgr-intl,";
+        kb_variant = "altgr-intl";
         kb_options = "grp:win_space_toggle";
       };
 
@@ -110,13 +118,16 @@
         ", XF86AudioRaiseVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+"
         ", XF86AudioLowerVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"
         ", XF86AudioMute, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
+        ", XF86AudioPrev, exec, dms ipc call mpris previous"
+        ", XF86AudioPlay, exec, dms ipc call mpris playPause"
+        ", XF86AudioNext, exec, dms ipc call mpris next"
       ];
 
       bind = [
         "$mod, RETURN, exec, ghostty"
         "$mod, B, exec, brave"
         "$mod, X, killactive,"
-        "$mod, M, exit,"
+        "$mod, M, exec, ghostty -e spotify_player"
         "$mod, E, exec, nautilus"
         "$mod, V, togglefloating,"
         "$mod, F, fullscreen,"
@@ -172,7 +183,6 @@
         "$mod SHIFT, N, exec, dms ipc call notifications clearAll"
         "$mod, Backspace, exec, dms ipc call notifications dismissAllPopups"
         "$mod, O, exec, dms ipc call hypr toggleOverview"
-        ", Escape, exec, dms ipc call hypr closeOverview"
         "$mod, Escape, exec, dms ipc call lock lock"
         "$mod, S, exec, dms ipc call settings toggle"
         "$mod, Q, exec, dms ipc call powermenu toggle"
