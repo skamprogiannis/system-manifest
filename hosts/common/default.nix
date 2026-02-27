@@ -84,7 +84,7 @@
   # Configure keymap in X11
   services.xserver.xkb = {
     layout = "us,gr";
-    variant = "altgr-intl,";
+    variant = "altgr-intl";
     options = "grp:win_space_toggle";
   };
 
@@ -105,9 +105,13 @@
   services.gnome.gnome-keyring.enable = true;
   security.pam.services.login.enableGnomeKeyring = true;
   security.pam.services.greetd.enableGnomeKeyring = true;
+  security.pam.services.gdm.enableGnomeKeyring = true;
   security.pam.services.gdm-password.enableGnomeKeyring = true;
   services.gnome.gnome-online-accounts.enable = false;
   services.gnome.rygel.enable = false;
+
+  # Prevent annoying 90s hang on shutdown if a service fails to stop
+  systemd.settings.Manager.DefaultTimeoutStopSec = "10s";
 
   # Define a user account. Don't forget to set a password with ‘passwd’
   users.users.stefan = {

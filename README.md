@@ -1,6 +1,6 @@
 # NixOS System Manifest
 
-This repository contains the declarative configuration for my NixOS system, managed via **Nix Flakes** and **Home Manager**.
+Declarative infrastructure source-of-truth. Defines system state, configurations, and packages for NixOS. Managed via **Nix Flakes** and **Home Manager**.
 
 ## Features
 
@@ -24,61 +24,20 @@ This repository contains the declarative configuration for my NixOS system, mana
   - **System Cleanup:** Stripped out legacy GNOME components (`xterm`, `rygel`) to ensure a lean, stable environment.
   - **Multi-Monitor Logic:** Explicit workspace pinning to ensure `DP-1` (Primary) and `HDMI-A-1` (Secondary) behave predictably.
 
-## Typography
+## Custom Scripts & Workflows
 
-Fonts are treated as infrastructure, not pets. We enforce a strictly consistent typography stack across all environments (Desktop, Laptop, USB, TTY).
-
-- **Monospace:** `JetBrains Mono Nerd Font` (For Terminals, Code, and GNOME UI)
-- **UI/Sans:** `Adwaita` (GNOME Default)
-- **Serif:** `Noto Serif`
-
-This is enforced via `fontconfig` for the system and explicit `dconf` locks for GNOME and Terminal profiles.
+- **`zs` (Zellij Sessionizer)**: A custom adaptation of the popular `tmux-sessionizer` workflow. Uses `fzf` to quickly jump between projects in `~/repositories`, automatically bootstrapping a pre-configured 80/20 horizontal Vim/Terminal layout alongside a background OpenCode instance.
+- **`sync-transmission-port`**: Synchronizes the transmission-daemon port with a specified value and restarts the service.
+- **`generate-thumbnails`**: Generates PNG thumbnails for video files in `~/wallpapers` for use in the DMS wallpaper picker.
+- **`setup_persistent_usb.sh`**: Initializes a fresh persistent NixOS installation on a target USB drive with LUKS encryption.
+- **`update_usb.sh`**: Compiles and pushes the current NixOS flake configuration onto the portable USB drive.
 
 ## Usage
 
 ### Rebuild System
-
 ```bash
-# Rebuild for desktop (or laptop, usb)
 sudo nixos-rebuild switch --flake .#desktop
 ```
 
-### Dry Run Build
-
-```bash
-# Check for errors without applying
-sudo nixos-rebuild dry-build --flake .#desktop
-```
-
 ### Switch to Gaming Mode
-
 Select **"NixOS - desktop-gaming-box"** from the bootloader menu (GRUB).
-
-## Directory Structure
-
-- `flake.nix`: Entry point and NixOS/Home Manager inputs.
-- `hosts/`: Host-specific configurations.
-  - `common/`: Shared system configuration (Boot, Networking, Audio, Printing).
-  - `desktop/`: Desktop-specific hardware, bootloader, and NVIDIA drivers.
-  - `usb/`: Live USB configuration.
-- `home.nix`: User-level config entry point.
-- `modules/`:
-  - `home/`: User-facing configurations (Ghostty, Hyprland, Neovim, Brave, Firefox, etc.).
-  - `nixos/`: System-level module configurations (GNOME, Hyprland).
-## Custom Scripts & Workflows
-
-### `zs` (Zellij Sessionizer)
-A lightning-fast project manager. Type `zs` in any terminal to fuzzy-find your repositories. It automatically launches a Zellij session with a custom horizontal layout: Neovim (with Neo-tree on the right) takes the top 80%, and a raw terminal takes the bottom 20%. It also launches an OpenCode instance in a background tab.
-
-### `desktop-widget`
-A script that uses `nwg-wrapper` and `fastfetch` to paint system statistics directly onto the Hyprland wallpaper. It runs automatically on startup.
-
-### `update_usb.sh` & `setup_persistent_usb.sh`
-*   `setup_persistent_usb.sh`: Run this ONCE to completely format a target USB drive with a LUKS-encrypted ext4 partition and a generic EFI boot sector.
-*   `update_usb.sh`: Run this to compile and push your current NixOS flake configuration onto the portable USB drive.
-
-### `sync-transmission-port`
-Updates Transmission's `settings.json` with a new port and restarts the daemon. Usage: `sync-transmission-port <port_number>`.
-
-### `generate-thumbnails`
-Scans `~/wallpapers` for MP4 files and uses `ffmpeg` to generate static PNG thumbnails in a `.thumbnails` subdirectory. These thumbnails are used by the DMS UI so you don't have to load raw video files into the wallpaper picker.

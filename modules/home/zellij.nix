@@ -22,11 +22,12 @@ in {
         }
         else {
           pane_frames = true;
+          default_layout = "dev";
         }
       );
     extraConfig = ''
       keybinds {
-          unbind "Ctrl p" "Ctrl t" "Ctrl n" "Ctrl s" "Ctrl o" "Ctrl q" "Ctrl g" "Ctrl r" "Ctrl d" "Ctrl h" "Ctrl j" "Ctrl k" "Ctrl l" "Ctrl b" "Alt n" "Alt f" "Alt i" "Alt s" "Alt h" "Alt j" "Alt k" "Alt l"
+          unbind "Ctrl p" "Ctrl t" "Ctrl n" "Ctrl s" "Ctrl o" "Ctrl q" "Ctrl g" "Ctrl r" "Ctrl d" "Ctrl h" "Ctrl j" "Ctrl k" "Ctrl l" "Ctrl b" "Alt i" "Alt s"
 
           locked {
             bind "Alt g" { SwitchToMode "Normal"; }
@@ -40,7 +41,6 @@ in {
             bind "Alt r" { SwitchToMode "Resize"; }
             bind "Alt s" { SwitchToMode "Scroll"; }
             bind "Alt o" { SwitchToMode "Session"; }
-            bind "Alt m" { SwitchToMode "Move"; }
             bind "Alt g" { SwitchToMode "Locked"; }
             bind "Alt q" { Quit; }
 
@@ -99,8 +99,10 @@ in {
           }
 
           tab {
-            bind "h" "k" { GoToPreviousTab; }
-            bind "l" "j" { GoToNextTab; }
+            bind "h" "k" "Left" "Up" { GoToPreviousTab; }
+            bind "l" "j" "Right" "Down" { GoToNextTab; }
+            bind "Alt h" "Alt Left" { MoveTab "Left"; }
+            bind "Alt l" "Alt Right" { MoveTab "Right"; }
           }
       }
     '';
@@ -127,7 +129,7 @@ in {
         if zellij list-sessions | grep -q "^$session_name"; then
             zellij attach "$session_name"
         else
-            zellij --layout dev options --default-layout dev -s "$session_name"
+            zellij attach -c "$session_name"
         fi
       else
         zellij action new-tab -l dev -c "$selected_path" -n "$session_name"
@@ -142,8 +144,8 @@ in {
                 plugin location="zellij:tab-bar"
             }
             children
-            pane size=2 borderless=true {
-                plugin location="zellij:status-bar"
+            pane size=1 borderless=true {
+                plugin location="zellij:compact-bar"
             }
         }
         
