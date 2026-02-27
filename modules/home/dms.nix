@@ -49,6 +49,11 @@
       use24HourClock = true;
       cornerRadius = 12;
 
+      # --- NOTIFICATIONS ---
+      notificationTimeoutNormal = 10000;
+      notificationTimeoutLow = 5000;
+      notificationHistorySaveLow = false;
+
       # --- MATUGEN TEMPLATES ---
       runDmsMatugenTemplates = true;
       runUserMatugenTemplates = true;

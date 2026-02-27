@@ -5,6 +5,11 @@
   lib,
   ...
 }: {
+  home.packages = with pkgs; [
+    qt5.qtwayland
+    qt6.qtwayland
+  ];
+
   wayland.windowManager.hyprland = {
     enable = true;
 
