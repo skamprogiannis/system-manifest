@@ -48,7 +48,7 @@
                    sleep 0.3
                    
                    # Run a loop that restarts mpvpaper every 3600s (1 hour) to fix the memory leak
-                   bash -c 'exec -a mpvpaper-loop bash -c "while true; do mpvpaper -o \"no-audio --loop-file=inf --hwdec=auto --vd-lavc-threads=2 --cache=no --demuxer-max-bytes=10M --demuxer-max-back-bytes=1M\" \"*\" \"$1\" & PID=\$!; sleep 3600; kill \$PID; wait \$PID 2>/dev/null; done"' -- "$MP4_WALL" &
+                   bash -c 'exec -a mpvpaper-loop bash -c "trap \"kill 0\" EXIT SIGTERM; while true; do mpvpaper -o \"no-audio --loop-file=inf --hwdec=auto --vd-lavc-threads=2 --cache=no --demuxer-max-bytes=10M --demuxer-max-back-bytes=1M\" \"*\" \"$1\" & PID=\$!; sleep 3600 & wait \$!; kill \$PID 2>/dev/null; done"' -- "$MP4_WALL" &
                else
                    echo "Static wallpaper detected: $NEW_WALL"
                   pkill mpvpaper || true

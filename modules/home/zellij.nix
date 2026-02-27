@@ -40,7 +40,6 @@ in {
             bind "Alt r" { SwitchToMode "Resize"; }
             bind "Alt s" { SwitchToMode "Scroll"; }
             bind "Alt o" { SwitchToMode "Session"; }
-            bind "Alt m" { SwitchToMode "Move"; }
             bind "Alt g" { SwitchToMode "Locked"; }
             bind "Alt q" { Quit; }
 
@@ -99,8 +98,10 @@ in {
           }
 
           tab {
-            bind "h" "k" { GoToPreviousTab; }
-            bind "l" "j" { GoToNextTab; }
+            bind "h" "k" "Left" "Up" { GoToPreviousTab; }
+            bind "l" "j" "Right" "Down" { GoToNextTab; }
+            bind "Alt h" "Alt Left" { MoveTab "Left"; }
+            bind "Alt l" "Alt Right" { MoveTab "Right"; }
           }
       }
     '';
