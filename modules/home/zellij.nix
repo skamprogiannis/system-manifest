@@ -26,7 +26,7 @@ in {
       );
     extraConfig = ''
       keybinds {
-          unbind "Ctrl p" "Ctrl t" "Ctrl n" "Ctrl s" "Ctrl o" "Ctrl q" "Ctrl g" "Ctrl r" "Ctrl d" "Ctrl h" "Ctrl j" "Ctrl k" "Ctrl l" "Ctrl b" "Alt n" "Alt f" "Alt i" "Alt s" "Alt h" "Alt j" "Alt k" "Alt l"
+          unbind "Ctrl p" "Ctrl t" "Ctrl n" "Ctrl s" "Ctrl o" "Ctrl q" "Ctrl g" "Ctrl r" "Ctrl d" "Ctrl h" "Ctrl j" "Ctrl k" "Ctrl l" "Ctrl b" "Alt i" "Alt s"
 
           locked {
             bind "Alt g" { SwitchToMode "Normal"; }
