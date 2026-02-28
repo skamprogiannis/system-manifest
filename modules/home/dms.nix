@@ -11,7 +11,7 @@
 
   programs.dank-material-shell = {
     enable = true;
-    systemd.enable = false;
+    systemd.enable = true;
     enableSystemMonitoring = true;
     enableDynamicTheming = true;
     enableClipboardPaste = true;

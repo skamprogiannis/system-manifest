@@ -110,11 +110,7 @@
 
       if [[ -z "$ZELLIJ" ]]; then
         cd "$selected_path"
-        if zellij list-sessions | grep -q "^$session_name"; then
-            zellij attach "$session_name"
-        else
-            zellij attach -c "$session_name"
-        fi
+        zellij attach -c "$session_name"
       else
         zellij action new-tab -l dev -c "$selected_path" -n "$session_name"
       fi
@@ -138,6 +134,10 @@
                 pane size="80%" command="nvim" focus=true
                 pane size="20%"
             }
+        }
+
+        tab name="opencode" {
+            pane command="opencode"
         }
     }
   '';

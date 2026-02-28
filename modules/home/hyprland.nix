@@ -37,7 +37,6 @@
         "dbus-update-activation-environment --systemd --all"
         "systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP QT_QPA_PLATFORM"
         "hyprctl setcursor Silksong-Cursors 24"
-        "pkill -f 'dms run' || true; sleep 0.5; dms run --session &"
         "wallpaper-hook &"
       ];
 
