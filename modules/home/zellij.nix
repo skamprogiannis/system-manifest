@@ -128,7 +128,7 @@ in {
         if zellij list-sessions | grep -q "^$session_name"; then
             zellij attach "$session_name"
         else
-            zellij --layout dev options --default-layout dev -s "$session_name"
+            zellij -s "$session_name" -l dev
         fi
       else
         zellij action new-tab -l dev -c "$selected_path" -n "$session_name"
