@@ -54,7 +54,10 @@
       ];
 
       exec-once = [
+        "dbus-update-activation-environment --systemd --all"
+        "systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP QT_QPA_PLATFORM"
         "hyprctl setcursor Dracula-cursors 24"
+        "dms run --session &"
         "wallpaper-hook &"
       ];
 
