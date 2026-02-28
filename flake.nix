@@ -67,34 +67,10 @@
             home-manager.extraSpecialArgs = { inherit inputs; hostType = "usb"; };
             home-manager.users.stefan = {
               imports = [
-                ./hosts/desktop/home-manager.nix
-                inputs.nixvim.homeModules.nixvim
-              ];
-            };
-          }
-        ];
-      };
-
-      usb = nixpkgs.lib.nixosSystem {
-        system = "x86_64-linux";
-        specialArgs = {inherit inputs;};
-        modules = [
-          ./hosts/usb/default.nix
-          home-manager.nixosModules.home-manager
-          {
-            home-manager.useGlobalPkgs = true;
-            home-manager.useUserPackages = true;
-            home-manager.backupFileExtension = "backup";
-            home-manager.extraSpecialArgs = { inherit inputs; hostType = "usb"; };
-            home-manager.users.stefan = {
-              imports = [
                 ./hosts/usb/home-manager.nix
                 inputs.nixvim.homeModules.nixvim
               ];
             };
-          }
-        ];
-      };
           }
         ];
       };
