@@ -22,6 +22,7 @@ in {
         }
         else {
           pane_frames = true;
+          default_layout = "dev";
         }
       );
     extraConfig = ''
@@ -128,7 +129,7 @@ in {
         if zellij list-sessions | grep -q "^$session_name"; then
             zellij attach "$session_name"
         else
-            zellij -s "$session_name" -l dev
+            zellij attach -c "$session_name"
         fi
       else
         zellij action new-tab -l dev -c "$selected_path" -n "$session_name"
