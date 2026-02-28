@@ -94,25 +94,23 @@
 
   home.packages = [
     (pkgs.writeShellScriptBin "zs" ''
-      paths=("''${@:-$HOME/repositories $HOME/system_manifest}")
-
-      if command -v fd &> /dev/null; then
-        selected_path=$(fd . ''${paths[@]} --min-depth 1 --max-depth 2 --type d 2>/dev/null | fzf)
+      if [[ $# -eq 1 ]]; then
+          selected_path=$1
       else
-        selected_path=$(find ''${paths[@]} -mindepth 1 -maxdepth 2 -type d 2>/dev/null | fzf)
+          selected_path=$(find ~/repositories ~/system_manifest -mindepth 1 -maxdepth 2 -type d | fzf)
       fi
 
-      if [[ -z "$selected_path" ]]; then
-        exit 0
+      if [[ -z $selected_path ]]; then
+          exit 0
       fi
 
-      session_name=$(basename "$selected_path" | tr . _)
+      selected_name=$(basename "$selected_path" | tr . _)
 
-      if [[ -z "$ZELLIJ" ]]; then
-        cd "$selected_path"
-        zellij attach -c "$session_name"
+      if [[ -z $ZELLIJ ]]; then
+          cd "$selected_path"
+          zellij attach -c "$selected_name"
       else
-        zellij action new-tab -l dev -c "$selected_path" -n "$session_name"
+          zellij action new-tab -l dev -c "$selected_path" -n "$selected_name"
       fi
     '')
   ];

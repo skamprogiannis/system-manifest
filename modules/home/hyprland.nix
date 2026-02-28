@@ -11,6 +11,10 @@
 
   wayland.windowManager.hyprland = {
     enable = true;
+    systemd = {
+      enable = true;
+      variables = ["--all"];
+    };
 
     settings = {
       source = [
@@ -34,8 +38,6 @@
       ];
 
       exec-once = [
-        "dbus-update-activation-environment --systemd --all"
-        "systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP QT_QPA_PLATFORM"
         "hyprctl setcursor Silksong-Cursors 24"
         "wallpaper-hook &"
       ];
