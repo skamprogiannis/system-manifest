@@ -27,7 +27,7 @@
 
       # --- CURSOR ---
       cursorSettings = {
-        theme = "Silksong-Cursors";
+        theme = "Dracula-cursors";
         size = 24;
         hyprland = {
           hideOnKeyPress = true;
