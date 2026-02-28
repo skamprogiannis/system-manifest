@@ -23,6 +23,7 @@
     ./modules/home/obsidian.nix
     ./modules/home/zellij.nix
     ./modules/home/scripts.nix
+    ./modules/home/cursors.nix
   ];
 
   # --- PACKAGES ---
@@ -33,6 +34,7 @@
     mailspring
     obsidian
     protonvpn-gui
+    swww
 
     # CLI / Tools
     alejandra
@@ -140,10 +142,7 @@
     "org/gnome/shell/screenshot" = {
       last-save-directory = "file:///home/stefan/pictures/screenshots";
     };
-    # Disable WLR_NO_HARDWARE_CURSORS to fix cursor issues
     "org/gnome/desktop/interface" = {
-      cursor-theme = lib.mkForce "Adwaita";
-      cursor-size = 24;
     };
   };
 
@@ -223,6 +222,12 @@
   };
 
   # Configure default applications
+  xdg.desktopEntries.btop = {
+    name = "btop";
+    exec = "ghostty -e btop";
+    noDisplay = true;
+  };
+
   xdg.mimeApps = {
     enable = true;
     associations.added = {

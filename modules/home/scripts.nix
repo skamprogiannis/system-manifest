@@ -1,13 +1,28 @@
 { pkgs, ... }: {
   home.packages = [
     (pkgs.writeShellScriptBin "wallpaper-hook" ''
+      LOCKFILE="/tmp/wallpaper-hook.lock"
+      exec 9>"$LOCKFILE"
+      if ! flock -n 9; then
+        echo "Another instance of wallpaper-hook is already running."
+        exit 1
+      fi
+
+      # Function to clean up on exit
+      cleanup() {
+        pkill -f "mpvpaper-loop" || true
+        pkill mpvpaper || true
+        rm -f "$LOCKFILE"
+      }
+      trap cleanup EXIT SIGTERM
+
       # Monitor DMS for wallpaper changes and launch mpvpaper if a video exists
       CURRENT_WALL=""
-      
+
       # Wait for DMS to be ready and Matugen to settle
-      sleep 2
+      sleep 3
       until dms ipc wallpaper get &>/dev/null; do
-          sleep 1
+          sleep 0.5
       done
 
       # Initial check on startup
@@ -42,17 +57,19 @@
                if [ -f "$MP4_WALL" ]; then
                    echo "Video wallpaper detected: $MP4_WALL"
                    
-                   # Kill any existing restarter script and mpvpaper process
-                   pkill -f "mpvpaper-loop" || true
-                   pkill mpvpaper || true
-                   sleep 1.5
+                # Kill any existing restarter script and mpvpaper process
+                pkill -f "mpvpaper-loop" || true
+                pkill mpvpaper || true
+                sleep 1.5
                    
                    # Run a loop that restarts mpvpaper every 600s (10 minutes) with a hard kill to avoid Wayland buffer crash
                    bash -c 'exec -a mpvpaper-loop bash -c "trap \"kill 0\" EXIT SIGTERM; while true; do mpvpaper -o \"no-audio --loop-file=inf --hwdec=auto --vd-lavc-threads=2 --cache=no --demuxer-max-bytes=10M --demuxer-max-back-bytes=1M\" \"*\" \"$1\" & PID=\$!; sleep 600 & wait \$!; kill \$PID 2>/dev/null; sleep 1.5; done"' -- "$MP4_WALL" &
                else
                    echo "Static wallpaper detected: $NEW_WALL"
-                  pkill mpvpaper || true
-              fi
+                   pkill -f "mpvpaper-loop" || true
+                   pkill mpvpaper || true
+               fi
+
 
               # Update Zathura colors from Matugen
               if [ -f ~/.config/hypr/dms/colors.conf ]; then

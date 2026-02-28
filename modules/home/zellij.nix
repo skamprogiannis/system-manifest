@@ -1,30 +1,14 @@
 {
   config,
   pkgs,
-  hostType ? "desktop",
   ...
-}: let
-  isPortable = hostType == "laptop" || hostType == "usb";
-in {
+}: {
   programs.zellij = {
     enable = true;
     enableBashIntegration = false;
-    settings =
-      {
-        default_shell = "bash";
-      }
-      // (
-        if isPortable
-        then {
-          pane_frames = false;
-          simplified_ui = true;
-          default_layout = "compact";
-        }
-        else {
-          pane_frames = true;
-          default_layout = "dev";
-        }
-      );
+    settings = {
+      default_shell = "bash";
+    };
     extraConfig = ''
       keybinds {
           unbind "Ctrl p" "Ctrl t" "Ctrl n" "Ctrl s" "Ctrl o" "Ctrl q" "Ctrl g" "Ctrl r" "Ctrl d" "Ctrl h" "Ctrl j" "Ctrl k" "Ctrl l" "Ctrl b" "Alt i" "Alt s"
@@ -58,7 +42,6 @@ in {
             bind "Alt H" { GoToPreviousTab; }
             bind "Alt L" { GoToNextTab; }
 
-            // Global Actions (Alt)
             bind "Alt n" { NewTab; }
             bind "Alt f" { ToggleFloatingPanes; }
             bind "Alt x" { CloseFocus; }
@@ -110,29 +93,23 @@ in {
 
   home.packages = [
     (pkgs.writeShellScriptBin "zs" ''
-      paths=("''${@:-$HOME/repositories $HOME/system_manifest}")
-
-      if command -v fd &> /dev/null; then
-        selected_path=$(fd . ''${paths[@]} --min-depth 1 --max-depth 2 --type d 2>/dev/null | fzf)
+      if [[ $# -eq 1 ]]; then
+          selected_path=$1
       else
-        selected_path=$(find ''${paths[@]} -mindepth 1 -maxdepth 2 -type d 2>/dev/null | fzf)
+          selected_path=$(find ~/repositories ~/system_manifest -mindepth 1 -maxdepth 2 -type d | fzf)
       fi
 
-      if [[ -z "$selected_path" ]]; then
-        exit 0
+      if [[ -z $selected_path ]]; then
+          exit 0
       fi
 
-      session_name=$(basename "$selected_path" | tr . _)
+      selected_name=$(basename "$selected_path" | tr . _)
 
-      if [[ -z "$ZELLIJ" ]]; then
-        cd "$selected_path"
-        if zellij list-sessions | grep -q "^$session_name"; then
-            zellij attach "$session_name"
-        else
-            zellij attach -c "$session_name"
-        fi
+      if [[ -z $ZELLIJ ]]; then
+          cd "$selected_path"
+          zellij attach -c "$selected_name"
       else
-        zellij action new-tab -l dev -c "$selected_path" -n "$session_name"
+          zellij action new-tab -l dev -c "$selected_path" -n "$selected_name"
       fi
     '')
   ];
@@ -144,8 +121,8 @@ in {
                 plugin location="zellij:tab-bar"
             }
             children
-            pane size=1 borderless=true {
-                plugin location="zellij:compact-bar"
+            pane size=2 borderless=true {
+                plugin location="zellij:status-bar"
             }
         }
         
@@ -154,6 +131,10 @@ in {
                 pane size="80%" command="nvim" focus=true
                 pane size="20%"
             }
+        }
+
+        tab name="opencode" {
+            pane command="opencode"
         }
     }
   '';
