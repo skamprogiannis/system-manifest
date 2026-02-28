@@ -84,7 +84,7 @@
   # Configure keymap in X11
   services.xserver.xkb = {
     layout = "us,gr";
-    variant = "altgr-intl,";
+    variant = "altgr-intl";
     options = "grp:win_space_toggle";
   };
 

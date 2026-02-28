@@ -153,10 +153,10 @@ EOF
       if [ -f "$dest" ]; then
           if [ "$TYPE" = "image" ]; then
               ${pkgs.wl-clipboard}/bin/wl-copy < "$dest"
-              ${pkgs.libnotify}/bin/notify-send -i "$dest" "Screenshot ($MODE)" "Image copied to clipboard"
+              ${pkgs.libnotify}/bin/notify-send -u low -i "$dest" "Screenshot ($MODE)" "Image copied to clipboard"
           else
               echo -n "$dest" | ${pkgs.wl-clipboard}/bin/wl-copy
-              ${pkgs.libnotify}/bin/notify-send -i "$dest" "Screenshot ($MODE)" "Path copied to clipboard"
+              ${pkgs.libnotify}/bin/notify-send -u low -i "$dest" "Screenshot ($MODE)" "Path copied to clipboard"
           fi
       fi
     '')

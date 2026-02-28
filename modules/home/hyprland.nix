@@ -57,7 +57,7 @@
         "dbus-update-activation-environment --systemd --all"
         "systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP QT_QPA_PLATFORM"
         "hyprctl setcursor Dracula-cursors 24"
-        "dms run --session &"
+        "pkill -f 'dms run' || true; sleep 0.5; dms run --session &"
         "wallpaper-hook &"
       ];
 
@@ -69,7 +69,7 @@
 
       input = {
         kb_layout = "us,gr";
-        kb_variant = "altgr-intl,";
+        kb_variant = "altgr-intl";
         kb_options = "grp:win_space_toggle";
       };
 

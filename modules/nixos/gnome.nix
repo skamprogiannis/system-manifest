@@ -7,6 +7,11 @@
   services.displayManager.gdm.enable = true;
   services.desktopManager.gnome.enable = true;
 
+  environment.systemPackages = with pkgs; [
+    btop
+    seahorse # GNOME Keyring GUI Manager
+  ];
+
   # Exclude GNOME bloat
   environment.gnome.excludePackages = with pkgs; [
     gnome-maps
