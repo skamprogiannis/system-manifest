@@ -37,7 +37,6 @@
     gnome-font-viewer
     gnome-logs
     gnome-connections
-    gnome-text-editor
     gnome-user-share
     papers
     decibels

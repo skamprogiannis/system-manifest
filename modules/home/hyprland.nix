@@ -1,7 +1,6 @@
 {
   config,
   pkgs,
-  hostType,
   lib,
   ...
 }: {
@@ -20,29 +19,10 @@
         "~/.config/hypr/dms/layout.conf"
       ];
       "$mod" = "SUPER";
-      monitor = if hostType == "desktop" then [
-        "HDMI-A-1, 1920x1080@60, 0x0, 1"
-        "DP-1, 1920x1080@60, 1920x0, 1"
-      ] else [
-        ",preferred,auto,1"
-      ];
-
-      workspace = if hostType == "desktop" then [
-        "1, monitor:DP-1, default:true"
-        "2, monitor:DP-1"
-        "3, monitor:DP-1"
-        "4, monitor:DP-1"
-        "5, monitor:DP-1"
-        "6, monitor:DP-1"
-        "7, monitor:DP-1"
-        "8, monitor:DP-1"
-        "9, monitor:DP-1"
-        "10, monitor:HDMI-A-1, default:true"
-      ] else [];
 
       env = [
         "XCURSOR_SIZE,24"
-        "XCURSOR_THEME,Dracula-cursors"
+        "XCURSOR_THEME,Silksong-Cursors"
         "GDK_BACKEND,wayland,x11"
         "QT_QPA_PLATFORM,wayland;xcb"
         "CLUTTER_BACKEND,wayland"
@@ -56,7 +36,7 @@
       exec-once = [
         "dbus-update-activation-environment --systemd --all"
         "systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP QT_QPA_PLATFORM"
-        "hyprctl setcursor Dracula-cursors 24"
+        "hyprctl setcursor Silksong-Cursors 24"
         "pkill -f 'dms run' || true; sleep 0.5; dms run --session &"
         "wallpaper-hook &"
       ];

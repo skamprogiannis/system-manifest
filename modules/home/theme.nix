@@ -13,27 +13,12 @@
       name = "Dracula";
       package = pkgs.dracula-theme;
     };
-    cursorTheme = {
-      name = "Dracula-cursors";
-      package = pkgs.dracula-theme;
-      size = 24;
-    };
   };
 
   # Also ensure standard hicolor icons are present for apps that need them
   home.packages = with pkgs; [
     hicolor-icon-theme
   ];
-
-  home.pointerCursor = {
-    gtk.enable = true;
-    x11.enable = true;
-    package = pkgs.dracula-theme;
-    name = "Dracula-cursors";
-    size = 24;
-  };
-
-  home.file.".icons/Dracula-cursors".source = "${pkgs.dracula-theme}/share/icons/Dracula-cursors";
 
   # GTK 4 settings are managed via dconf
   dconf.settings = {

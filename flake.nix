@@ -46,7 +46,7 @@
             home-manager.extraSpecialArgs = { inherit inputs; hostType = "desktop"; };
             home-manager.users.stefan = {
               imports = [
-                ./home.nix
+                ./hosts/desktop/home-manager.nix
                 inputs.nixvim.homeModules.nixvim
               ];
             };
@@ -67,7 +67,7 @@
             home-manager.extraSpecialArgs = { inherit inputs; hostType = "usb"; };
             home-manager.users.stefan = {
               imports = [
-                ./home.nix
+                ./hosts/usb/home-manager.nix
                 inputs.nixvim.homeModules.nixvim
               ];
             };

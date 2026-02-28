@@ -1,30 +1,14 @@
 {
   config,
   pkgs,
-  hostType ? "desktop",
   ...
-}: let
-  isPortable = hostType == "laptop" || hostType == "usb";
-in {
+}: {
   programs.zellij = {
     enable = true;
     enableBashIntegration = false;
-    settings =
-      {
-        default_shell = "bash";
-      }
-      // (
-        if isPortable
-        then {
-          pane_frames = false;
-          simplified_ui = true;
-          default_layout = "compact";
-        }
-        else {
-          pane_frames = true;
-          default_layout = "dev";
-        }
-      );
+    settings = {
+      default_shell = "bash";
+    };
     extraConfig = ''
       keybinds {
           unbind "Ctrl p" "Ctrl t" "Ctrl n" "Ctrl s" "Ctrl o" "Ctrl q" "Ctrl g" "Ctrl r" "Ctrl d" "Ctrl h" "Ctrl j" "Ctrl k" "Ctrl l" "Ctrl b" "Alt i" "Alt s"
