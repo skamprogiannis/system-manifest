@@ -10,6 +10,7 @@
         "--disable-features=HardwareMediaKeyHandling"
         "--test-type"
         "--extensions-on-chrome-urls"
+        "--ozone-platform-hint=auto"
       ];
     };
     extensions = [

@@ -26,7 +26,7 @@
 
       env = [
         "XCURSOR_SIZE,24"
-        "XCURSOR_THEME,Silksong-Cursors"
+        "XCURSOR_THEME,HollowKnight"
         "GDK_BACKEND,wayland,x11"
         "QT_QPA_PLATFORM,wayland;xcb"
         "CLUTTER_BACKEND,wayland"
@@ -38,7 +38,9 @@
       ];
 
       exec-once = [
-        "hyprctl setcursor Silksong-Cursors 24"
+        "dbus-update-activation-environment --systemd --all"
+        "systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP QT_QPA_PLATFORM"
+        "hyprctl setcursor HollowKnight 24"
         "wallpaper-hook &"
       ];
 

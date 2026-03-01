@@ -134,6 +134,7 @@
   environment.systemPackages = with pkgs; [
     wget
     git
+    gnome-themes-extra
     # GStreamer plugins for video playback and subtitles
     gst_all_1.gstreamer
     gst_all_1.gst-plugins-base

@@ -42,7 +42,6 @@
             bind "Alt H" { GoToPreviousTab; }
             bind "Alt L" { GoToNextTab; }
 
-            // Global Actions (Alt)
             bind "Alt n" { NewTab; }
             bind "Alt f" { ToggleFloatingPanes; }
             bind "Alt x" { CloseFocus; }

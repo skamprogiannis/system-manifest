@@ -34,6 +34,7 @@
     mailspring
     obsidian
     protonvpn-gui
+    swww
 
     # CLI / Tools
     alejandra
