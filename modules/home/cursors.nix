@@ -18,7 +18,7 @@
 
     installPhase = ''
       mkdir -p $out/share/icons/HollowKnight
-      tar -xzf $src/HollowKnight.tar.gz -C $out/share/icons/
+      tar -xzf $src/HollowKnight.tar.gz --strip-components=1 -C $out/share/icons/HollowKnight
     '';
   };
 in {

@@ -121,8 +121,8 @@
                 plugin location="zellij:tab-bar"
             }
             children
-            pane size=1 borderless=true {
-                plugin location="zellij:compact-bar"
+            pane size=2 borderless=true {
+                plugin location="zellij:status-bar"
             }
         }
         
