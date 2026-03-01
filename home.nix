@@ -142,9 +142,7 @@
     "org/gnome/shell/screenshot" = {
       last-save-directory = "file:///home/stefan/pictures/screenshots";
     };
-    # Disable WLR_NO_HARDWARE_CURSORS to fix cursor issues
     "org/gnome/desktop/interface" = {
-      gtk-decoration-layout = "icon:minimize,maximize,close";
     };
   };
 

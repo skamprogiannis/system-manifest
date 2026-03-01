@@ -52,7 +52,7 @@
 
       input = {
         kb_layout = "us,gr";
-        kb_variant = "altgr-intl,polytonic";
+        kb_variant = "altgr-intl,";
         kb_options = "grp:win_space_toggle";
       };
 

@@ -18,18 +18,11 @@
 
       # Monitor DMS for wallpaper changes and launch mpvpaper if a video exists
       CURRENT_WALL=""
-      
-      # PRE-LOAD: Start the Light Mode wallpaper immediately to avoid black screen
-      LIGHT_WALL="$HOME/wallpapers/hollow-knight-sunset.mp4"
-      if [ -f "$LIGHT_WALL" ]; then
-          mpvpaper -o "no-audio --loop-file=inf --hwdec=auto --vd-lavc-threads=2 --cache=no --demuxer-max-bytes=10M --demuxer-max-back-bytes=1M" "*" "$LIGHT_WALL" &
-          OLD_PID=$!
-      fi
 
       # Wait for DMS to be ready and Matugen to settle
-      sleep 2
+      sleep 0.5
       until dms ipc wallpaper get &>/dev/null; do
-          sleep 1
+          sleep 0.2
       done
 
       # Initial check on startup
@@ -66,7 +59,6 @@
                    
                 # Kill any existing restarter script and mpvpaper process
                 pkill -f "mpvpaper-loop" || true
-                [ -n "$OLD_PID" ] && kill $OLD_PID 2>/dev/null
                 pkill mpvpaper || true
                 sleep 1.5
                    
