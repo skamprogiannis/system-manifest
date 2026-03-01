@@ -14,11 +14,11 @@
       sha256 = "sha256-3qv8G+QRxNJ6DNqEhE0gYZ1MTsAHNsZAsqzG0ffvGkU=";
     };
 
-    nativeBuildInputs = [ pkgs.tar ];
+    nativeBuildInputs = [ pkgs.gnutar pkgs.gzip ];
 
     installPhase = ''
       mkdir -p $out/share/icons/HollowKnight
-      tar -xzf HollowKnight.tar.gz -C $out/share/icons/
+      tar -xzf $src/HollowKnight.tar.gz -C $out/share/icons/
     '';
   };
 in {
