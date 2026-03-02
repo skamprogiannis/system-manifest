@@ -34,6 +34,7 @@
       TYPE="''${2:-path}"
       dest="$HOME/pictures/screenshots/screenshot_$(date +%F_%H-%M-%S).png"
       mkdir -p "$(dirname "$dest")"
+
       
       case "$MODE" in
           "full")

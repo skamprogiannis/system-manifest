@@ -209,12 +209,13 @@ in {
         ];
 
         layerrule = [
-          "blur, ^(quickshell)$"
-          "blur, ^(dms:bar)$"
-          "ignorezero, ^(quickshell)$"
-          "ignorezero, ^(dms:bar)$"
-          "hideonfullscreen, ^(dms:bar)$"
+          "blur on, ^(quickshell)$"
+          "blur on, ^(dms:bar)$"
+          "ignorezero 1, ^(quickshell)$"
+          "ignorezero 1, ^(dms:bar)$"
+          "hideonfullscreen 1, ^(dms:bar)$"
         ];
+
 
         bindr = [];
       };
