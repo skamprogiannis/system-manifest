@@ -65,17 +65,17 @@
       decoration = {
         rounding = 10;
         active_opacity = 1.0;
-        inactive_opacity = 0.8;
+        inactive_opacity = 0.7;
         blur = {
           enabled = true;
-          size = 6;
-          passes = 3;
+          size = 5;
+          passes = 4;
           new_optimizations = true;
           ignore_opacity = true;
-          xray = false;
-          vibrancy = 0.16;
-          brightness = 0.8;
-          contrast = 0.9;
+          xray = true;
+          vibrancy = 0.8;
+          brightness = 1.4;
+          contrast = 1.1;
           noise = 0.01;
         };
         shadow = {
@@ -175,6 +175,12 @@
         "$mod, Escape, exec, dms ipc call lock lock"
         "$mod, S, exec, dms ipc call settings toggle"
         "$mod, Q, exec, dms ipc call powermenu toggle"
+      ];
+
+      windowrulev2 = [
+        "opacity 0.9 0.8, class:^(com.mitchellh.ghostty)$"
+        "opacity 0.9 0.8, class:^(spotify-player)$"
+        "opacity 0.9 0.8, class:^(nautilus)$"
       ];
 
       bindr = [];

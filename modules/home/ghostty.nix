@@ -10,7 +10,6 @@
       theme = "Dracula";
       font-family = "JetBrainsMono Nerd Font";
       font-size = 11;
-      background-opacity = 0.85;
 
       # Cursor and shell settings
       cursor-style = "block";
