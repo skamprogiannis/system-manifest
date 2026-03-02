@@ -30,8 +30,8 @@
 
       # --- CURSOR ---
       cursorSettings = {
-        theme = "Dracula-cursors";
-        size = 24;
+        theme = config.home.pointerCursor.name;
+        size = config.home.pointerCursor.size;
         hyprland = {
           hideOnKeyPress = true;
           hideOnTouch = false;

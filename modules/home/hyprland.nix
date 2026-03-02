@@ -25,8 +25,8 @@
       "$mod" = "SUPER";
 
       env = [
-        "XCURSOR_SIZE,24"
-        "XCURSOR_THEME,HollowKnight"
+        "XCURSOR_SIZE,${toString config.home.pointerCursor.size}"
+        "XCURSOR_THEME,${config.home.pointerCursor.name}"
         "GDK_BACKEND,wayland,x11"
         "QT_QPA_PLATFORM,wayland;xcb"
         "CLUTTER_BACKEND,wayland"
@@ -40,7 +40,7 @@
       exec-once = [
         "dbus-update-activation-environment --systemd --all"
         "systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP QT_QPA_PLATFORM"
-        "hyprctl setcursor HollowKnight 24"
+        "hyprctl setcursor ${config.home.pointerCursor.name} ${toString config.home.pointerCursor.size}"
         "wallpaper-hook &"
       ];
 
