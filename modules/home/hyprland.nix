@@ -27,8 +27,6 @@
       env = [
         "XCURSOR_SIZE,${toString config.home.pointerCursor.size}"
         "XCURSOR_THEME,${config.home.pointerCursor.name}"
-        "HYPRCURSOR_SIZE,${toString config.home.pointerCursor.size}"
-        "HYPRCURSOR_THEME,${config.home.pointerCursor.name}"
         "GDK_BACKEND,wayland,x11"
         "QT_QPA_PLATFORM,wayland;xcb"
         "CLUTTER_BACKEND,wayland"
@@ -62,15 +60,15 @@
         gaps_out = 10;
         border_size = 2;
         layout = "dwindle";
-        "col.active_border" = "rgba(ffffff66)"; # Specular light-catching edge
+        "col.active_border" = "rgba(80560099)"; # Fallback primary color (60% alpha)
       };
 
       decoration = {
         rounding = 10;
-        active_opacity = 0.94;
-        inactive_opacity = 0.8;
+        active_opacity = 0.85; # Focused: Luminous/Translucent
+        inactive_opacity = 0.96; # Unfocused: Muddier/Solid
         dim_inactive = true;
-        dim_strength = 0.1;
+        dim_strength = 0.2;
         blur = {
           enabled = true;
           size = 5;
@@ -118,67 +116,81 @@
       ];
 
       bind = [
-        "$mod, RETURN, exec, ghostty"
-        "$mod, B, exec, brave"
-        "$mod, X, killactive,"
-        "$mod, M, exec, ghostty -e spotify_player"
-        "$mod, E, exec, nautilus"
-        "$mod, V, togglefloating,"
-        "$mod, F, fullscreen,"
-        "$mod, R, exec, dms ipc call spotlight toggle"
-        "$mod SHIFT, V, exec, dms ipc call clipboard toggle"
-        "$mod, P, pseudo,"
-        "$mod, backslash, togglesplit,"
-        "$mod, G, togglegroup,"
-        "$mod, Tab, changegroupactive, f"
-        "$mod, h, movefocus, l"
-        "$mod, l, movefocus, r"
-        "$mod, k, movefocus, u"
-        "$mod, j, movefocus, d"
-        "$mod, left, focusmonitor, -1"
-        "$mod, right, focusmonitor, +1"
-        "$mod SHIFT, left, movewindow, mon:-1"
-        "$mod SHIFT, right, movewindow, mon:+1"
-        "$mod SHIFT, h, movewindow, l"
-        "$mod SHIFT, l, movewindow, r"
-        "$mod SHIFT, k, movewindow, u"
-        "$mod SHIFT, j, movewindow, d"
-        "$mod, 0, workspace, 0"
-        "$mod, 1, workspace, 1"
-        "$mod, 2, workspace, 2"
-        "$mod, 3, workspace, 3"
-        "$mod, 4, workspace, 4"
-        "$mod, 5, workspace, 5"
-        "$mod, 6, workspace, 6"
-        "$mod, 7, workspace, 7"
-        "$mod, 8, workspace, 8"
-        "$mod, 9, workspace, 9"
-        "$mod, 0, workspace, 10"
-        "$mod SHIFT, 1, movetoworkspace, 1"
-        "$mod SHIFT, 2, movetoworkspace, 2"
-        "$mod SHIFT, 3, movetoworkspace, 3"
-        "$mod SHIFT, 4, movetoworkspace, 4"
-        "$mod SHIFT, 5, movetoworkspace, 5"
-        "$mod SHIFT, 6, movetoworkspace, 6"
-        "$mod SHIFT, 7, movetoworkspace, 7"
-        "$mod SHIFT, 8, movetoworkspace, 8"
-        "$mod SHIFT, 9, movetoworkspace, 9"
-        "$mod SHIFT, 0, movetoworkspace, 10"
-        "$mod, grave, togglespecialworkspace, music"
-        "$mod SHIFT, grave, movetoworkspace, special:music"
+        # --- System & Apps (Keycodes for cross-layout support) ---
+        "$mod, code:36, exec, ghostty" # Return
+        "$mod, code:56, exec, brave" # b
+        "$mod, code:53, killactive," # x
+        "$mod, code:58, exec, ghostty -e spotify_player" # m
+        "$mod, code:26, exec, nautilus" # e
+        "$mod, code:55, togglefloating," # v
+        "$mod, code:41, fullscreen," # f
+        "$mod, code:27, exec, dms ipc call spotlight toggle" # r
+        "CONTROL, code:44, exec, dms ipc call spotlight toggle" # Ctrl+j
+        "CONTROL SHIFT, code:55, exec, dms ipc call clipboard toggle" # Ctrl+Shift+v
+        "$mod SHIFT, code:55, exec, dms ipc call clipboard toggle" # Super+Shift+v
+        "$mod, code:33, pseudo," # p
+        "$mod, code:51, togglesplit," # \
+        "$mod, code:42, togglegroup," # g
+        "$mod, code:23, changegroupactive, f" # Tab
+
+        # --- Navigation ---
+        "$mod, code:43, movefocus, l" # h
+        "$mod, code:46, movefocus, r" # l
+        "$mod, code:45, movefocus, u" # k
+        "$mod, code:44, movefocus, d" # j
+        "$mod, code:113, movefocus, l" # Left
+        "$mod, code:114, movefocus, r" # Right
+        "$mod, code:111, movefocus, u" # Up
+        "$mod, code:116, movefocus, d" # Down
+
+        # --- Window Movement ---
+        "$mod SHIFT, code:43, movewindow, l" # H
+        "$mod SHIFT, code:46, movewindow, r" # L
+        "$mod SHIFT, code:45, movewindow, u" # K
+        "$mod SHIFT, code:44, movewindow, d" # J
+        "$mod SHIFT, code:113, movewindow, mon:-1" # Left
+        "$mod SHIFT, code:114, movewindow, mon:+1" # Right
+
+        # --- Workspaces ---
+        "$mod, code:10, workspace, 1"
+        "$mod, code:11, workspace, 2"
+        "$mod, code:12, workspace, 3"
+        "$mod, code:13, workspace, 4"
+        "$mod, code:14, workspace, 5"
+        "$mod, code:15, workspace, 6"
+        "$mod, code:16, workspace, 7"
+        "$mod, code:17, workspace, 8"
+        "$mod, code:18, workspace, 9"
+        "$mod, code:19, workspace, 10"
+        "$mod SHIFT, code:10, movetoworkspace, 1"
+        "$mod SHIFT, code:11, movetoworkspace, 2"
+        "$mod SHIFT, code:12, movetoworkspace, 3"
+        "$mod SHIFT, code:13, movetoworkspace, 4"
+        "$mod SHIFT, code:14, movetoworkspace, 5"
+        "$mod SHIFT, code:15, movetoworkspace, 6"
+        "$mod SHIFT, code:16, movetoworkspace, 7"
+        "$mod SHIFT, code:17, movetoworkspace, 8"
+        "$mod SHIFT, code:18, movetoworkspace, 9"
+        "$mod SHIFT, code:19, movetoworkspace, 10"
+
+        # --- Special Workspaces & Screenshots ---
+        "$mod, code:49, togglespecialworkspace, music" # `
+        "$mod SHIFT, code:49, movetoworkspace, special:music" # ~
         ", Print, exec, screenshot-path region path"
         "SHIFT, Print, exec, dms screenshot region"
         "CONTROL, Print, exec, screenshot-path window path"
         "CONTROL SHIFT, Print, exec, dms screenshot window"
         "ALT, Print, exec, screenshot-path full path"
         "ALT SHIFT, Print, exec, dms screenshot full"
-        "$mod, N, exec, dms ipc call notifications toggle"
-        "$mod SHIFT, N, exec, dms ipc call notifications clearAll"
-        "$mod, Backspace, exec, dms ipc call notifications dismissAllPopups"
-        "$mod, O, exec, dms ipc call hypr toggleOverview"
-        "$mod, Escape, exec, dms ipc call lock lock"
-        "$mod, S, exec, dms ipc call settings toggle"
-        "$mod, Q, exec, dms ipc call powermenu toggle"
+
+        # --- DMS IPC Controls ---
+        "$mod, code:57, exec, dms ipc call notifications toggle" # n
+        "$mod SHIFT, code:57, exec, dms ipc call notifications clearAll" # N
+        "$mod, code:22, exec, dms ipc call notifications dismissAllPopups" # Backspace
+        "$mod, code:32, exec, dms ipc call hypr toggleOverview" # o
+        "$mod, code:9, exec, dms ipc call lock lock" # Escape
+        "$mod, code:39, exec, dms ipc call settings toggle" # s
+        "$mod, code:24, exec, dms ipc call powermenu toggle" # q
       ];
 
       windowrule = [];
