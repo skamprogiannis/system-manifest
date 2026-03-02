@@ -88,5 +88,13 @@
       name = "Settings";
       noDisplay = true;
     };
+    "org.gnome.Extensions" = {
+      name = "Extensions";
+      noDisplay = true;
+    };
+    "ibus-setup" = {
+      name = "IBus Preferences";
+      noDisplay = true;
+    };
   };
 }
