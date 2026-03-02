@@ -52,8 +52,9 @@
 
       input = {
         kb_layout = "us,gr";
-        kb_variant = "altgr-intl,";
+        kb_variant = "altgr-intl,simple";
         kb_options = "grp:win_space_toggle";
+        resolve_binds_by_sym = 1;
       };
 
       general = {

@@ -222,6 +222,12 @@
   };
 
   # Configure default applications
+  xdg.desktopEntries.btop = {
+    name = "btop";
+    exec = "ghostty -e btop";
+    noDisplay = true;
+  };
+
   xdg.mimeApps = {
     enable = true;
     associations.added = {
