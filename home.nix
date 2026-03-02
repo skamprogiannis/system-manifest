@@ -12,7 +12,7 @@
     ./modules/home/git.nix
     ./modules/home/ghostty.nix
     ./modules/home/neovim.nix
-    ./modules/home/opencode.nix
+    ./modules/home/opencode
     ./modules/home/hyprland.nix
     ./modules/home/dms.nix
     ./modules/home/pearpass.nix
@@ -157,9 +157,7 @@
   programs.home-manager.enable = true;
 
   # Prevent long shutdown delays for user services
-  systemd.user.extraConfig = ''
-    DefaultTimeoutStopSec=2s
-  '';
+  systemd.user.settings.Manager.DefaultTimeoutStopSec = "2s";
 
   programs.bash = {
     enable = true;
