@@ -40,37 +40,11 @@
       ln -sf Link pointing_hand
       ln -sf Link hand1
       ln -sf Link hand2
-      
-      # Text & Precision
-      ln -sf xterm text
-      ln -sf xterm ibeam
-      ln -sf plus cell
-      ln -sf plus crosshair
-      ln -sf plus cross
-      ln -sf plus precision
-      
-      # Movement & Resize
-      ln -sf sb_h_double_arrow h_double_arrow
-      ln -sf sb_h_double_arrow e-resize
-      ln -sf sb_h_double_arrow w-resize
-      ln -sf sb_h_double_arrow col-resize
-      ln -sf sb_v_double_arrow v_double_arrow
-      ln -sf sb_v_double_arrow n-resize
-      ln -sf sb_v_double_arrow s-resize
-      ln -sf sb_v_double_arrow row-resize
-      
-      # Status
-      ln -sf watch wait
-      ln -sf watch busy
-      ln -sf X_cursor not-allowed
-      ln -sf X_cursor no-drop
-      ln -sf X_cursor forbidden
-      
-      # Interactive
       ln -sf Link grab
       ln -sf Link grabbing
       ln -sf Link zoom-in
       ln -sf Link zoom-out
+
       
       # Fix index.theme to inherit ONLY as a last resort
       cat <<EOF > $out/share/icons/HollowKnight/index.theme

@@ -60,13 +60,13 @@
         gaps_out = 10;
         border_size = 2;
         layout = "dwindle";
-        "col.active_border" = "rgba(80560099)"; # Fallback primary color (60% alpha)
+        "col.active_border" = "rgba(80560099)"; # Fallback dynamic color
       };
 
       decoration = {
         rounding = 10;
-        active_opacity = 0.85; # Focused: Luminous/Translucent
-        inactive_opacity = 0.96; # Unfocused: Muddier/Solid
+        active_opacity = 0.75; # More glassy focused window
+        inactive_opacity = 0.85; # More glassy background window
         dim_inactive = true;
         dim_strength = 0.2;
         blur = {
@@ -75,7 +75,7 @@
           passes = 4;
           new_optimizations = true;
           ignore_opacity = true;
-          xray = true;
+          xray = false; # Allow scratchpad transparency
           vibrancy = 1.0;
           brightness = 1.2;
           contrast = 1.2;
@@ -125,17 +125,15 @@
         "$mod, code:55, togglefloating," # v
         "$mod, code:41, fullscreen," # f
         "$mod, code:27, exec, dms ipc call spotlight toggle" # r
-        "CONTROL, code:44, exec, dms ipc call spotlight toggle" # Ctrl+j
-        "CONTROL SHIFT, code:55, exec, dms ipc call clipboard toggle" # Ctrl+Shift+v
         "$mod SHIFT, code:55, exec, dms ipc call clipboard toggle" # Super+Shift+v
         "$mod, code:33, pseudo," # p
         "$mod, code:51, togglesplit," # \
         "$mod, code:42, togglegroup," # g
         "$mod, code:23, changegroupactive, f" # Tab
 
-        # --- Navigation ---
-        "$mod, code:43, movefocus, l" # h
-        "$mod, code:46, movefocus, r" # l
+        # --- Navigation (with Workspace Overflow) ---
+        "$mod, code:43, exec, hypr-nav l" # h
+        "$mod, code:46, exec, hypr-nav r" # l
         "$mod, code:45, movefocus, u" # k
         "$mod, code:44, movefocus, d" # j
         "$mod, code:113, movefocus, l" # Left
@@ -193,7 +191,18 @@
         "$mod, code:24, exec, dms ipc call powermenu toggle" # q
       ];
 
-      windowrule = [];
+      windowrule = [
+        "opacity 0.8 0.8, match:class ^(org.gnome.baobab)$"
+      ];
+
+      layerrule = [
+        "blur,quickshell"
+        "blur,dms:bar"
+        "ignorezero,quickshell"
+        "ignorezero,dms:bar"
+        "hideonfullscreen,dms:bar"
+      ];
+
 
       bindr = [];
     };
