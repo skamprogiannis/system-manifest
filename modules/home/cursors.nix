@@ -28,16 +28,15 @@
       # Ensure common modern names point to HK icons to prevent Adwaita fallbacks
       # Using -sf to force creation even if the file already exists (prevent build failure)
       
-      # Pointers / Hands
-      ln -sf hand1 pointer
+      # Pointers
+      ln -sf left_ptr pointer
+      ln -sf left_ptr default
+      ln -sf left_ptr arrow
+      ln -sf left_ptr ptr
+      ln -sf left_ptr top_left_arrow
+      
+      # Hands (Clickable links)
       ln -sf hand1 pointing_hand
-      ln -sf hand1 left_ptr
-      ln -sf hand1 default
-      ln -sf hand1 arrow
-      ln -sf hand1 ptr
-      ln -sf hand1 top_left_arrow
-      ln -sf hand2 progress
-      ln -sf hand2 alias
       
       # Text & Precision
       ln -sf xterm text
@@ -46,6 +45,8 @@
       ln -sf plus crosshair
       ln -sf plus cross
       ln -sf plus precision
+      ln -sf hand2 progress
+      ln -sf hand2 alias
       
       # Movement & Resize
       ln -sf sb_h_double_arrow h_double_arrow

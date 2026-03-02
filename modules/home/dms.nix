@@ -23,8 +23,8 @@
     enableAudioWavelength = true;
     settings = {
       # --- THEME & COLOR ---
-      currentThemeName = "dark";
-      currentThemeCategory = "dark";
+      currentThemeName = "dynamic";
+      currentThemeCategory = "dynamic";
       matugenScheme = "scheme-fidelity";
       matugenPaletteFidelity = 1;
 

@@ -66,10 +66,10 @@
 
       decoration = {
         rounding = 10;
-        active_opacity = 0.94;
-        inactive_opacity = 0.8;
+        active_opacity = 0.85;
+        inactive_opacity = 0.96;
         dim_inactive = true;
-        dim_strength = 0.1;
+        dim_strength = 0.2;
         blur = {
           enabled = true;
           size = 5;
@@ -134,14 +134,15 @@
         "$mod, l, movefocus, r"
         "$mod, k, movefocus, u"
         "$mod, j, movefocus, d"
-        "$mod, left, focusmonitor, -1"
-        "$mod, right, focusmonitor, +1"
-        "$mod SHIFT, left, movewindow, mon:-1"
-        "$mod SHIFT, right, movewindow, mon:+1"
-        "$mod SHIFT, h, movewindow, l"
-        "$mod SHIFT, l, movewindow, r"
-        "$mod SHIFT, k, movewindow, u"
-        "$mod SHIFT, j, movewindow, d"
+        "CONTROL, j, exec, dms ipc call spotlight toggle"
+        "CONTROL SHIFT, v, exec, dms ipc call clipboard toggle"
+        # Navigation using keycodes (works regardless of layout)
+        "$mod, code:43, movefocus, l" # h
+        "$mod, code:44, movefocus, d" # j
+        "$mod, code:45, movefocus, u" # k
+        "$mod, code:46, movefocus, r" # l
+        "CONTROL, code:44, exec, dms ipc call spotlight toggle" # Ctrl+j
+        "CONTROL SHIFT, code:55, exec, dms ipc call clipboard toggle" # Ctrl+Shift+v
         "$mod, 0, workspace, 0"
         "$mod, 1, workspace, 1"
         "$mod, 2, workspace, 2"
