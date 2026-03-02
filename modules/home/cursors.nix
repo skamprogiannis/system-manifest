@@ -31,6 +31,11 @@
       # Pointers / Hands
       ln -sf hand1 pointer
       ln -sf hand1 pointing_hand
+      ln -sf hand1 left_ptr
+      ln -sf hand1 default
+      ln -sf hand1 arrow
+      ln -sf hand1 ptr
+      ln -sf hand1 top_left_arrow
       ln -sf hand2 progress
       ln -sf hand2 alias
       

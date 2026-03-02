@@ -60,6 +60,7 @@
         gaps_out = 10;
         border_size = 2;
         layout = "dwindle";
+        "col.active_border" = "rgba(80560099)"; # 60% opacity primary color
       };
 
       decoration = {
@@ -177,10 +178,10 @@
         "$mod, Q, exec, dms ipc call powermenu toggle"
       ];
 
-      windowrulev2 = [
-        "opacity 0.9 0.8, class:^(com.mitchellh.ghostty)$"
-        "opacity 0.9 0.8, class:^(spotify-player)$"
-        "opacity 0.9 0.8, class:^(nautilus)$"
+      windowrule = [
+        "opacity 0.9 0.8, match:class ^(com.mitchellh.ghostty)$"
+        "opacity 0.9 0.8, match:class ^(org.gnome.Nautilus)$"
+        "opacity 0.9 0.8, match:class ^(baobab)$"
       ];
 
       bindr = [];
