@@ -77,8 +77,8 @@ in {
 
         decoration = {
           rounding = 10;
-          active_opacity = 0.75; # More glassy focused window
-          inactive_opacity = 0.85; # More glassy background window
+          active_opacity = 0.65; # Focused: Luminous/Translucent
+          inactive_opacity = 0.95; # Unfocused: Solid/Muddy
           dim_inactive = true;
           dim_strength = 0.2;
           blur = {
@@ -208,11 +208,11 @@ in {
         ];
 
         layerrule = [
-          "blur,quickshell"
-          "blur,dms:bar"
-          "ignorezero,quickshell"
-          "ignorezero,dms:bar"
-          "hideonfullscreen,dms:bar"
+          "blur, quickshell"
+          "blur, dms:bar"
+          "ignorezero, quickshell"
+          "ignorezero, dms:bar"
+          "hideonfullscreen, dms:bar"
         ];
 
         bindr = [];
@@ -224,4 +224,3 @@ in {
     };
   };
 }
-
