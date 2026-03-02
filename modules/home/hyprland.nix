@@ -72,9 +72,9 @@
           passes = 4;
           new_optimizations = true;
           ignore_opacity = true;
-          xray = false;
-          vibrancy = 0.5;
-          brightness = 1.2;
+          xray = true;
+          vibrancy = 0.8;
+          brightness = 1.4;
           contrast = 1.1;
           noise = 0.01;
         };
@@ -175,6 +175,12 @@
         "$mod, Escape, exec, dms ipc call lock lock"
         "$mod, S, exec, dms ipc call settings toggle"
         "$mod, Q, exec, dms ipc call powermenu toggle"
+      ];
+
+      windowrulev2 = [
+        "opacity 0.9 0.8, class:^(com.mitchellh.ghostty)$"
+        "opacity 0.9 0.8, class:^(spotify-player)$"
+        "opacity 0.9 0.8, class:^(nautilus)$"
       ];
 
       bindr = [];
