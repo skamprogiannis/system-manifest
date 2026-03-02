@@ -67,11 +67,18 @@
       decoration = {
         rounding = 10;
         active_opacity = 1.0;
-        inactive_opacity = 0.75;
+        inactive_opacity = 0.8;
         blur = {
           enabled = true;
-          size = 3;
-          passes = 1;
+          size = 6;
+          passes = 3;
+          new_optimizations = true;
+          ignore_opacity = true;
+          xray = false;
+          vibrancy = 0.16;
+          brightness = 0.8;
+          contrast = 0.9;
+          noise = 0.01;
         };
         shadow = {
           enabled = true;
