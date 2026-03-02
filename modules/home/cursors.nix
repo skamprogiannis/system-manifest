@@ -15,7 +15,7 @@
       sha256 = "sha256-3qv8G+QRxNJ6DNqEhE0gYZ1MTsAHNsZAsqzG0ffvGkU=";
     };
 
-    nativeBuildInputs = [ pkgs.gnutar pkgs.gzip pkgs.imagemagick ];
+    nativeBuildInputs = [ pkgs.gnutar pkgs.gzip ];
 
     installPhase = ''
       mkdir -p $out/share/icons/HollowKnight/cursors
@@ -23,10 +23,6 @@
       
       # Go to the cursors directory
       cd $out/share/icons/HollowKnight/cursors
-
-      # --- CUSTOM REFINEMENTS ---
-      # Shrink the hand cursors by 20% for better precision
-      mogrify -resize 80% hand1 hand2
 
       # --- SYMLINK BAKING ---
       # Ensure common modern names point to HK icons to prevent Adwaita fallbacks
