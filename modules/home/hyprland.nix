@@ -181,7 +181,7 @@
       windowrule = [
         "opacity 0.9 0.8, match:class ^(com.mitchellh.ghostty)$"
         "opacity 0.9 0.8, match:class ^(org.gnome.Nautilus)$"
-        "opacity 0.9 0.8, match:class ^(baobab)$"
+        "opacity 0.9 0.8, match:class ^(org.gnome.baobab)$"
       ];
 
       bindr = [];
