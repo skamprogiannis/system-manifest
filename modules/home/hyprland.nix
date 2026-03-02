@@ -75,10 +75,11 @@
           ignore_opacity = true;
           xray = true;
           vibrancy = 0.8;
-          brightness = 1.4;
+          brightness = 1.3;
           contrast = 1.1;
-          noise = 0.01;
+          noise = 0.02;
         };
+
         shadow = {
           enabled = true;
           range = 4;
