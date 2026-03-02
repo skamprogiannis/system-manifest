@@ -47,6 +47,7 @@
     glow
     go
     jq
+    libsecret
     nodejs_22
     opencode
     pacvim
@@ -223,6 +224,14 @@
   };
 
   # Configure default applications
+  xdg.desktopEntries.mailspring = {
+    name = "Mailspring";
+    exec = "mailspring --password-store=gnome-libsecret %U";
+    icon = "mailspring";
+    categories = ["Network" "Email"];
+    mimeType = ["x-scheme-handler/mailto"];
+  };
+
   xdg.desktopEntries.btop = {
     name = "btop";
     exec = "ghostty -e btop";
