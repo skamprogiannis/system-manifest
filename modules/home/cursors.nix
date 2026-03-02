@@ -25,18 +25,21 @@
       cd $out/share/icons/HollowKnight/cursors
 
       # --- SYMLINK BAKING ---
-      # Ensure common modern names point to HK icons to prevent Adwaita fallbacks
-      # Using -sf to force creation even if the file already exists (prevent build failure)
+      # Map standard names to Hollow Knight assets
+      # Sword is 'Normal', Hand is 'Link'
       
-      # Pointers
-      ln -sf left_ptr pointer
-      ln -sf left_ptr default
-      ln -sf left_ptr arrow
-      ln -sf left_ptr ptr
-      ln -sf left_ptr top_left_arrow
+      # Pointers (The Sword)
+      ln -sf Normal left_ptr
+      ln -sf Normal default
+      ln -sf Normal arrow
+      ln -sf Normal ptr
+      ln -sf Normal top_left_arrow
+      ln -sf Normal pointer
       
       # Hands (Clickable links)
-      ln -sf hand1 pointing_hand
+      ln -sf Link pointing_hand
+      ln -sf Link hand1
+      ln -sf Link hand2
       
       # Text & Precision
       ln -sf xterm text
@@ -45,8 +48,6 @@
       ln -sf plus crosshair
       ln -sf plus cross
       ln -sf plus precision
-      ln -sf hand2 progress
-      ln -sf hand2 alias
       
       # Movement & Resize
       ln -sf sb_h_double_arrow h_double_arrow
@@ -66,10 +67,10 @@
       ln -sf X_cursor forbidden
       
       # Interactive
-      ln -sf hand1 grab
-      ln -sf hand1 grabbing
-      ln -sf hand1 zoom-in
-      ln -sf hand1 zoom-out
+      ln -sf Link grab
+      ln -sf Link grabbing
+      ln -sf Link zoom-in
+      ln -sf Link zoom-out
       
       # Fix index.theme to inherit ONLY as a last resort
       cat <<EOF > $out/share/icons/HollowKnight/index.theme
@@ -92,7 +93,4 @@ in {
     gtk.enable = true;
     x11.enable = true;
   };
-
-  # Source of truth for other modules
-  # Use: config.home.pointerCursor.name and config.home.pointerCursor.size
 }
