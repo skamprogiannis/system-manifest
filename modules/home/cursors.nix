@@ -44,6 +44,8 @@
       ln -sf xterm ibeam
       ln -sf plus cell
       ln -sf plus crosshair
+      ln -sf plus cross
+      ln -sf plus precision
       
       # Movement & Resize
       ln -sf sb_h_double_arrow h_double_arrow

@@ -27,9 +27,8 @@
       env = [
         "XCURSOR_SIZE,${toString config.home.pointerCursor.size}"
         "XCURSOR_THEME,${config.home.pointerCursor.name}"
-        "HYPRCURSOR_SIZE,${toString config.home.pointerCursor.size}"
-        "HYPRCURSOR_THEME,${config.home.pointerCursor.name}"
         "GDK_BACKEND,wayland,x11"
+
         "QT_QPA_PLATFORM,wayland;xcb"
         "CLUTTER_BACKEND,wayland"
         "ANKI_WAYLAND,1"
