@@ -77,8 +77,9 @@ in {
 
         decoration = {
           rounding = 10;
-          active_opacity = 0.65; # Focused: Luminous/Translucent
-          inactive_opacity = 0.95; # Unfocused: Solid/Muddy
+        active_opacity = 0.70; # Luminous focused pane
+        inactive_opacity = 0.90; # Solid/Muddy background
+
           dim_inactive = true;
           dim_strength = 0.2;
           blur = {
@@ -208,11 +209,11 @@ in {
         ];
 
         layerrule = [
-          "blur, quickshell"
-          "blur, dms:bar"
-          "ignorezero, quickshell"
-          "ignorezero, dms:bar"
-          "hideonfullscreen, dms:bar"
+          "blur, ^(quickshell)$"
+          "blur, ^(dms:bar)$"
+          "ignorezero, ^(quickshell)$"
+          "ignorezero, ^(dms:bar)$"
+          "hideonfullscreen, ^(dms:bar)$"
         ];
 
         bindr = [];
