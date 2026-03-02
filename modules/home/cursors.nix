@@ -29,17 +29,17 @@
       # Sword is 'Normal', Hand is 'Link'
       
       # Pointers (The Sword)
-      ln -sf Normal left_ptr
-      ln -sf Normal default
-      ln -sf Normal arrow
-      ln -sf Normal ptr
-      ln -sf Normal top_left_arrow
-      ln -sf Normal pointer
+      ln -sf Link left_ptr
+      ln -sf Link default
+      ln -sf Link arrow
+      ln -sf Link ptr
+      ln -sf Link top_left_arrow
+      ln -sf Link pointer
       
       # Hands (Clickable links)
-      ln -sf Link pointing_hand
-      ln -sf Link hand1
-      ln -sf Link hand2
+      ln -sf Normal pointing_hand
+      ln -sf Normal hand1
+      ln -sf Normal hand2
       
       # Text & Precision
       ln -sf xterm text
@@ -67,10 +67,10 @@
       ln -sf X_cursor forbidden
       
       # Interactive
-      ln -sf Link grab
-      ln -sf Link grabbing
-      ln -sf Link zoom-in
-      ln -sf Link zoom-out
+      ln -sf Normal grab
+      ln -sf Normal grabbing
+      ln -sf Normal zoom-in
+      ln -sf Normal zoom-out
       
       # Fix index.theme to inherit ONLY as a last resort
       cat <<EOF > $out/share/icons/HollowKnight/index.theme

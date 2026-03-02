@@ -16,6 +16,7 @@
       Restart = "always";
       RestartSec = "2.5";
       RuntimeMaxSec = "600s";
+      TimeoutStopSec = "2s";
     };
   };
 

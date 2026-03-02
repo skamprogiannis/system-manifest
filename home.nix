@@ -88,7 +88,7 @@
     normalization = false
 
     [notification_control]
-    enabled = true
+    enabled = false
     include_body = true
     urgency = "Low"
   '';
@@ -113,6 +113,7 @@
       ExecStart = "${inputs.spotify-player.defaultPackage.${pkgs.stdenv.hostPlatform.system}}/bin/spotify_player --daemon";
       Restart = "on-failure";
       RestartSec = "30s";
+      TimeoutStopSec = "2s";
     };
     Install = {
       WantedBy = ["default.target"];

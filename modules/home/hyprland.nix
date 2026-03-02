@@ -60,13 +60,13 @@
         gaps_out = 10;
         border_size = 2;
         layout = "dwindle";
-        "col.active_border" = "rgba(80560099)"; # Fallback primary color (60% alpha)
+        "col.active_border" = "rgba(80560099)"; # Fallback dynamic color
       };
 
       decoration = {
         rounding = 10;
-        active_opacity = 0.80; # Deep Glass
-        inactive_opacity = 0.88; # Frosted Glass
+        active_opacity = 0.75; # More glassy focused window
+        inactive_opacity = 0.85; # More glassy background window
         dim_inactive = true;
         dim_strength = 0.2;
         blur = {
@@ -75,7 +75,7 @@
           passes = 4;
           new_optimizations = true;
           ignore_opacity = true;
-          xray = false; # Allow layering
+          xray = false; # Allow scratchpad transparency
           vibrancy = 1.0;
           brightness = 1.2;
           contrast = 1.2;
@@ -191,7 +191,16 @@
         "$mod, code:24, exec, dms ipc call powermenu toggle" # q
       ];
 
-      windowrule = [];
+      windowrule = [
+        "opacity 0.8 0.8, match:class ^(org.gnome.baobab)$"
+      ];
+
+      layerrule = [
+        "blur, quickshell"
+        "blur, dms:bar"
+        "ignorezero, quickshell"
+        "ignorezero, dms:bar"
+      ];
 
       bindr = [];
     };
