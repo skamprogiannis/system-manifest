@@ -26,41 +26,42 @@
 
       # --- SYMLINK BAKING ---
       # Ensure common modern names point to HK icons to prevent Adwaita fallbacks
+      # Using -sf to force creation even if the file already exists (prevent build failure)
       
       # Pointers / Hands
-      ln -s hand1 pointer
-      ln -s hand1 pointing_hand
-      ln -s hand2 progress
-      ln -s hand2 alias
+      ln -sf hand1 pointer
+      ln -sf hand1 pointing_hand
+      ln -sf hand2 progress
+      ln -sf hand2 alias
       
       # Text & Precision
-      ln -s xterm text
-      ln -s xterm ibeam
-      ln -s plus cell
-      ln -s pencil crosshair
+      ln -sf xterm text
+      ln -sf xterm ibeam
+      ln -sf plus cell
+      ln -sf pencil crosshair
       
       # Movement & Resize
-      ln -s sb_h_double_arrow h_double_arrow
-      ln -s sb_h_double_arrow e-resize
-      ln -s sb_h_double_arrow w-resize
-      ln -s sb_h_double_arrow col-resize
-      ln -s sb_v_double_arrow v_double_arrow
-      ln -s sb_v_double_arrow n-resize
-      ln -s sb_v_double_arrow s-resize
-      ln -s sb_v_double_arrow row-resize
+      ln -sf sb_h_double_arrow h_double_arrow
+      ln -sf sb_h_double_arrow e-resize
+      ln -sf sb_h_double_arrow w-resize
+      ln -sf sb_h_double_arrow col-resize
+      ln -sf sb_v_double_arrow v_double_arrow
+      ln -sf sb_v_double_arrow n-resize
+      ln -sf sb_v_double_arrow s-resize
+      ln -sf sb_v_double_arrow row-resize
       
       # Status
-      ln -s watch wait
-      ln -s watch busy
-      ln -s X_cursor not-allowed
-      ln -s X_cursor no-drop
-      ln -s X_cursor forbidden
+      ln -sf watch wait
+      ln -sf watch busy
+      ln -sf X_cursor not-allowed
+      ln -sf X_cursor no-drop
+      ln -sf X_cursor forbidden
       
       # Interactive
-      ln -s hand1 grab
-      ln -s hand1 grabbing
-      ln -s hand1 zoom-in
-      ln -s hand1 zoom-out
+      ln -sf hand1 grab
+      ln -sf hand1 grabbing
+      ln -sf hand1 zoom-in
+      ln -sf hand1 zoom-out
       
       # Fix index.theme to inherit ONLY as a last resort
       cat <<EOF > $out/share/icons/HollowKnight/index.theme
