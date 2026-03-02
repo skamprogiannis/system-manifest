@@ -41,7 +41,7 @@
       CURRENT_WALL=""
       LAST_COLORS_HASH=""
 
-      update_zathura() {
+      update_themes() {
         local color_file="$HOME/.config/hypr/dms/colors.conf"
         [ ! -f "$color_file" ] && return
         
@@ -49,11 +49,13 @@
         [ "$current_hash" = "$LAST_COLORS_HASH" ] && return
         LAST_COLORS_HASH="$current_hash"
         
-        echo "Updating Zathura colors..."
+        # Extract colors
         PRIMARY=$(grep "\$primary =" "$color_file" | cut -d'(' -f2 | cut -d')' -f1 | sed 's/ff$//')
         BG=$(grep "\$surface =" "$color_file" | cut -d'(' -f2 | cut -d')' -f1 | sed 's/ff$//')
         FG=$(grep "\$onSurface =" "$color_file" | cut -d'(' -f2 | cut -d')' -f1 | sed 's/ff$//')
-        
+        ACCENT=$(grep "\$secondary =" "$color_file" | cut -d'(' -f2 | cut -d')' -f1 | sed 's/ff$//')
+
+        echo "Updating Zathura colors..."
         mkdir -p ~/.config/zathura
         cat <<EOF > ~/.config/zathura/zathurarc
 set recolor "true"
@@ -76,6 +78,33 @@ set notification-warning-fg "#$FG"
 set highlight-color "#$PRIMARY"
 set highlight-active-color "#$PRIMARY"
 EOF
+
+        echo "Updating GTK colors for Brave..."
+        for version in 3.0 4.0; do
+          mkdir -p "$HOME/.config/gtk-$version"
+          cat <<EOF > "$HOME/.config/gtk-$version/gtk.css"
+@define-color accent_color #$PRIMARY;
+@define-color accent_bg_color #$PRIMARY;
+@define-color accent_fg_color #$BG;
+@define-color window_bg_color #$BG;
+@define-color window_fg_color #$FG;
+@define-color view_bg_color #$BG;
+@define-color view_fg_color #$FG;
+@define-color headerbar_bg_color #$BG;
+@define-color headerbar_fg_color #$FG;
+@define-color headerbar_border_color #$BG;
+@define-color headerbar_backdrop_color @headerbar_bg_color;
+@define-color card_bg_color #$BG;
+@define-color card_fg_color #$FG;
+@define-color dialog_bg_color #$BG;
+@define-color dialog_fg_color #$FG;
+@define-color popover_bg_color #$BG;
+@define-color popover_fg_color #$FG;
+@define-color sidebar_bg_color #$BG;
+@define-color sidebar_fg_color #$FG;
+@define-color scrollbar_outline_color #$BG;
+EOF
+        done
       }
 
       while true; do
@@ -101,7 +130,7 @@ EOF
             systemctl --user stop mpvpaper.service
           fi
           
-          update_zathura
+          update_themes
         fi
         sleep 2
       done
