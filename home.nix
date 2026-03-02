@@ -93,6 +93,7 @@
     urgency = "Low"
   '';
 
+
   programs.spotify-player = {
     enable = true;
     package = inputs.spotify-player.defaultPackage.${pkgs.stdenv.hostPlatform.system};

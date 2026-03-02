@@ -23,8 +23,8 @@
     enableAudioWavelength = true;
     settings = {
       # --- THEME & COLOR ---
-      currentThemeName = "dynamic";
-      currentThemeCategory = "dynamic";
+      currentThemeName = "dark";
+      currentThemeCategory = "dark";
       matugenScheme = "scheme-fidelity";
       matugenPaletteFidelity = 1;
 
@@ -41,9 +41,10 @@
 
       # --- GENERAL ---
       showSeconds = true;
-      useAutoLocation = true;
+      useAutoLocation = false;
       use24HourClock = true;
       cornerRadius = 12;
+
 
       # --- NOTIFICATIONS ---
       notificationTimeoutNormal = 10000;
