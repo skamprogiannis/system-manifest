@@ -39,6 +39,13 @@
 - **Subagent Rebuilds:** Use a subagent (task tool) to handle `nixos-rebuild` commands (dry-run and switch) to keep the main context clean and handle potential long output.
 - **Bug Reporting:** When a bug is reported, prioritize writing a reproduction test before attempting a fix. Use subagents to implement the fix and verify it with the passing test.
 
+## Glassmorphism & UI Stability
+
+- **Vibrancy Physics:** High-end glassmorphism requires `xray = true` in Hyprland to prevent muddy artifacts from overlapping shadows. Optimal settings: `brightness > 1.1`, `vibrancy > 0.8`, and `contrast > 1.1`.
+- **Systemd buffers:** When managing video surfaces (like `mpvpaper`) on Nvidia/Wayland, use systemd with `RestartSec=2.5` to prevent GPU buffer race conditions that crash the compositor.
+- **Cursor Baking:** Always manually symlink modern cursor names (`left_ptr`, `pointer`, `default`, `progress`, `alias`) in custom theme derivations to prevent Adwaita fallbacks in browsers and system bars.
+- **Hyprland Syntax:** `windowrulev2` is deprecated; use `windowrule` with `match:class` or `match:title` for all new configuration.
+
 ## USB Update Workflow
 
 - **Purpose:** Updates the bootable USB drive configuration from the `usb` flake output.

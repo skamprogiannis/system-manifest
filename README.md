@@ -19,6 +19,7 @@ Declarative infrastructure source-of-truth. Defines system state, configurations
 - **Modular Architecture:** Configuration split into `hosts/` and `modules/` for maintainability.
 - **Workflow Optimizations:**
   - **AI-First Screenshots:** Advanced screenshot utility (`screenshot-path`) that copies absolute paths to clipboard by default (for OpenCode) and images when modified by `Shift`.
+  - **Glassmorphism Aesthetics:** High-end transparent UI logic with premium blur, vibrancy, and specular light-catching borders.
   - **Dynamic Theming:** Matugen-powered Hyprland borders and dynamic video wallpapers (`mpvpaper`) synced via a custom `wallpaper-hook` daemon.
   - **Zellij Navigation:** Refactored keybindings to use `Alt` for navigation, freeing up standard `Ctrl` shortcuts for internal application use.
   - **System Cleanup:** Stripped out legacy GNOME components (`xterm`, `rygel`) to ensure a lean, stable environment.
@@ -35,9 +36,11 @@ Declarative infrastructure source-of-truth. Defines system state, configurations
 ## Usage
 
 ### Rebuild System
+
 ```bash
 sudo nixos-rebuild switch --flake .#desktop
 ```
 
 ### Switch to Gaming Mode
+
 Select **"NixOS - desktop-gaming-box"** from the bootloader menu (GRUB).

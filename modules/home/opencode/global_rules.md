@@ -15,7 +15,7 @@ BEFORE replying, ALWAYS ask yourself: should I use a skill for this? And use the
 - **Clarification:** ALWAYS ask clarifying questions BEFORE committing to a plan. Surface edge cases the user may not have considered.
 - **Formatters & Linters:** After editing code, **ALWAYS run the configured formatters/linters** (e.g., `prettier`, `ruff`, `gofmt` or `nixfmt`) to ensure standards.
 - **Subagents:** Use subagents for research and long-running tasks (like builds/test runs) to keep the main context clean.
-- **Style:** Do NOT use emojis in documentation or commit messages unless explicitly requested.
+- **Style:** Do NOT use emojis in documentation or commit messages unless explicitly requested. Use generic design terms like **Glassmorphism** instead of platform-specific ones (like iOS).
 
 ## Verification Before Done
 

@@ -27,6 +27,8 @@
       env = [
         "XCURSOR_SIZE,${toString config.home.pointerCursor.size}"
         "XCURSOR_THEME,${config.home.pointerCursor.name}"
+        "HYPRCURSOR_SIZE,${toString config.home.pointerCursor.size}"
+        "HYPRCURSOR_THEME,${config.home.pointerCursor.name}"
         "GDK_BACKEND,wayland,x11"
         "QT_QPA_PLATFORM,wayland;xcb"
         "CLUTTER_BACKEND,wayland"
@@ -162,7 +164,6 @@
         "$mod SHIFT, 8, movetoworkspace, 8"
         "$mod SHIFT, 9, movetoworkspace, 9"
         "$mod SHIFT, 0, movetoworkspace, 10"
-        # Special workspace (scratchpad) for Spotify
         "$mod, grave, togglespecialworkspace, music"
         "$mod SHIFT, grave, movetoworkspace, special:music"
         ", Print, exec, screenshot-path region path"
