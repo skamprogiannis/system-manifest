@@ -105,9 +105,6 @@ EOF
 @define-color scrollbar_outline_color #$BG;
 EOF
         done
-
-        echo "Updating Hyprland borders..."
-        hyprctl keyword general:col.active_border "rgba(''${PRIMARY}99)"
       }
 
       while true; do

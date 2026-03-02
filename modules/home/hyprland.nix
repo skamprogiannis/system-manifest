@@ -60,13 +60,15 @@
         gaps_out = 10;
         border_size = 2;
         layout = "dwindle";
-        "col.active_border" = "rgba(80560099)"; # 60% opacity primary color
+        "col.active_border" = "rgba(ffffff66)"; # Specular light-catching edge
       };
 
       decoration = {
         rounding = 10;
-        active_opacity = 1.0;
-        inactive_opacity = 0.7;
+        active_opacity = 0.94;
+        inactive_opacity = 0.8;
+        dim_inactive = true;
+        dim_strength = 0.1;
         blur = {
           enabled = true;
           size = 5;
@@ -74,12 +76,11 @@
           new_optimizations = true;
           ignore_opacity = true;
           xray = true;
-          vibrancy = 0.8;
-          brightness = 1.3;
-          contrast = 1.1;
-          noise = 0.02;
+          vibrancy = 1.0;
+          brightness = 1.2;
+          contrast = 1.2;
+          noise = 0.03;
         };
-
         shadow = {
           enabled = true;
           range = 4;
@@ -179,14 +180,7 @@
         "$mod, Q, exec, dms ipc call powermenu toggle"
       ];
 
-      windowrule = [
-        "opacity 0.9 0.8, match:class ^(com.mitchellh.ghostty)$"
-        "opacity 0.9 0.8, match:class ^(org.gnome.Nautilus)$"
-        "opacity 0.9 0.8, match:class ^(org.gnome.baobab)$"
-        "opacity 0.9 0.8, match:class ^(pear-runtime)$"
-        "opacity 0.9 0.8, match:class ^(discord)$"
-      ];
-
+      windowrule = [];
 
       bindr = [];
     };
