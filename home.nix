@@ -86,6 +86,11 @@
     bitrate = 320
     audio_cache = true
     normalization = false
+
+    [notification_control]
+    enabled = true
+    include_body = true
+    urgency = "Low"
   '';
 
   programs.spotify-player = {
