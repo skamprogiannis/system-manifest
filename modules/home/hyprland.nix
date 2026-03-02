@@ -182,7 +182,10 @@
         "opacity 0.9 0.8, match:class ^(com.mitchellh.ghostty)$"
         "opacity 0.9 0.8, match:class ^(org.gnome.Nautilus)$"
         "opacity 0.9 0.8, match:class ^(org.gnome.baobab)$"
+        "opacity 0.9 0.8, match:class ^(pear-runtime)$"
+        "opacity 0.9 0.8, match:class ^(discord)$"
       ];
+
 
       bindr = [];
     };
