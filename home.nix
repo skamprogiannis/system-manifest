@@ -47,6 +47,7 @@
     go
     jq
     libsecret
+    gcr
     nodejs_22
     opencode
     pacvim
