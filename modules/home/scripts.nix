@@ -9,18 +9,27 @@
           echo "Usage: $0 <port>"
           exit 1
       fi
+    '')
+    (pkgs.writeShellScriptBin "hypr-nav" ''
+      DIRECTION=$1
+      BEFORE=$(hyprctl activewindow -j | jq -r '.address')
+      hyprctl dispatch movefocus $DIRECTION
+      AFTER=$(hyprctl activewindow -j | jq -r '.address')
 
-      NEW_PORT="$1"
-      echo "Updating Transmission port to $NEW_PORT..."
-      sed -i "s/\"peer-port\": [0-9]*/\"peer-port\": $NEW_PORT/" "$SETTINGS_FILE"
-      echo "Restarting transmission-daemon..."
-      pkill -f transmission-daemon || true
-      sleep 2
-      transmission-daemon --no-auth -g "$CONFIG_DIR" -p 9091 &
-      sleep 3
-      echo "Done! Port $NEW_PORT is now active."
+      if [ "$BEFORE" == "$AFTER" ] || [ "$BEFORE" == "null" ]; then
+          CURR=$(hyprctl activeworkspace -j | jq '.id')
+          if [ "$DIRECTION" == "r" ]; then
+              NEXT=$(( (CURR % 10) + 1 ))
+              hyprctl dispatch workspace $NEXT
+          elif [ "$DIRECTION" == "l" ]; then
+              NEXT=$(( CURR - 1 ))
+              [ $NEXT -lt 1 ] && NEXT=10
+              hyprctl dispatch workspace $NEXT
+          fi
+      fi
     '')
     (pkgs.writeShellScriptBin "screenshot-path" ''
+
       MODE="''${1:-region}"
       TYPE="''${2:-path}"
       dest="$HOME/pictures/screenshots/$(date +%s).png"

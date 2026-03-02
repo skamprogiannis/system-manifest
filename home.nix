@@ -88,7 +88,7 @@
     normalization = false
 
     [notification_control]
-    enabled = true
+    enabled = false
     include_body = true
     urgency = "Low"
   '';
@@ -113,6 +113,7 @@
       ExecStart = "${inputs.spotify-player.defaultPackage.${pkgs.stdenv.hostPlatform.system}}/bin/spotify_player --daemon";
       Restart = "on-failure";
       RestartSec = "30s";
+      TimeoutStopSec = "2s";
     };
     Install = {
       WantedBy = ["default.target"];
@@ -154,6 +155,12 @@
   };
 
   programs.home-manager.enable = true;
+
+  # Prevent long shutdown delays for user services
+  systemd.user.extraConfig = ''
+    DefaultTimeoutStopSec=2s
+  '';
+
   programs.bash = {
     enable = true;
     enableCompletion = true;

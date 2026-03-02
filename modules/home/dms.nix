@@ -61,6 +61,7 @@
       matugenTemplateVesktop = true;
       matugenTemplateGhostty = true;
       matugenTemplateNeovim = true;
+      matugenTemplateZellij = true;
       matugenTemplateDgop = true;
       matugenTemplateKcolorscheme = true;
       matugenTemplateNiri = false;
