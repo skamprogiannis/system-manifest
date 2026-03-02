@@ -29,48 +29,22 @@
       # Sword is 'Normal', Hand is 'Link'
       
       # Pointers (The Sword)
-      ln -sf Link left_ptr
-      ln -sf Link default
-      ln -sf Link arrow
-      ln -sf Link ptr
-      ln -sf Link top_left_arrow
-      ln -sf Link pointer
+      ln -sf Normal left_ptr
+      ln -sf Normal default
+      ln -sf Normal arrow
+      ln -sf Normal ptr
+      ln -sf Normal top_left_arrow
+      ln -sf Normal pointer
       
       # Hands (Clickable links)
-      ln -sf Normal pointing_hand
-      ln -sf Normal hand1
-      ln -sf Normal hand2
-      
-      # Text & Precision
-      ln -sf xterm text
-      ln -sf xterm ibeam
-      ln -sf plus cell
-      ln -sf plus crosshair
-      ln -sf plus cross
-      ln -sf plus precision
-      
-      # Movement & Resize
-      ln -sf sb_h_double_arrow h_double_arrow
-      ln -sf sb_h_double_arrow e-resize
-      ln -sf sb_h_double_arrow w-resize
-      ln -sf sb_h_double_arrow col-resize
-      ln -sf sb_v_double_arrow v_double_arrow
-      ln -sf sb_v_double_arrow n-resize
-      ln -sf sb_v_double_arrow s-resize
-      ln -sf sb_v_double_arrow row-resize
-      
-      # Status
-      ln -sf watch wait
-      ln -sf watch busy
-      ln -sf X_cursor not-allowed
-      ln -sf X_cursor no-drop
-      ln -sf X_cursor forbidden
-      
-      # Interactive
-      ln -sf Normal grab
-      ln -sf Normal grabbing
-      ln -sf Normal zoom-in
-      ln -sf Normal zoom-out
+      ln -sf Link pointing_hand
+      ln -sf Link hand1
+      ln -sf Link hand2
+      ln -sf Link grab
+      ln -sf Link grabbing
+      ln -sf Link zoom-in
+      ln -sf Link zoom-out
+
       
       # Fix index.theme to inherit ONLY as a last resort
       cat <<EOF > $out/share/icons/HollowKnight/index.theme

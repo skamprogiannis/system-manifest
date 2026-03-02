@@ -196,11 +196,13 @@
       ];
 
       layerrule = [
-        "blur, quickshell"
-        "blur, dms:bar"
-        "ignorezero, quickshell"
-        "ignorezero, dms:bar"
+        "blur,quickshell"
+        "blur,dms:bar"
+        "ignorezero,quickshell"
+        "ignorezero,dms:bar"
+        "hideonfullscreen,dms:bar"
       ];
+
 
       bindr = [];
     };

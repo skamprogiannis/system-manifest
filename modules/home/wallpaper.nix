@@ -21,6 +21,7 @@
   };
 
   home.packages = [
+    pkgs.swaybg
     (pkgs.writeShellScriptBin "wallpaper-hook" ''
       LOCKFILE="/tmp/wallpaper-hook.lock"
       exec 9>"$LOCKFILE"
@@ -28,16 +29,28 @@
         exit 1
       fi
 
+      CACHE_WALL="$HOME/.cache/current_wallpaper"
+
       cleanup() {
         systemctl --user stop mpvpaper.service
+        pkill swaybg || true
         rm -f "$LOCKFILE"
       }
       trap cleanup EXIT SIGTERM
 
+      # Fast static startup
+      if [ -f "$CACHE_WALL" ]; then
+        LAST_WALL=$(cat "$CACHE_WALL")
+        if [ -f "$LAST_WALL" ]; then
+          ${pkgs.swaybg}/bin/swaybg -i "$LAST_WALL" -m fill &
+          SWAYBG_PID=$!
+        fi
+      fi
+
       # Wait for environment
       until hyprctl monitors &>/dev/null; do sleep 1; done
-      sleep 2
-      until dms ipc wallpaper get &>/dev/null; do sleep 1; done
+      sleep 1
+      until dms ipc wallpaper get &>/dev/null; do sleep 0.5; done
 
       CURRENT_WALL=""
       LAST_COLORS_HASH=""
@@ -116,6 +129,7 @@ EOF
         
         if [ -n "$NEW_WALL" ] && [ "$NEW_WALL" != "$CURRENT_WALL" ]; then
           CURRENT_WALL="$NEW_WALL"
+          echo "$CURRENT_WALL" > "$CACHE_WALL"
           
           if echo "$NEW_WALL" | grep -q ".thumbnails/"; then
             BASE_NAME=$(basename "''${NEW_WALL%.*}")
@@ -129,9 +143,13 @@ EOF
             echo "Video wallpaper: $MP4_WALL"
             systemctl --user set-environment MPV_WALLPAPER_PATH="$MP4_WALL"
             systemctl --user restart mpvpaper.service
+            # Kill swaybg if it was running for startup
+            [ -n "$SWAYBG_PID" ] && kill $SWAYBG_PID && SWAYBG_PID=""
           else
             echo "Static wallpaper: $NEW_WALL"
             systemctl --user stop mpvpaper.service
+            ${pkgs.swaybg}/bin/swaybg -i "$NEW_WALL" -m fill &
+            SWAYBG_PID=$!
           fi
           
           update_themes
