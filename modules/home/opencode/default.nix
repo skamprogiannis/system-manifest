@@ -43,6 +43,6 @@
       }
     '';
 
-    ".config/opencode/AGENTS.md".text = builtins.readFile ./opencode/global_rules.md;
+    ".config/opencode/AGENTS.md".text = builtins.readFile ./global_rules.md;
   };
 }

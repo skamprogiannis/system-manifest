@@ -157,9 +157,7 @@
   programs.home-manager.enable = true;
 
   # Prevent long shutdown delays for user services
-  systemd.user.extraConfig = ''
-    DefaultTimeoutStopSec=2s
-  '';
+  systemd.user.settings.Manager.DefaultTimeoutStopSec = "2s";
 
   programs.bash = {
     enable = true;
