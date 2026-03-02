@@ -8,6 +8,8 @@
     ../../home.nix
   ];
 
+  system_manifest.navigation.wrapWorkspaces = true;
+
   wayland.windowManager.hyprland.settings = {
     monitor = [
       ",preferred,auto,1"

@@ -12,7 +12,7 @@
     ./modules/home/git.nix
     ./modules/home/ghostty.nix
     ./modules/home/neovim.nix
-    ./modules/home/opencode.nix
+    ./modules/home/opencode
     ./modules/home/hyprland.nix
     ./modules/home/dms.nix
     ./modules/home/pearpass.nix
