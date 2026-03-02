@@ -15,8 +15,7 @@ id_ed25519
 *.swp
 
 # OpenCode
-.opencode/plans/
-.opencode/Plans/
+.opencode/
 
 # Python
 .ruff_cache/
