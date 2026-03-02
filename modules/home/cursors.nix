@@ -19,6 +19,13 @@
     installPhase = ''
       mkdir -p $out/share/icons/HollowKnight
       tar -xzf $src/HollowKnight.tar.gz --strip-components=1 -C $out/share/icons/HollowKnight
+      
+      # Add index.theme to inherit from Adwaita for missing icons (fixes gray box in GNOME)
+      cat <<EOF > $out/share/icons/HollowKnight/index.theme
+[Icon Theme]
+Name=HollowKnight
+Inherits=Adwaita
+EOF
     '';
   };
 in {

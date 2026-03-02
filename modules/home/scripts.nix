@@ -20,9 +20,9 @@
       CURRENT_WALL=""
 
       # Wait for DMS to be ready and Matugen to settle
-      sleep 0.5
+      sleep 3
       until dms ipc wallpaper get &>/dev/null; do
-          sleep 0.2
+          sleep 0.5
       done
 
       # Initial check on startup
