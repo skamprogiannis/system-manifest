@@ -44,6 +44,7 @@
       useAutoLocation = false;
       use24HourClock = true;
       cornerRadius = 12;
+      enablePerModeWallpapers = false;
 
 
       # --- NOTIFICATIONS ---

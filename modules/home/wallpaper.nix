@@ -104,6 +104,8 @@ EOF
 @define-color sidebar_fg_color #$FG;
 @define-color scrollbar_outline_color #$BG;
 EOF
+        done
+
         echo "Updating Hyprland borders..."
         hyprctl keyword general:col.active_border "rgba(''${PRIMARY}99)"
       }
