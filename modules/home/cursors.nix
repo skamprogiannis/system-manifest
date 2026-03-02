@@ -43,7 +43,7 @@
       ln -sf xterm text
       ln -sf xterm ibeam
       ln -sf plus cell
-      ln -sf pencil crosshair
+      ln -sf plus crosshair
       
       # Movement & Resize
       ln -sf sb_h_double_arrow h_double_arrow
