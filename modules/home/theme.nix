@@ -31,8 +31,6 @@
       document-font-name = "Adwaita 9";
       monospace-font-name = "JetBrainsMono Nerd Font 9";
     };
-
-    # GNOME Terminal Profile (The Cattle Fix)
     "org/gnome/terminal/legacy/profiles:/:default" = {
       font = "JetBrainsMono Nerd Font 9";
       use-system-font = false;
