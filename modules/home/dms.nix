@@ -41,7 +41,7 @@
 
       # --- GENERAL ---
       showSeconds = true;
-      useAutoLocation = false;
+      useAutoLocation = true;
       use24HourClock = true;
       cornerRadius = 12;
       enablePerModeWallpapers = false;
