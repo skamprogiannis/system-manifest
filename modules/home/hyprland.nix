@@ -209,11 +209,10 @@ in {
         ];
 
         layerrule = [
-          "blur on, ^(quickshell)$"
-          "blur on, ^(dms:bar)$"
-          "ignorezero 1, ^(quickshell)$"
-          "ignorezero 1, ^(dms:bar)$"
-          "hideonfullscreen 1, ^(dms:bar)$"
+          "blur on, match:namespace ^(quickshell)$"
+          "blur on, match:namespace ^(dms:bar)$"
+          "ignore_alpha 0, match:namespace ^(quickshell)$"
+          "ignore_alpha 0, match:namespace ^(dms:bar)$"
         ];
 
 
