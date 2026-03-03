@@ -118,6 +118,22 @@
         "type": "github"
       }
     },
+    "pearpass-app-desktop": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1772185669,
+        "narHash": "sha256-IN2C4VSyhI0qbiraqJnZJaQw64JCBHIaUHppOx2JDZQ=",
+        "owner": "tetherto",
+        "repo": "pearpass-app-desktop",
+        "rev": "19e1f02bfc622e40711905d45233f7b8c007a291",
+        "type": "github"
+      },
+      "original": {
+        "owner": "tetherto",
+        "repo": "pearpass-app-desktop",
+        "type": "github"
+      }
+    },
     "quickshell": {
       "inputs": {
         "nixpkgs": [
@@ -146,6 +162,7 @@
         "home-manager": "home-manager",
         "nixpkgs": "nixpkgs",
         "nixvim": "nixvim",
+        "pearpass-app-desktop": "pearpass-app-desktop",
         "spotify-player": "spotify-player"
       }
     },
