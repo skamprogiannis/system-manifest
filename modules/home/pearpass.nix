@@ -1,20 +1,23 @@
 {
   config,
   pkgs,
+  inputs,
   ...
 }: let
   pearpassExtensionId = "pdeffakfmcdnjjafophphgmddmigpejh";
   pearpassNativeHostName = "com.pears.pass";
 
+  pearpassVersion = (builtins.fromJSON (builtins.readFile "${inputs.pearpass-app-desktop}/package.json")).version;
+
   pearpassSource = pkgs.fetchurl {
-    url = "https://github.com/tetherto/pearpass-app-desktop/releases/download/v1.4.0/PearPass-Desktop-Linux-x64-v1.4.0.AppImage";
-    sha256 = "19nfy69ygvmqxcgdn46481f8fkhawpl4vlm5888n51rmhd6pic3n";
+    url = "https://github.com/tetherto/pearpass-app-desktop/releases/download/v${pearpassVersion}/PearPass-Desktop-Linux-x64-v${pearpassVersion}.AppImage";
+    hash = "sha256-hPwTYuC2GJEAgflY7yCAuYEUJkewtCZtmHincpyouIs=";
   };
 
   # Extract the AppImage to get the icon and resources
   pearpassExtracted = pkgs.appimageTools.extract {
     pname = "pearpass";
-    version = "1.4.0";
+    version = pearpassVersion;
     src = pearpassSource;
   };
 
