@@ -222,6 +222,12 @@ in {
           "opacity 1.0 1.0, match:title ^(Picture-in-Picture)$"
         ];
 
+        windowrulev2 = [
+          "opacity 0.8 0.75, class:^(com.mitchellh.ghostty)$"
+          "opacity 0.8 0.75, class:^(spotify-player)$"
+          "opacity 0.8 0.75, class:^(nautilus)$"
+        ];
+
         bindr = [];
       };
 
