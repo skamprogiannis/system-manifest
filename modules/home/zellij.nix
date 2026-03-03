@@ -107,7 +107,11 @@
 
       if [[ -z $ZELLIJ ]]; then
           cd "$selected_path"
-          zellij attach -c "$selected_name"
+          if zellij list-sessions 2>/dev/null | grep -q "^''${selected_name}$"; then
+              zellij attach "$selected_name"
+          else
+              zellij attach -c "$selected_name"
+          fi
       else
           zellij action new-tab -l dev -c "$selected_path" -n "$selected_name"
       fi

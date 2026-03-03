@@ -20,6 +20,20 @@
     };
   };
 
+  systemd.user.services.wallpaper-thumbnail-watcher = {
+    Unit = {
+      Description = "Watch wallpapers directory for new MP4 files and generate thumbnails";
+      After = ["hyprland-session.target"];
+      PartOf = ["hyprland-session.target"];
+    };
+    Service = {
+      Type = "simple";
+      ExecStart = "${pkgs.bash}/bin/bash -c 'exec ${pkgs.inotify-tools}/bin/inotifywait -m -e create -e moved_to -e close_write --format \"%w%f\" \"$HOME/wallpapers\" | while read -r file; do case \"$file\" in *.mp4) \"$HOME/.local/bin/generate-thumbnails\" ;; esac; done'";
+      Restart = "on-failure";
+      RestartSec = "5";
+    };
+  };
+
   home.packages = [
     pkgs.swaybg
     (pkgs.writeShellScriptBin "wallpaper-hook" ''
