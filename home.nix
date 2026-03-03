@@ -42,12 +42,12 @@
     fastfetch
     fd
     ffmpegthumbnailer
-    tremc
+    gcr
+    github-copilot-cli
     glow
     go
     jq
     libsecret
-    gcr
     nodejs_22
     opencode
     pacvim
@@ -56,6 +56,7 @@
     ripgrep
     ruff
     transmission_4
+    tremc
     wget
     wl-clipboard
     zathura
