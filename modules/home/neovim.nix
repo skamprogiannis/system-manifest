@@ -42,7 +42,16 @@
         };
       };
       telescope.enable = true;
-      # vim-be-good is not a standard module yet, adding to extraPlugins
+      startify = {
+        enable = true;
+        configuration = {
+          session_directory = "$HOME/.local/share/nvim/session";
+          session_delete_buffers = true;
+          session_autoload = 1;
+          session_autosave = "yes";
+          session_save_on_exit = "yes";
+        };
+      };
     };
 
     extraPlugins = with pkgs.vimPlugins; [
