@@ -153,7 +153,7 @@ in {
 
           # --- Layout-Agnostic App Shortcuts ---
           "CONTROL, code:44, sendshortcut, CONTROL, J"
-          "CONTROL SHIFT, code:55, sendshortcut, CONTROL SHIFT, V"
+          "CONTROL SHIFT, V, exec, wl-paste | wl-copy && xdotool key ctrl+v"
 
           # --- Navigation (with Workspace Overflow) ---
           "$mod, code:43, ${navL}" # h
