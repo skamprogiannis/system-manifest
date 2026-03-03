@@ -138,7 +138,7 @@
 
       if [[ -z $ZELLIJ ]]; then
           cd "$selected_path" || exit 1
-          if zellij list-sessions 2>/dev/null | grep -q "^''${selected_name}$"; then
+          if zellij list-sessions 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g' | grep -qF "$selected_name"; then
               zellij attach "$selected_name"
           else
               zellij attach -c "$selected_name"
@@ -168,8 +168,8 @@
             }
         }
 
-        tab name="opencode" {
-            pane command="opencode"
+        tab name="copilot" {
+            pane command="gh copilot"
         }
     }
   '';
