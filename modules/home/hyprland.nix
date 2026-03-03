@@ -151,6 +151,10 @@ in {
           "$mod, code:42, togglegroup," # g
           "$mod, code:23, changegroupactive, f" # Tab
 
+          # --- Layout-Agnostic App Shortcuts ---
+          "CONTROL, code:44, sendshortcut, CONTROL, J"
+          "CONTROL SHIFT, code:55, sendshortcut, CONTROL SHIFT, V"
+
           # --- Navigation (with Workspace Overflow) ---
           "$mod, code:43, ${navL}" # h
           "$mod, code:46, ${navR}" # l
