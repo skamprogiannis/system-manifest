@@ -13,6 +13,7 @@
       hlsearch = true;
       clipboard = "unnamedplus";
       swapfile = false;
+      number = true;
     };
 
     colorschemes.dracula.enable = true;
