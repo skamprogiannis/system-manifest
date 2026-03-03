@@ -66,6 +66,9 @@
       sleep 1
       until dms ipc wallpaper get &>/dev/null; do sleep 0.5; done
 
+      # Initial theme update on startup
+      update_themes
+
       CURRENT_WALL=""
       LAST_COLORS_HASH=""
 
@@ -82,6 +85,16 @@
         BG=$(grep "\$surface =" "$color_file" | cut -d'(' -f2 | cut -d')' -f1 | sed 's/ff$//')
         FG=$(grep "\$onSurface =" "$color_file" | cut -d'(' -f2 | cut -d')' -f1 | sed 's/ff$//')
         ACCENT=$(grep "\$secondary =" "$color_file" | cut -d'(' -f2 | cut -d')' -f1 | sed 's/ff$//')
+
+        # If primary is too dark (low perceived brightness), use accent instead
+        # Calculate perceived brightness: (R * 299 + G * 587 + B * 114) / 1000
+        PRIMARY_R=$((16#${PRIMARY:0:2}))
+        PRIMARY_G=$((16#${PRIMARY:2:2}))
+        PRIMARY_B=$((16#${PRIMARY:4:2}))
+        BRIGHTNESS=$(( (PRIMARY_R * 299 + PRIMARY_G * 587 + PRIMARY_B * 114) / 1000 ))
+        if [ "$BRIGHTNESS" -lt 80 ]; then
+          PRIMARY="$ACCENT"
+        fi
 
         echo "Updating Zathura colors..."
         mkdir -p ~/.config/zathura
