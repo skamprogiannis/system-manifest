@@ -6,8 +6,14 @@
 }: let
   cfg = config.wayland.windowManager.hyprland;
   useHyprNav = config.system_manifest.navigation.wrapWorkspaces or false;
-  navL = if useHyprNav then "exec, hypr-nav l" else "movefocus, l";
-  navR = if useHyprNav then "exec, hypr-nav r" else "movefocus, r";
+  navL =
+    if useHyprNav
+    then "exec, hypr-nav l"
+    else "movefocus, l";
+  navR =
+    if useHyprNav
+    then "exec, hypr-nav r"
+    else "movefocus, r";
 in {
   options.system_manifest.navigation.wrapWorkspaces = lib.mkOption {
     type = lib.types.bool;
@@ -78,28 +84,28 @@ in {
 
         decoration = {
           rounding = 10;
-          active_opacity = 0.75; # Luminous focused pane
-          inactive_opacity = 0.90; # Solid/Muddy background
+          active_opacity = 0.82;
+          inactive_opacity = 0.72;
 
           dim_inactive = true;
-          dim_strength = 0.1;
+          dim_strength = 0.04;
           blur = {
             enabled = true;
-            size = 5;
+            size = 8;
             passes = 4;
             new_optimizations = true;
             ignore_opacity = true;
-            xray = false;
-            vibrancy = 1.0;
-            brightness = 1.1;
-            contrast = 1.2;
-            noise = 0.03;
+            xray = true;
+            vibrancy = 1.05;
+            brightness = 1.18;
+            contrast = 1.22;
+            noise = 0.01;
           };
           shadow = {
             enabled = true;
-            range = 4;
-            render_power = 3;
-            color = "rgba(1a1a1aee)";
+            range = 10;
+            render_power = 2;
+            color = "rgba(0f1116aa)";
           };
         };
 
@@ -189,7 +195,7 @@ in {
           "$mod, code:49, togglespecialworkspace, music" # `
           "$mod SHIFT, code:49, movetoworkspace, special:music" # ~
 
-	  # --- Screenshots ---
+          # --- Screenshots ---
           ", Print, exec, screenshot-path region path"
           "SHIFT, Print, exec, dms screenshot region"
           "CONTROL, Print, exec, screenshot-path window path"
@@ -208,7 +214,8 @@ in {
         ];
 
         windowrule = [
-          "opacity 1.0 1.0, match:class ^(brave)$"
+          "opacity 1.0 1.0, match:class ^(brave|firefox|chromium|google-chrome|zen|mpv|vlc|imv|feh)$"
+          "opacity 1.0 1.0, match:title ^(Picture-in-Picture)$"
         ];
 
         bindr = [];
