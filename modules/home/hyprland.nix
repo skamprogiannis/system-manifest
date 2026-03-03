@@ -52,6 +52,7 @@ in {
         exec-once = [
           "hyprctl setcursor ${config.home.pointerCursor.name} ${toString config.home.pointerCursor.size}"
           "wallpaper-hook &"
+          "systemctl --user start wallpaper-thumbnail-watcher.service"
         ];
 
         misc = {
@@ -77,20 +78,20 @@ in {
 
         decoration = {
           rounding = 10;
-        active_opacity = 0.70; # Luminous focused pane
-        inactive_opacity = 0.90; # Solid/Muddy background
+          active_opacity = 0.75; # Luminous focused pane
+          inactive_opacity = 0.90; # Solid/Muddy background
 
           dim_inactive = true;
-          dim_strength = 0.2;
+          dim_strength = 0.1;
           blur = {
             enabled = true;
             size = 5;
             passes = 4;
             new_optimizations = true;
             ignore_opacity = true;
-            xray = false; # Allow scratchpad transparency
+            xray = false;
             vibrancy = 1.0;
-            brightness = 1.2;
+            brightness = 1.1;
             contrast = 1.2;
             noise = 0.03;
           };
@@ -184,9 +185,10 @@ in {
           "$mod SHIFT, code:18, movetoworkspace, 9"
           "$mod SHIFT, code:19, movetoworkspace, 10"
 
-          # --- Special Workspaces & Screenshots ---
+          # --- Special Workspaces ---
           "$mod, code:49, togglespecialworkspace, music" # `
           "$mod SHIFT, code:49, movetoworkspace, special:music" # ~
+	  # --- Screenshots ---
           ", Print, exec, screenshot-path region path"
           "SHIFT, Print, exec, dms screenshot region"
           "CONTROL, Print, exec, screenshot-path window path"
@@ -207,14 +209,6 @@ in {
         windowrule = [
           "opacity 0.8 0.8, match:class ^(org.gnome.baobab)$"
         ];
-
-        layerrule = [
-          "blur on, match:namespace ^(quickshell)$"
-          "blur on, match:namespace ^(dms:bar)$"
-          "ignore_alpha 0, match:namespace ^(quickshell)$"
-          "ignore_alpha 0, match:namespace ^(dms:bar)$"
-        ];
-
 
         bindr = [];
       };
