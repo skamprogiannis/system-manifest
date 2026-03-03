@@ -188,6 +188,7 @@ in {
           # --- Special Workspaces ---
           "$mod, code:49, togglespecialworkspace, music" # `
           "$mod SHIFT, code:49, movetoworkspace, special:music" # ~
+
 	  # --- Screenshots ---
           ", Print, exec, screenshot-path region path"
           "SHIFT, Print, exec, dms screenshot region"
@@ -207,7 +208,7 @@ in {
         ];
 
         windowrule = [
-          "opacity 0.8 0.8, match:class ^(org.gnome.baobab)$"
+          "opacity 1.0 1.0, match:class ^(brave)$"
         ];
 
         bindr = [];
