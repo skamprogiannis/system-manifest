@@ -220,7 +220,6 @@ in {
         windowrule = [
           "opacity 1.0 1.0, match:class ^(brave|firefox|chromium|google-chrome|zen|mpv|vlc|imv|feh)$"
           "opacity 1.0 1.0, match:title ^(Picture-in-Picture)$"
-          "noblur, match:class ^(brave)$"
         ];
 
         bindr = [];
