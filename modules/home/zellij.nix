@@ -86,6 +86,8 @@
             bind "l" "j" "Right" "Down" { GoToNextTab; }
             bind "Alt h" "Alt Left" { MoveTab "Left"; }
             bind "Alt l" "Alt Right" { MoveTab "Right"; }
+            bind "Alt ," { MoveTab "Left"; }
+            bind "Alt ." { MoveTab "Right"; }
           }
       }
     '';
@@ -93,8 +95,37 @@
 
   home.packages = [
     (pkgs.writeShellScriptBin "zs" ''
+      resolve_path() {
+        local input="$1"
+        
+        if [[ -z "$input" ]]; then
+          return 1
+        fi
+        
+        if [[ -d "$input" ]]; then
+          echo "$input"
+          return 0
+        fi
+        
+        if [[ -d ~/repositories/"$input" ]]; then
+          echo ~/repositories/"$input"
+          return 0
+        fi
+        
+        if [[ -d ~/"$input" ]]; then
+          echo ~/"$input"
+          return 0
+        fi
+        
+        return 1
+      }
+
       if [[ $# -eq 1 ]]; then
-          selected_path=$1
+          selected_path=$(resolve_path "$1")
+          if [[ -z "$selected_path" ]]; then
+              echo "Error: Directory '$1' not found"
+              exit 1
+          fi
       else
           selected_path=$(find ~/repositories ~/system_manifest -mindepth 1 -maxdepth 2 -type d | fzf)
       fi
@@ -106,7 +137,7 @@
       selected_name=$(basename "$selected_path" | tr . _)
 
       if [[ -z $ZELLIJ ]]; then
-          cd "$selected_path"
+          cd "$selected_path" || exit 1
           if zellij list-sessions 2>/dev/null | grep -q "^''${selected_name}$"; then
               zellij attach "$selected_name"
           else
