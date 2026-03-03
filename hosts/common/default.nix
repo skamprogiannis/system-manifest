@@ -45,7 +45,7 @@
 
   # Enable the X11 windowing system
   services.xserver.enable = true;
-  services.xserver.excludePackages = [ pkgs.xterm ];
+  services.xserver.excludePackages = [pkgs.xterm];
   services.xserver.desktopManager.xterm.enable = false;
 
   # Enable nix-ld for Opencode/dynamic binaries
