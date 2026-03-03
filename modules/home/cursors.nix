@@ -33,7 +33,7 @@
             ln -sf Normal arrow
             ln -sf Normal ptr
             ln -sf Normal top_left_arrow
-            ln -sf Normal pointer
+            ln -sf Link pointer
             ln -sf Normal context-menu
 
             # Hands / links
