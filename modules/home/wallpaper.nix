@@ -66,9 +66,6 @@
       sleep 1
       until dms ipc wallpaper get &>/dev/null; do sleep 0.5; done
 
-      # Initial theme update on startup
-      update_themes
-
       CURRENT_WALL=""
       LAST_COLORS_HASH=""
 
@@ -150,6 +147,9 @@ EOF
         echo "Updating Hyprland borders..."
         hyprctl keyword general:col.active_border "rgba(''${PRIMARY}99)"
       }
+
+      # Initial theme update on startup
+      update_themes
 
       while true; do
         NEW_WALL=$(dms ipc wallpaper get 2>/dev/null)
