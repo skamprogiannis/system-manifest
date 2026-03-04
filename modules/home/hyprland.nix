@@ -69,7 +69,7 @@ in {
 
         input = {
           kb_layout = "us,gr";
-          kb_variant = "altgr-intl,ext";
+          kb_variant = "altgr-intl,simple";
           kb_options = "grp:win_space_toggle";
           resolve_binds_by_sym = 1;
         };
@@ -136,9 +136,6 @@ in {
         ];
 
         bind = [
-          # --- Keyboard Layout Switching ---
-          "$mod, code:65, exec, switch-kbdlayout"
-
           # --- System & Apps (Keycodes for cross-layout support) ---
           "$mod, code:36, exec, ghostty" # Return
           "$mod, code:56, exec, brave" # b
