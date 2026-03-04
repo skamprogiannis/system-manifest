@@ -28,6 +28,14 @@
           fi
       fi
     '')
+    (pkgs.writeShellScriptBin "switch-kbdlayout" ''
+      # Switch keyboard layout on the main keyboard device
+      DEVICE=$(hyprctl devices -j 2>/dev/null | jq -r '.keyboards[] | select(.main == true) | .name' || echo "")
+      if [ -z "$DEVICE" ]; then
+        exit 1
+      fi
+      hyprctl switchxkblayout "$DEVICE" next
+    '')
     (pkgs.writeShellScriptBin "screenshot-path" ''
 
       MODE="''${1:-region}"
