@@ -216,11 +216,10 @@ in {
         ];
 
         windowrule = [
-          "opacity 1.0 1.0, match:class ^(brave-browser|firefox|chromium|google-chrome|zen|mpv|vlc|imv|feh)$"
-          "opacity 1.0 1.0, match:title ^(Picture-in-Picture)$"
-          "opacity 0.8 0.75, match:class ^(com.mitchellh.ghostty)$"
-          "opacity 0.8 0.75, match:class ^(spotify-player)$"
-          "opacity 0.8 0.75, match:class ^(nautilus)$"
+          "opacity 1.0, match:class ^(brave-browser|firefox|chromium|google-chrome|zen|mpv|vlc|imv|feh)$"
+          "opacity 1.0, match:title ^(Picture-in-Picture)$"
+          "opacity 0.8, match:class ^(com.mitchellh.ghostty)$"
+          "opacity 0.8, match:class ^(nautilus)$"
         ];
 
         bindr = [];
