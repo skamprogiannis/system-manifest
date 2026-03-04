@@ -89,6 +89,17 @@
             bind "Alt ," { MoveTab "Left"; }
             bind "Alt ." { MoveTab "Right"; }
           }
+
+          scroll {
+            bind "Ctrl c" { SwitchToMode "Normal"; }
+            bind "j" "Down" { ScrollDown; }
+            bind "k" "Up" { ScrollUp; }
+            bind "Ctrl f" "PageDown" "l" "Right" { PageScrollDown; }
+            bind "Ctrl b" "PageUp" "h" "Left" { PageScrollUp; }
+            bind "Ctrl d" { HalfPageScrollDown; }
+            bind "Ctrl u" { HalfPageScrollUp; }
+            bind "Escape" { SwitchToMode "Normal"; }
+          }
       }
     '';
   };
