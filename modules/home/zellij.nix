@@ -98,7 +98,6 @@
             bind "Ctrl b" "PageUp" "h" "Left" { PageScrollUp; }
             bind "Ctrl d" { HalfPageScrollDown; }
             bind "Ctrl u" { HalfPageScrollUp; }
-            bind "Escape" { SwitchToMode "Normal"; }
           }
       }
     '';
