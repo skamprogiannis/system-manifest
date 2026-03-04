@@ -151,8 +151,7 @@ in {
           "$mod, code:23, changegroupactive, f" # Tab
 
           # --- Layout-Agnostic App Shortcuts ---
-          "CONTROL, code:44, sendshortcut, CONTROL, j"
-          "CONTROL SHIFT, V, sendshortcut, CONTROL, v"
+          "CONTROL, code:44, sendshortcut, CONTROL, code:44" # Ctrl+J
 
           # --- Navigation (with Workspace Overflow) ---
           "$mod, code:43, ${navL}" # h
