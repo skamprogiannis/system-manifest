@@ -69,7 +69,7 @@ in {
 
         input = {
           kb_layout = "us,gr";
-          kb_variant = "altgr-intl,ext";
+          kb_variant = "altgr-intl,simple";
           kb_options = "grp:win_space_toggle";
           resolve_binds_by_sym = 1;
         };
@@ -136,9 +136,6 @@ in {
         ];
 
         bind = [
-          # --- Keyboard Layout Switching ---
-          "$mod, Space, exec, switch-kbdlayout"
-
           # --- System & Apps (Keycodes for cross-layout support) ---
           "$mod, code:36, exec, ghostty" # Return
           "$mod, code:56, exec, brave" # b
@@ -155,8 +152,8 @@ in {
           "$mod, code:23, changegroupactive, f" # Tab
 
           # --- Layout-Agnostic App Shortcuts ---
-          "CONTROL, code:44, sendshortcut, CONTROL, J"
-          "CONTROL SHIFT, V, sendshortcut, CONTROL, V"
+          "CONTROL, code:44, sendshortcut, CONTROL, j"
+          "CONTROL SHIFT, V, sendshortcut, CONTROL, v"
 
           # --- Navigation (with Workspace Overflow) ---
           "$mod, code:43, ${navL}" # h
