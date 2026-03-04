@@ -137,7 +137,7 @@ in {
 
         bind = [
           # --- Keyboard Layout Switching ---
-          "$mod, Space, exec, switch-kbdlayout"
+          "$mod, code:65, exec, switch-kbdlayout"
 
           # --- System & Apps (Keycodes for cross-layout support) ---
           "$mod, code:36, exec, ghostty" # Return
