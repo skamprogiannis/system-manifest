@@ -137,7 +137,7 @@ in {
 
         bind = [
           # --- Keyboard Layout Switching ---
-          "$mod, Space, exec, hyprctl switchxkblayout 0 next"
+          "$mod, Space, exec, switch-kbdlayout"
 
           # --- System & Apps (Keycodes for cross-layout support) ---
           "$mod, code:36, exec, ghostty" # Return
@@ -156,7 +156,7 @@ in {
 
           # --- Layout-Agnostic App Shortcuts ---
           "CONTROL, code:44, sendshortcut, CONTROL, J"
-          "CONTROL SHIFT, V, exec, wl-paste | wl-copy && xdotool key ctrl+v"
+          "CONTROL SHIFT, V, sendshortcut, CONTROL, V"
 
           # --- Navigation (with Workspace Overflow) ---
           "$mod, code:43, ${navL}" # h
@@ -221,7 +221,7 @@ in {
         ];
 
         windowrule = [
-          "opacity 1.0 1.0, match:class ^(brave|firefox|chromium|google-chrome|zen|mpv|vlc|imv|feh)$"
+          "opacity 1.0 1.0, match:class ^(brave-browser|firefox|chromium|google-chrome|zen|mpv|vlc|imv|feh)$"
           "opacity 1.0 1.0, match:title ^(Picture-in-Picture)$"
           "opacity 0.8 0.75, match:class ^(com.mitchellh.ghostty)$"
           "opacity 0.8 0.75, match:class ^(spotify-player)$"
