@@ -18,6 +18,7 @@
     ./modules/home/pearpass.nix
     ./modules/home/xdg.nix
     ./modules/home/brave.nix
+    ./modules/home/github-copilot.nix
     ./modules/home/firefox.nix
     ./modules/home/theme.nix
     ./modules/home/obsidian.nix
