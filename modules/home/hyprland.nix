@@ -136,6 +136,9 @@ in {
         ];
 
         bind = [
+          # --- Keyboard Layout Switching ---
+          "$mod, Space, exec, hyprctl switchxkblayout 0 next"
+
           # --- System & Apps (Keycodes for cross-layout support) ---
           "$mod, code:36, exec, ghostty" # Return
           "$mod, code:56, exec, brave" # b
@@ -230,10 +233,6 @@ in {
 
       extraConfig = ''
         $terminal = ghostty
-        
-        # Explicit keyboard layout switching for Super+Space
-        # (grp:win_space_toggle doesn't work reliably with ext variant on Wayland)
-        bind = SUPER, Space, exec, hyprctl switchxkblayout 0 next
       '';
     };
   };
