@@ -152,7 +152,6 @@ in {
 
           # --- Layout-Agnostic App Shortcuts ---
           "CONTROL, code:44, sendshortcut, CONTROL, code:44" # Ctrl+J
-          "CONTROL SHIFT, code:55, sendshortcut, CONTROL, code:55" # Ctrl+Shift+V
 
           # --- Navigation (with Workspace Overflow) ---
           "$mod, code:43, ${navL}" # h
