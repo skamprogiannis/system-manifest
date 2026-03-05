@@ -20,8 +20,8 @@
       keybind = [
         "kp_enter=text:\\r"
         "backspace=text:\\x7f"
-        "ctrl+physical:j=text:\\x0a"
-        "ctrl+shift+physical:v=paste_from_clipboard"
+
+
         "ctrl+shift+t=unbind"
         "ctrl+shift+w=unbind"
         "ctrl+shift+e=unbind"
