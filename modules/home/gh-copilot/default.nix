@@ -6,6 +6,15 @@
     GH_EDITOR = "nvim";
   };
 
+  # Source GH_TOKEN from file if present — enables auth on machines where gnome-keyring
+  # may not auto-unlock (e.g., booting USB on a computer lab machine).
+  # Create the file once: echo "ghp_..." > ~/.config/github-pat && chmod 600 ~/.config/github-pat
+  programs.bash.initExtra = ''
+    if [ -z "$GH_TOKEN" ] && [ -f "$HOME/.config/github-pat" ]; then
+      export GH_TOKEN="$(cat "$HOME/.config/github-pat")"
+    fi
+  '';
+
   programs.gh = {
     settings = {
       editor = "nvim";
@@ -31,30 +40,30 @@
     lspServers = {
       gopls = {
         command = "gopls";
-        fileExtensions = { go = "go"; };
+        fileExtensions = { ".go" = "go"; };
       };
       typescript-language-server = {
         command = "typescript-language-server";
         args = [ "--stdio" ];
         fileExtensions = {
-          ts = "typescript";
-          tsx = "typescriptreact";
-          js = "javascript";
-          jsx = "javascriptreact";
+          ".ts" = "typescript";
+          ".tsx" = "typescriptreact";
+          ".js" = "javascript";
+          ".jsx" = "javascriptreact";
         };
       };
       pylsp = {
         command = "pylsp";
-        fileExtensions = { py = "python"; };
+        fileExtensions = { ".py" = "python"; };
       };
       rust-analyzer = {
         command = "rust-analyzer";
-        fileExtensions = { rs = "rust"; };
+        fileExtensions = { ".rs" = "rust"; };
       };
       omnisharp = {
         command = "OmniSharp";
         args = [ "--languageserver" ];
-        fileExtensions = { cs = "csharp"; };
+        fileExtensions = { ".cs" = "csharp"; };
       };
     };
   };
