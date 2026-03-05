@@ -31,23 +31,6 @@
       document-font-name = "Adwaita 9";
       monospace-font-name = "JetBrainsMono Nerd Font 9";
     };
-    "org/gnome/terminal/legacy/profiles:/:default" = {
-      font = "JetBrainsMono Nerd Font 9";
-      use-system-font = false;
-    };
-
-    # Favorites Bar
-    "org/gnome/shell" = {
-      favorite-apps = [
-        "com.mitchellh.ghostty.desktop"
-        "brave-browser.desktop"
-        "vesktop.desktop"
-        "pearpass.desktop"
-        "spotify-player.desktop"
-        "Mailspring.desktop"
-        "org.gnome.Nautilus.desktop"
-      ];
-    };
   };
 
   # Fontconfig: Ensure non-GNOME apps (Hyprland, TUI) see the same fonts
@@ -66,7 +49,7 @@
     platformTheme.name = "gtk";
   };
 
-  # Hide CLI/TUI apps from GNOME app overview
+  # Hide CLI/TUI apps from app launchers (wofi, rofi, etc.)
   xdg.desktopEntries = {
     nvim = {
       name = "Neovim";
@@ -82,14 +65,6 @@
     };
     tremc = {
       name = "tremc";
-      noDisplay = true;
-    };
-    "org.gnome.Settings" = {
-      name = "Settings";
-      noDisplay = true;
-    };
-    "org.gnome.Extensions" = {
-      name = "Extensions";
       noDisplay = true;
     };
     "ibus-setup" = {

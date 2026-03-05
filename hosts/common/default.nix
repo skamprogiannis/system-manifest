@@ -101,15 +101,6 @@
     pulse.enable = true;
   };
 
-  # Enable GNOME Keyring for email clients and other apps
-  services.gnome.gnome-keyring.enable = true;
-  security.pam.services.login.enableGnomeKeyring = true;
-  security.pam.services.greetd.enableGnomeKeyring = true;
-  security.pam.services.gdm.enableGnomeKeyring = true;
-  security.pam.services.gdm-password.enableGnomeKeyring = true;
-  services.gnome.gnome-online-accounts.enable = false;
-  services.gnome.rygel.enable = false;
-
   # Prevent annoying 90s hang on shutdown if a service fails to stop
   systemd.settings.Manager.DefaultTimeoutStopSec = "10s";
 
@@ -134,7 +125,6 @@
   environment.systemPackages = with pkgs; [
     wget
     git
-    gnome-themes-extra
     inotify-tools
     # GStreamer plugins for video playback and subtitles
     gst_all_1.gstreamer
