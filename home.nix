@@ -36,7 +36,12 @@
     mpvpaper
     nautilus
     vesktop
-    mailspring
+    (pkgs.mailspring.overrideAttrs (old: {
+      postInstall = (old.postInstall or "") + ''
+        sed -i 's|^Exec=mailspring|Exec=mailspring --password-store=basic|g' \
+          "$out/share/applications/Mailspring.desktop"
+      '';
+    }))
     obsidian
     protonvpn-gui
 
@@ -209,15 +214,6 @@
     Install = {
       WantedBy = [ "default.target" ];
     };
-  };
-
-  # Configure default applications
-  xdg.desktopEntries.mailspring = {
-    name = "Mailspring";
-    exec = "mailspring --password-store=basic %U";
-    icon = "mailspring";
-    categories = ["Network" "Email"];
-    mimeType = ["x-scheme-handler/mailto"];
   };
 
   xdg.desktopEntries.btop = {
