@@ -41,7 +41,20 @@
 - **Bug Reporting:** When a bug is reported, prioritize writing a reproduction test before attempting a fix. Use subagents to implement the fix and verify it with the passing test.
 - **Pre-Completion Dry Build:** After any config/code change and before reporting "done," run `nixos-rebuild dry-build --flake .#desktop` yourself and fix any failures before handing back to the user.
 
-## Glassmorphism & UI Stability
+## Greenfield Projects: Spec Kit Workflow
+
+Use **Spec Kit** (`specify` CLI) to scaffold spec-driven development for new projects. This unlocks `/speckit.*` slash commands in Copilot CLI.
+
+- **Initialize a project:** `specify init <PROJECT_NAME> --ai copilot` (run in the project directory)
+- **Slash commands available after init:**
+  - `/speckit.constitution` — Define guiding principles
+  - `/speckit.specify` — Describe what to build
+  - `/speckit.plan` — Generate an implementation plan
+  - `/speckit.tasks` — Break down work into tasks
+  - `/speckit.implement` — Trigger implementation workflow
+- The `specify` binary is installed declaratively via a `uvx` wrapper — no manual installation needed.
+
+
 
 - **Vibrancy Physics:** High-end glassmorphism requires `xray = true` in Hyprland to prevent muddy artifacts from overlapping shadows. Optimal settings: `brightness > 1.1`, `vibrancy > 0.8`, and `contrast > 1.1`.
 - **Systemd buffers:** When managing video surfaces (like `mpvpaper`) on Nvidia/Wayland, use systemd with `RestartSec=2.5` to prevent GPU buffer race conditions that crash the compositor.
