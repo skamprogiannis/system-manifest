@@ -73,7 +73,19 @@ Use **Spec Kit** (`specify` CLI) to scaffold spec-driven development for new pro
   5.  Unmounts and cleans up.
 - **Note:** The script currently hardcodes device paths (`/dev/sdc`). Verify device names with `lsblk` before running if devices have changed.
 - **GH auth on foreign machines:** When booting the USB on a computer lab machine, gnome-keyring may not auto-unlock. Store a fine-grained PAT (with "Copilot Requests" permission) in `~/.config/github-pat` on the encrypted USB partition: `echo "ghp_..." > ~/.config/github-pat && chmod 600 ~/.config/github-pat`. The shell will auto-export it as `GH_TOKEN`. This file is protected by LUKS and never committed to git.
-- **Copilot session portability:** Sessions (`~/.copilot/sessions/`) live on the LUKS-encrypted partition and persist across reboots and machines. Use `copilot --resume` to pick up old sessions.
+
+## Copilot Session Sync (Desktop ↔ USB)
+
+Copilot sessions live in `~/.copilot/session-state/`. To share them between desktop and USB, plug in the USB and use `sync-copilot-sessions`:
+
+- `sync-copilot-sessions to-usb` — push desktop sessions to USB (run before leaving for a lab)
+- `sync-copilot-sessions from-usb` — pull USB sessions back to desktop (run when back home)
+
+The script finds the USB automatically via the `NIXOS_USB_CRYPT` disk label, unlocks LUKS, mounts, rsyncs, and unmounts. Requires `sudo`.
+
+At the lab: `copilot --resume` to pick up synced sessions.
+
+**Zellij sessions** are process-based (in-RAM) and cannot be shared across machines — this is fundamental. Config is declarative and identical on both systems.
 
 ## Known Issues / Fixes
 
