@@ -32,7 +32,9 @@
   # --- PACKAGES ---
   home.packages = with pkgs; [
     # GUI
+    imv
     mpvpaper
+    nautilus
     vesktop
     mailspring
     obsidian
@@ -127,40 +129,6 @@
     };
     Install = {
       WantedBy = ["default.target"];
-    };
-  };
-
-  # --- GNOME KEYBINDINGS ---
-  dconf.settings = {
-    "org/gnome/settings-daemon/plugins/media-keys" = {
-      custom-keybindings = [
-        "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/"
-      ];
-    };
-    "org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0" = {
-      binding = "<Super>Return";
-      command = "ghostty";
-      name = "Ghostty";
-    };
-    # Input sources for GNOME
-    "org/gnome/desktop/input-sources" = {
-      sources = [(lib.hm.gvariant.mkTuple ["xkb" "us+altgr-intl"]) (lib.hm.gvariant.mkTuple ["xkb" "gr"])];
-    };
-    "org/gnome/desktop/wm/keybindings" = {
-      switch-input-source = ["<Super>space"];
-      switch-input-source-backward = ["<Shift><Super>space"];
-      close = ["<Super>x"];
-    };
-    "org/gnome/gnome-screenshot" = {
-      auto-save-directory = "file:///home/stefan/pictures/screenshots";
-    };
-    "org/gnome/shell" = {
-      last-screenshot-directory = "file:///home/stefan/pictures/screenshots";
-    };
-    "org/gnome/shell/screenshot" = {
-      last-save-directory = "file:///home/stefan/pictures/screenshots";
-    };
-    "org/gnome/desktop/interface" = {
     };
   };
 
@@ -267,15 +235,14 @@
     defaultApplications = {
       "x-scheme-handler/magnet" = ["tremc.desktop"];
       "application/x-bittorrent" = ["tremc.desktop"];
-      "image/png" = ["org.gnome.Loupe.desktop"];
-      "image/jpeg" = ["org.gnome.Loupe.desktop"];
-      "image/gif" = ["org.gnome.Loupe.desktop"];
-      "image/webp" = ["org.gnome.Loupe.desktop"];
-      "image/bmp" = ["org.gnome.Loupe.desktop"];
-      "image/tiff" = ["org.gnome.Loupe.desktop"];
-      "image/svg+xml" = ["org.gnome.Loupe.desktop"];
+      "image/png" = ["imv.desktop"];
+      "image/jpeg" = ["imv.desktop"];
+      "image/gif" = ["imv.desktop"];
+      "image/webp" = ["imv.desktop"];
+      "image/bmp" = ["imv.desktop"];
+      "image/tiff" = ["imv.desktop"];
+      "image/svg+xml" = ["imv.desktop"];
       "application/pdf" = ["org.pwmt.zathura.desktop"];
-      "text/plain" = ["org.gnome.TextEditor.desktop"];
     };
   };
 }
