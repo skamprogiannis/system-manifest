@@ -47,17 +47,23 @@
     github-copilot-cli
     glow
     go
+    gopls
     jq
     libsecret
     nodejs_22
+    nodePackages.typescript-language-server
+    omnisharp-roslyn
     opencode
     pacvim
     pandoc
     python3
+    python3Packages.python-lsp-server
     ripgrep
     ruff
+    rust-analyzer
     transmission_4
     tremc
+    uv
     wget
     wl-clipboard
     zathura
