@@ -179,7 +179,9 @@
         }
 
         tab name="copilot" {
-            pane command="gh copilot"
+            pane command="gh" {
+                args "copilot";
+            }
         }
     }
   '';
