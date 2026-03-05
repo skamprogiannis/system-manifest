@@ -41,7 +41,7 @@
       favorite-apps = [
         "com.mitchellh.ghostty.desktop"
         "brave-browser.desktop"
-        "discord.desktop"
+        "vesktop.desktop"
         "pearpass.desktop"
         "spotify-player.desktop"
         "Mailspring.desktop"
