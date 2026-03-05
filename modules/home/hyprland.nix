@@ -207,7 +207,7 @@ in {
 
           # --- DMS IPC Controls ---
           "$mod, code:57, exec, dms ipc call notifications toggle" # n
-          "$mod SHIFT, code:57, exec, dms ipc call notifications clearAll" # N
+          "$mod SHIFT, code:57, exec, dms ipc call notifications clearAll && echo '{\"notifications\": []}' > ~/.cache/DankMaterialShell/notification_history.json" # N
           "$mod, code:22, exec, dms ipc call notifications dismissAllPopups" # Backspace
           "$mod, code:32, exec, dms ipc call hypr toggleOverview" # o
           "$mod, code:9, exec, dms ipc call lock lock" # Escape

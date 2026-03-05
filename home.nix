@@ -98,7 +98,7 @@
     normalization = false
 
     [notification_control]
-    enabled = false
+    enabled = true
     include_body = true
     urgency = "Low"
   '';
@@ -246,7 +246,7 @@
   # Configure default applications
   xdg.desktopEntries.mailspring = {
     name = "Mailspring";
-    exec = "mailspring --password-store=gnome-libsecret %U";
+    exec = "mailspring --password-store=basic %U";
     icon = "mailspring";
     categories = ["Network" "Email"];
     mimeType = ["x-scheme-handler/mailto"];
