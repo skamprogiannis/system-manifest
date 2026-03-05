@@ -1,5 +1,8 @@
 { pkgs, ... }: {
   home.packages = [
+    (pkgs.writeShellScriptBin "specify" ''
+      exec ${pkgs.uv}/bin/uvx --from git+https://github.com/github/spec-kit.git specify "$@"
+    '')
     (pkgs.writeShellScriptBin "sync-transmission-port" ''
       set -e
       CONFIG_DIR="$HOME/.config/fragments"
