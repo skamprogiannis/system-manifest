@@ -84,8 +84,8 @@ in {
 
         decoration = {
           rounding = 10;
-          active_opacity = 0.82;
-          inactive_opacity = 0.72;
+          active_opacity = 1.0;
+          inactive_opacity = 1.0;
 
           dim_inactive = true;
           dim_strength = 0.04;
@@ -218,9 +218,10 @@ in {
         windowrule = [
           "opacity 1.0, match:class ^(brave-browser|firefox|chromium|google-chrome|zen|mpv|vlc|imv|feh)$"
           "opacity 1.0, match:title ^(Picture-in-Picture)$"
-          "opacity 0.8, match:class ^(com.mitchellh.ghostty)$"
-          "opacity 0.8, match:class ^(nautilus)$"
+          "opacity 0.82, match:class ^(com.mitchellh.ghostty)$"
+          "opacity 0.82, match:class ^(nautilus)$"
         ];
+
 
         bindr = [];
       };
