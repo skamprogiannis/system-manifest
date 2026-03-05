@@ -12,6 +12,6 @@
     };
   };
 
-  # Copy instructions to GH Copilot config directory
-  home.file.".config/gh-copilot/instructions.md".text = builtins.readFile ./instructions.md;
+  # Global instructions — deployed to the path the Copilot CLI reads automatically
+  home.file.".copilot/copilot-instructions.md".text = builtins.readFile ./instructions.md;
 }
