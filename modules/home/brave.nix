@@ -12,7 +12,10 @@
         "--extensions-on-chrome-urls"
         "--ozone-platform-hint=auto"
         "--force-dark-mode"
-        "--enable-features=WebUIDarkMode"
+        "--enable-features=WebUIDarkMode,VaapiVideoDecoder,VaapiVideoEncoder,Vulkan,UseSkiaRenderer"
+        "--use-gl=egl"
+        "--enable-gpu-rasterization"
+        "--enable-zero-copy"
       ];
 
     };
