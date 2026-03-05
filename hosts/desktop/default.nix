@@ -6,10 +6,11 @@
 }: {
   imports = [
     ../common/default.nix
-    ../../modules/nixos/gnome.nix
     ../../modules/nixos/hyprland.nix
     ./hardware-configuration.nix
   ];
+
+  services.displayManager.gdm.enable = true;
 
   networking.hostName = "desktop";
 
@@ -97,8 +98,6 @@
   specialisation = {
     gaming-box.configuration = {
       system.nixos.tags = ["gaming-box"];
-      services.desktopManager.gnome.enable = lib.mkForce false;
-      services.displayManager.gdm.enable = lib.mkForce false;
       programs.hyprland.enable = lib.mkForce false;
       programs.steam = {
         enable = true;
