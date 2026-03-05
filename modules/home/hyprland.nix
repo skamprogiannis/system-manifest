@@ -5,6 +5,49 @@
   ...
 }: let
   cfg = config.wayland.windowManager.hyprland;
+  liquid-glass-plugin = pkgs.stdenv.mkDerivation {
+    pname = "liquid-glass-plugin-hyprland";
+    version = "unstable-2025-06-12";
+    src = pkgs.fetchFromGitHub {
+      owner = "purple-lines";
+      repo = "liquid-glass-plugin-hyprpm";
+      rev = "1fba07fa7d894d0e4f39e9642556a64c77d19643";
+      hash = "sha256-awTwcDRSwV1HtBLA8+V+4exIFcqb2hmDzntlshd6Uf8=";
+    };
+    postPatch = ''
+      # Window.hpp moved to desktop/view/ in Hyprland 0.45+
+      sed -i 's|hyprland/src/desktop/Window\.hpp|hyprland/src/desktop/view/Window.hpp|g' src/*.cpp src/*.hpp
+      # m_windowData.noBlur removed in 0.53+ (blur is disabled globally anyway)
+      sed -i '/m_windowData\.noBlur/d' src/*.cpp
+      # invertTransform and wlTransformToHyprutils moved into Math:: namespace in 0.53+
+      sed -i 's|\binvertTransform\b|Math::invertTransform|g' src/*.cpp
+      sed -i 's|\bwlTransformToHyprutils\b|Math::wlTransformToHyprutils|g' src/*.cpp
+    '';
+    nativeBuildInputs = with pkgs; [pkg-config];
+    buildInputs = with pkgs; [
+      hyprland
+      aquamarine.dev
+      hyprutils.dev
+      hyprgraphics.dev
+      hyprlang.dev
+      hyprcursor.dev
+      libdrm.dev
+      libGL.dev
+      libinput.dev
+      wayland.dev
+      wayland-protocols
+      libxkbcommon.dev
+      libxkbfile
+      pango.dev
+      pixman
+    ];
+    NIX_CFLAGS_COMPILE = "-I${pkgs.hyprland.dev}/include/hyprland/protocols -I${pkgs.libdrm.dev}/include/libdrm";
+    buildPhase = "make all";
+    installPhase = ''
+      mkdir -p $out/lib
+      cp liquid-glass.so $out/lib/liquid-glass.so
+    '';
+  };
   useHyprNav = config.system_manifest.navigation.wrapWorkspaces or false;
   navL =
     if useHyprNav
@@ -33,6 +76,8 @@ in {
         enable = true;
         variables = ["--all"];
       };
+
+      plugins = ["${liquid-glass-plugin}/lib/liquid-glass.so"];
 
       settings = {
         source = [
@@ -90,15 +135,7 @@ in {
           dim_inactive = true;
           dim_strength = 0.15;
           blur = {
-            enabled = true;
-            size = 8;
-            passes = 4;
-            new_optimizations = true;
-            xray = true;
-            vibrancy = 1.05;
-            brightness = 1.18;
-            contrast = 1.22;
-            noise = 0.01;
+            enabled = false;
           };
           shadow = {
             enabled = true;
@@ -224,6 +261,17 @@ in {
 
 
         bindr = [];
+
+        "plugin:liquid-glass" = {
+          enabled = true;
+          blur_strength = 1.5;
+          refraction_strength = 0.08;
+          chromatic_aberration = 0.012;
+          fresnel_strength = 0.4;
+          specular_strength = 0.3;
+          glass_opacity = 1.0;
+          edge_thickness = 0.15;
+        };
       };
 
       extraConfig = ''
