@@ -11,7 +11,7 @@
     };
     extraConfig = ''
       keybinds {
-          unbind "Ctrl p" "Ctrl t" "Ctrl n" "Ctrl s" "Ctrl o" "Ctrl q" "Ctrl g" "Ctrl r" "Ctrl d" "Ctrl h" "Ctrl j" "Ctrl k" "Ctrl l" "Ctrl b" "Alt i" "Alt s"
+          unbind "Ctrl p" "Ctrl t" "Ctrl n" "Ctrl s" "Ctrl o" "Ctrl q" "Ctrl g" "Ctrl r" "Ctrl d" "Ctrl h" "Ctrl j" "Ctrl k" "Ctrl l" "Ctrl b" "Alt i"
 
           locked {
             bind "Alt g" { SwitchToMode "Normal"; }
@@ -71,6 +71,8 @@
             bind "Ctrl Shift Tab" { GoToPreviousTab; }
             bind "Alt Tab" { GoToNextTab; }
             bind "Alt Shift Tab" { GoToPreviousTab; }
+            bind "Alt ," "Alt Shift Left" { MoveTab "Left"; }
+            bind "Alt ." "Alt Shift Right" { MoveTab "Right"; }
             
           }
           
@@ -86,8 +88,6 @@
             bind "l" "j" "Right" "Down" { GoToNextTab; }
             bind "Alt h" "Alt Left" { MoveTab "Left"; }
             bind "Alt l" "Alt Right" { MoveTab "Right"; }
-            bind "Alt ," { MoveTab "Left"; }
-            bind "Alt ." { MoveTab "Right"; }
           }
 
           scroll {
