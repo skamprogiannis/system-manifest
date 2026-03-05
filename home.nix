@@ -98,7 +98,7 @@
     normalization = false
 
     [notification_control]
-    enabled = false
+    enabled = true
     include_body = true
     urgency = "Low"
   '';
