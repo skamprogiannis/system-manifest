@@ -26,13 +26,14 @@
     ./modules/home/scripts.nix
     ./modules/home/wallpaper.nix
     ./modules/home/cursors.nix
+    ./modules/home/vesktop.nix
   ];
 
   # --- PACKAGES ---
   home.packages = with pkgs; [
     # GUI
     mpvpaper
-    discord
+    vesktop
     mailspring
     obsidian
     protonvpn-gui
