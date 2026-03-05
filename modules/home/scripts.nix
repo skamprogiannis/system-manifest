@@ -3,6 +3,46 @@
     (pkgs.writeShellScriptBin "specify" ''
       exec ${pkgs.uv}/bin/uvx --from git+https://github.com/github/spec-kit.git specify "$@"
     '')
+    (pkgs.writeShellScriptBin "sync-copilot-sessions" ''
+      set -e
+      MODE="''${1:-to-usb}"
+      LUKS_DEVICE="/dev/disk/by-partlabel/NIXOS_USB_CRYPT"
+      MAPPER="usb-sync-root"
+      MOUNT="/mnt/usb-sync"
+      LOCAL="$HOME/.copilot/session-state"
+      REMOTE="$MOUNT/home/stefan/.copilot/session-state"
+
+      if [ ! -e "$LUKS_DEVICE" ]; then
+        echo "USB not found. Plug in the USB drive and try again."
+        exit 1
+      fi
+
+      sudo ${pkgs.cryptsetup}/bin/cryptsetup luksOpen "$LUKS_DEVICE" "$MAPPER"
+      sudo mkdir -p "$MOUNT"
+      sudo mount "/dev/mapper/$MAPPER" "$MOUNT"
+      sudo mkdir -p "$REMOTE"
+
+      case "$MODE" in
+        to-usb)
+          echo "Syncing desktop → USB..."
+          sudo ${pkgs.rsync}/bin/rsync -av --update "$LOCAL/" "$REMOTE/"
+          ;;
+        from-usb)
+          echo "Syncing USB → desktop..."
+          ${pkgs.rsync}/bin/rsync -av --update "$REMOTE/" "$LOCAL/"
+          ;;
+        *)
+          echo "Usage: sync-copilot-sessions [to-usb|from-usb]"
+          sudo umount "$MOUNT"
+          sudo ${pkgs.cryptsetup}/bin/cryptsetup luksClose "$MAPPER"
+          exit 1
+          ;;
+      esac
+
+      sudo umount "$MOUNT"
+      sudo ${pkgs.cryptsetup}/bin/cryptsetup luksClose "$MAPPER"
+      echo "Done."
+    '')
     (pkgs.writeShellScriptBin "sync-transmission-port" ''
       set -e
       CONFIG_DIR="$HOME/.config/fragments"
