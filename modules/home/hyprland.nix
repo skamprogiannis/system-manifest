@@ -88,7 +88,7 @@ in {
           inactive_opacity = 1.0;
 
           dim_inactive = true;
-          dim_strength = 0.04;
+          dim_strength = 0.15;
           blur = {
             enabled = true;
             size = 8;
