@@ -36,13 +36,6 @@
       fi
       hyprctl switchxkblayout "$DEVICE" next
     '')
-    (pkgs.writeShellScriptBin "brave-no-gpu" ''
-      exec ${pkgs.brave}/bin/brave --disable-gpu --disable-software-rasterizer --disable-accelerated-2d-canvas --disable-accelerated-video-decode --disable-gpu-compositing --ignore-gpu-blacklist "$@"
-    '')
-    (pkgs.writeShellScriptBin "firefox-no-gpu" ''
-      export MOZ_WEBRENDER=0
-      exec ${pkgs.firefox}/bin/firefox "$@"
-    '')
     (pkgs.writeShellScriptBin "screenshot-path" ''
 
       MODE="''${1:-region}"
