@@ -253,10 +253,10 @@ in {
           "opacity 1.0 override, match:class ^(mpv|vlc|imv|feh)$"
           "opacity 1.0 override, match:title ^(Picture-in-Picture)$"
           # Ghostty uses native background-opacity; compositor stays at 1.0
+          # Vesktop uses Translucence CSS for glass; compositor stays at 1.0
           "opacity 0.75 override, match:class ^(brave-browser)$"
           "opacity 0.75 override, match:class ^(firefox)$"
           "opacity 0.75 override, match:class ^(org.gnome.Nautilus)$"
-          "opacity 0.75 override, match:class ^(vesktop)$"
           "opacity 0.75 override, match:class ^(obsidian)$"
           "opacity 0.80 override, match:class ^(Mailspring)$"
           "opacity 0.75 override, match:class ^(pear-runtime)$"
