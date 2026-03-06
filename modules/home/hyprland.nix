@@ -6,7 +6,7 @@
   ...
 }: let
   cfg = config.wayland.windowManager.hyprland;
-  hyprland-pkg = inputs.hyprland.packages.${pkgs.system}.hyprland;
+  hyprland-pkg = inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
   hyprglass-plugin = pkgs.stdenv.mkDerivation {
     pname = "hyprglass";
     version = "0.2.4";
@@ -251,8 +251,8 @@ in {
           "opacity 0.82, match:class ^(com.mitchellh.ghostty)$"
           "opacity 0.82, match:class ^(nautilus)$"
           # Center credential/auth dialogs so they don't spawn between monitors
-          "float, match:class ^(pinentry|pinentry-gtk-2|pinentry-gnome3|ssh-askpass|git-askpass)$"
-          "center, match:class ^(pinentry|pinentry-gtk-2|pinentry-gnome3|ssh-askpass|git-askpass)$"
+          "float 1, match:class ^(pinentry|pinentry-gtk-2|pinentry-gnome3|ssh-askpass|git-askpass)$"
+          "center 1, match:class ^(pinentry|pinentry-gtk-2|pinentry-gnome3|ssh-askpass|git-askpass)$"
           "size 400 200, match:class ^(pinentry|pinentry-gtk-2|pinentry-gnome3|ssh-askpass|git-askpass)$"
         ];
 
