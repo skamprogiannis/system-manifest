@@ -272,16 +272,17 @@ in {
           enabled = 1;
           default_theme = "dark";
           default_preset = "default";
-          blur_strength = 1.2;
+          blur_strength = 0.4;      # 0.4×12 = ~5px — nearly clear, just soft edges
+          blur_iterations = 1;      # minimum passes
           refraction_strength = 0.6;
           chromatic_aberration = 0.5;
           fresnel_strength = 0.6;
           specular_strength = 0.8;
           glass_opacity = 1.0;
           edge_thickness = 0.06;
-          "dark:brightness" = 0.94;
-          "dark:saturation" = 0.92;
-          "dark:adaptive_dim" = 0.15;
+          "dark:brightness" = 1.0;  # no dimming of background
+          "dark:saturation" = 1.0;  # no desaturation
+          "dark:adaptive_dim" = 0.0; # no adaptive dimming
         };
       };
 
