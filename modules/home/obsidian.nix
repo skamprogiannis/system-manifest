@@ -55,15 +55,4 @@ in {
       WantedBy = [ "graphical-session.target" ];
     };
   };
-
-  # Desktop entry override: --enable-transparent-visuals enables per-pixel
-  # alpha so the CSS glass snippet can show the wallpaper through backgrounds.
-  xdg.desktopEntries.obsidian = {
-    name = "Obsidian";
-    exec = "obsidian --enable-transparent-visuals %u";
-    icon = "obsidian";
-    categories = ["Office"];
-    comment = "Knowledge base";
-    mimeType = ["x-scheme-handler/obsidian"];
-  };
 }
