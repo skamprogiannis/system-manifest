@@ -2,50 +2,42 @@
   config,
   pkgs,
   lib,
+  inputs,
   ...
 }: let
   cfg = config.wayland.windowManager.hyprland;
-  liquid-glass-plugin = pkgs.stdenv.mkDerivation {
-    pname = "liquid-glass-plugin-hyprland";
-    version = "unstable-2025-06-12";
+  hyprland-pkg = inputs.hyprland.packages.${pkgs.system}.hyprland;
+  hyprglass-plugin = pkgs.stdenv.mkDerivation {
+    pname = "hyprglass";
+    version = "0.2.4";
     src = pkgs.fetchFromGitHub {
-      owner = "purple-lines";
-      repo = "liquid-glass-plugin-hyprpm";
-      rev = "1fba07fa7d894d0e4f39e9642556a64c77d19643";
-      hash = "sha256-awTwcDRSwV1HtBLA8+V+4exIFcqb2hmDzntlshd6Uf8=";
+      owner = "hyprnux";
+      repo = "hyprglass";
+      rev = "0e82595ec5c1b04e30b559fe689f3ceae24bc3ef";
+      hash = "sha256-i2NXWuvVM+n6m4kwfqVTUOpinNWJHhSQdzMPbMR/Bn8=";
     };
-    postPatch = ''
-      # Window.hpp moved to desktop/view/ in Hyprland 0.45+
-      sed -i 's|hyprland/src/desktop/Window\.hpp|hyprland/src/desktop/view/Window.hpp|g' src/*.cpp src/*.hpp
-      # m_windowData.noBlur removed in 0.53+ (blur is disabled globally anyway)
-      sed -i '/m_windowData\.noBlur/d' src/*.cpp
-      # invertTransform and wlTransformToHyprutils moved into Math:: namespace in 0.53+
-      sed -i 's|\binvertTransform\b|Math::invertTransform|g' src/*.cpp
-      sed -i 's|\bwlTransformToHyprutils\b|Math::wlTransformToHyprutils|g' src/*.cpp
-    '';
     nativeBuildInputs = with pkgs; [pkg-config];
-    buildInputs = with pkgs; [
-      hyprland
-      aquamarine.dev
-      hyprutils.dev
-      hyprgraphics.dev
-      hyprlang.dev
-      hyprcursor.dev
-      libdrm.dev
-      libGL.dev
-      libinput.dev
-      wayland.dev
-      wayland-protocols
-      libxkbcommon.dev
-      libxkbfile
-      pango.dev
-      pixman
+    buildInputs = [
+      hyprland-pkg
+      pkgs.aquamarine.dev
+      pkgs.hyprutils.dev
+      pkgs.hyprgraphics.dev
+      pkgs.hyprlang.dev
+      pkgs.hyprcursor.dev
+      pkgs.libdrm.dev
+      pkgs.libGL.dev
+      pkgs.libinput.dev
+      pkgs.wayland.dev
+      pkgs.wayland-protocols
+      pkgs.libxkbcommon.dev
+      pkgs.pixman
+      pkgs.cairo
     ];
-    NIX_CFLAGS_COMPILE = "-I${pkgs.hyprland.dev}/include/hyprland/protocols -I${pkgs.libdrm.dev}/include/libdrm";
+    NIX_CFLAGS_COMPILE = "-I${hyprland-pkg.dev}/include/hyprland/protocols -I${pkgs.libdrm.dev}/include/libdrm";
     buildPhase = "make all";
     installPhase = ''
       mkdir -p $out/lib
-      cp liquid-glass.so $out/lib/liquid-glass.so
+      cp hyprglass.so $out/lib/hyprglass.so
     '';
   };
   useHyprNav = config.system_manifest.navigation.wrapWorkspaces or false;
@@ -72,12 +64,13 @@ in {
 
     wayland.windowManager.hyprland = {
       enable = true;
+      package = hyprland-pkg;
       systemd = {
         enable = true;
         variables = ["--all"];
       };
 
-      plugins = ["${liquid-glass-plugin}/lib/liquid-glass.so"];
+      plugins = ["${hyprglass-plugin}/lib/hyprglass.so"];
 
       settings = {
         source = [
@@ -262,15 +255,17 @@ in {
 
         bindr = [];
 
-        "plugin:liquid-glass" = {
-          enabled = true;
-          blur_strength = 1.5;
-          refraction_strength = 0.08;
-          chromatic_aberration = 0.012;
-          fresnel_strength = 0.4;
-          specular_strength = 0.3;
+        "plugin:hyprglass" = {
+          enabled = 1;
+          default_theme = "dark";
+          default_preset = "default";
+          blur_strength = 2.0;
+          refraction_strength = 0.6;
+          chromatic_aberration = 0.5;
+          fresnel_strength = 0.6;
+          specular_strength = 0.8;
           glass_opacity = 1.0;
-          edge_thickness = 0.15;
+          edge_thickness = 0.06;
         };
       };
 
