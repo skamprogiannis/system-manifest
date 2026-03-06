@@ -227,6 +227,18 @@
     noDisplay = true;
   };
 
+  # Mailspring: override desktop entry to add both flags declaratively
+  # (--password-store=basic needed on NixOS; --enable-transparent-visuals for glass)
+  xdg.desktopEntries."Mailspring" = {
+    name = "Mailspring";
+    comment = "The best email app for people and teams at work";
+    genericName = "Mail Client";
+    exec = "mailspring --password-store=basic --enable-transparent-visuals %U";
+    icon = "mailspring";
+    categories = ["Network" "Email"];
+    mimeType = ["x-scheme-handler/mailto" "x-scheme-handler/mailspring"];
+  };
+
   xdg.mimeApps = {
     enable = true;
     associations.added = {
