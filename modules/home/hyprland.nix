@@ -250,6 +250,10 @@ in {
           "opacity 1.0, match:title ^(Picture-in-Picture)$"
           "opacity 0.82, match:class ^(com.mitchellh.ghostty)$"
           "opacity 0.82, match:class ^(nautilus)$"
+          # Center credential/auth dialogs so they don't spawn between monitors
+          "float, match:class ^(pinentry|pinentry-gtk-2|pinentry-gnome3|ssh-askpass|git-askpass)$"
+          "center, match:class ^(pinentry|pinentry-gtk-2|pinentry-gnome3|ssh-askpass|git-askpass)$"
+          "size 400 200, match:class ^(pinentry|pinentry-gtk-2|pinentry-gnome3|ssh-askpass|git-askpass)$"
         ];
 
 
