@@ -79,6 +79,7 @@
     # Disk Utilities
     dosfstools
     e2fsprogs
+    ncdu
     parted
 
     # Fonts
