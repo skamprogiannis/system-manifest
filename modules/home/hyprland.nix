@@ -250,10 +250,15 @@ in {
         ];
 
         windowrule = [
-          "opacity 1.0, match:class ^(brave-browser|firefox|chromium|google-chrome|zen|mpv|vlc|imv|feh)$"
-          "opacity 1.0, match:title ^(Picture-in-Picture)$"
-          "opacity 0.82, match:class ^(com.mitchellh.ghostty)$"
-          "opacity 0.82, match:class ^(nautilus)$"
+          "opacity 1.0 override, match:class ^(brave-browser|firefox|chromium|google-chrome|zen|mpv|vlc|imv|feh)$"
+          "opacity 1.0 override, match:title ^(Picture-in-Picture)$"
+          "opacity 0.82 override, match:class ^(com.mitchellh.ghostty)$"
+          "opacity 0.82 override, match:class ^(nautilus)$"
+          "opacity 0.82 override, match:class ^(vesktop)$"
+          "opacity 0.82 override, match:class ^(obsidian)$"
+          "opacity 0.82 override, match:class ^(Mailspring)$"
+          "opacity 0.82 override, match:class ^(pear-runtime)$"
+          "opacity 0.82 override, match:class ^(protonvpn-app)$"
           # Center credential/auth dialogs so they don't spawn between monitors
           "float 1, match:class ^(pinentry|pinentry-gtk-2|pinentry-gnome3|ssh-askpass|git-askpass)$"
           "center 1, match:class ^(pinentry|pinentry-gtk-2|pinentry-gnome3|ssh-askpass|git-askpass)$"
