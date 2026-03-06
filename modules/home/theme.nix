@@ -24,6 +24,13 @@
       headerbar {
         background-color: rgba(35, 35, 35, 0.80);
       }
+      /* Nautilus sidebar and titlebar */
+      .sidebar, .nautilus-window .sidebar {
+        background-color: rgba(30, 30, 30, 0.75);
+      }
+      .titlebar {
+        background-color: rgba(35, 35, 35, 0.85);
+      }
     '';
   };
 
