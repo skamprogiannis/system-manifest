@@ -250,15 +250,16 @@ in {
         ];
 
         windowrule = [
-          "opacity 1.0 override, match:class ^(brave-browser|firefox|chromium|google-chrome|zen|mpv|vlc|imv|feh)$"
+          # Video and image viewers are always fully opaque — content IS the window
+          "opacity 1.0 override, match:class ^(mpv|vlc|imv|feh)$"
           "opacity 1.0 override, match:title ^(Picture-in-Picture)$"
-          "opacity 0.75 override, match:class ^(com.mitchellh.ghostty)$"
-          "opacity 0.75 override, match:class ^(org.gnome.Nautilus)$"
-          "opacity 0.75 override, match:class ^(vesktop)$"
-          "opacity 0.75 override, match:class ^(obsidian)$"
+          # Apps using app-level transparency (CSS rgba / native bg-opacity):
+          #   Ghostty (background-opacity), Nautilus (GTK4 CSS), Brave/Firefox
+          #   (--enable-transparent-visuals), Vesktop/Obsidian (Electron flag + CSS)
+          # Apps still using compositor opacity (CSS approach pending or not applicable)
           "opacity 0.75 override, match:class ^(Mailspring)$"
           "opacity 0.75 override, match:class ^(pear-runtime)$"
-          "opacity 0.75 override, match:class ^(protonvpn-app)$"
+          "opacity 0.85 override, match:class ^(protonvpn-app)$"
           # Center credential/auth dialogs so they don't spawn between monitors
           "float 1, match:class ^(pinentry|pinentry-gtk-2|pinentry-gnome3|ssh-askpass|git-askpass)$"
           "center 1, match:class ^(pinentry|pinentry-gtk-2|pinentry-gnome3|ssh-askpass|git-askpass)$"

@@ -13,6 +13,7 @@
         "--ozone-platform-hint=auto"
         "--force-dark-mode"
         "--enable-features=WebUIDarkMode,VaapiVideoDecoder,VaapiVideoEncoder,Vulkan,UseSkiaRenderer"
+        "--enable-transparent-visuals"
         "--use-gl=egl"
         "--enable-gpu-rasterization"
         "--enable-zero-copy"
