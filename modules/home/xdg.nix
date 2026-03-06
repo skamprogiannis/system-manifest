@@ -49,8 +49,8 @@
     set_icon "$HOME/videos/camera" "folder-videos"
     set_icon "$HOME/videos/screencasts" "camera-video"
     set_icon "$HOME/go" "folder-development"
-    set_icon "$HOME/system_manifest" "folder-development"
-    set_icon "$HOME/tabletop_games" "folder-books"
+    set_icon "$HOME/system-manifest" "folder-development"
+    set_icon "$HOME/tabletop-games" "folder-books"
     set_icon "$HOME/scripts" "folder"
     set_icon "$HOME/wallpapers/.thumbnails" "folder-pictures"
   '';

@@ -33,6 +33,8 @@
   home.packages = with pkgs; [
     # GUI
     imv
+    kooha
+    mpv
     mpvpaper
     nautilus
     vesktop
@@ -44,6 +46,8 @@
     }))
     obsidian
     protonvpn-gui
+
+    wf-recorder
 
     # CLI / Tools
     alejandra

@@ -235,6 +235,10 @@ in {
           "ALT, Print, exec, screenshot-path full path"
           "ALT SHIFT, Print, exec, dms screenshot full"
 
+          # --- Screen Recording ---
+          "$mod, code:27, exec, screenrecord region" # r
+          "$mod SHIFT, code:27, exec, screenrecord full" # R
+
           # --- DMS IPC Controls ---
           "$mod, code:57, exec, dms ipc call notifications toggle" # n
           "$mod SHIFT, code:57, exec, dms ipc call notifications clearAll && echo '{\"notifications\": []}' > ~/.cache/DankMaterialShell/notification_history.json" # N

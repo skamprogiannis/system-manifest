@@ -5,7 +5,7 @@
   ...
 }: let
   # The vault path provided by the user
-  vaultPath = "${config.home.homeDirectory}/tabletop_games/dungeons_and_dragons/obsidian";
+  vaultPath = "${config.home.homeDirectory}/tabletop-games/dungeons-and-dragons/obsidian";
   pluginId = "webpage-html-export";
   pluginPath = "${vaultPath}/.obsidian/plugins/${pluginId}";
 
