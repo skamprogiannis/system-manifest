@@ -10,6 +10,8 @@
   # may not auto-unlock (e.g., booting USB on a computer lab machine).
   # Create the file once: echo "ghp_..." > ~/.config/github-pat && chmod 600 ~/.config/github-pat
   programs.bash.initExtra = ''
+    export EDITOR=nvim
+    export VISUAL=nvim
     if [ -z "$GH_TOKEN" ] && [ -f "$HOME/.config/github-pat" ]; then
       export GH_TOKEN="$(cat "$HOME/.config/github-pat")"
     fi

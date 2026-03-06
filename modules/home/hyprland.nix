@@ -173,7 +173,7 @@ in {
           "$mod, code:26, exec, nautilus" # e
           "$mod, code:55, togglefloating," # v
           "$mod, code:41, fullscreen," # f
-          "$mod, code:27, exec, dms ipc call spotlight toggle" # r
+          "$mod, code:40, exec, dms ipc call spotlight toggle" # d
           "$mod SHIFT, code:55, exec, dms ipc call clipboard toggle" # Super+Shift+v
           "$mod, code:33, pseudo," # p
           "$mod, code:51, togglesplit," # \
@@ -234,6 +234,10 @@ in {
           "CONTROL SHIFT, Print, exec, dms screenshot window"
           "ALT, Print, exec, screenshot-path full path"
           "ALT SHIFT, Print, exec, dms screenshot full"
+
+          # --- Screen Recording ---
+          "$mod, code:27, exec, screenrecord region" # r
+          "$mod SHIFT, code:27, exec, screenrecord full" # R
 
           # --- DMS IPC Controls ---
           "$mod, code:57, exec, dms ipc call notifications toggle" # n
