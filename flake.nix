@@ -29,6 +29,17 @@
       url = "github:AvengeMedia/DankMaterialShell";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    hyprland = {
+      url = "github:hyprwm/Hyprland";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    ghostty = {
+      url = "github:ghostty-org/ghostty";
+      # Intentionally NOT following nixpkgs so ghostty uses its own pinned rev,
+      # matching what ghostty.cachix.org was built against for cache hits.
+    };
   };
 
   outputs = {

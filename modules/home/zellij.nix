@@ -18,6 +18,9 @@
           }
 
           shared_except "locked" {
+            // Exit any mode back to Normal
+            bind "Escape" { SwitchToMode "Normal"; }
+
             // --- INVERSE LAYOUT ---
             // Modes (Alt)
             bind "Alt p" { SwitchToMode "Pane"; }
