@@ -250,13 +250,14 @@ in {
         ];
 
         windowrule = [
-          # Video and image viewers are always fully opaque — content IS the window
           "opacity 1.0 override, match:class ^(mpv|vlc|imv|feh)$"
           "opacity 1.0 override, match:title ^(Picture-in-Picture)$"
-          # Apps using app-level transparency (CSS rgba / native bg-opacity):
-          #   Ghostty (background-opacity), Nautilus (GTK4 CSS), Brave/Firefox
-          #   (--enable-transparent-visuals), Vesktop/Obsidian (Electron flag + CSS)
-          # Apps still using compositor opacity (CSS approach pending or not applicable)
+          # Ghostty uses native background-opacity; compositor stays at 1.0
+          # Vesktop uses Translucence CSS for glass; compositor stays at 1.0
+          "opacity 0.75 override, match:class ^(brave-browser)$"
+          "opacity 0.75 override, match:class ^(firefox)$"
+          "opacity 0.75 override, match:class ^(org.gnome.Nautilus)$"
+          "opacity 0.75 override, match:class ^(obsidian)$"
           "opacity 0.80 override, match:class ^(Mailspring)$"
           "opacity 0.75 override, match:class ^(pear-runtime)$"
           "opacity 0.85 override, match:class ^(protonvpn-app)$"
