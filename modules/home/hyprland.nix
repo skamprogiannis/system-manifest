@@ -252,13 +252,13 @@ in {
         windowrule = [
           "opacity 1.0 override, match:class ^(brave-browser|firefox|chromium|google-chrome|zen|mpv|vlc|imv|feh)$"
           "opacity 1.0 override, match:title ^(Picture-in-Picture)$"
-          "opacity 0.82 override, match:class ^(com.mitchellh.ghostty)$"
-          "opacity 0.82 override, match:class ^(nautilus)$"
-          "opacity 0.82 override, match:class ^(vesktop)$"
-          "opacity 0.82 override, match:class ^(obsidian)$"
-          "opacity 0.82 override, match:class ^(Mailspring)$"
-          "opacity 0.82 override, match:class ^(pear-runtime)$"
-          "opacity 0.82 override, match:class ^(protonvpn-app)$"
+          "opacity 0.90 override, match:class ^(com.mitchellh.ghostty)$"
+          "opacity 0.90 override, match:class ^(org.gnome.Nautilus)$"
+          "opacity 0.90 override, match:class ^(vesktop)$"
+          "opacity 0.90 override, match:class ^(obsidian)$"
+          "opacity 0.90 override, match:class ^(Mailspring)$"
+          "opacity 0.90 override, match:class ^(pear-runtime)$"
+          "opacity 0.90 override, match:class ^(protonvpn-app)$"
           # Center credential/auth dialogs so they don't spawn between monitors
           "float 1, match:class ^(pinentry|pinentry-gtk-2|pinentry-gnome3|ssh-askpass|git-askpass)$"
           "center 1, match:class ^(pinentry|pinentry-gtk-2|pinentry-gnome3|ssh-askpass|git-askpass)$"
@@ -272,13 +272,16 @@ in {
           enabled = 1;
           default_theme = "dark";
           default_preset = "default";
-          blur_strength = 2.0;
+          blur_strength = 1.2;
           refraction_strength = 0.6;
           chromatic_aberration = 0.5;
           fresnel_strength = 0.6;
           specular_strength = 0.8;
           glass_opacity = 1.0;
           edge_thickness = 0.06;
+          "dark:brightness" = 0.94;
+          "dark:saturation" = 0.92;
+          "dark:adaptive_dim" = 0.15;
         };
       };
 
