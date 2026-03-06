@@ -16,13 +16,13 @@
     gtk4.extraCss = ''
       /* Liquid glass: transparent backgrounds, opaque content */
       window.background {
-        background-color: rgba(30, 15, 14, 0.75);
+        background-color: rgba(30, 30, 30, 0.75);
       }
       .view {
-        background-color: rgba(30, 15, 14, 0.70);
+        background-color: rgba(25, 25, 25, 0.70);
       }
       headerbar {
-        background-color: rgba(30, 15, 14, 0.80);
+        background-color: rgba(35, 35, 35, 0.80);
       }
     '';
   };

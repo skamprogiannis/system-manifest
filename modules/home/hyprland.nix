@@ -257,7 +257,7 @@ in {
           #   Ghostty (background-opacity), Nautilus (GTK4 CSS), Brave/Firefox
           #   (--enable-transparent-visuals), Vesktop/Obsidian (Electron flag + CSS)
           # Apps still using compositor opacity (CSS approach pending or not applicable)
-          "opacity 0.75 override, match:class ^(Mailspring)$"
+          "opacity 0.80 override, match:class ^(Mailspring)$"
           "opacity 0.75 override, match:class ^(pear-runtime)$"
           "opacity 0.85 override, match:class ^(protonvpn-app)$"
           # Center credential/auth dialogs so they don't spawn between monitors
@@ -280,6 +280,10 @@ in {
           specular_strength = 0.8;
           glass_opacity = 1.0;
           edge_thickness = 0.06;
+          # Dark theme processing - let more wallpaper color through
+          "dark:brightness" = 0.95;
+          "dark:saturation" = 0.95;
+          "dark:adaptive_dim" = 0.10;
         };
       };
 
