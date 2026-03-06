@@ -19,7 +19,7 @@
 
           shared_except "locked" {
             // Exit any mode back to Normal
-            bind "Escape" { SwitchToMode "Normal"; }
+            bind "Esc" { SwitchToMode "Normal"; }
 
             // --- INVERSE LAYOUT ---
             // Modes (Alt)
@@ -140,7 +140,7 @@
               exit 1
           fi
       else
-          selected_path=$(find ~/repositories ~/system_manifest -mindepth 1 -maxdepth 2 -type d | fzf)
+          selected_path=$(find ~/repositories ~/system-manifest -mindepth 1 -maxdepth 2 -type d | fzf)
       fi
 
       if [[ -z $selected_path ]]; then
