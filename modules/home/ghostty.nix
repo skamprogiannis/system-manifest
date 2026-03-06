@@ -9,7 +9,7 @@
     package = inputs.ghostty.packages.${pkgs.stdenv.hostPlatform.system}.ghostty;
     enableBashIntegration = false;
     settings = {
-      theme = "Dracula";
+      theme = "dankcolors";
       background-opacity = 0.75;
       font-family = "JetBrainsMono Nerd Font";
       font-size = 11;
