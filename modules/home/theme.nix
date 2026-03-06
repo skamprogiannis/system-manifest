@@ -13,6 +13,18 @@
       name = "Dracula";
       package = pkgs.dracula-theme;
     };
+    gtk4.extraCss = ''
+      /* Liquid glass: transparent backgrounds, opaque content */
+      window.background {
+        background-color: rgba(30, 30, 30, 0.75);
+      }
+      .view {
+        background-color: rgba(25, 25, 25, 0.70);
+      }
+      headerbar {
+        background-color: rgba(35, 35, 35, 0.80);
+      }
+    '';
   };
 
   # Also ensure standard hicolor icons are present for apps that need them

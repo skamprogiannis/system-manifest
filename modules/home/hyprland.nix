@@ -250,10 +250,16 @@ in {
         ];
 
         windowrule = [
-          "opacity 1.0, match:class ^(brave-browser|firefox|chromium|google-chrome|zen|mpv|vlc|imv|feh)$"
-          "opacity 1.0, match:title ^(Picture-in-Picture)$"
-          "opacity 0.82, match:class ^(com.mitchellh.ghostty)$"
-          "opacity 0.82, match:class ^(nautilus)$"
+          # Video and image viewers are always fully opaque — content IS the window
+          "opacity 1.0 override, match:class ^(mpv|vlc|imv|feh)$"
+          "opacity 1.0 override, match:title ^(Picture-in-Picture)$"
+          # Apps using app-level transparency (CSS rgba / native bg-opacity):
+          #   Ghostty (background-opacity), Nautilus (GTK4 CSS), Brave/Firefox
+          #   (--enable-transparent-visuals), Vesktop/Obsidian (Electron flag + CSS)
+          # Apps still using compositor opacity (CSS approach pending or not applicable)
+          "opacity 0.80 override, match:class ^(Mailspring)$"
+          "opacity 0.75 override, match:class ^(pear-runtime)$"
+          "opacity 0.85 override, match:class ^(protonvpn-app)$"
           # Center credential/auth dialogs so they don't spawn between monitors
           "float 1, match:class ^(pinentry|pinentry-gtk-2|pinentry-gnome3|ssh-askpass|git-askpass)$"
           "center 1, match:class ^(pinentry|pinentry-gtk-2|pinentry-gnome3|ssh-askpass|git-askpass)$"
@@ -274,6 +280,10 @@ in {
           specular_strength = 0.8;
           glass_opacity = 1.0;
           edge_thickness = 0.06;
+          # Dark theme processing - let more wallpaper color through
+          "dark:brightness" = 0.95;
+          "dark:saturation" = 0.95;
+          "dark:adaptive_dim" = 0.10;
         };
       };
 
