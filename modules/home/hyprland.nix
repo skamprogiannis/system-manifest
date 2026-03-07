@@ -96,7 +96,6 @@ in {
         exec-once = [
           "hyprctl setcursor ${config.home.pointerCursor.name} ${toString config.home.pointerCursor.size}"
           "wallpaper-hook &"
-          "systemctl --user start wallpaper-thumbnail-watcher.service"
         ];
 
         misc = {
