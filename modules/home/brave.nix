@@ -22,7 +22,6 @@
     extensions = [
       {id = "dbepggeogbaibhgnhhndojpepiihcmeb";} # Vimium C
       {id = "pdeffakfmcdnjjafophphgmddmigpejh";} # PearPass
-      {id = "klmoijkddehdpobmgicjlcidiijfngig";} # Dracula theme
     ];
   };
 
