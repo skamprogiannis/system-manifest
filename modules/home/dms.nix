@@ -59,7 +59,7 @@
       matugenTemplateHyprland = true;
       matugenTemplateFirefox = true;
       matugenTemplateVesktop = true;
-      matugenTemplateGhostty = true;
+      matugenTemplateGhostty = false;
       matugenTemplateNeovim = true;
       matugenTemplateZellij = true;
       matugenTemplateDgop = true;
