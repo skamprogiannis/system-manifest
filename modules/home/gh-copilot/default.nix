@@ -4,6 +4,7 @@
     EDITOR = "nvim";
     VISUAL = "nvim";
     GH_EDITOR = "nvim";
+    NIXOS_OZONE_WL = "1";
   };
 
   # Source GH_TOKEN from file if present — enables auth on machines where gnome-keyring
