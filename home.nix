@@ -38,12 +38,7 @@
     mpvpaper
     nautilus
     vesktop
-    (pkgs.mailspring.overrideAttrs (old: {
-      postInstall = (old.postInstall or "") + ''
-        sed -i 's|^Exec=mailspring|Exec=mailspring --password-store=basic|g' \
-          "$out/share/applications/Mailspring.desktop"
-      '';
-    }))
+    pkgs.mailspring
     obsidian
     protonvpn-gui
 
@@ -227,12 +222,11 @@
     noDisplay = true;
   };
 
-  # Mailspring: --password-store=basic needed on NixOS
   xdg.desktopEntries."Mailspring" = {
     name = "Mailspring";
     comment = "The best email app for people and teams at work";
     genericName = "Mail Client";
-    exec = "mailspring --password-store=basic %U";
+    exec = "mailspring %U";
     icon = "mailspring";
     categories = ["Network" "Email"];
     mimeType = ["x-scheme-handler/mailto" "x-scheme-handler/mailspring"];

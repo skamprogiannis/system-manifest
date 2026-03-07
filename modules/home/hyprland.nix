@@ -253,18 +253,6 @@ in {
           # Tier: Opaque — media players, no transparency
           "opacity 1.0 override, match:class ^(mpv|vlc|imv|feh)$"
           "opacity 1.0 override, match:title ^(Picture-in-Picture)$"
-          # Tier: Native RGBA — these apps handle transparency internally
-          # Ghostty: background-opacity=0.75; Vesktop: Electron transparent=true + Translucence CSS
-          # Tier: Compositor glass — lets hyprglass show through, text fades slightly
-          "opacity 0.85 override, match:class ^(obsidian)$"
-          "opacity 0.82 override, match:class ^(Mailspring)$"
-          "opacity 0.82 override, match:class ^(pear-runtime)$"
-          "opacity 0.88 override, match:class ^(protonvpn-app)$"
-          # Assign hyprglass compositor_glass preset to non-native-transparency apps
-          "tag +hyprglass_preset_compositor_glass, match:class ^(obsidian)$"
-          "tag +hyprglass_preset_compositor_glass, match:class ^(Mailspring)$"
-          "tag +hyprglass_preset_compositor_glass, match:class ^(pear-runtime)$"
-          "tag +hyprglass_preset_compositor_glass, match:class ^(protonvpn-app)$"
           # Center credential/auth dialogs so they don't spawn between monitors
           "float 1, match:class ^(pinentry|pinentry-gtk-2|pinentry-gnome3|ssh-askpass|git-askpass)$"
           "center 1, match:class ^(pinentry|pinentry-gtk-2|pinentry-gnome3|ssh-askpass|git-askpass)$"
@@ -286,11 +274,6 @@ in {
       extraConfig = ''
         $terminal = ghostty
 
-        # Hyprglass preset for compositor-opacity apps (higher blur, lower refraction)
-        plugin:hyprglass {
-          preset = name:compositor_glass, blur_strength:2.5, blur_iterations:4, refraction_strength:0.3, chromatic_aberration:0.2, fresnel_strength:0.4, specular_strength:0.6, lens_distortion:0.2
-          preset = name:compositor_glass:dark, brightness:0.88, contrast:0.98, saturation:0.85, adaptive_dim:0.20
-        }
       '';
     };
   };
