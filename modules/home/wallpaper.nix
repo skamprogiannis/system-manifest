@@ -119,33 +119,6 @@ set highlight-color "#$PRIMARY"
 set highlight-active-color "#$PRIMARY"
 EOF
 
-        echo "Updating GTK colors for Brave..."
-        for version in 3.0 4.0; do
-          mkdir -p "$HOME/.config/gtk-$version"
-          cat <<EOF > "$HOME/.config/gtk-$version/gtk.css"
-@define-color accent_color #$PRIMARY;
-@define-color accent_bg_color #$PRIMARY;
-@define-color accent_fg_color #$BG;
-@define-color window_bg_color #$BG;
-@define-color window_fg_color #$FG;
-@define-color view_bg_color #$BG;
-@define-color view_fg_color #$FG;
-@define-color headerbar_bg_color #$BG;
-@define-color headerbar_fg_color #$FG;
-@define-color headerbar_border_color #$BG;
-@define-color headerbar_backdrop_color @headerbar_bg_color;
-@define-color card_bg_color #$BG;
-@define-color card_fg_color #$FG;
-@define-color dialog_bg_color #$BG;
-@define-color dialog_fg_color #$FG;
-@define-color popover_bg_color #$BG;
-@define-color popover_fg_color #$FG;
-@define-color sidebar_bg_color #$BG;
-@define-color sidebar_fg_color #$FG;
-@define-color scrollbar_outline_color #$BG;
-EOF
-        done
-
         echo "Updating Hyprland borders..."
         hyprctl keyword general:col.active_border "rgba(''${PRIMARY}99)"
       }
