@@ -1,4 +1,4 @@
-{ pkgs, ... }: {
+{ pkgs, inputs, ... }: {
   # Ensure Copilot and gh open Neovim from any launcher context (shell, zellij, etc.)
   home.sessionVariables = {
     EDITOR = "nvim";
@@ -26,6 +26,28 @@
 
   # Global instructions — deployed to the path the Copilot CLI reads automatically
   home.file.".copilot/copilot-instructions.md".text = builtins.readFile ./instructions.md;
+
+  # --- Skills ---
+
+  # Visual Explainer — generates HTML diagrams, diff reviews, plan reviews
+  home.file.".copilot/skills/visual-explainer" = {
+    source = "${inputs.visual-explainer}/plugins/visual-explainer";
+    recursive = true;
+  };
+
+  # Technical Debt — codebase health analysis and refactoring roadmaps
+  home.file.".copilot/skills/technical-debt/SKILL.md".source = ./skills/technical-debt/SKILL.md;
+
+  # Browser Automation — PinchTab-based browser control for testing and scraping
+  home.file.".copilot/skills/browser-automation/SKILL.md".source = ./skills/browser-automation/SKILL.md;
+
+  # --- Custom Agents ---
+
+  # Plan Reviewer — structured 4-section plan review before implementation
+  home.file.".copilot/agents/plan-reviewer.agent.md".source = ./agents/plan-reviewer.agent.md;
+
+  # Security Reviewer — OWASP-focused security analysis for new code
+  home.file.".copilot/agents/security-reviewer.agent.md".source = ./agents/security-reviewer.agent.md;
 
   # MCP servers — Context7 for library docs; GitHub MCP is built-in
   home.file.".copilot/mcp-config.json".text = builtins.toJSON {

@@ -79,3 +79,40 @@ Examples:
 3. **Verify window state** - rules only apply to NEW windows
 4. **Check git history** - `git log --oneline -10` to see recent changes
 5. **Ask: Did the user rebuild?** - Configuration changes require rebuild to apply
+
+## Greenfield Project Workflow
+
+When building new projects from scratch, use the following workflow and tools:
+
+### Available Skills
+
+| Skill | What it does | Trigger |
+|-------|-------------|---------|
+| `visual-explainer` | Generate HTML diagrams, diff reviews, plan reviews, architecture overviews | Ask for any diagram, visualization, or when presenting complex tables |
+| `technical-debt` | Analyze codebase health, quantify debt, generate refactoring roadmaps | Ask for debt audit, code health check, or refactoring plan |
+| `browser-automation` | Control Chrome via PinchTab for testing, scraping, form filling | Ask to test a web UI, extract page content, or automate browser tasks |
+
+### Available Agents
+
+| Agent | What it does | When to use |
+|-------|-------------|-------------|
+| `plan-reviewer` | Structured 4-section plan review (Architecture → Code Quality → Tests → Performance) | Before implementing any significant plan |
+| `security-reviewer` | OWASP-focused security analysis with severity ratings | When writing auth, API, input handling, or any security-sensitive code |
+
+### Project Bootstrap Sequence
+
+1. **Scaffold** with Spec Kit: `specify init <PROJECT_NAME> --ai copilot`
+2. **Define constitution**: `/speckit.constitution` — guiding principles
+3. **Specify features**: `/speckit.specify` — describe what to build
+4. **Plan**: `/speckit.plan` or `/plan` — generate implementation plan
+5. **Review plan**: Use `@plan-reviewer` agent before coding
+6. **Implement**: `/speckit.implement` or work interactively
+7. **Security check**: Use `@security-reviewer` agent on new code
+8. **Visualize**: Use `visual-explainer` skill for architecture diagrams
+
+### Multi-Agent Patterns
+
+- **Plan → Review → Implement**: Create plan, run plan-reviewer agent, then implement
+- **Implement → Security → Ship**: Write code, run security-reviewer agent, then commit
+- **Audit → Roadmap**: Run technical-debt skill, then plan refactoring sprints
+- **Test → Visualize**: Run tests, then use visual-explainer for coverage reports
