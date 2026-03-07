@@ -268,6 +268,9 @@ in {
           default_preset = "glass";
           glass_opacity = 1.0;
           edge_thickness = 0.06;
+          refraction_strength = 5.0;
+          chromatic_aberration = 0.4;
+          lens_distortion = 0.2;
         };
       };
 
