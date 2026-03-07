@@ -71,5 +71,29 @@
       name = "IBus Preferences";
       noDisplay = true;
     };
+    # Hide individual Zathura plugin desktop entries — only the main one should appear
+    "org.pwmt.zathura-djvu" = { name = "Zathura"; exec = "zathura %U"; noDisplay = true; };
+    "org.pwmt.zathura-pdf-mupdf" = { name = "Zathura"; exec = "zathura %U"; noDisplay = true; };
+    "org.pwmt.zathura-cb" = { name = "Zathura"; exec = "zathura %U"; noDisplay = true; };
+    "org.pwmt.zathura-ps" = { name = "Zathura"; exec = "zathura %U"; noDisplay = true; };
+    # Neovim in Ghostty — used as the default text editor
+    "nvim-text" = {
+      name = "Neovim";
+      genericName = "Text Editor";
+      exec = "ghostty -e nvim %F";
+      icon = "nvim";
+      terminal = false;
+      mimeType = [
+        "text/plain"
+        "text/markdown"
+        "text/css"
+        "text/javascript"
+        "text/x-script.python"
+        "application/json"
+        "application/x-shellscript"
+        "application/x-sh"
+      ];
+      categories = ["Utility" "TextEditor"];
+    };
   };
 }
