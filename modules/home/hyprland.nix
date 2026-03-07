@@ -256,13 +256,11 @@ in {
           # Tier: Native RGBA — these apps handle transparency internally
           # Ghostty: background-opacity=0.75; Vesktop: Electron transparent=true + Translucence CSS
           # Tier: Compositor glass — lets hyprglass show through, text fades slightly
-          "opacity 0.85 override, match:class ^(org.gnome.Nautilus)$"
           "opacity 0.85 override, match:class ^(obsidian)$"
           "opacity 0.82 override, match:class ^(Mailspring)$"
           "opacity 0.82 override, match:class ^(pear-runtime)$"
           "opacity 0.88 override, match:class ^(protonvpn-app)$"
           # Assign hyprglass compositor_glass preset to non-native-transparency apps
-          "tag +hyprglass_preset_compositor_glass, match:class ^(org.gnome.Nautilus)$"
           "tag +hyprglass_preset_compositor_glass, match:class ^(obsidian)$"
           "tag +hyprglass_preset_compositor_glass, match:class ^(Mailspring)$"
           "tag +hyprglass_preset_compositor_glass, match:class ^(pear-runtime)$"
