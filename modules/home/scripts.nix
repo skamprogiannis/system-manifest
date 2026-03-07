@@ -102,27 +102,34 @@
       fi
     '')
     (pkgs.writeShellScriptBin "screenrecord" ''
-      LOCK="/tmp/screenrecord.pid"
+      LOCK="/tmp/screenrecord.lock"
+
+      if [ -f "$LOCK" ]; then
+          PID=$(head -1 "$LOCK")
+          SAVED=$(tail -1 "$LOCK")
+          if kill -0 "$PID" 2>/dev/null; then
+              kill "$PID"
+              rm -f "$LOCK"
+              ${pkgs.libnotify}/bin/notify-send -u low "Recording stopped" "$SAVED"
+              exit 0
+          else
+              rm -f "$LOCK"
+          fi
+      fi
+
       DEST="$HOME/videos/screencasts/screencast_$(date +%F_%H-%M-%S).mp4"
       mkdir -p "$(dirname "$DEST")"
-
-      if [ -f "$LOCK" ] && kill -0 "$(cat "$LOCK")" 2>/dev/null; then
-          kill "$(cat "$LOCK")"
-          rm -f "$LOCK"
-          ${pkgs.libnotify}/bin/notify-send -u low "Recording stopped" "$DEST"
-      else
-          MODE="''${1:-region}"
-          case "$MODE" in
-              full)
-                  ${pkgs.wf-recorder}/bin/wf-recorder --audio -f "$DEST" &
-                  ;;
-              *)
-                  ${pkgs.wf-recorder}/bin/wf-recorder --audio -g "$(${pkgs.slurp}/bin/slurp)" -f "$DEST" &
-                  ;;
-          esac
-          echo $! > "$LOCK"
-          ${pkgs.libnotify}/bin/notify-send -u low "Recording started" "Mode: $MODE — press Super+R again to stop"
-      fi
+      MODE="''${1:-region}"
+      case "$MODE" in
+          full)
+              ${pkgs.wf-recorder}/bin/wf-recorder --audio -f "$DEST" &
+              ;;
+          *)
+              ${pkgs.wf-recorder}/bin/wf-recorder --audio -g "$(${pkgs.slurp}/bin/slurp)" -f "$DEST" &
+              ;;
+      esac
+      printf '%s\n%s\n' "$!" "$DEST" > "$LOCK"
+      ${pkgs.libnotify}/bin/notify-send -u low "Recording started" "Mode: $MODE — press Super+R again to stop"
     '')
   ];
 
