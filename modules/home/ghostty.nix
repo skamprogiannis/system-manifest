@@ -10,7 +10,7 @@
     enableBashIntegration = false;
     settings = {
       theme = "dankcolors";
-      background-opacity = 0.75;
+      background-opacity = 0.5;
       font-family = "JetBrainsMono Nerd Font";
       font-size = 11;
 
