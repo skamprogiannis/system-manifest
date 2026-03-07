@@ -57,7 +57,7 @@
       runUserMatugenTemplates = true;
       matugenTemplateGtk = true;
       matugenTemplateHyprland = true;
-      matugenTemplateFirefox = true;
+      matugenTemplateFirefox = false;
       matugenTemplateVesktop = true;
       matugenTemplateGhostty = false;
       matugenTemplateNeovim = true;
