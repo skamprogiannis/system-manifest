@@ -25,6 +25,11 @@
       flake = false;
     };
 
+    visual-explainer = {
+      url = "github:nicobailon/visual-explainer";
+      flake = false;
+    };
+
     dms = {
       url = "github:AvengeMedia/DankMaterialShell";
       inputs.nixpkgs.follows = "nixpkgs";
