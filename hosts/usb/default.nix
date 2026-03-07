@@ -7,10 +7,9 @@
   imports = [
     ../common/default.nix
     ../../modules/nixos/hyprland.nix
+    ../../modules/nixos/gnome.nix
     ./hardware-configuration.nix
   ];
-
-  services.displayManager.gdm.enable = true;
 
   networking.hostName = "nixos-usb";
 
