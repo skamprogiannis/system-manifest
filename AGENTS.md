@@ -60,6 +60,9 @@ Use **Spec Kit** (`specify` CLI) to scaffold spec-driven development for new pro
 - **Systemd buffers:** When managing video surfaces (like `mpvpaper`) on Nvidia/Wayland, use systemd with `RestartSec=2.5` to prevent GPU buffer race conditions that crash the compositor.
 - **Cursor Baking:** Always manually symlink modern cursor names (`left_ptr`, `pointer`, `default`, `progress`, `alias`) in custom theme derivations to prevent Adwaita fallbacks in browsers and system bars.
 - **Hyprland Syntax:** `windowrulev2` is deprecated; use `windowrule` with `match:class` or `match:title` for all new configuration.
+- **Hyprglass Transparency:** Hyprglass draws at `DECORATION_LAYER_BOTTOM` (behind window content). Glass only shows through transparent pixels. Native RGBA transparency (Ghostty's `background-opacity`, Vesktop's `transparent: true`) = proper liquid glass with opaque text. Compositor opacity (`opacity X override`) = uniform fade (text also becomes transparent). For compositor-opacity apps, use the `compositor_glass` preset (higher blur, lower refraction) to mask text fade. Default preset `high_contrast` (blur 1.2, contrast 1.14) is less milky than `default` (blur 2.0).
+- **NIXOS_OZONE_WL Placement:** Must be in `home.sessionVariables` (e.g., in `modules/home/gh-copilot/default.nix`), NOT in Hyprland's `env =` block. Hyprland env= only propagates to keybind-launched apps, not DMS/QuickShell spotlight launchers. Session variables propagate to all user processes (D-Bus, systemd) and require log-out/log-in to take effect.
+- **Desktop Entry Exec Lines:** Cannot contain complex shell syntax, pipes, redirects, or unquoted special characters. Use `pkgs.writeShellScript` to create a wrapper script and reference it in `exec`. Example: Vesktop needs a wrapper to patch `settings.json` before launch because Vesktop overwrites settings on exit.
 
 ## USB Update Workflow
 
