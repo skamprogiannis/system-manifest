@@ -17,9 +17,17 @@
       extraCss = ''
         /* rgba() transparency for Nautilus and GTK4 apps.
          * Dracula palette: bg=#282a36 (40,42,54), current-line=#44475a (68,71,90)
-         * Text/icons are NOT affected — only background surfaces get alpha < 1.
-         * Nix manages this; wallpaper-hook no longer overwrites gtk.css. */
-        window {
+         * libadwaita uses CSS custom properties for colors, not plain selectors.
+         * We set both --window-bg-color and background-color for full coverage. */
+        :root, window {
+          --window-bg-color: rgba(40, 42, 54, 0.82);
+          --headerbar-bg-color: rgba(68, 71, 90, 0.88);
+          --sidebar-bg-color: rgba(40, 42, 54, 0.75);
+          --view-bg-color: rgba(40, 42, 54, 0.78);
+          --popover-bg-color: rgba(68, 71, 90, 0.92);
+        }
+        window,
+        .background {
           background-color: rgba(40, 42, 54, 0.82);
         }
         headerbar {
@@ -28,7 +36,7 @@
         headerbar:backdrop {
           background-color: rgba(68, 71, 90, 0.72);
         }
-        .nautilus-window .sidebar {
+        .sidebar, .nautilus-window .sidebar {
           background-color: rgba(40, 42, 54, 0.75);
         }
         .view, .content-view {
