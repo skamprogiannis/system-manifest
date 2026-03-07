@@ -671,7 +671,8 @@
         "nixpkgs": "nixpkgs_2",
         "nixvim": "nixvim",
         "pearpass-app-desktop": "pearpass-app-desktop",
-        "spotify-player": "spotify-player"
+        "spotify-player": "spotify-player",
+        "visual-explainer": "visual-explainer"
       }
     },
     "spotify-player": {
@@ -752,6 +753,22 @@
       "original": {
         "owner": "nix-systems",
         "repo": "default",
+        "type": "github"
+      }
+    },
+    "visual-explainer": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1772770231,
+        "narHash": "sha256-ZTqOGDNjCwcsbJlBrOuV5PwizQzvaUW13db43JeLErc=",
+        "owner": "nicobailon",
+        "repo": "visual-explainer",
+        "rev": "f41c48fd507c95f53151047788662e91def8c673",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nicobailon",
+        "repo": "visual-explainer",
         "type": "github"
       }
     },
