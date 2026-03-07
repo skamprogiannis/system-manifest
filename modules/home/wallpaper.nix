@@ -22,7 +22,6 @@
   home.packages = [
     pkgs.swaybg
     (pkgs.writeShellScriptBin "we-sync" ''
-      WE_BASE="$HOME/games/SteamLibrary/steamapps/common/wallpaper_engine"
       WE_WORKSHOP="$HOME/games/SteamLibrary/steamapps/workshop/content/431960"
       WALL_DIR="$HOME/wallpapers"
       MAP_FILE="$HOME/.cache/we-wallpaper-map.json"
@@ -34,75 +33,62 @@
       FIRST=true
       declare -A EXPECTED_THUMBS
 
-      sync_source_dir() {
-        local source_dir="$1"
-        [ -d "$source_dir" ] || return
+      for dir in "$WE_WORKSHOP"/*/; do
+        [ -d "$dir" ] || continue
+        [ -f "$dir/project.json" ] || continue
 
-        for dir in "$source_dir"/*/; do
-          [ -d "$dir" ] || continue
-          [ -f "$dir/project.json" ] || continue
+        PREVIEW_SRC=""
+        if [ -f "$dir/preview.jpg" ]; then
+          PREVIEW_SRC="$dir/preview.jpg"
+        elif [ -f "$dir/preview.gif" ]; then
+          PREVIEW_SRC="$dir/preview.gif"
+        else
+          continue
+        fi
 
-          # Prefer jpg, fall back to gif (imagemagick handles both)
-          local PREVIEW_SRC="" PREVIEW_FRAME=""
-          if [ -f "$dir/preview.jpg" ]; then
-            PREVIEW_SRC="$dir/preview.jpg"
-            PREVIEW_FRAME="$dir/preview.jpg"
-          elif [ -f "$dir/preview.gif" ]; then
-            PREVIEW_SRC="$dir/preview.gif"
-            PREVIEW_FRAME="$dir/preview.gif[0]"
-          else
-            continue
-          fi
+        TITLE=$(${pkgs.jq}/bin/jq -r '.title // "unknown"' "$dir/project.json")
+        SAFE_TITLE=$(echo "$TITLE" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9._-]/-/g' | sed 's/--*/-/g' | sed 's/^-//;s/-$//')
+        THUMB_NAME="''${SAFE_TITLE}.jpg"
 
-          local TITLE SAFE_TITLE THUMB_NAME
-          TITLE=$(${pkgs.jq}/bin/jq -r '.title // "unknown"' "$dir/project.json")
-          SAFE_TITLE=$(echo "$TITLE" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9._-]/-/g' | sed 's/--*/-/g' | sed 's/^-//;s/-$//')
-          THUMB_NAME="''${SAFE_TITLE}.jpg"
+        # Handle duplicate names by appending dir basename
+        if [ -n "''${EXPECTED_THUMBS[$THUMB_NAME]+x}" ]; then
+          THUMB_NAME="''${SAFE_TITLE}-$(basename "$dir").jpg"
+        fi
+        EXPECTED_THUMBS["$THUMB_NAME"]=1
 
-          # Handle duplicate names by appending dir basename
-          if [ -n "''${EXPECTED_THUMBS[$THUMB_NAME]+x}" ]; then
-            THUMB_NAME="''${SAFE_TITLE}-$(basename "$dir").jpg"
-          fi
-          EXPECTED_THUMBS["$THUMB_NAME"]=1
+        THUMB_PATH="$WALL_DIR/$THUMB_NAME"
 
-          local THUMB_PATH="$WALL_DIR/$THUMB_NAME"
-          # Regenerate thumbnail if missing or source is newer
+        if [ "''${PREVIEW_SRC##*.}" = "gif" ]; then
+          # Convert first gif frame to jpg
           if [ ! -f "$THUMB_PATH" ] || [ "$PREVIEW_SRC" -nt "$THUMB_PATH" ]; then
-            # Blurred 16:9 background + centered original on top
-            ${pkgs.imagemagick}/bin/convert "$PREVIEW_FRAME" \
-              \( -clone 0 -resize 640x360^ -blur 0x12 -brightness-contrast -30x-10 \) \
-              \( -clone 0 -resize 640x360 \) \
-              -delete 0 -gravity center -composite \
-              "$THUMB_PATH" 2>/dev/null || \
-              ${pkgs.imagemagick}/bin/convert "$PREVIEW_FRAME" "$THUMB_PATH" 2>/dev/null
+            ${pkgs.imagemagick}/bin/magick "''${PREVIEW_SRC}[0]" "$THUMB_PATH" 2>/dev/null
           fi
+        else
+          # Symlink jpg preview directly
+          ln -sf "$PREVIEW_SRC" "$THUMB_PATH"
+        fi
 
-          if [ "$FIRST" = true ]; then
-            FIRST=false
-          else
-            echo "," >> "$MAP_FILE.tmp"
-          fi
-          printf '  "%s": "%s"' "$THUMB_NAME" "$dir" >> "$MAP_FILE.tmp"
-        done
-      }
-
-      # Scan all WE wallpaper sources
-      sync_source_dir "$WE_WORKSHOP"
-      sync_source_dir "$WE_BASE/projects/defaultprojects"
-      sync_source_dir "$WE_BASE/projects/myprojects"
+        if [ "$FIRST" = true ]; then
+          FIRST=false
+        else
+          echo "," >> "$MAP_FILE.tmp"
+        fi
+        printf '  "%s": "%s"' "$THUMB_NAME" "$dir" >> "$MAP_FILE.tmp"
+      done
 
       echo "" >> "$MAP_FILE.tmp"
       echo "}" >> "$MAP_FILE.tmp"
       mv "$MAP_FILE.tmp" "$MAP_FILE"
 
-      # Clean stale WE thumbnails (real files whose names aren't in current mapping)
+      # Clean stale thumbnails not in current mapping
       for thumb in "$WALL_DIR"/*.jpg; do
-        [ -f "$thumb" ] || continue
-        [ -L "$thumb" ] && continue  # skip symlinks (e.g. static wallpapers)
+        [ -f "$thumb" ] || [ -L "$thumb" ] || continue
         BASENAME=$(basename "$thumb")
+        # Skip static wallpapers subdirectory contents
+        [[ "$thumb" == */static/* ]] && continue
         if [ -z "''${EXPECTED_THUMBS[$BASENAME]+x}" ]; then
-          echo "Removing stale thumbnail: $BASENAME"
-          rm "$thumb"
+          echo "Removing stale: $BASENAME"
+          rm -f "$thumb"
         fi
       done
 
