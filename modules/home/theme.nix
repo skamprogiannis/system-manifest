@@ -17,32 +17,17 @@
       extraCss = ''
         /* rgba() transparency for Nautilus and GTK4 apps.
          * Dracula palette: bg=#282a36 (40,42,54), current-line=#44475a (68,71,90)
-         * Override Dracula's @define-color named colors with rgba() versions,
-         * then use !important on selectors to win any specificity battles. */
-        @define-color theme_bg_color rgba(40, 42, 54, 0.82);
-        @define-color theme_base_color rgba(40, 42, 54, 0.82);
-        @define-color theme_unfocused_bg_color rgba(40, 42, 54, 0.72);
-        @define-color theme_unfocused_base_color rgba(40, 42, 54, 0.72);
-        window,
-        .background,
-        .background:not(.tiled):not(.maximized) {
-          background-color: rgba(40, 42, 54, 0.82) !important;
-        }
-        headerbar {
-          background-color: rgba(68, 71, 90, 0.88) !important;
-        }
-        headerbar:backdrop {
-          background-color: rgba(68, 71, 90, 0.72) !important;
-        }
-        .sidebar, .nautilus-window .sidebar {
-          background-color: rgba(40, 42, 54, 0.75) !important;
-        }
-        .view, .content-view {
-          background-color: rgba(40, 42, 54, 0.78) !important;
-        }
-        popover > contents {
-          background-color: rgba(68, 71, 90, 0.92) !important;
-        }
+         * libadwaita uses its own named color variables (NOT theme_bg_color).
+         * Setting window_bg_color etc. as rgba() makes backgrounds transparent
+         * while text/icons remain fully opaque. */
+        @define-color window_bg_color rgba(40, 42, 54, 0.82);
+        @define-color window_fg_color #f8f8f2;
+        @define-color headerbar_bg_color rgba(68, 71, 90, 0.88);
+        @define-color headerbar_backdrop_color rgba(68, 71, 90, 0.72);
+        @define-color sidebar_bg_color rgba(40, 42, 54, 0.75);
+        @define-color view_bg_color rgba(40, 42, 54, 0.78);
+        @define-color popover_bg_color rgba(68, 71, 90, 0.92);
+        @define-color card_bg_color rgba(68, 71, 90, 0.6);
       '';
     };
   };
