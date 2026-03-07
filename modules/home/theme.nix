@@ -17,33 +17,31 @@
       extraCss = ''
         /* rgba() transparency for Nautilus and GTK4 apps.
          * Dracula palette: bg=#282a36 (40,42,54), current-line=#44475a (68,71,90)
-         * libadwaita uses CSS custom properties for colors, not plain selectors.
-         * We set both --window-bg-color and background-color for full coverage. */
-        :root, window {
-          --window-bg-color: rgba(40, 42, 54, 0.82);
-          --headerbar-bg-color: rgba(68, 71, 90, 0.88);
-          --sidebar-bg-color: rgba(40, 42, 54, 0.75);
-          --view-bg-color: rgba(40, 42, 54, 0.78);
-          --popover-bg-color: rgba(68, 71, 90, 0.92);
-        }
+         * Override Dracula's @define-color named colors with rgba() versions,
+         * then use !important on selectors to win any specificity battles. */
+        @define-color theme_bg_color rgba(40, 42, 54, 0.82);
+        @define-color theme_base_color rgba(40, 42, 54, 0.82);
+        @define-color theme_unfocused_bg_color rgba(40, 42, 54, 0.72);
+        @define-color theme_unfocused_base_color rgba(40, 42, 54, 0.72);
         window,
-        .background {
-          background-color: rgba(40, 42, 54, 0.82);
+        .background,
+        .background:not(.tiled):not(.maximized) {
+          background-color: rgba(40, 42, 54, 0.82) !important;
         }
         headerbar {
-          background-color: rgba(68, 71, 90, 0.88);
+          background-color: rgba(68, 71, 90, 0.88) !important;
         }
         headerbar:backdrop {
-          background-color: rgba(68, 71, 90, 0.72);
+          background-color: rgba(68, 71, 90, 0.72) !important;
         }
         .sidebar, .nautilus-window .sidebar {
-          background-color: rgba(40, 42, 54, 0.75);
+          background-color: rgba(40, 42, 54, 0.75) !important;
         }
         .view, .content-view {
-          background-color: rgba(40, 42, 54, 0.78);
+          background-color: rgba(40, 42, 54, 0.78) !important;
         }
         popover > contents {
-          background-color: rgba(68, 71, 90, 0.92);
+          background-color: rgba(68, 71, 90, 0.92) !important;
         }
       '';
     };
