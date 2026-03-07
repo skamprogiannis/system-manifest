@@ -6,7 +6,7 @@
 }: {
   imports = [
     ../common/default.nix
-    ../../modules/nixos/hyprland.nix
+    ../../modules/desktop-enviroments/hyprland.nix
     ./hardware-configuration.nix
   ];
 
