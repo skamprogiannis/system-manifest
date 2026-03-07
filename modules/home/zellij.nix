@@ -8,6 +8,7 @@
     enableBashIntegration = false;
     settings = {
       default_shell = "bash";
+      escape_timeout = 0;
     };
     extraConfig = ''
       keybinds {
@@ -17,10 +18,17 @@
             bind "Alt g" { SwitchToMode "Normal"; }
           }
 
-          shared_except "locked" {
-            // Exit any mode back to Normal
+          // Esc only exits modes back to Normal (not in Normal mode — pass through to apps)
+          shared_except "locked" "normal" {
             bind "Esc" { SwitchToMode "Normal"; }
+          }
 
+          normal {
+            // Esc is unbound so Vim, Copilot etc. receive it uninterrupted
+            unbind "Esc"
+          }
+
+          shared_except "locked" {
             // --- INVERSE LAYOUT ---
             // Modes (Alt)
             bind "Alt p" { SwitchToMode "Pane"; }
