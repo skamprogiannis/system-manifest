@@ -277,7 +277,7 @@ in {
         "plugin:hyprglass" = {
           enabled = 1;
           default_theme = "dark";
-          default_preset = "high_contrast";
+          default_preset = "glass";
           glass_opacity = 1.0;
           edge_thickness = 0.06;
         };
