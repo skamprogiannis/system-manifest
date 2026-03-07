@@ -35,7 +35,7 @@
     imv
     kooha
     mpv
-    mpvpaper
+    linux-wallpaperengine
     nautilus
     vesktop
     pkgs.mailspring
