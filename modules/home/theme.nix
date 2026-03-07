@@ -13,23 +13,7 @@
       name = "Dracula";
       package = pkgs.dracula-theme;
     };
-    gtk4 = {
-      extraCss = ''
-        /* rgba() transparency for Nautilus and GTK4 apps.
-         * Dracula palette: bg=#282a36 (40,42,54), current-line=#44475a (68,71,90)
-         * libadwaita uses its own named color variables (NOT theme_bg_color).
-         * Setting window_bg_color etc. as rgba() makes backgrounds transparent
-         * while text/icons remain fully opaque. */
-        @define-color window_bg_color rgba(40, 42, 54, 0.82);
-        @define-color window_fg_color #f8f8f2;
-        @define-color headerbar_bg_color rgba(68, 71, 90, 0.88);
-        @define-color headerbar_backdrop_color rgba(68, 71, 90, 0.72);
-        @define-color sidebar_bg_color rgba(40, 42, 54, 0.75);
-        @define-color view_bg_color rgba(40, 42, 54, 0.78);
-        @define-color popover_bg_color rgba(68, 71, 90, 0.92);
-        @define-color card_bg_color rgba(68, 71, 90, 0.6);
-      '';
-    };
+    gtk4 = {};
   };
 
   # Also ensure standard hicolor icons are present for apps that need them
