@@ -100,13 +100,15 @@
     '';
   };
 in {
+  # Keep HollowKnight package available for future use
   home.packages = [
     hollow-knight-cursors
+    pkgs.adwaita-icon-theme
   ];
 
   home.pointerCursor = {
-    package = hollow-knight-cursors;
-    name = "HollowKnight";
+    package = pkgs.adwaita-icon-theme;
+    name = "Adwaita";
     size = 24;
     gtk.enable = true;
     x11.enable = true;

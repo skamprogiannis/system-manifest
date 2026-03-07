@@ -6,15 +6,6 @@
 }: {
   programs.firefox = {
     enable = true;
-    # Install Dracula theme via policy — forces installation without profile extension path issues
-    policies = {
-      ExtensionSettings = {
-        "dracula-dark-colorscheme@draculatheme.com" = {
-          install_url = "https://addons.mozilla.org/firefox/downloads/latest/dracula-dark-colorscheme/latest.xpi";
-          installation_mode = "force_installed";
-        };
-      };
-    };
     profiles.stefan = {
       isDefault = true;
       settings = {
