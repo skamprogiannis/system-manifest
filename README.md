@@ -7,14 +7,13 @@ Declarative infrastructure source-of-truth. Defines system state, configurations
 - **Multi-Host Configuration:** Shared common configuration with host-specific overrides for `desktop` and `usb` (live/portable system).
 - **Hyprland Desktop:** Wayland tiling compositor with glassmorphism aesthetics powered by the [hyprglass](https://github.com/hyprnux/hyprglass) blur/vibrancy plugin (`glass` preset). Ghostty uses native `background-opacity` for true liquid-glass (background transparent, text fully opaque).
 - **USB: Dual Session** — USB host boots with GDM offering a session picker between **GNOME** and **Hyprland**.
-- **Nautilus Transparency:** GTK4 CSS `rgba()` overrides give Nautilus a semi-transparent Dracula-palette background while text and icons remain fully opaque.
 - **Gaming Mode:** A dedicated specialisation (`gaming-box`) that boots directly into Steam Big Picture Mode with Gamescope.
 - **Media & Productivity:**
   - **Spotify Player:** Terminal-based Spotify client (`spotify_player`) with streaming support.
   - **Transmission:** BitTorrent daemon with `tremc` TUI frontend.
   - **Mailspring:** Email client; credentials stored via GNOME Keyring (runs standalone, no GNOME shell required).
   - **Obsidian:** Note-taking application with Home Manager plugin management.
-  - **Vesktop:** Discord client with native transparency support.
+  - **Vesktop:** Discord client (Translucence CSS theme managed imperatively).
 - **Dev Ready:** Pre-configured environment for Node.js, Python, Go, and Neovim (via nixvim). Neovim is also registered as the default text editor via an `nvim-text` XDG desktop entry (opens in Ghostty).
 - **AI Integrated:** Built-in configuration for **OpenCode** (AI Terminal Agent) and **GitHub Copilot CLI** with per-repo `AGENTS.md` instructions. Global Copilot instructions at `~/.copilot/AGENTS.md`.
 - **Modular Architecture:** Configuration split across `hosts/` (system-level) and `modules/home/` (user-level) for maintainability.
@@ -37,7 +36,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 
 ## Workflow & UI
 
-- **Glassmorphism Aesthetics:** True liquid-glass effect — Ghostty uses `background-opacity = 0.5` with the hyprglass `glass` preset so only the terminal background is transparent (text fully opaque). Nautilus and GTK4 apps use `rgba()` CSS. Some apps (Obsidian, Mailspring, ProtonVPN, PearPass) use compositor opacity + `compositor_glass` hyprglass preset.
+- **Glassmorphism Aesthetics:** True liquid-glass effect — Ghostty uses `background-opacity = 0.5` with the hyprglass `glass` preset so only the terminal background is transparent (text fully opaque). Some apps (Obsidian, Mailspring, ProtonVPN, PearPass) use compositor opacity + `compositor_glass` hyprglass preset.
 - **Dynamic Theming:** Matugen-powered Hyprland border colours and video wallpapers (`mpvpaper`) synced via a custom `wallpaper-hook` daemon. GTK uses the **Dracula** theme; Ghostty uses the built-in **Dracula** colour scheme.
 - **Cursor:** Adwaita (system default). HollowKnight cursor theme is built and available for future use.
 - **Zellij Navigation:** `Alt`-based keybindings for all multiplexer actions; `Escape` in Normal mode is unbound so it passes through to terminal apps (Vim, Copilot CLI, etc.).

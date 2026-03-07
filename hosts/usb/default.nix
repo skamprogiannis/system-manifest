@@ -6,8 +6,8 @@
 }: {
   imports = [
     ../common/default.nix
-    ../../modules/nixos/hyprland.nix
-    ../../modules/nixos/gnome.nix
+    ../../modules/desktop-enviroments/hyprland.nix
+    ../../modules/desktop-enviroments/gnome.nix
     ./hardware-configuration.nix
   ];
 
