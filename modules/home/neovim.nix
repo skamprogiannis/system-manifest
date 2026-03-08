@@ -16,6 +16,30 @@
       number = true;
     };
 
+    # Filetype-specific column rulers
+    autoCmd = [
+      {
+        event = "FileType";
+        pattern = "gitcommit";
+        command = "setlocal colorcolumn=50,72"; # subject line / body wrap
+      }
+      {
+        event = "FileType";
+        pattern = "go";
+        command = "setlocal colorcolumn=100"; # Uber Go style guide
+      }
+      {
+        event = "FileType";
+        pattern = [ "javascript" "typescript" "javascriptreact" "typescriptreact" ];
+        command = "setlocal colorcolumn=100";
+      }
+      {
+        event = "FileType";
+        pattern = "cs";
+        command = "setlocal colorcolumn=120"; # Microsoft C# conventions
+      }
+    ];
+
     colorschemes.dracula.enable = true;
 
     plugins = {
