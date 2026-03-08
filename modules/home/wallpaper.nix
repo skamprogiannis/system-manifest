@@ -32,11 +32,34 @@
       FIRST=true
       declare -A EXPECTED_THUMBS
 
-      # Generate a 16:9 thumbnail padded with the image's own average color
-      generate_thumb() {
+      WE_ASSETS="$HOME/games/SteamLibrary/steamapps/common/wallpaper_engine/assets"
+
+      # Render a 1920x1080 screenshot via WE's offscreen GL window
+      generate_screenshot() {
+        local bg_dir="$1" dst="$2"
+        rm -f "$dst"
+        ${pkgs.linux-wallpaperengine}/bin/linux-wallpaperengine \
+          --assets-dir "$WE_ASSETS" \
+          --window 0x0x1920x1080 \
+          --screenshot "$dst" \
+          --screenshot-delay 3 --fps 1 \
+          --silent --disable-mouse \
+          "$bg_dir" &>/dev/null &
+        local pid=$!
+        # Poll until screenshot file appears (max 10s)
+        local waited=0
+        while [ ! -s "$dst" ] && kill -0 "$pid" 2>/dev/null && [ "$waited" -lt 50 ]; do
+          sleep 0.2
+          waited=$((waited + 1))
+        done
+        kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null
+        [ -s "$dst" ]
+      }
+
+      # Fallback: pad preview image to 16:9 with its own average color
+      generate_thumb_fallback() {
         local src="$1" dst="$2"
         local frame="$src"
-        # Use first frame for gifs
         [[ "$src" == *.gif ]] && frame="''${src}[0]"
         AVG=$(${pkgs.imagemagick}/bin/magick "$frame" -resize 1x1! -format '%[hex:p{0,0}]' info: 2>/dev/null)
         [ -z "$AVG" ] && AVG="000000"
@@ -52,15 +75,6 @@
         [ -d "$dir" ] || return
         [ -f "$dir/project.json" ] || return
 
-        PREVIEW_SRC=""
-        if [ -f "$dir/preview.jpg" ]; then
-          PREVIEW_SRC="$dir/preview.jpg"
-        elif [ -f "$dir/preview.gif" ]; then
-          PREVIEW_SRC="$dir/preview.gif"
-        else
-          return
-        fi
-
         TITLE=$(${pkgs.jq}/bin/jq -r '.title // "unknown"' "$dir/project.json")
         SAFE_TITLE=$(echo "$TITLE" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9._-]/-/g' | sed 's/--*/-/g' | sed 's/^-//;s/-$//')
         THUMB_NAME="''${SAFE_TITLE}.jpg"
@@ -72,8 +86,15 @@
 
         THUMB_PATH="$WALL_DIR/$THUMB_NAME"
 
-        if [ ! -f "$THUMB_PATH" ] || [ "$PREVIEW_SRC" -nt "$THUMB_PATH" ]; then
-          generate_thumb "$PREVIEW_SRC" "$THUMB_PATH"
+        if [ ! -f "$THUMB_PATH" ]; then
+          echo "  Rendering: $SAFE_TITLE..."
+          if ! generate_screenshot "$dir" "$THUMB_PATH"; then
+            echo "  Screenshot failed, using preview fallback"
+            local preview=""
+            [ -f "$dir/preview.jpg" ] && preview="$dir/preview.jpg"
+            [ -z "$preview" ] && [ -f "$dir/preview.gif" ] && preview="$dir/preview.gif"
+            [ -n "$preview" ] && generate_thumb_fallback "$preview" "$THUMB_PATH"
+          fi
         fi
 
         if [ "$FIRST" = true ]; then
@@ -111,15 +132,43 @@
     '')
 
     (pkgs.writeShellScriptBin "we-mute" ''
-      systemctl --user set-environment WE_SILENT=1
-      systemctl --user restart linux-wallpaperengine.service
-      echo "Wallpaper Engine audio muted"
+      WE_PID=$(systemctl --user show -p MainPID --value linux-wallpaperengine.service 2>/dev/null)
+      if [ -z "$WE_PID" ] || [ "$WE_PID" = "0" ]; then
+        echo "Wallpaper Engine is not running"
+        exit 1
+      fi
+      # WE has multiple Client objects per PID; find the Node whose client.id is any of them
+      NODE_ID=$(${pkgs.pipewire}/bin/pw-dump 2>/dev/null | ${pkgs.jq}/bin/jq -r \
+        --argjson pid "$WE_PID" \
+        '([ .[] | select(.type == "PipeWire:Interface:Client" and .info.props."application.process.id" == $pid) | .id ]) as $cids |
+         .[] | select(.type == "PipeWire:Interface:Node" and (.info.props."client.id" as $cid | $cids | contains([$cid])) and .info.props."media.class" == "Stream/Output/Audio") | .id' \
+        | head -1)
+      if [ -z "$NODE_ID" ]; then
+        echo "No audio stream found for Wallpaper Engine (wallpaper may have no sound)"
+        exit 0
+      fi
+      ${pkgs.wireplumber}/bin/wpctl set-mute "$NODE_ID" 1
+      echo "Wallpaper Engine audio muted (node $NODE_ID)"
     '')
 
     (pkgs.writeShellScriptBin "we-unmute" ''
-      systemctl --user unset-environment WE_SILENT
-      systemctl --user restart linux-wallpaperengine.service
-      echo "Wallpaper Engine audio restored (auto-mutes when other audio plays)"
+      WE_PID=$(systemctl --user show -p MainPID --value linux-wallpaperengine.service 2>/dev/null)
+      if [ -z "$WE_PID" ] || [ "$WE_PID" = "0" ]; then
+        echo "Wallpaper Engine is not running"
+        exit 1
+      fi
+      # WE has multiple Client objects per PID; find the Node whose client.id is any of them
+      NODE_ID=$(${pkgs.pipewire}/bin/pw-dump 2>/dev/null | ${pkgs.jq}/bin/jq -r \
+        --argjson pid "$WE_PID" \
+        '([ .[] | select(.type == "PipeWire:Interface:Client" and .info.props."application.process.id" == $pid) | .id ]) as $cids |
+         .[] | select(.type == "PipeWire:Interface:Node" and (.info.props."client.id" as $cid | $cids | contains([$cid])) and .info.props."media.class" == "Stream/Output/Audio") | .id' \
+        | head -1)
+      if [ -z "$NODE_ID" ]; then
+        echo "No audio stream found for Wallpaper Engine (wallpaper may have no sound)"
+        exit 0
+      fi
+      ${pkgs.wireplumber}/bin/wpctl set-mute "$NODE_ID" 0
+      echo "Wallpaper Engine audio unmuted (node $NODE_ID)"
     '')
 
     (pkgs.writeShellScriptBin "wallpaper-hook" ''
