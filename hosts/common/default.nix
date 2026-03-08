@@ -38,6 +38,7 @@
   # Networking
   # HostName is defined in host specific config
   networking.networkmanager.enable = true;
+  networking.nameservers = [ "9.9.9.9" "149.112.112.112" ];
 
   # Time & Locales
   time.timeZone = "Europe/Athens";

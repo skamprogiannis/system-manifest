@@ -20,22 +20,37 @@
   };
 
   home.packages = [
-    pkgs.swaybg
     (pkgs.writeShellScriptBin "we-sync" ''
       WE_WORKSHOP="$HOME/games/SteamLibrary/steamapps/workshop/content/431960"
+      WE_DEFAULTS="$HOME/games/SteamLibrary/steamapps/common/wallpaper_engine/projects/defaultprojects"
       WALL_DIR="$HOME/wallpapers"
       MAP_FILE="$HOME/.cache/we-wallpaper-map.json"
 
       mkdir -p "$WALL_DIR"
 
-      # Build new mapping and track expected thumbnails
       echo "{" > "$MAP_FILE.tmp"
       FIRST=true
       declare -A EXPECTED_THUMBS
 
-      for dir in "$WE_WORKSHOP"/*/; do
-        [ -d "$dir" ] || continue
-        [ -f "$dir/project.json" ] || continue
+      # Generate a 16:9 thumbnail padded with the image's own average color
+      generate_thumb() {
+        local src="$1" dst="$2"
+        local frame="$src"
+        # Use first frame for gifs
+        [[ "$src" == *.gif ]] && frame="''${src}[0]"
+        AVG=$(${pkgs.imagemagick}/bin/magick "$frame" -resize 1x1! -format '%[hex:p{0,0}]' info: 2>/dev/null)
+        [ -z "$AVG" ] && AVG="000000"
+        ${pkgs.imagemagick}/bin/magick "$frame" \
+          -resize 1920x1080 -gravity center \
+          -background "#$AVG" -extent 1920x1080 \
+          "$dst" 2>/dev/null
+      }
+
+      # Process a single wallpaper directory
+      process_dir() {
+        local dir="$1"
+        [ -d "$dir" ] || return
+        [ -f "$dir/project.json" ] || return
 
         PREVIEW_SRC=""
         if [ -f "$dir/preview.jpg" ]; then
@@ -43,14 +58,13 @@
         elif [ -f "$dir/preview.gif" ]; then
           PREVIEW_SRC="$dir/preview.gif"
         else
-          continue
+          return
         fi
 
         TITLE=$(${pkgs.jq}/bin/jq -r '.title // "unknown"' "$dir/project.json")
         SAFE_TITLE=$(echo "$TITLE" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9._-]/-/g' | sed 's/--*/-/g' | sed 's/^-//;s/-$//')
         THUMB_NAME="''${SAFE_TITLE}.jpg"
 
-        # Handle duplicate names by appending dir basename
         if [ -n "''${EXPECTED_THUMBS[$THUMB_NAME]+x}" ]; then
           THUMB_NAME="''${SAFE_TITLE}-$(basename "$dir").jpg"
         fi
@@ -58,14 +72,8 @@
 
         THUMB_PATH="$WALL_DIR/$THUMB_NAME"
 
-        if [ "''${PREVIEW_SRC##*.}" = "gif" ]; then
-          # Convert first gif frame to jpg
-          if [ ! -f "$THUMB_PATH" ] || [ "$PREVIEW_SRC" -nt "$THUMB_PATH" ]; then
-            ${pkgs.imagemagick}/bin/magick "''${PREVIEW_SRC}[0]" "$THUMB_PATH" 2>/dev/null
-          fi
-        else
-          # Symlink jpg preview directly
-          ln -sf "$PREVIEW_SRC" "$THUMB_PATH"
+        if [ ! -f "$THUMB_PATH" ] || [ "$PREVIEW_SRC" -nt "$THUMB_PATH" ]; then
+          generate_thumb "$PREVIEW_SRC" "$THUMB_PATH"
         fi
 
         if [ "$FIRST" = true ]; then
@@ -74,7 +82,15 @@
           echo "," >> "$MAP_FILE.tmp"
         fi
         printf '  "%s": "%s"' "$THUMB_NAME" "$dir" >> "$MAP_FILE.tmp"
+      }
+
+      # Scan workshop subscriptions
+      for dir in "$WE_WORKSHOP"/*/; do
+        process_dir "$dir"
       done
+
+      # Include select bundled wallpapers
+      process_dir "$WE_DEFAULTS/razer_vortex"
 
       echo "" >> "$MAP_FILE.tmp"
       echo "}" >> "$MAP_FILE.tmp"
@@ -84,7 +100,6 @@
       for thumb in "$WALL_DIR"/*.jpg; do
         [ -f "$thumb" ] || [ -L "$thumb" ] || continue
         BASENAME=$(basename "$thumb")
-        # Skip static wallpapers subdirectory contents
         [[ "$thumb" == */static/* ]] && continue
         if [ -z "''${EXPECTED_THUMBS[$BASENAME]+x}" ]; then
           echo "Removing stale: $BASENAME"
@@ -120,19 +135,9 @@
 
       cleanup() {
         systemctl --user stop linux-wallpaperengine.service 2>/dev/null
-        for pid in $(pgrep -x swaybg); do kill "$pid" 2>/dev/null; done
         rm -f "$LOCKFILE"
       }
       trap cleanup EXIT SIGTERM
-
-      # Fast static startup
-      if [ -f "$CACHE_WALL" ]; then
-        LAST_WALL=$(cat "$CACHE_WALL")
-        if [ -f "$LAST_WALL" ]; then
-          ${pkgs.swaybg}/bin/swaybg -i "$LAST_WALL" -m fill &
-          SWAYBG_PID=$!
-        fi
-      fi
 
       # Wait for environment
       until hyprctl monitors &>/dev/null; do sleep 1; done
@@ -222,13 +227,10 @@ EOF
             echo "Wallpaper Engine: $WE_DIR"
             systemctl --user set-environment WE_WALLPAPER_DIR="$WE_DIR" WE_ASSETS_DIR="$WE_ASSETS"
             systemctl --user restart linux-wallpaperengine.service
-            [ -n "$SWAYBG_PID" ] && kill $SWAYBG_PID 2>/dev/null && SWAYBG_PID=""
           else
+            # Static wallpaper — DMS renders it natively, just stop WE
             echo "Static wallpaper: $NEW_WALL"
             systemctl --user stop linux-wallpaperengine.service 2>/dev/null
-            [ -n "$SWAYBG_PID" ] && kill $SWAYBG_PID 2>/dev/null
-            ${pkgs.swaybg}/bin/swaybg -i "$NEW_WALL" -m fill &
-            SWAYBG_PID=$!
           fi
 
           update_themes
