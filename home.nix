@@ -27,6 +27,7 @@
     ./modules/home/wallpaper.nix
     ./modules/home/cursors.nix
     ./modules/home/vesktop.nix
+    ./modules/home/keyring.nix
   ];
 
   # --- PACKAGES ---
