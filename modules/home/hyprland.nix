@@ -249,13 +249,14 @@ in {
         ];
 
         windowrule = [
-          # Tier: Opaque — media players, no transparency
           "opacity 1.0 override, match:class ^(mpv|vlc|imv|feh)$"
           "opacity 1.0 override, match:title ^(Picture-in-Picture)$"
           # Center credential/auth dialogs so they don't spawn between monitors
           "float 1, match:class ^(pinentry|pinentry-gtk-2|pinentry-gnome3|ssh-askpass|git-askpass)$"
           "center 1, match:class ^(pinentry|pinentry-gtk-2|pinentry-gnome3|ssh-askpass|git-askpass)$"
           "size 400 200, match:class ^(pinentry|pinentry-gtk-2|pinentry-gnome3|ssh-askpass|git-askpass)$"
+          # Hide WE screenshot windows (we-sync offscreen rendering)
+          "workspace special:wesync silent, match:title ^(wallpaperengine)$"
         ];
 
 
@@ -264,12 +265,7 @@ in {
         "plugin:hyprglass" = {
           enabled = 1;
           default_theme = "dark";
-          default_preset = "glass";
-          glass_opacity = 1.0;
-          edge_thickness = 0.06;
-          refraction_strength = 5.0;
-          chromatic_aberration = 0.4;
-          lens_distortion = 0.2;
+          default_preset = "high_contrast";
         };
       };
 

@@ -7,7 +7,7 @@ USB_BOOT_DEV="/dev/disk/by-label/NIXOS_BOOT"
 USB_MAPPER_NAME="NIXOS_USB_CRYPT"
 USB_ROOT_DEV="/dev/mapper/$USB_MAPPER_NAME"
 MOUNT_POINT="/mnt"
-FLAKE_DIR="/home/stefan/system_manifest"
+FLAKE_DIR="/home/stefan/system-manifest"
 
 echo "Updating NixOS USB Persistent Drive..."
 
