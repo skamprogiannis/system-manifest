@@ -69,6 +69,8 @@ Examples:
 - docs(AGENTS): update keybind documentation
 ```
 
+**No Co-authored-by:** Never include `Co-authored-by:` trailers in commit messages.
+
 **Types**: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert  
 **Scopes**: desktop, laptop, usb, common, home, system, or module names
 
