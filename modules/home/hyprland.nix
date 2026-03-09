@@ -127,7 +127,13 @@ in {
           dim_inactive = true;
           dim_strength = 0.15;
           blur = {
-            enabled = false;
+            enabled = true;
+            size = 3;
+            passes = 2;
+            noise = 0.02;
+            contrast = 0.9;
+            xray = true;
+            new_optimizations = true;
           };
           shadow = {
             enabled = true;
@@ -262,15 +268,28 @@ in {
 
         bindr = [];
 
-        "plugin:hyprglass" = {
-          enabled = 1;
-          default_theme = "dark";
-          default_preset = "high_contrast";
-        };
       };
 
       extraConfig = ''
         $terminal = ghostty
+
+        plugin:hyprglass {
+          enabled = 1
+          default_theme = light
+          default_preset = default
+          blur_strength = 2.5
+          blur_iterations = 4
+          tint_color = 0xffffff08
+          specular_strength = 0.5
+          edge_thickness = 0.04
+          lens_distortion = 0.1
+          light:brightness = 1.02
+          light:contrast = 0.95
+          light:saturation = 1.0
+          light:vibrancy = 0.05
+          light:adaptive_boost = 0.05
+          light:adaptive_dim = 0.0
+        }
 
       '';
     };
