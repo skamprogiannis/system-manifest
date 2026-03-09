@@ -82,8 +82,8 @@
             bind "Ctrl Shift Tab" { GoToPreviousTab; }
             bind "Alt Tab" { GoToNextTab; }
             bind "Alt Shift Tab" { GoToPreviousTab; }
-            bind "Alt ," "Alt Shift Left" { MoveTab "Left"; }
-            bind "Alt ." "Alt Shift Right" { MoveTab "Right"; }
+            bind "Alt [" "Alt Shift Left" { MoveTab "Left"; }
+            bind "Alt ]" "Alt Shift Right" { MoveTab "Right"; }
             
           }
           
