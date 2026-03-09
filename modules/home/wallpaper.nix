@@ -9,6 +9,9 @@
       Description = "Wallpaper Engine Live Wallpaper";
       After = ["hyprland-session.target"];
       PartOf = ["hyprland-session.target"];
+      # GPU may segfault repeatedly after suspend on Nvidia; keep retrying
+      StartLimitBurst = 20;
+      StartLimitIntervalSec = 120;
     };
     Service = {
       Type = "simple";
