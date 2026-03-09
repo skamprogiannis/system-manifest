@@ -16,6 +16,7 @@
       font-size = 11;
 
       # Cursor and shell settings
+      minimum-contrast = 1.5;
       cursor-style = "block";
       cursor-style-blink = true;
       shell-integration-features = "no-cursor";

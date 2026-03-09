@@ -56,6 +56,7 @@
             bind "Alt n" { NewTab; }
             bind "Alt f" { ToggleFloatingPanes; }
             bind "Alt x" { CloseFocus; }
+            bind "Alt m" { SwitchToMode "Move"; }
             bind "Alt d" { Detach; }
 
             // Tab Switching
