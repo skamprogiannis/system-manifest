@@ -10,7 +10,7 @@
     enableBashIntegration = false;
     settings = {
       theme = "Dracula";
-      background-opacity = 0.1;
+      background-opacity = 0.2;
       background = "000000";
       font-family = "JetBrainsMono Nerd Font";
       font-size = 11;
