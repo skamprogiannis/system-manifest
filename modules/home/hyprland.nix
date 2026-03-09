@@ -116,7 +116,7 @@ in {
           gaps_out = 10;
           border_size = 2;
           layout = "dwindle";
-          "col.active_border" = "rgba(cccccc99)"; # Neutral fallback before matugen runs
+          # col.active_border and col.inactive_border set dynamically by matugen via colors.conf
         };
 
         decoration = {
