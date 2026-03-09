@@ -9,15 +9,15 @@
       name = "Dracula";
       package = pkgs.dracula-icon-theme;
     };
-    theme = {
-      name = "Dracula";
-      package = pkgs.dracula-theme;
-    };
-    gtk4 = {};
+    # GTK 3: keep Dracula via extraConfig (theme package installed below)
+    gtk3.extraConfig.gtk-theme-name = "Dracula";
+    # GTK 4: use matugen dynamic colors instead of Dracula
+    gtk4.extraCss = ''@import url("dank-colors.css");'';
   };
 
-  # Also ensure standard hicolor icons are present for apps that need them
+  # Dracula theme (GTK 3 only — GTK 4 uses matugen/dank-colors.css) + hicolor icons
   home.packages = with pkgs; [
+    dracula-theme
     hicolor-icon-theme
   ];
 
