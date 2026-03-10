@@ -78,11 +78,12 @@
             bind "Alt ]" "Alt Shift Right" { MoveTab "Right"; }
 
             // Stacking
-            bind "Alt ," { TogglePaneEmbedOrEject; }
+            bind "Alt ," { TogglePaneEmbedOrFloating; }
             bind "Alt ." { NewPane "stacked"; SwitchToMode "Normal"; }
           }
           
           move {
+            bind "Esc" { SwitchToMode "Normal"; }
             bind "h" { MovePane "Left"; }
             bind "l" { MovePane "Right"; }
             bind "j" { MovePane "Down"; }
@@ -90,6 +91,7 @@
           }
 
           pane {
+            bind "Esc" { SwitchToMode "Normal"; }
             bind "h" "Left" { MoveFocus "Left"; }
             bind "l" "Right" { MoveFocus "Right"; }
             bind "j" "Down" { MoveFocus "Down"; }
@@ -102,6 +104,7 @@
           }
 
           tab {
+            bind "Esc" { SwitchToMode "Normal"; }
             bind "h" "k" "Left" "Up" { GoToPreviousTab; }
             bind "l" "j" "Right" "Down" { GoToNextTab; }
             bind "Alt h" "Alt Left" { MoveTab "Left"; }
@@ -109,6 +112,7 @@
           }
 
           resize {
+            bind "Esc" { SwitchToMode "Normal"; }
             bind "h" "Left" { Resize "Increase Left"; }
             bind "j" "Down" { Resize "Increase Down"; }
             bind "k" "Up" { Resize "Increase Up"; }
@@ -122,6 +126,7 @@
           }
 
           session {
+            bind "Esc" { SwitchToMode "Normal"; }
             bind "d" { Detach; }
             bind "w" {
               LaunchOrFocusPlugin "session-manager" {
