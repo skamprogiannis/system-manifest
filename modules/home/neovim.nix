@@ -40,7 +40,20 @@
       }
     ];
 
+    initExtra = ''
+      -- Set mapleader to Space
+      vim.g.mapleader = ' '
+    '';
+
     colorschemes.dracula.enable = true;
+
+    # Transparent background — let Ghostty's RGBA glass show through
+    extraConfigLuaPost = ''
+      vim.api.nvim_set_hl(0, "Normal", { bg = "NONE" })
+      vim.api.nvim_set_hl(0, "NormalNC", { bg = "NONE" })
+      vim.api.nvim_set_hl(0, "SignColumn", { bg = "NONE" })
+      vim.api.nvim_set_hl(0, "LineNr", { bg = "NONE" })
+    '';
 
     plugins = {
       web-devicons.enable = true;

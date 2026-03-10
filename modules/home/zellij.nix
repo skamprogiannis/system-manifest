@@ -76,7 +76,10 @@
             bind "Alt Shift Tab" { GoToPreviousTab; }
             bind "Alt [" "Alt Shift Left" { MoveTab "Left"; }
             bind "Alt ]" "Alt Shift Right" { MoveTab "Right"; }
-            
+
+            // Stacking
+            bind "Alt ," { TogglePaneEmbedOrEject; }
+            bind "Alt ." { NewPane "stacked"; SwitchToMode "Normal"; }
           }
           
           move {
@@ -86,6 +89,18 @@
             bind "k" { MovePane "Up"; }
           }
 
+          pane {
+            bind "h" "Left" { MoveFocus "Left"; }
+            bind "l" "Right" { MoveFocus "Right"; }
+            bind "j" "Down" { MoveFocus "Down"; }
+            bind "k" "Up" { MoveFocus "Up"; }
+            bind "n" { NewPane; SwitchToMode "Normal"; }
+            bind "d" { NewPane "Down"; SwitchToMode "Normal"; }
+            bind "r" { NewPane "Right"; SwitchToMode "Normal"; }
+            bind "s" { NewPane "stacked"; SwitchToMode "Normal"; }
+            bind "p" { SwitchFocus; }
+          }
+
           tab {
             bind "h" "k" "Left" "Up" { GoToPreviousTab; }
             bind "l" "j" "Right" "Down" { GoToNextTab; }
@@ -93,14 +108,86 @@
             bind "Alt l" "Alt Right" { MoveTab "Right"; }
           }
 
+          resize {
+            bind "h" "Left" { Resize "Increase Left"; }
+            bind "j" "Down" { Resize "Increase Down"; }
+            bind "k" "Up" { Resize "Increase Up"; }
+            bind "l" "Right" { Resize "Increase Right"; }
+            bind "H" { Resize "Decrease Left"; }
+            bind "J" { Resize "Decrease Down"; }
+            bind "K" { Resize "Decrease Up"; }
+            bind "L" { Resize "Decrease Right"; }
+            bind "=" "+" { Resize "Increase"; }
+            bind "-" { Resize "Decrease"; }
+          }
+
+          session {
+            bind "d" { Detach; }
+            bind "w" {
+              LaunchOrFocusPlugin "session-manager" {
+                floating true
+                move_to_focused_tab true
+              };
+              SwitchToMode "Normal"
+            }
+            bind "c" {
+              LaunchOrFocusPlugin "configuration" {
+                floating true
+                move_to_focused_tab true
+              };
+              SwitchToMode "Normal"
+            }
+            bind "p" {
+              LaunchOrFocusPlugin "plugin-manager" {
+                floating true
+                move_to_focused_tab true
+              };
+              SwitchToMode "Normal"
+            }
+            bind "a" {
+              LaunchOrFocusPlugin "zellij:about" {
+                floating true
+                move_to_focused_tab true
+              };
+              SwitchToMode "Normal"
+            }
+            bind "s" {
+              LaunchOrFocusPlugin "zellij:share" {
+                floating true
+                move_to_focused_tab true
+              };
+              SwitchToMode "Normal"
+            }
+          }
+
           scroll {
-            bind "Ctrl c" { SwitchToMode "Normal"; }
             bind "j" "Down" { ScrollDown; }
             bind "k" "Up" { ScrollUp; }
             bind "Ctrl f" "PageDown" "l" "Right" { PageScrollDown; }
             bind "Ctrl b" "PageUp" "h" "Left" { PageScrollUp; }
             bind "Ctrl d" { HalfPageScrollDown; }
             bind "Ctrl u" { HalfPageScrollUp; }
+            bind "s" { SwitchToMode "EnterSearch"; SearchInput 0; }
+            bind "e" { EditScrollback; SwitchToMode "Normal"; }
+          }
+
+          search {
+            bind "j" "Down" { ScrollDown; }
+            bind "k" "Up" { ScrollUp; }
+            bind "Ctrl f" "PageDown" "l" "Right" { PageScrollDown; }
+            bind "Ctrl b" "PageUp" "h" "Left" { PageScrollUp; }
+            bind "d" { HalfPageScrollDown; }
+            bind "u" { HalfPageScrollUp; }
+            bind "n" { Search "down"; }
+            bind "p" { Search "up"; }
+            bind "c" { SearchToggleOption "CaseSensitivity"; }
+            bind "w" { SearchToggleOption "Wrap"; }
+            bind "o" { SearchToggleOption "WholeWord"; }
+          }
+
+          entersearch {
+            bind "Esc" { SwitchToMode "Scroll"; }
+            bind "Enter" { SwitchToMode "Search"; }
           }
       }
     '';
