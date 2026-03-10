@@ -127,7 +127,8 @@
       StartLimitBurst = 3;
     };
     Service = {
-      ExecStartPre = "${pkgs.util-linux}/bin/fuser -k 8081/tcp || true";
+      Type = "forking";
+      ExecStartPre = "-${pkgs.psmisc}/bin/fuser -k 8081/tcp";
       ExecStart = "${inputs.spotify-player.defaultPackage.${pkgs.stdenv.hostPlatform.system}}/bin/spotify_player --daemon";
       Restart = "on-failure";
       RestartSec = "30s";
@@ -227,7 +228,7 @@
     name = "Mailspring";
     comment = "The best email app for people and teams at work";
     genericName = "Mail Client";
-    exec = "mailspring %U";
+    exec = "mailspring --password-store=gnome-libsecret %U";
     icon = "mailspring";
     categories = ["Network" "Email"];
     mimeType = ["x-scheme-handler/mailto" "x-scheme-handler/mailspring"];
