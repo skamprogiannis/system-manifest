@@ -21,6 +21,7 @@
 - **Git Push:** Always `git push` (or force push if history was rewritten) immediately after creating a new commit.
 
 - **Git Hygiene:** ALWAYS `git commit` all changes before running `nixos-rebuild switch`. This ensures that `nixos-rebuild list-generations` shows a clean configuration revision hash, making rollbacks and history tracking much more reliable.
+- **README Updates:** Update `README.md` before committing any significant change (new features, major config changes, removed features, new scripts). The README is the human-readable source-of-truth for the system state.
 - **Autonomy:** You are authorized to run `sudo nixos-rebuild switch --flake` autonomously when requested or implied by the workflow (e.g., "rebuild").
 - **Revision Tracking:** Always set `system.configurationRevision = inputs.self.rev or inputs.self.dirtyRev or null;` in `configuration.nix` so `nixos-rebuild list-generations` shows the commit hash.
 - **Dry Run:** Always use `nixos-rebuild dry-build` before asking the user to build, especially for complex derivations.
@@ -96,3 +97,4 @@ At the lab: `copilot --resume` to pick up synced sessions.
 
 - **USB Formatting:** When formatting raw disks or running `update_usb.sh`, scripts often fail because NixOS root environments lack standard utilities (like `sgdisk`, `parted`, `mkfs.ext4`). **Always** run disk manipulation scripts inside a shell with the required tools: `sudo nix-shell -p gptfdisk parted cryptsetup dosfstools e2fsprogs util-linux --run ./script.sh`.
 - **Neovim Swap Files:** If Neovim throws an `E325: ATTENTION` error or fails to open a file from `neo-tree`, it is blocked by a `.swp` file. Do not try to debug the plugin. The solution is to delete `~/.local/state/nvim/swap/*`. (Swap files are globally disabled in `opts.swapfile = false`, but old ones may linger).
+- **Zellij Stacking Action Name:** On Zellij `0.43.1`, `TogglePaneEmbedOrEject` is invalid and causes config parse failure. Use `TogglePaneEmbedOrFloating` instead.
