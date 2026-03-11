@@ -10,13 +10,13 @@
     enableBashIntegration = false;
     settings = {
       theme = "Dracula";
-      background-opacity = 0.2;
+      background-opacity = 0.25;
       background = "000000";
       font-family = "JetBrainsMono Nerd Font";
       font-size = 11;
 
       # Cursor and shell settings
-      minimum-contrast = 1.5;
+      minimum-contrast = 2.1;
       cursor-style = "block";
       cursor-style-blink = true;
       shell-integration-features = "no-cursor";
