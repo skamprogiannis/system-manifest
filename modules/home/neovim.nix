@@ -92,7 +92,6 @@
     };
 
     extraPlugins = with pkgs.vimPlugins; [
-      opencode-nvim # vscode style sidebar for opencode
       vim-be-good
     ];
 
