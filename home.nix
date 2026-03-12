@@ -12,7 +12,6 @@
     ./modules/home/git.nix
     ./modules/home/ghostty.nix
     ./modules/home/neovim.nix
-    ./modules/home/opencode
     ./modules/home/hyprland.nix
     ./modules/home/dms.nix
     ./modules/home/pearpass.nix
@@ -61,7 +60,6 @@
     nodejs_22
     nodePackages.typescript-language-server
     omnisharp-roslyn
-    opencode
     pacvim
     pandoc
     python3

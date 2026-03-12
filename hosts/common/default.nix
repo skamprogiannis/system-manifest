@@ -63,7 +63,7 @@
   services.xserver.excludePackages = [pkgs.xterm];
   services.xserver.desktopManager.xterm.enable = false;
 
-  # Enable nix-ld for Opencode/dynamic binaries
+  # Enable nix-ld for dynamic binaries
   programs.nix-ld.enable = true;
   programs.nix-ld.libraries = with pkgs; [
     stdenv.cc.cc.lib
