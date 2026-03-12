@@ -46,6 +46,15 @@
       cornerRadius = 12;
       enablePerModeWallpapers = false;
 
+      # --- POWER & SLEEP ---
+      acMonitorTimeout = 600;
+      acLockTimeout = 1800;
+      acSuspendTimeout = 3600;
+      lockBeforeSuspend = true;
+
+      # --- LOCK SCREEN ---
+      fadeToLockEnabled = true;
+      fadeToDpmsEnabled = true;
 
       # --- NOTIFICATIONS ---
       notificationTimeoutNormal = 10000;
