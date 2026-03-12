@@ -110,6 +110,7 @@
   security.pam.services.login.enableGnomeKeyring = true;
   security.pam.services.gdm.enableGnomeKeyring = true;
   security.pam.services.gdm-password.enableGnomeKeyring = true;
+  security.pam.services.greetd.enableGnomeKeyring = true;
 
   # Enable sound with pipewire
   services.pulseaudio.enable = false;

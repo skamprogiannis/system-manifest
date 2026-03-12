@@ -10,7 +10,14 @@
     ./hardware-configuration.nix
   ];
 
-  services.displayManager.gdm.enable = true;
+  # DMS greeter (greetd + QuickShell) replaces GDM
+  services.displayManager.gdm.enable = false;
+  programs.dank-material-shell.greeter = {
+    enable = true;
+    compositor.name = "hyprland";
+    configHome = "/home/stefan";
+  };
+  services.greetd.settings.default_session.user = "greeter";
 
   networking.hostName = "desktop";
 
