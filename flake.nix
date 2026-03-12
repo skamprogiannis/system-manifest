@@ -59,6 +59,7 @@
         specialArgs = {inherit inputs;};
         modules = [
           ./hosts/desktop/default.nix
+          inputs.dms.nixosModules.greeter
           home-manager.nixosModules.home-manager
           {
             home-manager.useGlobalPkgs = true;
