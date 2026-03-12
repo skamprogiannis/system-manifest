@@ -228,17 +228,18 @@ in {
           "$mod, grave, togglespecialworkspace, music"
           "$mod SHIFT, grave, movetoworkspace, special:music"
 
-          # --- Screenshots ---
-          ", Print, exec, screenshot-path region path"
-          "SHIFT, Print, exec, dms screenshot region"
-          "CONTROL, Print, exec, screenshot-path window path"
-          "CONTROL SHIFT, Print, exec, dms screenshot window"
-          "ALT, Print, exec, screenshot-path full path"
-          "ALT SHIFT, exec, dms screenshot full"
+          # --- Screenshots (image to clipboard) ---
+          ", Print, exec, dms screenshot region"
+          "CONTROL, Print, exec, dms screenshot window"
+          "ALT, Print, exec, dms screenshot full"
+
+          # --- Screenshots (file path to clipboard) ---
+          "SHIFT, Print, exec, screenshot-path-copy region"
+          "CONTROL SHIFT, Print, exec, screenshot-path-copy window"
+          "ALT SHIFT, Print, exec, screenshot-path-copy full"
 
           # --- Screen Recording ---
-          "$mod, r, exec, screenrecord region"
-          "$mod SHIFT, r, exec, screenrecord full"
+          "$mod, r, exec, kooha"
 
           # --- DMS IPC Controls ---
           "$mod, n, exec, dms ipc call notifications toggle"

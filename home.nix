@@ -42,8 +42,6 @@
     obsidian
     protonvpn-gui
 
-    wf-recorder
-
     # CLI / Tools
     alejandra
     curl

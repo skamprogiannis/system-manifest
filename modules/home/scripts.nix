@@ -71,74 +71,13 @@
           fi
       fi
     '')
-    (pkgs.writeShellScriptBin "screenshot-path" ''
-
-      MODE="''${1:-region}"
-      TYPE="''${2:-path}"
-      dest="$HOME/pictures/screenshots/screenshot_$(date +%F_%H-%M-%S).png"
-      mkdir -p "$(dirname "$dest")"
-
-      
-      case "$MODE" in
-          "full")
-              ${pkgs.grim}/bin/grim "$dest"
-              ;;
-          "window")
-              ${pkgs.grim}/bin/grim -g "$(${pkgs.hyprland}/bin/hyprctl activewindow -j | ${pkgs.jq}/bin/jq -r '"\(.at[0]),\(.at[1]) \(.size[0])x\(.size[1])"')" "$dest"
-              ;;
-          *)
-              ${pkgs.grim}/bin/grim -g "$(${pkgs.slurp}/bin/slurp)" "$dest"
-              ;;
-      esac
-
-      if [ -f "$dest" ]; then
-          if [ "$TYPE" = "image" ]; then
-              ${pkgs.wl-clipboard}/bin/wl-copy < "$dest"
-              ${pkgs.libnotify}/bin/notify-send -u low -i "$dest" "Screenshot ($MODE)" "Image copied to clipboard"
-          else
-              echo -n "$dest" | ${pkgs.wl-clipboard}/bin/wl-copy
-              ${pkgs.libnotify}/bin/notify-send -u low -i "$dest" "Screenshot ($MODE)" "Path copied to clipboard"
-          fi
+    (pkgs.writeShellScriptBin "screenshot-path-copy" ''
+      # Wraps dms screenshot to copy the FILE PATH to clipboard instead of the image
+      dest=$(dms screenshot "$@" --no-clipboard --no-notify)
+      if [ -n "$dest" ] && [ -f "$dest" ]; then
+          echo -n "$dest" | ${pkgs.wl-clipboard}/bin/wl-copy
+          ${pkgs.libnotify}/bin/notify-send -u low -i "$dest" "Screenshot" "Path copied: $dest"
       fi
-    '')
-    (pkgs.writeShellScriptBin "screenrecord" ''
-      LOCK="/tmp/screenrecord.lock"
-
-      if [ -f "$LOCK" ]; then
-          PID=$(head -1 "$LOCK")
-          SAVED=$(tail -1 "$LOCK")
-          if kill -0 "$PID" 2>/dev/null; then
-              kill "$PID"
-              rm -f "$LOCK"
-              ${pkgs.libnotify}/bin/notify-send -u low "Recording stopped" "$SAVED"
-              exit 0
-          else
-              rm -f "$LOCK"
-          fi
-      fi
-
-      DEST="$HOME/videos/screencasts/screencast_$(date +%F_%H-%M-%S).mp4"
-      mkdir -p "$(dirname "$DEST")"
-      MODE="''${1:-region}"
-      case "$MODE" in
-          full)
-              ${pkgs.wf-recorder}/bin/wf-recorder --audio -f "$DEST" &
-              ;;
-          *)
-              ${pkgs.wf-recorder}/bin/wf-recorder --audio -g "$(${pkgs.slurp}/bin/slurp)" -f "$DEST" &
-              ;;
-      esac
-      printf '%s\n%s\n' "$!" "$DEST" > "$LOCK"
-      ${pkgs.libnotify}/bin/notify-send -u low "Recording started" "Mode: $MODE — press Super+R again to stop"
     '')
   ];
-
-  home.file."scripts/screenshot-path.sh" = {
-    executable = true;
-    text = ''
-      #!/usr/bin/env bash
-      # This script is managed by Home Manager
-      screenshot-path "$@"
-    '';
-  };
 }
