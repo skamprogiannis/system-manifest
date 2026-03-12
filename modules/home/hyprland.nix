@@ -132,7 +132,7 @@ in {
             passes = 2;
             noise = 0.02;
             contrast = 0.9;
-            xray = true;
+            xray = false;
             new_optimizations = true;
           };
           shadow = {
