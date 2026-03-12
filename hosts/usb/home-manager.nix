@@ -28,5 +28,13 @@
     LIBGL_ALWAYS_SOFTWARE = "1";
   };
 
-  # Brave specific for USB if needed, but for now just leave it generic
+  # Lock after 10 min, no monitor off, no suspend (override desktop defaults)
+  programs.dank-material-shell.settings = {
+    acLockTimeout = lib.mkForce 600;
+    acMonitorTimeout = lib.mkForce 0;
+    acSuspendTimeout = lib.mkForce 0;
+    batteryLockTimeout = lib.mkForce 600;
+    batteryMonitorTimeout = lib.mkForce 0;
+    batterySuspendTimeout = lib.mkForce 0;
+  };
 }
