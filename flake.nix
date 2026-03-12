@@ -66,6 +66,8 @@
             home-manager.useUserPackages = true;
             home-manager.backupFileExtension = "backup";
             home-manager.extraSpecialArgs = { inherit inputs; hostType = "desktop"; };
+            # sd-switch ensures user systemd services are properly enabled/started after activation
+            home-manager.users.stefan.systemd.user.startServices = "sd-switch";
             home-manager.users.stefan = {
               imports = [
                 ./hosts/desktop/home-manager.nix
