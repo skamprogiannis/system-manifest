@@ -117,28 +117,6 @@
     package = inputs.spotify-player.defaultPackage.${pkgs.stdenv.hostPlatform.system};
   };
 
-  # Systemd service for spotify-player daemon
-  systemd.user.services.spotify-player = {
-    Unit = {
-      Description = "Spotify Player Daemon";
-      After = ["network-online.target"];
-      Wants = ["network-online.target"];
-      StartLimitIntervalSec = 300;
-      StartLimitBurst = 3;
-    };
-    Service = {
-      Type = "forking";
-      ExecStartPre = "-${pkgs.psmisc}/bin/fuser -k 8081/tcp";
-      ExecStart = "${inputs.spotify-player.defaultPackage.${pkgs.stdenv.hostPlatform.system}}/bin/spotify_player --daemon";
-      Restart = "on-failure";
-      RestartSec = "30s";
-      TimeoutStopSec = "2s";
-    };
-    Install = {
-      WantedBy = ["default.target"];
-    };
-  };
-
   programs.home-manager.enable = true;
 
   # Prevent long shutdown delays for user services
@@ -259,5 +237,3 @@
     };
   };
 }
-
-
