@@ -19,6 +19,15 @@
   };
   services.greetd.settings.default_session.user = "greeter";
 
+  # System-wide cursor theme (needed for greeter and other non-HM contexts)
+  environment.variables = {
+    XCURSOR_THEME = "Adwaita";
+    XCURSOR_SIZE = "24";
+  };
+
+  # DMS greeter shells out to bash+dbus-send for user profile icons
+  systemd.services.greetd.path = with pkgs; [ bash dbus ];
+
   networking.hostName = "desktop";
 
   # Bootloader
@@ -82,10 +91,15 @@
     package = config.boot.kernelPackages.nvidiaPackages.production;
   };
 
+  # Suppress kernel messages during boot (greeter handles the display)
+  boot.consoleLogLevel = 0;
+
   # Fix for Nvidia suspend/wake issues
   boot.kernelParams = [
     "nvidia.NVreg_PreserveVideoMemoryAllocations=1"
     "mem_sleep_default=deep"
+    "quiet"
+    "udev.log_level=3"
   ];
 
   # Disable USB wakeup for mice to prevent accidental wakeups from hibernation

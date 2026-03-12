@@ -108,8 +108,6 @@
 
   services.gnome.gnome-keyring.enable = true;
   security.pam.services.login.enableGnomeKeyring = true;
-  security.pam.services.gdm.enableGnomeKeyring = true;
-  security.pam.services.gdm-password.enableGnomeKeyring = true;
   security.pam.services.greetd.enableGnomeKeyring = true;
 
   # Enable sound with pipewire
@@ -147,6 +145,7 @@
     wget
     git
     inotify-tools
+    adwaita-icon-theme
     # GStreamer plugins for video playback and subtitles
     gst_all_1.gstreamer
     gst_all_1.gst-plugins-base
