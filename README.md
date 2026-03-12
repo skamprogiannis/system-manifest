@@ -36,7 +36,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 
 ## Workflow & UI
 
-- **Glassmorphism Aesthetics:** Ghostty uses `background-opacity = 0.2` (native RGBA) so the terminal background is near-transparent while text stays fully opaque, giving a liquid-glass terminal. The hyprglass Hyprland plugin is active for blur/tint effects on transparent surfaces.
+- **Glassmorphism Aesthetics:** Ghostty uses `background-opacity = 0.30` (native RGBA) so the terminal background is near-transparent while text stays fully opaque, giving a liquid-glass terminal. `minimum-contrast = 2.5` ensures text remains legible by boosting foreground colors that would otherwise be hard to read against the wallpaper. The hyprglass Hyprland plugin is active for blur/tint effects on transparent surfaces.
 - **Dynamic Theming:** Matugen-powered Hyprland border colours, GTK4/Nautilus colours, and video wallpapers via **linux-wallpaperengine** synced via a custom `wallpaper-hook` daemon. GTK uses the **Dracula** theme; Ghostty uses the built-in **Dracula** colour scheme.
 - **Cursor:** Adwaita (system default). HollowKnight cursor theme is built and available for future use.
 - **Zellij Navigation:** `Alt`-based keybindings for all multiplexer actions; `Escape` exits any mode back to Normal and is unbound in Normal mode so it passes through to terminal apps (Vim, Copilot CLI, etc.).
