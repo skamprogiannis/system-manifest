@@ -61,18 +61,6 @@
       notificationTimeoutLow = 5000;
       notificationHistorySaveLow = false;
 
-      # spotify_player sends no urgency hint (defaults to Normal), so use a rule
-      notificationRules = [
-        {
-          enabled = true;
-          field = "appName";
-          pattern = "spotify_player";
-          matchType = "exact";
-          action = "no_history";
-          urgency = "low";
-        }
-      ];
-
       # --- MATUGEN TEMPLATES ---
       runDmsMatugenTemplates = true;
       runUserMatugenTemplates = true;
