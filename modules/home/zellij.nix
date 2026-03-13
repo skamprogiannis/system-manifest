@@ -49,9 +49,11 @@
             bind "Alt Down" { MoveFocus "Down"; }
             bind "Alt Up" { MoveFocus "Up"; }
 
-            // Fast Tab Navigation
-            bind "Alt H" { GoToPreviousTab; }
-            bind "Alt L" { GoToNextTab; }
+            // Move Pane (Alt+Shift)
+            bind "Alt H" { MovePane "Left"; }
+            bind "Alt J" { MovePane "Down"; }
+            bind "Alt K" { MovePane "Up"; }
+            bind "Alt L" { MovePane "Right"; }
 
             bind "Alt n" { NewTab; }
             bind "Alt f" { ToggleFloatingPanes; }
@@ -74,12 +76,16 @@
             bind "Ctrl Shift Tab" { GoToPreviousTab; }
             bind "Alt Tab" { GoToNextTab; }
             bind "Alt Shift Tab" { GoToPreviousTab; }
-            bind "Alt [" "Alt Shift Left" { MoveTab "Left"; }
-            bind "Alt ]" "Alt Shift Right" { MoveTab "Right"; }
+            bind "Alt [" { MoveTab "Left"; }
+            bind "Alt ]" { MoveTab "Right"; }
+            bind "Alt Shift Left" { MovePane "Left"; }
+            bind "Alt Shift Right" { MovePane "Right"; }
+            bind "Alt Shift Up" { MovePane "Up"; }
+            bind "Alt Shift Down" { MovePane "Down"; }
 
-            // Stacking
-            bind "Alt ," { TogglePaneEmbedOrFloating; }
-            bind "Alt ." { NewPane "stacked"; SwitchToMode "Normal"; }
+            // Cycle tab layout
+            bind "Alt ," { PreviousSwapLayout; }
+            bind "Alt ." { NextSwapLayout; }
           }
           
           move {
