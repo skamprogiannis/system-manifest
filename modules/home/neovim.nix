@@ -56,6 +56,78 @@
     '';
 
     plugins = {
+      lsp = {
+        enable = true;
+        servers = {
+          gopls.enable = true;
+          ts_ls.enable = true;
+          rust_analyzer = {
+            enable = true;
+            installCargo = false;
+            installRustc = false;
+          };
+          pylsp.enable = true;
+          omnisharp.enable = true;
+          nil_ls.enable = true;
+        };
+        keymaps = {
+          lspBuf = {
+            "gd" = "definition";
+            "gr" = "references";
+            "K" = "hover";
+            "<leader>rn" = "rename";
+            "<leader>ca" = "code_action";
+          };
+        };
+      };
+
+      cmp = {
+        enable = true;
+        autoEnableSources = true;
+        settings = {
+          sources = [
+            { name = "nvim_lsp"; }
+            { name = "luasnip"; }
+            { name = "path"; }
+            { name = "buffer"; }
+          ];
+          snippet.expand = ''
+            function(args)
+              require('luasnip').lsp_expand(args.body)
+            end
+          '';
+          mapping = {
+            "<CR>" = "cmp.mapping.confirm({ select = true })";
+            "<Tab>" = ''
+              cmp.mapping(function(fallback)
+                local luasnip = require('luasnip')
+                if cmp.visible() then
+                  cmp.select_next_item()
+                elseif luasnip.expand_or_jumpable() then
+                  luasnip.expand_or_jump()
+                else
+                  fallback()
+                end
+              end, { 'i', 's' })
+            '';
+            "<S-Tab>" = ''
+              cmp.mapping(function(fallback)
+                local luasnip = require('luasnip')
+                if cmp.visible() then
+                  cmp.select_prev_item()
+                elseif luasnip.jumpable(-1) then
+                  luasnip.jump(-1)
+                else
+                  fallback()
+                end
+              end, { 'i', 's' })
+            '';
+          };
+        };
+      };
+
+      luasnip.enable = true;
+
       web-devicons.enable = true;
       neo-tree = {
         enable = true;
