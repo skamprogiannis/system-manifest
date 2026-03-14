@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -e
 
+# Self-wrap: re-exec inside nix-shell if mksquashfs is missing
+if ! command -v mksquashfs &>/dev/null; then
+  echo "Entering nix-shell for squashfs-tools..."
+  exec nix-shell -p squashfsTools --run "$0 $*"
+fi
+
 USB_DEV="/dev/sdc"
 USB_ROOT_PART="/dev/disk/by-partlabel/NIXOS_USB_CRYPT"
 USB_BOOT_DEV="/dev/disk/by-label/NIXOS_BOOT"
@@ -17,10 +23,10 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
-# Ensure mksquashfs is available
+# Ensure mksquashfs is available (should be via self-wrap above)
 if ! command -v mksquashfs &>/dev/null; then
-  echo "mksquashfs not found. Run with:"
-  echo "  sudo nix-shell -p squashfsTools --run ./update_usb.sh"
+  echo "mksquashfs not found and nix-shell self-wrap failed."
+  echo "Run manually: sudo nix-shell -p squashfsTools --run ./update_usb.sh"
   exit 1
 fi
 

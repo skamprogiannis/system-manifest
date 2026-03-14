@@ -25,23 +25,12 @@
     QT_QUICK_BACKEND = "software";
   };
 
-  # Lightweight Hyprland config for USB (no blur, no hyprglass, no animations)
+  # Auto-detect monitor (USB is portable across machines)
   wayland.windowManager.hyprland.settings = {
     monitor = [
       ",preferred,auto,1"
     ];
-
-    decoration = {
-      blur.enabled = lib.mkForce false;
-      shadow.enabled = lib.mkForce false;
-      dim_inactive = lib.mkForce false;
-    };
-
-    animations.enabled = lib.mkForce false;
   };
-
-  # Disable hyprglass plugin on USB (GPU-heavy)
-  wayland.windowManager.hyprland.plugins = lib.mkForce [];
 
   # Lock after 10 min, no monitor off, no suspend (override desktop defaults)
   programs.dank-material-shell.settings = {
