@@ -1,4 +1,4 @@
-# OpenCode Agents & Workflows
+# Agents & Workflows
 
 ## Useful Commands
 
@@ -7,10 +7,9 @@
 - **List Generations:** `nixos-rebuild list-generations`
 - **Garbage Collect:** `nix-collect-garbage -d` (Deletes old generations)
 
-## OpenCode Tips
+## Agent Tips
 
 - **Session Info:** `/session` command.
-- **Model Variants:** `Ctrl+T` toggles between High (Reasoning) and Low (Speed) models.
 - **Git & Gens:** Keep git commits atomic and descriptive.
 - **Commit Format:** Use **Conventional Commits** (`type(scope): message`).
   - Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`.
@@ -19,6 +18,7 @@
   - Example: `fix(usb): correct luks mounting path`
 - **System Git:** Ensure `git` is always in `environment.systemPackages` in `configuration.nix` (required for Flakes).
 - **Git Push:** Always `git push` (or force push if history was rewritten) immediately after creating a new commit.
+- **Squash Fix Chains:** If you need multiple attempts to fix something, squash them into a single commit before pushing (`git rebase -i` or `git commit --amend`). Avoid pushing fix→fix→fix chains that clutter history.
 
 - **Git Hygiene:** ALWAYS `git commit` all changes before running `nixos-rebuild switch`. This ensures that `nixos-rebuild list-generations` shows a clean configuration revision hash, making rollbacks and history tracking much more reliable.
 - **README Updates:** Update `README.md` before committing any significant change (new features, major config changes, removed features, new scripts). The README is the human-readable source-of-truth for the system state.
