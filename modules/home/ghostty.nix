@@ -37,8 +37,6 @@
         "ctrl+shift+k=unbind"
         "ctrl+shift+l=unbind"
 
-        # Prevent Ctrl+Shift+V from triggering compose state lock in Greek layout
-        "ctrl+shift+v=unbind"
       ];
     };
   };

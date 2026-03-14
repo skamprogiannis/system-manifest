@@ -33,7 +33,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 | `home-manager` | `github:nix-community/home-manager` | Tracks nixpkgs-unstable |
 | `nixvim` | `github:nix-community/nixvim` | Full Neovim config in Nix |
 | `spotify-player` | `github:aome510/spotify-player` | Picks up latest client fixes before nixpkgs |
-| `pearpass-app-desktop` | `github:tetherto/pearpass-app-desktop` | Pinned for stability; P2P app requires specific version |
+| `pearpass-app-desktop` | `github:tetherto/pearpass-app-desktop` | P2P password manager; AppImage wrapped with FHS env for NixOS |
 | `visual-explainer` | `github:nicobailon/visual-explainer` | HTML visualization generator for architecture diagrams and code explanations |
 | `dms` | `github:AvengeMedia/DankMaterialShell` | Fast-moving shell UI |
 
