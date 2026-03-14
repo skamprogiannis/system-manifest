@@ -80,10 +80,10 @@ nixos-rebuild dry-build --flake .#desktop
 ### Update USB Drive
 
 ```bash
-sudo nix-shell -p squashfsTools --run ./update_usb.sh
+sudo ./update_usb.sh
 ```
 
-The update script runs `nixos-install`, then compresses `/nix/store` into a squashfs image. At boot, the USB mounts this compressed image via overlayfs — reads are sequential and fast (like an ISO), while writes go to a 2 GB tmpfs (volatile, reset on reboot).
+The script auto-fetches `squashfs-tools` via `nix-shell` if needed. After `nixos-install`, it compresses `/nix/store` into a squashfs image. At boot, the USB mounts this compressed image via overlayfs — reads are sequential and fast (like an ISO), while writes go to a 2 GB tmpfs (volatile, reset on reboot).
 
 ### Switch to Gaming Mode
 
