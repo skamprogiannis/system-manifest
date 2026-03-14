@@ -1,6 +1,8 @@
 # NixOS System Manifest
 
-Declarative infrastructure source-of-truth. Defines system state, configurations, and packages for NixOS. Managed via **Nix Flakes** and **Home Manager**.
+My personal NixOS configuration — a declarative, reproducible system built around Hyprland with glassmorphism aesthetics, dual Greek/English keyboard support, and [DankMaterialShell](https://github.com/AvengeMedia/DankMaterialShell) as the desktop shell.
+
+Managed via **Nix Flakes** and **Home Manager**.
 
 ## Features
 
@@ -15,7 +17,7 @@ Declarative infrastructure source-of-truth. Defines system state, configurations
   - **Obsidian:** Note-taking application with Home Manager plugin management.
   - **Vesktop:** Discord client (Translucence CSS theme managed imperatively).
 - **Dev Ready:** Pre-configured environment for Node.js, Python, Go, and Neovim (via nixvim). Neovim uses the Dracula colorscheme with a transparent background (matches Ghostty glass). Also registered as the default text editor via an `nvim-text` XDG desktop entry (opens in Ghostty).
-- **AI Integrated:** Built-in configuration for **OpenCode** (AI Terminal Agent) and **GitHub Copilot CLI** with per-repo `AGENTS.md` instructions. Global Copilot instructions at `~/.copilot/AGENTS.md`.
+- **AI Integrated:** Built-in configuration for **GitHub Copilot CLI** with per-repo `AGENTS.md` instructions. Global Copilot instructions at `~/.copilot/AGENTS.md`.
 - **Modular Architecture:** Configuration split across `hosts/` (system-level) and `modules/home/` (user-level) for maintainability.
 - **PearPass:** Declarative wrapper for the PearPass P2P password manager (pinned to a specific upstream commit).
 - **Binary Caches:** Configured for `hyprland.cachix.org`, `nix-community.cachix.org`, and `ghostty.cachix.org` — pre-built binaries avoid local compilation.
@@ -32,6 +34,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 | `nixvim` | `github:nix-community/nixvim` | Full Neovim config in Nix |
 | `spotify-player` | `github:aome510/spotify-player` | Picks up latest client fixes before nixpkgs |
 | `pearpass-app-desktop` | `github:tetherto/pearpass-app-desktop` | Pinned for stability; P2P app requires specific version |
+| `visual-explainer` | `github:nicobailon/visual-explainer` | HTML visualization generator for architecture diagrams and code explanations |
 | `dms` | `github:AvengeMedia/DankMaterialShell` | Fast-moving shell UI |
 
 ## Workflow & UI
@@ -41,7 +44,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 - **Cursor:** Adwaita (system default). HollowKnight cursor theme is built and available for future use.
 - **Zellij Navigation:** `Alt`-based keybindings for all multiplexer actions; `Escape` exits any mode back to Normal and is unbound in Normal mode so it passes through to terminal apps (Vim, Copilot CLI, etc.).
 - **Keyboard Layout:** `us altgr-intl` + `gr simple`. `Super+Space` toggles layouts.
-- **AI-First Screenshots:** `screenshot-path` copies the absolute file path to clipboard by default (ideal for AI agents); pass `image` as second arg to copy the image itself.
+- **Screenshots:** `dms screenshot` handles region/window/full capture with image-to-clipboard. `screenshot-path-copy` wraps it to copy the file path instead (useful for sharing with AI agents). Screen recording via **Kooha** GUI.
 - **GitHub Copilot CLI:** `Ctrl+Y` opens Neovim. `gh copilot` launched from the Zellij `copilot` tab.
 - **DNS:** Quad9 (`9.9.9.9`) for privacy-focused DNS resolution.
 
@@ -50,8 +53,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 | Script | Description |
 |--------|-------------|
 | `zs` | Zellij sessionizer — fuzzy-find project in `~/repositories`, attach or create session with 80/20 Neovim/terminal layout |
-| `screenshot-path` | Screenshot to file; copies path (default) or image (`image` arg) to clipboard |
-| `screenrecord` | Screen recorder helper |
+| `screenshot-path-copy` | Wraps `dms screenshot` to copy the saved file path to clipboard (instead of image) |
 | `wallpaper-hook` | Daemon: picks wallpaper via linux-wallpaperengine, extracts palette via Matugen, reloads Hyprland border and GTK4/Nautilus colours |
 | `generate-thumbnails` | Generates JPG thumbnails for WallpaperEngine projects in `~/wallpapers` for the DMS wallpaper picker |
 | `hypr-nav` | Hyprland focus movement with workspace wrapping at boundaries |
