@@ -26,7 +26,7 @@
         "kp_enter=text:\\r"
         "backspace=text:\\x7f"
 
-
+        # Unbind Ghostty-intercepted shortcuts (let Zellij/apps handle them)
         "ctrl+shift+t=unbind"
         "ctrl+shift+w=unbind"
         "ctrl+shift+e=unbind"
@@ -36,6 +36,9 @@
         "ctrl+shift+j=unbind"
         "ctrl+shift+k=unbind"
         "ctrl+shift+l=unbind"
+
+        # Prevent Ctrl+Shift+V from triggering compose state lock in Greek layout
+        "ctrl+shift+v=unbind"
       ];
     };
   };
