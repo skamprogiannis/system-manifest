@@ -8,7 +8,7 @@ Managed via **Nix Flakes** and **Home Manager**.
 
 - **Multi-Host Configuration:** Shared common configuration with host-specific overrides for `desktop` and `usb` (live/portable system).
 - **Hyprland Desktop:** Wayland tiling compositor with glassmorphism aesthetics powered by the [hyprglass](https://github.com/hyprnux/hyprglass) blur/vibrancy plugin (`glass` preset). Ghostty uses native `background-opacity` for true liquid-glass (background transparent, text fully opaque).
-- **USB: Dual Session** — USB host boots with GDM offering a session picker between **GNOME** and **Hyprland**.
+- **USB: Dual Session** — USB host boots with GDM offering a session picker between **GNOME** and **Hyprland**. Uses a **hybrid squashfs** Nix store (compressed read-only image + tmpfs overlay) for near-ISO boot performance on lab machines.
 - **Gaming Mode:** A dedicated specialisation (`gaming-box`) that boots directly into Steam Big Picture Mode with Gamescope.
 - **Media & Productivity:**
   - **Spotify Player:** Terminal-based Spotify client (`spotify_player`) with streaming support.
@@ -61,7 +61,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 | `sync-copilot-sessions` | Syncs `~/.copilot/session-state/` between desktop and USB (`to-usb` / `from-usb`) |
 | `specify` | Spec Kit CLI wrapper — scaffolds spec-driven development for new projects |
 | `setup_persistent_usb.sh` | Initialises a fresh LUKS-encrypted persistent NixOS USB drive |
-| `update_usb.sh` | Builds the `usb` flake output and installs it onto the mounted USB drive |
+| `update_usb.sh` | Builds the `usb` flake output, installs it onto the USB, then creates a squashfs image of the Nix store for fast boot performance |
 
 ## Usage
 
@@ -80,8 +80,10 @@ nixos-rebuild dry-build --flake .#desktop
 ### Update USB Drive
 
 ```bash
-sudo ./update_usb.sh
+sudo nix-shell -p squashfsTools --run ./update_usb.sh
 ```
+
+The update script runs `nixos-install`, then compresses `/nix/store` into a squashfs image. At boot, the USB mounts this compressed image via overlayfs — reads are sequential and fast (like an ISO), while writes go to a 2 GB tmpfs (volatile, reset on reboot).
 
 ### Switch to Gaming Mode
 
