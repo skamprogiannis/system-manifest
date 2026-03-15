@@ -111,7 +111,7 @@
     login_redirect_uri = "http://127.0.0.1:8989/login"
     enable_streaming = "DaemonOnly"
     enable_media_control = true
-    enable_notify = false
+    enable_notify = true
 
     [device]
     name = "nixos-desktop"
