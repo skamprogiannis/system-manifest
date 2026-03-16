@@ -49,7 +49,20 @@
     fd
     ffmpegthumbnailer
     gcr
-    github-copilot-cli
+    # Wrap copilot CLI so keytar.node can find libsecret at runtime
+    (pkgs.symlinkJoin {
+      name = "github-copilot-cli-wrapped";
+      paths = [ pkgs.github-copilot-cli ];
+      nativeBuildInputs = [ pkgs.makeWrapper ];
+      postBuild = ''
+        wrapProgram $out/bin/copilot \
+          --prefix LD_LIBRARY_PATH : "${pkgs.lib.makeLibraryPath [
+            pkgs.libsecret
+            pkgs.glib
+            pkgs.gcc-unwrapped.lib
+          ]}"
+      '';
+    })
     glow
     go
     gopls
