@@ -83,8 +83,6 @@
     uv
     wget
     wl-clipboard
-    zathura
-
     # Disk Utilities
     dosfstools
     e2fsprogs
@@ -218,6 +216,11 @@
   programs.zoxide = {
     enable = true;
     enableBashIntegration = true;
+  };
+
+  programs.zathura = {
+    enable = true;
+    options.selection-clipboard = "clipboard";
   };
 
   programs.gh = {
