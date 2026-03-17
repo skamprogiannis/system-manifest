@@ -30,6 +30,11 @@
       flake = false;
     };
 
+    impeccable = {
+      url = "github:pbakaus/impeccable";
+      flake = false;
+    };
+
     dms = {
       url = "github:AvengeMedia/DankMaterialShell";
       inputs.nixpkgs.follows = "nixpkgs";
