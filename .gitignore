@@ -14,8 +14,8 @@ id_ed25519
 .idea/
 *.swp
 
-# OpenCode
-.opencode/
+# Errors
+errors.log
 
 # Python
 .ruff_cache/
