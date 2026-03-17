@@ -550,6 +550,22 @@
         "type": "github"
       }
     },
+    "impeccable": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1773761918,
+        "narHash": "sha256-ISX94T3mksoNXe7vF4CosIzRVX+8+uqCWNh309aj7EU=",
+        "owner": "pbakaus",
+        "repo": "impeccable",
+        "rev": "2bf7fce2d6fcfe26646e8910ced00967321d68c4",
+        "type": "github"
+      },
+      "original": {
+        "owner": "pbakaus",
+        "repo": "impeccable",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1770537093,
@@ -668,6 +684,7 @@
         "ghostty": "ghostty",
         "home-manager": "home-manager_2",
         "hyprland": "hyprland",
+        "impeccable": "impeccable",
         "nixpkgs": "nixpkgs_2",
         "nixvim": "nixvim",
         "pearpass-app-desktop": "pearpass-app-desktop",
