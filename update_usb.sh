@@ -48,6 +48,7 @@ mount "$USB_BOOT_DEV" "$MOUNT_POINT/boot"
 # causing "No such file or directory" on the next install.
 echo "=== USB Update: Cleaning stale Nix state ==="
 rm -rf "$MOUNT_POINT/nix/var/nix/db"
+rm -rf "$MOUNT_POINT/nix/var/nix/profiles"
 find "$MOUNT_POINT/nix/store" -mindepth 1 -maxdepth 1 -exec rm -rf {} + 2>/dev/null || true
 
 echo "=== USB Update: Installing NixOS ==="
