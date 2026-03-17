@@ -35,6 +35,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 | `spotify-player` | `github:aome510/spotify-player` | Picks up latest client fixes before nixpkgs |
 | `pearpass-app-desktop` | `github:tetherto/pearpass-app-desktop` | P2P password manager; AppImage wrapped with FHS env for NixOS |
 | `visual-explainer` | `github:nicobailon/visual-explainer` | HTML visualization generator for architecture diagrams and code explanations |
+| `impeccable` | `github:pbakaus/impeccable` | Frontend design skill with 20 commands for typography, color, layout, and motion |
 | `dms` | `github:AvengeMedia/DankMaterialShell` | Fast-moving shell UI |
 
 ## Workflow & UI

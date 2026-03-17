@@ -93,6 +93,7 @@ When building new projects from scratch, use the following workflow and tools:
 | `visual-explainer` | Generate HTML diagrams, diff reviews, plan reviews, architecture overviews | Ask for any diagram, visualization, or when presenting complex tables |
 | `technical-debt` | Analyze codebase health, quantify debt, generate refactoring roadmaps | Ask for debt audit, code health check, or refactoring plan |
 | `browser-automation` | Control Chrome via PinchTab for testing, scraping, form filling | Ask to test a web UI, extract page content, or automate browser tasks |
+| `impeccable` | Frontend design skill with 20 commands (`/audit`, `/polish`, `/typeset`, `/arrange`, etc.) covering typography, color, layout, motion, and anti-patterns | Any frontend/UI work — building web components, pages, or applications |
 
 ### Available Agents
 
@@ -118,3 +119,4 @@ When building new projects from scratch, use the following workflow and tools:
 - **Implement → Security → Ship**: Write code, run security-reviewer agent, then commit
 - **Audit → Roadmap**: Run technical-debt skill, then plan refactoring sprints
 - **Test → Visualize**: Run tests, then use visual-explainer for coverage reports
+- **Design → Polish → Ship**: Use impeccable `/audit` to find design issues, `/polish` to fix them, then commit

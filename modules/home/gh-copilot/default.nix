@@ -41,6 +41,13 @@
   # Browser Automation — PinchTab-based browser control for testing and scraping
   home.file.".copilot/skills/browser-automation/SKILL.md".source = ./skills/browser-automation/SKILL.md;
 
+  # Impeccable — frontend design skill with 20 commands (audit, polish, typeset, etc.)
+  # Deploys all skill directories from source/skills/ (frontend-design + 20 commands)
+  home.file.".copilot/skills/impeccable" = {
+    source = "${inputs.impeccable}/source/skills";
+    recursive = true;
+  };
+
   # --- Custom Agents ---
 
   # Plan Reviewer — structured 4-section plan review before implementation
