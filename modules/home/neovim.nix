@@ -9,11 +9,13 @@
     viAlias = true;
     vimAlias = true;
 
+    globals.mapleader = " ";
+
     opts = {
       hlsearch = true;
-      clipboard = "unnamedplus";
       swapfile = false;
       number = true;
+      relativenumber = true;
     };
 
     # Filetype-specific column rulers
@@ -39,11 +41,6 @@
         command = "setlocal colorcolumn=120"; # Microsoft C# conventions
       }
     ];
-
-    initExtra = ''
-      -- Set mapleader to Space
-      vim.g.mapleader = ' '
-    '';
 
     colorschemes.dracula.enable = true;
 
@@ -174,45 +171,37 @@
         action = "<cmd>Neotree toggle<cr>";
         options.desc = "Toggle File Explorer";
       }
-      # --- Move Lines Down ---
-      # Alt+Down
+      # --- Clipboard (system) ---
+      {
+        mode = [ "n" "v" ];
+        key = "<leader>y";
+        action = ''"+y'';
+        options.desc = "Yank to system clipboard";
+      }
       {
         mode = "n";
-        key = "<A-Down>";
-        action = ":m .+1<CR>==";
-        options.desc = "Move line down";
+        key = "<leader>Y";
+        action = ''"+Y'';
+        options.desc = "Yank to EOL to system clipboard";
       }
-      {
-        mode = "i";
-        key = "<A-Down>";
-        action = "<Esc>:m .+1<CR>==gi";
-        options.desc = "Move line down";
-      }
-      {
-        mode = "v";
-        key = "<A-Down>";
-        action = ":m '>+1<CR>gv=gv";
-        options.desc = "Move line down";
-      }
-      # --- Move Lines Up ---
-      # Alt+Up
       {
         mode = "n";
-        key = "<A-Up>";
-        action = ":m .-2<CR>==";
-        options.desc = "Move line up";
+        key = "<leader>p";
+        action = ''"+p'';
+        options.desc = "Paste from system clipboard (after)";
       }
       {
-        mode = "i";
-        key = "<A-Up>";
-        action = "<Esc>:m .-2<CR>==gi";
-        options.desc = "Move line up";
+        mode = "n";
+        key = "<leader>P";
+        action = ''"+P'';
+        options.desc = "Paste from system clipboard (before)";
       }
+      # --- Void-register delete (preserve yank) ---
       {
-        mode = "v";
-        key = "<A-Up>";
-        action = ":m '<-2<CR>gv=gv";
-        options.desc = "Move line up";
+        mode = [ "n" "v" ];
+        key = "<leader>d";
+        action = ''"_d'';
+        options.desc = "Delete to void register (keep yank intact)";
       }
     ];
   };
