@@ -123,6 +123,7 @@
     enable_streaming = "DaemonOnly"
     enable_media_control = true
     enable_notify = true
+    notify_transient = true
 
     [device]
     name = "nixos-desktop"
