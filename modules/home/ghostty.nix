@@ -18,7 +18,7 @@
       # Cursor and shell settings
       minimum-contrast = 2.5;
       cursor-style = "block";
-      cursor-style-blink = true;
+      cursor-style-blink = false;
       shell-integration-features = "no-cursor";
 
       # Mapping to standard Enter and Backspace for better application compatibility
