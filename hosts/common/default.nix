@@ -120,6 +120,8 @@
     pulse.enable = true;
   };
 
+  zramSwap.enable = true;
+
   # Prevent annoying 90s hang on shutdown if a service fails to stop
   systemd.settings.Manager.DefaultTimeoutStopSec = "10s";
 
