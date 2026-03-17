@@ -43,6 +43,13 @@ mount "$USB_ROOT_DEV" "$MOUNT_POINT"
 mkdir -p "$MOUNT_POINT/boot"
 mount "$USB_BOOT_DEV" "$MOUNT_POINT/boot"
 
+# Wipe stale Nix state so nixos-install starts fresh.
+# Previous runs delete store paths but the db still references them,
+# causing "No such file or directory" on the next install.
+echo "=== USB Update: Cleaning stale Nix state ==="
+rm -rf "$MOUNT_POINT/nix/var/nix/db"
+find "$MOUNT_POINT/nix/store" -mindepth 1 -maxdepth 1 -exec rm -rf {} + 2>/dev/null || true
+
 echo "=== USB Update: Installing NixOS ==="
 nixos-install --flake "$FLAKE_DIR#usb" --root "$MOUNT_POINT" --no-root-passwd
 
@@ -65,6 +72,7 @@ echo "squashfs image: $SQFS_SIZE"
 # Use find to avoid ARG_MAX with 500k+ store paths.
 echo "=== USB Update: Cleaning ext4 store ==="
 find "$MOUNT_POINT/nix/store" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+rm -rf "$MOUNT_POINT/nix/var/nix/db"
 
 # trap EXIT handles unmount and LUKS close
 echo "=== USB Update: Done ==="
