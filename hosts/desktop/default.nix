@@ -16,32 +16,6 @@
     enable = true;
     compositor.name = "hyprland";
     configHome = "/home/stefan";
-    logs.save = true;
-    logs.path = "/var/lib/dms-greeter/greeter.log";
-    compositor.customConfig = let
-      diagScript = pkgs.writeShellScript "greeter-diag" ''
-        exec > /tmp/greeter-diag.txt 2>&1
-        echo "=== GREETER ENV ==="
-        echo "PATH=$PATH"
-        echo "HOME=$HOME"
-        echo "DMS_GREET_CFG_DIR=$DMS_GREET_CFG_DIR"
-        echo "--- avatar test ---"
-        uid=$(id -u stefan 2>/dev/null)
-        echo "UID=$uid"
-        result=$(dbus-send --system --print-reply \
-          --dest=org.freedesktop.Accounts \
-          /org/freedesktop/Accounts/User"$uid" \
-          org.freedesktop.DBus.Properties.Get \
-          string:org.freedesktop.Accounts.User \
-          string:IconFile 2>&1)
-        echo "dbus-send: $result"
-        parsed=$(echo "$result" | grep -oP 'string "\K[^"]+')
-        echo "parsed: $parsed"
-        [ -f "$parsed" ] && echo "file exists" || echo "file NOT found"
-      '';
-    in ''
-      exec-once = ${diagScript}
-    '';
   };
   services.greetd.settings.default_session.user = "greeter";
 
