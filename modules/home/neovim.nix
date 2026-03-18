@@ -16,9 +16,13 @@
       swapfile = false;
       number = true;
       relativenumber = true;
+      expandtab = true;
+      tabstop = 4;
+      shiftwidth = 4;
+      softtabstop = 4;
     };
 
-    # Filetype-specific column rulers
+    # Filetype-specific column rulers and indentation
     autoCmd = [
       {
         event = "FileType";
@@ -28,12 +32,20 @@
       {
         event = "FileType";
         pattern = "go";
-        command = "setlocal colorcolumn=100"; # Uber Go style guide
+        # gofmt uses real tabs; display them at width 4
+        command = "setlocal noexpandtab tabstop=4 shiftwidth=4 softtabstop=4 colorcolumn=100";
       }
       {
         event = "FileType";
         pattern = [ "javascript" "typescript" "javascriptreact" "typescriptreact" ];
-        command = "setlocal colorcolumn=100";
+        # Prettier standard: 2 spaces
+        command = "setlocal tabstop=2 shiftwidth=2 softtabstop=2 colorcolumn=100";
+      }
+      {
+        event = "FileType";
+        pattern = "nix";
+        # alejandra/nixfmt: 2 spaces
+        command = "setlocal tabstop=2 shiftwidth=2 softtabstop=2";
       }
       {
         event = "FileType";
