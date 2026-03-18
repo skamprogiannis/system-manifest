@@ -156,7 +156,7 @@
     Service = {
       Type = "forking";
       ExecStartPre = "-${pkgs.psmisc}/bin/fuser -k 8081/tcp";
-      ExecStart = "${inputs.spotify-player.defaultPackage.${pkgs.stdenv.hostPlatform.system}}/bin/spotify_player -c \${XDG_CONFIG_HOME:-$HOME/.config}/spotify-player-daemon --daemon";
+      ExecStart = "${inputs.spotify-player.defaultPackage.${pkgs.stdenv.hostPlatform.system}}/bin/spotify_player -c ${config.xdg.configHome}/spotify-player-daemon --daemon";
       Restart = "on-failure";
       RestartSec = "30s";
       TimeoutStopSec = "2s";
