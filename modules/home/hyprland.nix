@@ -70,6 +70,7 @@ in {
     home.packages = with pkgs; [
       qt5.qtwayland
       qt6.qtwayland
+      swaybg
     ];
 
     wayland.windowManager.hyprland = {
@@ -104,6 +105,8 @@ in {
         ];
 
         exec-once = [
+          # Instant static wallpaper while DMS loads; killed after 8s
+          ''sh -c 'wall=$(${pkgs.jq}/bin/jq -r ".wallpaperPath // empty" ~/.local/state/DankMaterialShell/session.json 2>/dev/null); [ -f "$wall" ] && swaybg -i "$wall" -m fill & BGPID=$!; sleep 8; kill $BGPID 2>/dev/null' ''
           "hyprctl setcursor ${config.home.pointerCursor.name} ${toString config.home.pointerCursor.size}"
           "wallpaper-hook &"
           # home-manager user services show as "linked" in systemd and don't
@@ -116,6 +119,14 @@ in {
           disable_hyprland_logo = true;
           disable_splash_rendering = true;
           force_default_wallpaper = 0;
+          # Solid black background before wallpaper loads — avoids the
+          # default grey/teal flash during login transition.
+          background_color = "rgb(000000)";
+        };
+
+        debug = {
+          # Suppress the wall of debug text visible on the TTY during startup
+          disable_logs = true;
         };
 
         input = {
