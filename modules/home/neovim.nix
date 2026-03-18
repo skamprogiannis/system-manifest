@@ -215,20 +215,64 @@
         action = ''"_d'';
         options.desc = "Delete to void register (keep yank intact)";
       }
+      # --- Paste-over without clobbering register ---
+      {
+        mode = "v";
+        key = "<leader>p";
+        action = ''"_dP'';
+        options.desc = "Paste over selection (keep yank intact)";
+      }
+      # --- Move lines ---
+      {
+        mode = "n";
+        key = "<leader>j";
+        action = ":m .+1<CR>==";
+        options.desc = "Move line down";
+      }
+      {
+        mode = "n";
+        key = "<leader>k";
+        action = ":m .-2<CR>==";
+        options.desc = "Move line up";
+      }
+      {
+        mode = "v";
+        key = "<leader>j";
+        action = ":m '>+1<CR>gv=gv";
+        options.desc = "Move selection down";
+      }
+      {
+        mode = "v";
+        key = "<leader>k";
+        action = ":m '<-2<CR>gv=gv";
+        options.desc = "Move selection up";
+      }
+      # --- Telescope ---
+      {
+        mode = "n";
+        key = "<leader>ff";
+        action = "<cmd>Telescope find_files<cr>";
+        options.desc = "Find files";
+      }
+      {
+        mode = "n";
+        key = "<leader>fg";
+        action = "<cmd>Telescope live_grep<cr>";
+        options.desc = "Live grep";
+      }
+      {
+        mode = "n";
+        key = "<leader>fb";
+        action = "<cmd>Telescope buffers<cr>";
+        options.desc = "Buffers";
+      }
+      {
+        mode = "n";
+        key = "<leader>fh";
+        action = "<cmd>Telescope help_tags<cr>";
+        options.desc = "Help tags";
+      }
     ];
   };
 
-  # Keep aliases for muscle memory, though vi/vim alias options above handle most
-  home.shellAliases = {
-    vimtutor = "nvim +Tutor";
-  };
-
-  # Directly override the vimtutor binary to be sure
-  home.file.".local/bin/vimtutor" = {
-    executable = true;
-    text = ''
-      #!/bin/sh
-      exec nvim +Tutor
-    '';
-  };
 }
