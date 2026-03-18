@@ -16,6 +16,10 @@
     enable = true;
     compositor.name = "hyprland";
     configHome = "/home/stefan";
+    # Pre-warm AccountsService so the avatar D-Bus query succeeds
+    compositor.customConfig = ''
+      exec-once = dbus-send --system --print-reply --dest=org.freedesktop.Accounts /org/freedesktop/Accounts/User1000 org.freedesktop.DBus.Properties.Get string:org.freedesktop.Accounts.User string:IconFile > /dev/null 2>&1
+    '';
   };
   services.greetd.settings.default_session.user = "greeter";
 
