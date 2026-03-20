@@ -31,7 +31,29 @@
       pkgs.libxkbcommon.dev
       pkgs.pixman
       pkgs.cairo
+      pkgs.glslang
+      pkgs.libxcb
+      pkgs.libxcb-wm
+      pkgs.libxcb-errors
     ];
+    postPatch = ''
+      substituteInPlace src/Globals.hpp \
+        --replace-fail '<hyprland/src/render/Framebuffer.hpp>' '<hyprland/src/render/gl/GLFramebuffer.hpp>' \
+        --replace-fail 'CFramebuffer blurTempFramebuffer;' 'CGLFramebuffer blurTempFramebuffer;'
+
+      substituteInPlace src/GlassDecoration.hpp \
+        --replace-fail '<hyprland/src/render/Framebuffer.hpp>' '<hyprland/src/render/gl/GLFramebuffer.hpp>' \
+        --replace-fail 'CFramebuffer m_sampleFramebuffer;' 'CGLFramebuffer m_sampleFramebuffer;' \
+        --replace-fail 'void sampleBackground(CFramebuffer& sourceFramebuffer, CBox box);' 'void sampleBackground(IFramebuffer& sourceFramebuffer, CBox box);' \
+        --replace-fail 'void applyGlassEffect(CFramebuffer& sourceFramebuffer, CFramebuffer& targetFramebuffer,' 'void applyGlassEffect(CGLFramebuffer& sourceFramebuffer, IFramebuffer& targetFramebuffer,'
+
+      substituteInPlace src/GlassDecoration.cpp \
+        --replace-fail 'void CGlassDecoration::sampleBackground(CFramebuffer& sourceFramebuffer, CBox box) {' $'void CGlassDecoration::sampleBackground(IFramebuffer& sourceFramebuffer, CBox box) {\n    auto* srcGLFramebuffer = dynamic_cast<CGLFramebuffer*>(&sourceFramebuffer);\n    if (!srcGLFramebuffer)\n        return;' \
+        --replace-fail 'glBindFramebuffer(GL_READ_FRAMEBUFFER, sourceFramebuffer.getFBID());' 'glBindFramebuffer(GL_READ_FRAMEBUFFER, srcGLFramebuffer->getFBID());' \
+        --replace-fail 'void CGlassDecoration::applyGlassEffect(CFramebuffer& sourceFramebuffer, CFramebuffer& targetFramebuffer,' 'void CGlassDecoration::applyGlassEffect(CGLFramebuffer& sourceFramebuffer, IFramebuffer& targetFramebuffer,' \
+        --replace-fail 'glBindFramebuffer(GL_FRAMEBUFFER, targetFramebuffer.getFBID());' $'    auto* targetGLFramebuffer = dynamic_cast<CGLFramebuffer*>(&targetFramebuffer);\n    if (!targetGLFramebuffer)\n        return;\n\n    glBindFramebuffer(GL_FRAMEBUFFER, targetGLFramebuffer->getFBID());' \
+        --replace-fail 'blurBackground(blurRadius, blurIterations, source->getFBID(), viewportWidth, viewportHeight);' $'        auto* sourceGLFramebuffer = dynamic_cast<CGLFramebuffer*>(source.get());\n        if (!sourceGLFramebuffer)\n            return;\n\n        blurBackground(blurRadius, blurIterations, sourceGLFramebuffer->getFBID(), viewportWidth, viewportHeight);'
+    '';
     NIX_CFLAGS_COMPILE = "-I${hyprland-pkg.dev}/include/hyprland/protocols -I${pkgs.libdrm.dev}/include/libdrm";
     buildPhase = "make all";
     installPhase = ''
