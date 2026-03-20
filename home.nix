@@ -28,6 +28,7 @@
     ./modules/home/cursors.nix
     ./modules/home/vesktop.nix
     ./modules/home/keyring.nix
+    ./modules/home/voiden.nix
   ];
 
   # --- PACKAGES ---

@@ -20,6 +20,7 @@ Managed via **Nix Flakes** and **Home Manager**.
 - **AI Integrated:** Built-in configuration for **GitHub Copilot CLI** with per-repo `AGENTS.md` instructions. Global Copilot instructions at `~/.copilot/AGENTS.md`.
 - **Modular Architecture:** Configuration split across `hosts/` (system-level) and `modules/home/` (user-level) for maintainability.
 - **PearPass:** Declarative wrapper for the PearPass P2P password manager AppImage, with native messaging support for browser extensions.
+- **Voiden:** Declarative AppImage wrapper for the Voiden offline-first API client.
 - **Binary Caches:** Configured for `hyprland.cachix.org`, `nix-community.cachix.org`, and `ghostty.cachix.org` — pre-built binaries avoid local compilation.
 
 ## Flake Inputs
@@ -34,6 +35,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 | `nixvim` | `github:nix-community/nixvim` | Full Neovim config in Nix |
 | `spotify-player` | `github:aome510/spotify-player` | Picks up latest client fixes before nixpkgs |
 | `pearpass-app-desktop` | `github:tetherto/pearpass-app-desktop` | P2P password manager; AppImage wrapped with FHS env for NixOS |
+| `voiden` | `https://voiden.md/api/download/stable/linux/x64/Voiden-1.3.1.AppImage` | Offline-first API client packaged as AppImage wrapper |
 | `visual-explainer` | `github:nicobailon/visual-explainer` | HTML visualization generator for architecture diagrams and code explanations |
 | `impeccable` | `github:pbakaus/impeccable` | Frontend design skill with 20 commands for typography, color, layout, and motion |
 | `dms` | `github:AvengeMedia/DankMaterialShell` | Fast-moving shell UI |
