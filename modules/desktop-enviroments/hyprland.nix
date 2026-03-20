@@ -26,6 +26,17 @@ in {
     portalPackage = inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.xdg-desktop-portal-hyprland;
   };
 
+  xdg.portal = {
+    config.hyprland = {
+      default = [ "hyprland" "gtk" ];
+      "org.freedesktop.impl.portal.FileChooser" = [ "termfilechooser" "gtk" ];
+      "org.freedesktop.impl.portal.Settings" = [ "gtk" ];
+      "org.freedesktop.impl.portal.ScreenCast" = [ "hyprland" ];
+      "org.freedesktop.impl.portal.Screenshot" = [ "hyprland" ];
+    };
+    extraPortals = [ pkgs.xdg-desktop-portal-termfilechooser ];
+  };
+
   services.power-profiles-daemon.enable = true;
   services.accounts-daemon.enable = true;
   services.gvfs.enable = true;
