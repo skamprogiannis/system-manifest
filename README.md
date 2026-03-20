@@ -40,11 +40,13 @@ Packages tracked independently of nixpkgs for tighter version control:
 
 ## Workflow & UI
 
-- **Glassmorphism Aesthetics:** Ghostty uses `background-opacity = 0.30` (native RGBA) so the terminal background is near-transparent while text stays fully opaque, giving a liquid-glass terminal. `minimum-contrast = 2.5` ensures text remains legible by boosting foreground colors that would otherwise be hard to read against the wallpaper. The hyprglass Hyprland plugin is active for blur/tint effects on transparent surfaces.
+- **Glassmorphism Aesthetics:** Ghostty uses `background-opacity = 0.35` (native RGBA) so the terminal background is near-transparent while text stays fully opaque, giving a liquid-glass terminal. `minimum-contrast = 3.0` improves legibility by enforcing a stronger foreground/background contrast floor. The hyprglass Hyprland plugin is active for blur/tint effects on transparent surfaces.
 - **Dynamic Theming:** Matugen-powered Hyprland border colours, GTK4/Nautilus colours, and video wallpapers via **linux-wallpaperengine** synced via a custom `wallpaper-hook` daemon. GTK uses the **Dracula** theme; Ghostty uses the built-in **Dracula** colour scheme.
 - **Cursor:** Adwaita (system default). HollowKnight cursor theme is built and available for future use.
 - **Zellij Navigation:** `Alt`-based keybindings for all multiplexer actions; `Escape` exits any mode back to Normal and is unbound in Normal mode so it passes through to terminal apps (Vim, Copilot CLI, etc.).
 - **Keyboard Layout:** `us altgr-intl` + `gr simple`. `Super+Space` toggles layouts.
+- **Window Controls:** `Super` + left-drag moves windows, `Super` + right-drag resizes. `Super` + `-` shrinks and `Super` + `+` grows the active window.
+- **Launcher Shortcuts:** `Super+E` opens **Yazi** in Ghostty; `Super+Shift+E` opens **Nautilus**.
 - **Screenshots:** `dms screenshot` handles region/window/full capture with image-to-clipboard. `screenshot-path-copy` wraps it to copy the file path instead (useful for sharing with AI agents). Screen recording via **Kooha** GUI.
 - **GitHub Copilot CLI:** `Ctrl+Y` opens Neovim. `gh copilot` launched from the Zellij `copilot` tab.
 - **DNS:** Quad9 (`9.9.9.9`) for privacy-focused DNS resolution.

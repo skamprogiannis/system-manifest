@@ -133,7 +133,7 @@ in {
           kb_layout = "us,gr";
           kb_variant = "altgr-intl,simple";
           kb_options = "grp:win_space_toggle";
-          resolve_binds_by_sym = 1;
+          resolve_binds_by_sym = false;
         };
 
         general = {
@@ -150,7 +150,7 @@ in {
           inactive_opacity = 1.0;
 
           dim_inactive = true;
-          dim_strength = 0.15;
+          dim_strength = 0.20;
           blur = {
             enabled = true;
             size = 3;
@@ -193,13 +193,21 @@ in {
           ", XF86AudioNext, exec, dms ipc call mpris next"
         ];
 
+        binde = [
+          "$mod, minus, resizeactive, -30 -30"
+          "$mod SHIFT, equal, resizeactive, 30 30"
+          "$mod, KP_SUBTRACT, resizeactive, -30 -30"
+          "$mod, KP_ADD, resizeactive, 30 30"
+        ];
+
         bind = [
           # --- System & Apps ---
           "$mod, Return, exec, ghostty"
           "$mod, b, exec, brave"
           "$mod, x, killactive,"
           "$mod, m, exec, ghostty -e spotify_player"
-          "$mod, e, exec, nautilus"
+          "$mod, e, exec, ghostty -e yazi"
+          "$mod SHIFT, e, exec, nautilus"
           "$mod, v, togglefloating,"
           "$mod, f, fullscreen,"
           "$mod, d, exec, dms ipc call spotlight toggle"
@@ -285,6 +293,11 @@ in {
           "size 400 200, match:class ^(pinentry|pinentry-gtk-2|pinentry-gnome3|ssh-askpass|git-askpass)$"
           # Hide WE screenshot windows (we-sync offscreen rendering)
           "workspace special:wesync silent, match:title ^(wallpaperengine)$"
+        ];
+
+        bindm = [
+          "$mod, mouse:272, movewindow"
+          "$mod, mouse:273, resizewindow"
         ];
 
 
