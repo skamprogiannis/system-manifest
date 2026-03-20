@@ -62,6 +62,21 @@
             pkgs.glib
             pkgs.gcc-unwrapped.lib
           ]}"
+
+        # gh 2.88.x invokes copilot with --no-warnings; strip it for compatibility
+        mv $out/bin/copilot $out/bin/copilot-real
+        cat > $out/bin/copilot <<'EOF'
+        #!${pkgs.bash}/bin/bash
+        args=()
+        for arg in "$@"; do
+          if [[ "$arg" == "--no-warnings" ]]; then
+            continue
+          fi
+          args+=("$arg")
+        done
+        exec "$(dirname "$0")/copilot-real" "''${args[@]}"
+        EOF
+        chmod +x $out/bin/copilot
       '';
     })
     glow
