@@ -57,10 +57,50 @@
 
   home.file.".config/xdg-desktop-portal-termfilechooser/config".text = ''
     [filechooser]
-    cmd=portal-yazi-filechooser
-    env=TERMCMD=ghostty -e
+    cmd=${config.home.homeDirectory}/.config/xdg-desktop-portal-termfilechooser/ghostty-yazi-wrapper.sh
     default_dir=$HOME
     open_mode=suggested
     save_mode=suggested
   '';
+
+  home.file.".config/xdg-desktop-portal-termfilechooser/ghostty-yazi-wrapper.sh" = {
+    executable = true;
+    text = ''
+      #!${pkgs.bash}/bin/bash
+      set -e
+
+      multiple="$1"
+      directory="$2"
+      save="$3"
+      path="$4"
+      out="$5"
+
+      if [ "$save" = "1" ]; then
+          set -- --chooser-file="$out" "$path"
+      elif [ "$directory" = "1" ]; then
+          set -- --chooser-file="$out" --cwd-file="$out"".1" "$path"
+      elif [ "$multiple" = "1" ]; then
+          set -- --chooser-file="$out" "$path"
+      else
+          set -- --chooser-file="$out" "$path"
+      fi
+
+      command="${pkgs.ghostty}/bin/ghostty -e ${pkgs.yazi}/bin/yazi"
+      for arg in "$@"; do
+          escaped=$(printf "%s" "$arg" | sed 's/"/\\"/g')
+          command="$command \"$escaped\""
+      done
+
+      sh -c "$command"
+
+      if [ "$directory" = "1" ]; then
+          if [ ! -s "$out" ] && [ -s "$out"".1" ]; then
+              cat "$out"".1" > "$out"
+              rm "$out"".1"
+          else
+              rm "$out"".1"
+          fi
+      fi
+    '';
+  };
 }
