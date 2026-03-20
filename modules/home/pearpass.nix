@@ -12,7 +12,7 @@
 
   pearpassSource = pkgs.fetchurl {
     url = "https://github.com/tetherto/pearpass-app-desktop/releases/download/v${pearpassVersion}/PearPass-Desktop-Linux-x64-v${pearpassVersion}.AppImage";
-    hash = "sha256-hPwTYuC2GJEAgflY7yCAuYEUJkewtCZtmHincpyouIs=";
+    hash = "sha256-9bYQvh0/+l0RoNsDL9VZiSPHPAgCqOH/qpz5PpE6wb0=";
   };
 
   # Extract the AppImage to get the icon and resources
