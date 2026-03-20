@@ -215,18 +215,14 @@ in {
         ];
 
         binde = [
-          "$mod, minus, resizeactive, -30 -30"
-          "$mod SHIFT, equal, resizeactive, 30 30"
-          "$mod, KP_SUBTRACT, resizeactive, -30 -30"
-          "$mod, KP_ADD, resizeactive, 30 30"
           "$mod CTRL, h, resizeactive, -30 0"
           "$mod CTRL, l, resizeactive, 30 0"
           "$mod CTRL, k, resizeactive, 0 -30"
           "$mod CTRL, j, resizeactive, 0 30"
-          "$mod CTRL, Left, resizeactive, -30 0"
-          "$mod CTRL, Right, resizeactive, 30 0"
-          "$mod CTRL, Up, resizeactive, 0 -30"
-          "$mod CTRL, Down, resizeactive, 0 30"
+          "$mod CTRL, Left, resizeactive, -60 0"
+          "$mod CTRL, Right, resizeactive, 60 0"
+          "$mod CTRL, Up, resizeactive, 0 -60"
+          "$mod CTRL, Down, resizeactive, 0 60"
         ];
 
         bind = [
@@ -251,10 +247,10 @@ in {
           "$mod, l, ${navR}"
           "$mod, k, movefocus, u"
           "$mod, j, movefocus, d"
-          "$mod, Left, movefocus, l"
-          "$mod, Right, movefocus, r"
-          "$mod, Up, movefocus, u"
-          "$mod, Down, movefocus, d"
+          "$mod, Left, focusmonitor, l"
+          "$mod, Right, focusmonitor, r"
+          "$mod, Up, focusmonitor, u"
+          "$mod, Down, focusmonitor, d"
 
           # --- Window Movement ---
           "$mod SHIFT, h, movewindow, l"

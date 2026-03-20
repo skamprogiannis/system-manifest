@@ -138,6 +138,7 @@
       luasnip.enable = true;
 
       web-devicons.enable = true;
+      undotree.enable = true;
       neo-tree = {
         enable = true;
         settings = {
