@@ -28,12 +28,14 @@
       WE_DEFAULTS="$HOME/games/SteamLibrary/steamapps/common/wallpaper_engine/projects/defaultprojects"
       WALL_DIR="$HOME/wallpapers"
       MAP_FILE="$HOME/.cache/we-wallpaper-map.json"
+      WE_SUBS=$(ls -1t "$HOME/.local/share/Steam/userdata"/*/ugc/431960_subscriptions.vdf 2>/dev/null | head -n 1)
 
       mkdir -p "$WALL_DIR"
 
       echo "{" > "$MAP_FILE.tmp"
       FIRST=true
       declare -A EXPECTED_THUMBS
+      declare -A SUBSCRIBED_IDS
 
       WE_ASSETS="$HOME/games/SteamLibrary/steamapps/common/wallpaper_engine/assets"
 
@@ -55,7 +57,18 @@
           sleep 0.2
           waited=$((waited + 1))
         done
-        kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null
+        if kill -0 "$pid" 2>/dev/null; then
+          kill "$pid" 2>/dev/null || true
+          local kill_wait=0
+          while kill -0 "$pid" 2>/dev/null && [ "$kill_wait" -lt 10 ]; do
+            sleep 0.2
+            kill_wait=$((kill_wait + 1))
+          done
+          if kill -0 "$pid" 2>/dev/null; then
+            kill -9 "$pid" 2>/dev/null || true
+          fi
+        fi
+        wait "$pid" 2>/dev/null || true
         [ -s "$dst" ]
       }
 
@@ -76,6 +89,11 @@
       process_dir() {
         local dir="$1"
         [ -d "$dir" ] || return
+        local dir_id
+        dir_id=$(basename "$dir")
+        if [[ "$dir_id" =~ ^[0-9]+$ ]] && [ "''${#SUBSCRIBED_IDS[@]}" -gt 0 ] && [ -z "''${SUBSCRIBED_IDS[$dir_id]+x}" ]; then
+          return
+        fi
         [ -f "$dir/project.json" ] || return
 
         TITLE=$(${pkgs.jq}/bin/jq -r '.title // "unknown"' "$dir/project.json")
@@ -107,6 +125,14 @@
         fi
         printf '  "%s": "%s"' "$THUMB_NAME" "$dir" >> "$MAP_FILE.tmp"
       }
+
+      # Read currently subscribed Workshop IDs so stale leftover directories
+      # from unsubscribed wallpapers are ignored.
+      if [ -n "$WE_SUBS" ] && [ -f "$WE_SUBS" ]; then
+        while IFS= read -r wid; do
+          SUBSCRIBED_IDS["$wid"]=1
+        done < <(sed -n 's/^[[:space:]]*"publishedfileid"[[:space:]]*"\([0-9]\+\)".*$/\1/p' "$WE_SUBS")
+      fi
 
       # Scan workshop subscriptions
       for dir in "$WE_WORKSHOP"/*/; do
