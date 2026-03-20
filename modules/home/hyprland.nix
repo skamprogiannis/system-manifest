@@ -53,6 +53,20 @@
         --replace-fail 'void CGlassDecoration::applyGlassEffect(CFramebuffer& sourceFramebuffer, CFramebuffer& targetFramebuffer,' 'void CGlassDecoration::applyGlassEffect(CGLFramebuffer& sourceFramebuffer, IFramebuffer& targetFramebuffer,' \
         --replace-fail 'glBindFramebuffer(GL_FRAMEBUFFER, targetFramebuffer.getFBID());' $'    auto* targetGLFramebuffer = dynamic_cast<CGLFramebuffer*>(&targetFramebuffer);\n    if (!targetGLFramebuffer)\n        return;\n\n    glBindFramebuffer(GL_FRAMEBUFFER, targetGLFramebuffer->getFBID());' \
         --replace-fail 'blurBackground(blurRadius, blurIterations, source->getFBID(), viewportWidth, viewportHeight);' $'        auto* sourceGLFramebuffer = dynamic_cast<CGLFramebuffer*>(source.get());\n        if (!sourceGLFramebuffer)\n            return;\n\n        blurBackground(blurRadius, blurIterations, sourceGLFramebuffer->getFBID(), viewportWidth, viewportHeight);'
+
+      substituteInPlace Makefile \
+        --replace-fail 'SOURCES = src/main.cpp src/GlassDecoration.cpp src/GlassPassElement.cpp src/PluginConfig.cpp src/ShaderManager.cpp' 'SOURCES = src/main.cpp src/GlassDecoration.cpp src/PluginConfig.cpp src/ShaderManager.cpp'
+
+      substituteInPlace src/main.cpp \
+        --replace-fail '    g_pHyprRenderer->m_renderPass.removeAllOfType("CGlassPassElement");' ""
+
+      substituteInPlace src/GlassDecoration.cpp \
+        --replace-fail '#include "GlassPassElement.hpp"' "" \
+        --replace-fail '    CGlassPassElement::SGlassPassData data{this, alpha};' "" \
+        --replace-fail '    g_pHyprRenderer->m_renderPass.add(makeUnique<CGlassPassElement>(data));' '    renderPass(monitor, alpha);' \
+        --replace-fail 'g_pHyprOpenGL->m_renderData' 'g_pHyprRenderer->m_renderData' \
+        --replace-fail 'g_pHyprRenderer->m_renderData.monitorProjection.projectBox(rawBox, transform, rawBox.rot)' 'g_pHyprRenderer->getBoxProjection(rawBox, transform)' \
+        --replace-fail 'g_pHyprRenderer->m_renderData.projection.copy().multiply(matrix)' 'g_pHyprRenderer->projectBoxToTarget(rawBox, transform)'
     '';
     NIX_CFLAGS_COMPILE = "-I${hyprland-pkg.dev}/include/hyprland/protocols -I${pkgs.libdrm.dev}/include/libdrm";
     buildPhase = "make all";
@@ -337,12 +351,15 @@ in {
           enabled = 1
           default_theme = light
           default_preset = default
-          blur_strength = 2.5
+          blur_strength = 2.8
           blur_iterations = 4
           tint_color = 0xffffff08
-          specular_strength = 0.5
-          edge_thickness = 0.04
-          lens_distortion = 0.1
+          specular_strength = 0.6
+          edge_thickness = 0.05
+          lens_distortion = 0.14
+          refraction_strength = 0.7
+          chromatic_aberration = 0.6
+          fresnel_strength = 0.7
           light:brightness = 1.02
           light:contrast = 0.95
           light:saturation = 1.0
