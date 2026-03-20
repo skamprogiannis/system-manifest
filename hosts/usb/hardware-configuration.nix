@@ -14,9 +14,12 @@
     "ahci" "usb_storage" "sd_mod" "usbhid" "hid_generic"
     "nvme" "uas" "virtio_pci" "virtio_blk"
     "sdhci_pci" "ata_piix" "ata_generic"
-    # Required for squashfs hybrid store
-    "squashfs" "overlay" "loop"
   ];
+  # Force-load squashfs/loop/overlay so they are active before
+  # postMountCommands tries to mount the squashfs store image.
+  # availableKernelModules only bundles them in the initrd — it does
+  # not guarantee they are loaded when postMountCommands executes.
+  boot.initrd.kernelModules = [ "loop" "squashfs" "overlay" ];
   hardware.enableAllFirmware = true;
 
   # Enable LUKS support
