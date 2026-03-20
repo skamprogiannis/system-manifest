@@ -54,4 +54,13 @@
     set_icon "$HOME/scripts" "folder"
     set_icon "$HOME/wallpapers/.thumbnails" "folder-pictures"
   '';
+
+  home.file.".config/xdg-desktop-portal-termfilechooser/config".text = ''
+    [filechooser]
+    cmd=portal-yazi-filechooser
+    env=TERMCMD=ghostty -e
+    default_dir=$HOME
+    open_mode=suggested
+    save_mode=suggested
+  '';
 }
