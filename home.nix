@@ -125,6 +125,7 @@
     login_redirect_uri = "http://127.0.0.1:8989/login"
     enable_streaming = "DaemonOnly"
     enable_media_control = true
+    playback_refresh_duration_in_ms = 2000
     enable_notify = true
     notify_transient = true
 
