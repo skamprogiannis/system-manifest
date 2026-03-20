@@ -5,7 +5,6 @@
   inputs,
   ...
 }: let
-  cfg = config.wayland.windowManager.hyprland;
   hyprland-pkg = inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
   hyprglass-plugin = pkgs.stdenv.mkDerivation {
     pname = "hyprglass";
@@ -198,6 +197,14 @@ in {
           "$mod SHIFT, equal, resizeactive, 30 30"
           "$mod, KP_SUBTRACT, resizeactive, -30 -30"
           "$mod, KP_ADD, resizeactive, 30 30"
+          "$mod CTRL, h, resizeactive, -30 0"
+          "$mod CTRL, l, resizeactive, 30 0"
+          "$mod CTRL, k, resizeactive, 0 -30"
+          "$mod CTRL, j, resizeactive, 0 30"
+          "$mod CTRL, Left, resizeactive, -30 0"
+          "$mod CTRL, Right, resizeactive, 30 0"
+          "$mod CTRL, Up, resizeactive, 0 -30"
+          "$mod CTRL, Down, resizeactive, 0 30"
         ];
 
         bind = [

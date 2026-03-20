@@ -45,6 +45,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 - **Cursor:** Adwaita (system default). HollowKnight cursor theme is built and available for future use.
 - **Zellij Navigation:** `Alt`-based keybindings for all multiplexer actions; `Escape` exits any mode back to Normal and is unbound in Normal mode so it passes through to terminal apps (Vim, Copilot CLI, etc.).
 - **Keyboard Layout:** `us altgr-intl` + `gr simple`. `Super+Space` toggles layouts.
+- **Window Controls:** `Super` + left-drag moves windows, `Super` + right-drag resizes. `Super+Ctrl+H/J/K/L` (or arrows) resizes in directions. `Super` + `-` shrinks and `Super` + `+` grows the window.
 - **Window Controls:** `Super` + left-drag moves windows, `Super` + right-drag resizes. `Super` + `-` shrinks and `Super` + `+` grows the active window.
 - **Launcher Shortcuts:** `Super+E` opens **Yazi** in Ghostty; `Super+Shift+E` opens **Nautilus**.
 - **Screenshots:** `dms screenshot` handles region/window/full capture with image-to-clipboard. `screenshot-path-copy` wraps it to copy the file path instead (useful for sharing with AI agents). Screen recording via **Kooha** GUI.
