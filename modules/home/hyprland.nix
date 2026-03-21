@@ -252,7 +252,7 @@ in {
           "$mod, d, exec, dms ipc call spotlight toggle"
           "$mod SHIFT, v, exec, dms ipc call clipboard toggle"
           "$mod, p, pseudo,"
-          "$mod, backslash, togglesplit,"
+          "$mod, backslash, layoutmsg, togglesplit"
           "$mod, g, togglegroup,"
           "$mod, Tab, changegroupactive, f"
 
