@@ -23,6 +23,13 @@
             bind "Esc" { SwitchToMode "Normal"; }
           }
 
+          // Keep Enter behavior while preventing status-bar from preferring it in mode hints.
+          // The extra NoOp keeps Enter functional but avoids matching "SwitchToMode Normal" hint patterns.
+          shared_except "normal" "locked" {
+            unbind "Enter"
+            bind "Enter" { SwitchToMode "Normal"; NoOp; }
+          }
+
           normal {
             // Esc is unbound so Vim, Copilot etc. receive it uninterrupted
             unbind "Esc"
@@ -267,7 +274,7 @@
                 plugin location="zellij:tab-bar"
             }
             children
-            pane size=2 borderless=true {
+            pane size=1 borderless=true {
                 plugin location="zellij:status-bar"
             }
         }
