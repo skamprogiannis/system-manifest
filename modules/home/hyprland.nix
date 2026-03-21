@@ -246,7 +246,6 @@ in {
           "$mod, x, killactive,"
           "$mod, m, exec, ghostty -e spotify_player"
           "$mod, e, exec, ghostty -e yazi"
-          "$mod SHIFT, e, exec, nautilus"
           "$mod, v, togglefloating,"
           "$mod, f, fullscreen,"
           "$mod, d, exec, dms ipc call spotlight toggle"

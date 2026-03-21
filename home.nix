@@ -38,7 +38,6 @@
     kooha
     mpv
     linux-wallpaperengine
-    nautilus
     vesktop
     pkgs.mailspring
     obsidian
