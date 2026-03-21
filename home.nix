@@ -46,6 +46,7 @@
 
     # CLI / Tools
     alejandra
+    clang
     curl
     fastfetch
     fd
@@ -100,6 +101,7 @@
       '';
     })
     glow
+    gnumake
     go
     gopls
     jq
