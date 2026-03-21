@@ -20,12 +20,16 @@
   services.greetd.settings.default_session.user = "greeter";
 
   # AccountsService user config — required for the greeter avatar.
-  # Without this file the D-Bus IconFile query returns empty even though
-  # the icon exists at /var/lib/AccountsService/icons/stefan.
   environment.etc."AccountsService/users/stefan".text = ''
     [User]
     Icon=/var/lib/AccountsService/icons/stefan
     SystemAccount=false
+  '';
+
+  # Keep the avatar file declarative and aligned with the AccountsService Icon path.
+  system.activationScripts.accountsServiceAvatar = lib.stringAfter ["users"] ''
+    install -Dm0644 ${./assets/stefan-avatar.webp} /var/lib/AccountsService/icons/stefan
+    chown root:root /var/lib/AccountsService/icons/stefan
   '';
 
   # System-wide cursor theme (needed for greeter and other non-HM contexts)
@@ -36,6 +40,8 @@
 
   # DMS greeter shells out to bash+dbus-send for user profile icons
   systemd.services.greetd.path = with pkgs; [ bash dbus ];
+  # Avatar file is WEBP; expose Qt imageformat plugins so greeter can decode it.
+  systemd.services.greetd.environment.QT_PLUGIN_PATH = "${pkgs.qt6.qtimageformats}/lib/qt-6/plugins";
 
   networking.hostName = "desktop";
 

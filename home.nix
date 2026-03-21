@@ -55,19 +55,29 @@
     (pkgs.symlinkJoin {
       name = "github-copilot-cli-wrapped";
       paths = [ pkgs.github-copilot-cli ];
-      nativeBuildInputs = [ pkgs.makeWrapper ];
       postBuild = ''
-        wrapProgram $out/bin/copilot \
-          --prefix LD_LIBRARY_PATH : "${pkgs.lib.makeLibraryPath [
+        rm -f $out/bin/copilot
+        cp ${pkgs.github-copilot-cli}/bin/.copilot-wrapped $out/bin/upstream-copilot
+        chmod +x $out/bin/upstream-copilot
+
+        # Keep executable basename "copilot" (gh checks PATH for this name),
+        # but run the real binary with filtered args and NixOS runtime libs.
+        cat > $out/bin/copilot <<'EOF'
+        #!${pkgs.bash}/bin/bash
+        if [[ -n "$LD_LIBRARY_PATH" ]]; then
+          export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath [
+            pkgs.libsecret
+            pkgs.glib
+            pkgs.gcc-unwrapped.lib
+          ]}:$LD_LIBRARY_PATH"
+        else
+          export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath [
             pkgs.libsecret
             pkgs.glib
             pkgs.gcc-unwrapped.lib
           ]}"
+        fi
 
-        # gh 2.88.x invokes copilot with --no-warnings; strip it for compatibility
-        mv $out/bin/copilot $out/bin/copilot-real
-        cat > $out/bin/copilot <<'EOF'
-        #!${pkgs.bash}/bin/bash
         args=()
         for arg in "$@"; do
           if [[ "$arg" == "--no-warnings" ]]; then
@@ -75,7 +85,16 @@
           fi
           args+=("$arg")
         done
-        exec "$(dirname "$0")/copilot-real" "''${args[@]}"
+
+        # The upstream loader behavior depends on argv0 ending in "copilot".
+        # Use a symlinked binary name that preserves this suffix.
+        real="$(dirname "$0")/upstream-copilot"
+        if [[ ! -x "$real" ]]; then
+          echo "copilot runtime binary not found: $real" >&2
+          exit 1
+        fi
+
+        exec "$real" --no-auto-update "''${args[@]}"
         EOF
         chmod +x $out/bin/copilot
       '';
