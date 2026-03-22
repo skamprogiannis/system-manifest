@@ -56,7 +56,7 @@
     # Wrap copilot CLI so keytar.node can find libsecret at runtime
     (pkgs.symlinkJoin {
       name = "github-copilot-cli-wrapped";
-      paths = [ pkgs.github-copilot-cli ];
+      paths = [pkgs.github-copilot-cli];
       postBuild = ''
         rm -f $out/bin/copilot
         cp ${pkgs.github-copilot-cli}/bin/.copilot-wrapped $out/bin/upstream-copilot
@@ -68,16 +68,16 @@
         #!${pkgs.bash}/bin/bash
         if [[ -n "$LD_LIBRARY_PATH" ]]; then
           export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath [
-            pkgs.libsecret
-            pkgs.glib
-            pkgs.gcc-unwrapped.lib
-          ]}:$LD_LIBRARY_PATH"
+          pkgs.libsecret
+          pkgs.glib
+          pkgs.gcc-unwrapped.lib
+        ]}:$LD_LIBRARY_PATH"
         else
           export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath [
-            pkgs.libsecret
-            pkgs.glib
-            pkgs.gcc-unwrapped.lib
-          ]}"
+          pkgs.libsecret
+          pkgs.glib
+          pkgs.gcc-unwrapped.lib
+        ]}"
         fi
 
         args=()
@@ -224,14 +224,14 @@
   systemd.user.services.transmission-daemon = {
     Unit = {
       Description = "Transmission BitTorrent Daemon";
-      After = [ "network.target" ];
+      After = ["network.target"];
     };
     Service = {
       ExecStart = "${pkgs.transmission_4}/bin/transmission-daemon -f --no-auth --config-dir %h/.config/fragments --port 9091 --rpc-bind-address 127.0.0.1 --allowed 127.0.0.1";
       Restart = "on-failure";
     };
     Install = {
-      WantedBy = [ "default.target" ];
+      WantedBy = ["default.target"];
     };
   };
 
