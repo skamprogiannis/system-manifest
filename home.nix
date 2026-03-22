@@ -46,6 +46,8 @@
     # CLI / Tools
     alejandra
     clang
+    clang-tools
+    cppcheck
     curl
     fastfetch
     fd

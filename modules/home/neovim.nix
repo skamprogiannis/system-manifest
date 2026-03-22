@@ -51,6 +51,11 @@
       }
       {
         event = "FileType";
+        pattern = [ "c" "cpp" ];
+        command = "setlocal tabstop=4 shiftwidth=4 softtabstop=4 colorcolumn=100";
+      }
+      {
+        event = "FileType";
         pattern = "cs";
         command = "setlocal colorcolumn=120"; # Microsoft C# conventions
       }
@@ -118,6 +123,7 @@
           pylsp.enable = true;
           omnisharp.enable = true;
           nil_ls.enable = true;
+          clangd.enable = true;
         };
         keymaps = {
           lspBuf = {
@@ -159,6 +165,8 @@
             typescriptreact = [ "prettier" ];
             python = [ "ruff_format" ];
             nix = [ "alejandra" ];
+          c = [ "clang_format" ];
+          cpp = [ "clang_format" ];
           };
         };
       };
@@ -172,6 +180,8 @@
           typescriptreact = [ "eslint" ];
           python = [ "ruff" ];
           nix = [ "statix" ];
+          c = [ "cppcheck" ];
+          cpp = [ "cppcheck" ];
         };
       };
 
