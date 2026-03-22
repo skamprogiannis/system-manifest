@@ -21,7 +21,7 @@
       shiftwidth = 4;
       softtabstop = 4;
       undofile = true;
-      undodir = "$HOME/.local/state/nvim/undo";
+      undodir = "${config.home.homeDirectory}/.local/state/nvim/undo";
     };
 
     # Filetype-specific column rulers and indentation
