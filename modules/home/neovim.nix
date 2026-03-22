@@ -248,6 +248,14 @@
         action = ":m '<-2<CR>gv=gv";
         options.desc = "Move selection up";
       }
+      # --- UndoTree ---
+      {
+        mode = "n";
+        key = "<leader>u";
+        action = "<cmd>UndotreeToggle<cr>";
+        options.desc = "Toggle UndoTree";
+      }
+
       # --- Telescope ---
       {
         mode = "n";
