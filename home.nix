@@ -172,8 +172,6 @@
 
   home.shellAliases = {
     cat = "bat";
-    find = "fd";
-    grep = "rg";
     pearpass-dev = "cd ~/repositories/pearpass-app-desktop && npx pear run -d .";
     tremc = "systemd-inhibit --why='Downloading torrents' --who='tremc' --what='sleep:idle' tremc";
   };
