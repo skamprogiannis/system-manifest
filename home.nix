@@ -107,6 +107,8 @@
     libsecret
     nodejs_22
     nodePackages.typescript-language-server
+    nodePackages.prettier
+    nodePackages.eslint
     omnisharp-roslyn
     pacvim
     pandoc
@@ -115,6 +117,7 @@
     ripgrep
     ruff
     rust-analyzer
+    statix
     transmission_4
     tremc
     uv
