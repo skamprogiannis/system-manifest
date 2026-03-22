@@ -72,16 +72,24 @@
         [ -s "$dst" ]
       }
 
-      # Fallback: pad preview image to 16:9 with its own average color
+      # Fallback: scale-to-fill (cover crop) preview image to 16:9
       generate_thumb_fallback() {
         local src="$1" dst="$2"
         local frame="$src"
-        [[ "$src" == *.gif ]] && frame="''${src}[0]"
-        AVG=$(${pkgs.imagemagick}/bin/magick "$frame" -resize 1x1! -format '%[hex:p{0,0}]' info: 2>/dev/null)
-        [ -z "$AVG" ] && AVG="000000"
+        if [[ "$src" == *.gif ]]; then
+          # Pick the middle frame — avoids intro/blank frames and is more
+          # representative. Gaussian filter during resize smooths out GIF
+          # dithering artifacts (256-colour palette banding).
+          local nframes
+          nframes=$(${pkgs.imagemagick}/bin/magick identify "$src" 2>/dev/null | wc -l)
+          local mid=$(( nframes / 2 ))
+          frame="''${src}[''${mid}]"
+        fi
         ${pkgs.imagemagick}/bin/magick "$frame" \
-          -resize 1920x1080 -gravity center \
-          -background "#$AVG" -extent 1920x1080 \
+          -filter Gaussian \
+          -resize 1920x1080^ -gravity center \
+          -extent 1920x1080 \
+          -quality 92 \
           "$dst" 2>/dev/null
       }
 
