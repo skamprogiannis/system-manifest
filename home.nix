@@ -139,6 +139,13 @@
     set vi-cmd-mode-string "\1\e[2 q\2"
   '';
 
+  # Persistent undo directory for neovim
+  home.file."${config.xdg.stateHome}/nvim/undo/.keep" = {
+    text = ''
+
+    '';
+  };
+
   programs.home-manager.enable = true;
 
   # Prevent long shutdown delays for user services
