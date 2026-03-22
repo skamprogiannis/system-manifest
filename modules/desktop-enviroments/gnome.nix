@@ -6,6 +6,8 @@
   # Enable the GNOME Desktop Environment
   services.displayManager.gdm.enable = true;
   services.desktopManager.gnome.enable = true;
+  security.pam.services.gdm.enableGnomeKeyring = true;
+  security.pam.services."gdm-password".enableGnomeKeyring = true;
 
   environment.systemPackages = with pkgs; [
     btop
