@@ -406,6 +406,25 @@
         action = "<cmd>lua _G.git_worktree_picker()<cr>";
         options.desc = "Git worktrees";
       }
+      # --- Diagnostics ---
+      {
+        mode = "n";
+        key = "<leader>e";
+        action = "<cmd>lua vim.diagnostic.open_float()<cr>";
+        options.desc = "Show line diagnostics";
+      }
+      {
+        mode = "n";
+        key = "]d";
+        action = "<cmd>lua vim.diagnostic.goto_next()<cr>";
+        options.desc = "Next diagnostic";
+      }
+      {
+        mode = "n";
+        key = "[d";
+        action = "<cmd>lua vim.diagnostic.goto_prev()<cr>";
+        options.desc = "Prev diagnostic";
+      }
     ];
   };
 
