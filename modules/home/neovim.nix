@@ -70,8 +70,7 @@
       vim.api.nvim_set_hl(0, "SignColumn", { bg = "NONE" })
       vim.api.nvim_set_hl(0, "LineNr", { bg = "NONE" })
 
-      -- git-worktree: setup + snacks picker wrapper
-      require("git-worktree").setup()
+      -- git-worktree + snacks picker wrapper
 
       _G.git_worktree_picker = function()
         local lines = vim.fn.systemlist("git worktree list --porcelain")
