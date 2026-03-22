@@ -64,6 +64,44 @@
       vim.api.nvim_set_hl(0, "NormalNC", { bg = "NONE" })
       vim.api.nvim_set_hl(0, "SignColumn", { bg = "NONE" })
       vim.api.nvim_set_hl(0, "LineNr", { bg = "NONE" })
+
+      -- git-worktree: setup + snacks picker wrapper
+      require("git-worktree").setup()
+
+      _G.git_worktree_picker = function()
+        local lines = vim.fn.systemlist("git worktree list --porcelain")
+        local items = {}
+        local entry = {}
+        for _, line in ipairs(lines) do
+          local path  = line:match("^worktree (.+)")
+          local branch = line:match("^branch refs/heads/(.+)")
+          if path then
+            entry.path = path
+          elseif branch then
+            entry.branch = branch
+          elseif line == "" and entry.path then
+            table.insert(items, {
+              text = string.format("%-30s  %s", entry.branch or "(detached)", entry.path),
+              wt_path = entry.path,
+            })
+            entry = {}
+          end
+        end
+        if entry.path then
+          table.insert(items, {
+            text = string.format("%-30s  %s", entry.branch or "(detached)", entry.path),
+            wt_path = entry.path,
+          })
+        end
+        Snacks.picker.pick("worktrees", {
+          finder  = function() return items end,
+          title   = "Git Worktrees",
+          confirm = function(picker, item)
+            picker:close()
+            require("git-worktree").switch_worktree(item.wt_path)
+          end,
+        })
+      end
     '';
 
     plugins = {
@@ -177,13 +215,13 @@
           highlight.enable = true;
         };
       };
-      telescope.enable = true;
       snacks = {
         enable = true;
         settings = {
           dashboard.enabled = true;
           notifier.enabled = true;
           gitBrowse.enabled = true;
+          picker.enabled = true;
           indent.enabled = false;
           scroll.enabled = false;
           animate.enabled = false;
@@ -193,6 +231,7 @@
 
     extraPlugins = with pkgs.vimPlugins; [
       vim-be-good
+      git-worktree-nvim
     ];
 
     keymaps = [
@@ -318,30 +357,44 @@
         options.desc = "Flash treesitter jump";
       }
 
-      # --- Telescope ---
+      # --- Find (snacks picker) ---
       {
         mode = "n";
         key = "<leader>ff";
-        action = "<cmd>Telescope find_files<cr>";
+        action = "<cmd>lua Snacks.picker.files()<cr>";
         options.desc = "Find files";
       }
       {
         mode = "n";
         key = "<leader>fg";
-        action = "<cmd>Telescope live_grep<cr>";
+        action = "<cmd>lua Snacks.picker.grep()<cr>";
         options.desc = "Live grep";
       }
       {
         mode = "n";
         key = "<leader>fb";
-        action = "<cmd>Telescope buffers<cr>";
+        action = "<cmd>lua Snacks.picker.buffers()<cr>";
         options.desc = "Buffers";
       }
       {
         mode = "n";
         key = "<leader>fh";
-        action = "<cmd>Telescope help_tags<cr>";
+        action = "<cmd>lua Snacks.picker.help()<cr>";
         options.desc = "Help tags";
+      }
+      # --- Format ---
+      {
+        mode = [ "n" "v" ];
+        key = "<leader>cf";
+        action = "<cmd>lua require('conform').format({ async = true })<cr>";
+        options.desc = "Format buffer";
+      }
+      # --- Git worktrees ---
+      {
+        mode = "n";
+        key = "<leader>gw";
+        action = "<cmd>lua _G.git_worktree_picker()<cr>";
+        options.desc = "Git worktrees";
       }
     ];
   };
