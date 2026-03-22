@@ -28,7 +28,18 @@
 
   # Keep the avatar file declarative and aligned with the AccountsService Icon path.
   system.activationScripts.accountsServiceAvatar = lib.stringAfter ["users"] ''
+    install -dm0755 /var/lib/AccountsService/users /var/lib/AccountsService/icons
+
+    cat > /var/lib/AccountsService/users/stefan <<'EOF'
+    [User]
+    Icon=/var/lib/AccountsService/icons/stefan
+    SystemAccount=false
+    EOF
+    chmod 0644 /var/lib/AccountsService/users/stefan
+    chown root:root /var/lib/AccountsService/users/stefan
+
     install -Dm0644 ${./assets/stefan-avatar.webp} /var/lib/AccountsService/icons/stefan
+    chmod 0644 /var/lib/AccountsService/icons/stefan
     chown root:root /var/lib/AccountsService/icons/stefan
   '';
 
@@ -39,9 +50,15 @@
   };
 
   # DMS greeter shells out to bash+dbus-send for user profile icons
-  systemd.services.greetd.path = with pkgs; [ bash dbus ];
-  # Avatar file is WEBP; expose Qt imageformat plugins so greeter can decode it.
-  systemd.services.greetd.environment.QT_PLUGIN_PATH = "${pkgs.qt6.qtimageformats}/lib/qt-6/plugins";
+  systemd.services.greetd.path = with pkgs; [ bash dbus systemd ];
+  # Ensure greeter DBus queries and Qt image loaders resolve correctly.
+  systemd.services.greetd.environment = {
+    DBUS_SYSTEM_BUS_ADDRESS = "unix:path=/run/dbus/system_bus_socket";
+    QT_PLUGIN_PATH = lib.concatStringsSep ":" [
+      "${pkgs.qt6.qtbase}/lib/qt-6/plugins"
+      "${pkgs.qt6.qtimageformats}/lib/qt-6/plugins"
+    ];
+  };
 
   networking.hostName = "desktop";
 
