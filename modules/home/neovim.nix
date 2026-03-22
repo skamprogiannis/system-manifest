@@ -92,55 +92,70 @@
         };
       };
 
-      cmp = {
+      cmp.enable = false;
+
+      blink-cmp = {
         enable = true;
-        autoEnableSources = true;
         settings = {
-          sources = [
-            { name = "nvim_lsp"; }
-            { name = "luasnip"; }
-            { name = "path"; }
-            { name = "buffer"; }
-          ];
-          snippet.expand = ''
-            function(args)
-              require('luasnip').lsp_expand(args.body)
-            end
-          '';
-          mapping = {
-            "<CR>" = "cmp.mapping.confirm({ select = true })";
-            "<Tab>" = ''
-              cmp.mapping(function(fallback)
-                local luasnip = require('luasnip')
-                if cmp.visible() then
-                  cmp.select_next_item()
-                elseif luasnip.expand_or_jumpable() then
-                  luasnip.expand_or_jump()
-                else
-                  fallback()
-                end
-              end, { 'i', 's' })
-            '';
-            "<S-Tab>" = ''
-              cmp.mapping(function(fallback)
-                local luasnip = require('luasnip')
-                if cmp.visible() then
-                  cmp.select_prev_item()
-                elseif luasnip.jumpable(-1) then
-                  luasnip.jump(-1)
-                else
-                  fallback()
-                end
-              end, { 'i', 's' })
-            '';
+          keymap.preset = "default";
+          appearance.nerd_font_variant = "mono";
+          sources.default = [ "lsp" "path" "snippets" "buffer" ];
+          signature.enabled = true;
+        };
+      };
+
+      web-devicons.enable = true;
+      undotree.enable = true;
+
+      conform-nvim = {
+        enable = true;
+        settings = {
+          format_on_save = {
+            timeout_ms = 2000;
+            lsp_fallback = false;
+          };
+          formatters_by_ft = {
+            javascript = [ "prettier" ];
+            typescript = [ "prettier" ];
+            javascriptreact = [ "prettier" ];
+            typescriptreact = [ "prettier" ];
+            python = [ "ruff_format" ];
+            nix = [ "alejandra" ];
           };
         };
       };
 
-      luasnip.enable = true;
+      lint = {
+        enable = true;
+        lintersByFt = {
+          javascript = [ "eslint" ];
+          typescript = [ "eslint" ];
+          javascriptreact = [ "eslint" ];
+          typescriptreact = [ "eslint" ];
+          python = [ "ruff" ];
+          nix = [ "statix" ];
+        };
+      };
 
-      web-devicons.enable = true;
-      undotree.enable = true;
+      lualine = {
+        enable = true;
+        settings.options.theme = "dracula";
+      };
+
+      gitsigns = {
+        enable = true;
+        settings.signs = {
+          add.text = "▎";
+          change.text = "▎";
+          delete.text = "";
+          topdelete.text = "";
+          changedelete.text = "▎";
+        };
+      };
+
+      which-key.enable = true;
+
+      flash.enable = true;
       neo-tree = {
         enable = true;
         settings = {
@@ -163,14 +178,15 @@
         };
       };
       telescope.enable = true;
-      startify = {
+      snacks = {
         enable = true;
-        configuration = {
-          session_directory = "$HOME/.local/share/nvim/session";
-          session_delete_buffers = true;
-          session_autoload = 1;
-          session_autosave = "yes";
-          session_save_on_exit = "yes";
+        settings = {
+          dashboard.enabled = true;
+          notifier.enabled = true;
+          gitBrowse.enabled = true;
+          indent.enabled = false;
+          scroll.enabled = false;
+          animate.enabled = false;
         };
       };
     };
@@ -256,6 +272,50 @@
         key = "<leader>u";
         action = "<cmd>UndotreeToggle<cr>";
         options.desc = "Toggle UndoTree";
+      }
+      # --- Git hunks (gitsigns) ---
+      {
+        mode = "n";
+        key = "]h";
+        action = "<cmd>Gitsigns next_hunk<cr>";
+        options.desc = "Next git hunk";
+      }
+      {
+        mode = "n";
+        key = "[h";
+        action = "<cmd>Gitsigns prev_hunk<cr>";
+        options.desc = "Prev git hunk";
+      }
+      {
+        mode = "n";
+        key = "<leader>hs";
+        action = "<cmd>Gitsigns stage_hunk<cr>";
+        options.desc = "Stage hunk";
+      }
+      {
+        mode = "n";
+        key = "<leader>hu";
+        action = "<cmd>Gitsigns undo_stage_hunk<cr>";
+        options.desc = "Undo stage hunk";
+      }
+      {
+        mode = "n";
+        key = "<leader>hp";
+        action = "<cmd>Gitsigns preview_hunk<cr>";
+        options.desc = "Preview hunk";
+      }
+      # --- Flash jump ---
+      {
+        mode = [ "n" "o" "v" ];
+        key = "s";
+        action = "<cmd>lua require('flash').jump()<cr>";
+        options.desc = "Flash jump";
+      }
+      {
+        mode = [ "n" "o" "v" ];
+        key = "S";
+        action = "<cmd>lua require('flash').treesitter()<cr>";
+        options.desc = "Flash treesitter jump";
       }
 
       # --- Telescope ---
