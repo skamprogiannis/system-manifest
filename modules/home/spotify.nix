@@ -19,6 +19,20 @@
       ${pkgs.systemd}/bin/systemctl --user restart spotify-player.service
     fi
   '';
+  spotifyPauseOnStart = pkgs.writeShellScript "spotify-player-pause-on-start" ''
+    set -eu
+
+    attempts=0
+    while [ "$attempts" -lt 20 ]; do
+      if ${spotifyPlayerPkg}/bin/spotify_player -c ${spotifyDaemonConfigDir} playback pause >/dev/null 2>&1; then
+        exit 0
+      fi
+      attempts=$((attempts + 1))
+      ${pkgs.coreutils}/bin/sleep 0.5
+    done
+
+    echo "spotify-player: could not force startup pause; daemon may still be initializing" >&2
+  '';
 in {
   # TUI config: no MPRIS or notifications (daemon handles those)
   home.file."${config.xdg.configHome}/spotify-player/app.toml".text = ''
@@ -75,6 +89,7 @@ in {
       Type = "forking";
       ExecStartPre = "-${pkgs.psmisc}/bin/fuser -k 8081/tcp";
       ExecStart = "${spotifyPlayerPkg}/bin/spotify_player -c ${spotifyDaemonConfigDir} --daemon";
+      ExecStartPost = spotifyPauseOnStart;
       Restart = "on-failure";
       RestartSec = "30s";
       TimeoutStopSec = "2s";
