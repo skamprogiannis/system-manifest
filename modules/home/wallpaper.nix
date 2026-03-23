@@ -22,17 +22,48 @@
     };
   };
 
+  systemd.user.services.wallpaper-hook = {
+    Unit = {
+      Description = "DMS wallpaper sync hook";
+      After = ["hyprland-session.target" "dms.service"];
+      PartOf = ["hyprland-session.target"];
+    };
+    Service = {
+      Type = "simple";
+      ExecStart = "${config.home.profileDirectory}/bin/wallpaper-hook";
+      Restart = "on-failure";
+      RestartSec = "2";
+    };
+    Install = {
+      WantedBy = ["hyprland-session.target"];
+    };
+  };
+
   home.packages = [
     (pkgs.writeShellScriptBin "we-sync" ''
       WE_WORKSHOP="$HOME/games/SteamLibrary/steamapps/workshop/content/431960"
       WE_DEFAULTS="$HOME/games/SteamLibrary/steamapps/common/wallpaper_engine/projects/defaultprojects"
       WALL_DIR="$HOME/wallpapers"
+      CACHE_DIR="$HOME/.cache"
       MAP_FILE="$HOME/.cache/we-wallpaper-map.json"
+      LOCK_FILE="$CACHE_DIR/we-sync.lock"
       WE_SUBS=$(ls -1t "$HOME/.local/share/Steam/userdata"/*/ugc/431960_subscriptions.vdf 2>/dev/null | head -n 1)
+      FORCE_REGEN=0
+      if [ "''${1:-}" = "--regen" ]; then
+        FORCE_REGEN=1
+      fi
 
-      mkdir -p "$WALL_DIR"
+      mkdir -p "$WALL_DIR" "$CACHE_DIR"
+      exec 8>"$LOCK_FILE"
+      if ! ${pkgs.util-linux}/bin/flock -n 8; then
+        echo "we-sync already running, skipping"
+        exit 0
+      fi
 
-      echo "{" > "$MAP_FILE.tmp"
+      MAP_TMP=$(mktemp "$CACHE_DIR/we-wallpaper-map.json.tmp.XXXXXX")
+      trap 'rm -f "$MAP_TMP"' EXIT
+
+      echo "{" > "$MAP_TMP"
       FIRST=true
       declare -A EXPECTED_THUMBS
       declare -A SUBSCRIBED_IDS
@@ -72,25 +103,74 @@
         [ -s "$dst" ]
       }
 
-      # Fallback: scale-to-fill (cover crop) preview image to 16:9
-      generate_thumb_fallback() {
-        local src="$1" dst="$2"
+      # Prefer Wallpaper Engine's authored previews for much cleaner thumbnails.
+      # Fallback to a live capture only if no preview asset exists.
+      generate_thumb_from_preview() {
+        local dir="$1" dst="$2"
+        local src=""
         local frame="$src"
-        if [[ "$src" == *.gif ]]; then
-          # Pick the middle frame — avoids intro/blank frames and is more
-          # representative. Gaussian filter during resize smooths out GIF
-          # dithering artifacts (256-colour palette banding).
-          local nframes
-          nframes=$(${pkgs.imagemagick}/bin/magick identify "$src" 2>/dev/null | wc -l)
-          local mid=$(( nframes / 2 ))
-          frame="''${src}[''${mid}]"
+
+        for candidate in \
+          "$dir/preview.jpg" \
+          "$dir/preview.png" \
+          "$dir/preview.webp" \
+          "$dir/preview.bmp" \
+          "$dir/preview.gif" \
+          "$dir/thumbnail.jpg" \
+          "$dir/thumbnail.png" \
+          "$dir/thumbnail.webp"; do
+          if [ -f "$candidate" ]; then
+            src="$candidate"
+            break
+          fi
+        done
+
+        if [ -n "$src" ]; then
+          frame="$src"
+          if [[ "$src" == *.gif ]]; then
+            local nframes
+            nframes=$(${pkgs.imagemagick}/bin/magick identify "$src" 2>/dev/null | wc -l)
+            local mid=$(( nframes / 2 ))
+            frame="''${src}[''${mid}]"
+          fi
+
+          ${pkgs.imagemagick}/bin/magick "$frame" \
+            -strip \
+            -colorspace sRGB \
+            -filter Lanczos \
+            -resize 1920x1080^ -gravity center \
+            -extent 1920x1080 \
+            -quality 92 \
+            "$dst" 2>/dev/null || true
+          [ -s "$dst" ] && return 0
         fi
-        ${pkgs.imagemagick}/bin/magick "$frame" \
-          -filter Gaussian \
-          -resize 1920x1080^ -gravity center \
-          -extent 1920x1080 \
-          -quality 92 \
-          "$dst" 2>/dev/null
+
+        local movie=""
+        [ -f "$dir/preview_movie.mp4" ] && movie="$dir/preview_movie.mp4"
+        [ -z "$movie" ] && [ -f "$dir/preview_movie.webm" ] && movie="$dir/preview_movie.webm"
+        if [ -n "$movie" ]; then
+          ${pkgs.ffmpegthumbnailer}/bin/ffmpegthumbnailer \
+            -i "$movie" \
+            -o "$dst" \
+            -s 1920 \
+            -t 35 \
+            -q 10 \
+            -f >/dev/null 2>&1 || true
+
+          if [ -s "$dst" ]; then
+            ${pkgs.imagemagick}/bin/magick "$dst" \
+              -strip \
+              -colorspace sRGB \
+              -filter Lanczos \
+              -resize 1920x1080^ -gravity center \
+              -extent 1920x1080 \
+              -quality 92 \
+              "$dst" 2>/dev/null || true
+            [ -s "$dst" ] && return 0
+          fi
+        fi
+
+        return 1
       }
 
       # Process a single wallpaper directory
@@ -115,23 +195,20 @@
 
         THUMB_PATH="$WALL_DIR/$THUMB_NAME"
 
-        if [ ! -f "$THUMB_PATH" ]; then
+        if [ ! -f "$THUMB_PATH" ] || [ "$FORCE_REGEN" = "1" ]; then
           echo "  Rendering: $SAFE_TITLE..."
-          if ! generate_screenshot "$dir" "$THUMB_PATH"; then
-            echo "  Screenshot failed, using preview fallback"
-            local preview=""
-            [ -f "$dir/preview.jpg" ] && preview="$dir/preview.jpg"
-            [ -z "$preview" ] && [ -f "$dir/preview.gif" ] && preview="$dir/preview.gif"
-            [ -n "$preview" ] && generate_thumb_fallback "$preview" "$THUMB_PATH"
+          if ! generate_thumb_from_preview "$dir" "$THUMB_PATH"; then
+            echo "  Preview missing, using live capture fallback"
+            generate_screenshot "$dir" "$THUMB_PATH" || true
           fi
         fi
 
         if [ "$FIRST" = true ]; then
           FIRST=false
         else
-          echo "," >> "$MAP_FILE.tmp"
+          echo "," >> "$MAP_TMP"
         fi
-        printf '  "%s": "%s"' "$THUMB_NAME" "$dir" >> "$MAP_FILE.tmp"
+        printf '  "%s": "%s"' "$THUMB_NAME" "$dir" >> "$MAP_TMP"
       }
 
       # Read currently subscribed Workshop IDs so stale leftover directories
@@ -150,9 +227,16 @@
       # Include select bundled wallpapers
       process_dir "$WE_DEFAULTS/razer_vortex"
 
-      echo "" >> "$MAP_FILE.tmp"
-      echo "}" >> "$MAP_FILE.tmp"
-      mv "$MAP_FILE.tmp" "$MAP_FILE"
+      echo "" >> "$MAP_TMP"
+      echo "}" >> "$MAP_TMP"
+
+      if ! ${pkgs.jq}/bin/jq empty "$MAP_TMP" >/dev/null 2>&1; then
+        echo "Failed to build valid wallpaper map"
+        exit 1
+      fi
+
+      mv "$MAP_TMP" "$MAP_FILE"
+      trap - EXIT
 
       # Clean stale thumbnails not in current mapping
       for thumb in "$WALL_DIR"/*.jpg; do
@@ -209,9 +293,9 @@
     '')
 
     (pkgs.writeShellScriptBin "wallpaper-hook" ''
-      LOCKFILE="/tmp/wallpaper-hook.lock"
+      LOCKFILE="''${XDG_RUNTIME_DIR:-/tmp}/wallpaper-hook.lock"
       exec 9>"$LOCKFILE"
-      if ! flock -n 9; then
+      if ! ${pkgs.util-linux}/bin/flock -n 9; then
         exit 1
       fi
 
@@ -294,6 +378,30 @@ EOF
         return 1
       }
 
+      resolve_we_dir_with_refresh() {
+        local wall_path="$1"
+        local resolved=""
+
+        resolved=$(resolve_we_dir "$wall_path" || true)
+        if [ -n "$resolved" ]; then
+          echo "$resolved"
+          return 0
+        fi
+
+        # Mapping can get stale/corrupted after interrupted sessions.
+        # If current wallpaper comes from the synced folder, refresh once.
+        if [ -f "$wall_path" ] && [ "''${wall_path#$HOME/wallpapers/}" != "$wall_path" ]; then
+          we-sync &>/dev/null || true
+          resolved=$(resolve_we_dir "$wall_path" || true)
+          if [ -n "$resolved" ]; then
+            echo "$resolved"
+            return 0
+          fi
+        fi
+
+        return 1
+      }
+
       # Ensure WE wallpaper map is fresh before first poll
       we-sync &>/dev/null || true
 
@@ -307,7 +415,7 @@ EOF
           CURRENT_WALL="$NEW_WALL"
           echo "$CURRENT_WALL" > "$CACHE_WALL"
 
-          WE_DIR=$(resolve_we_dir "$NEW_WALL")
+          WE_DIR=$(resolve_we_dir_with_refresh "$NEW_WALL" || true)
 
           if [ -n "$WE_DIR" ]; then
             echo "Wallpaper Engine: $WE_DIR"
