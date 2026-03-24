@@ -93,5 +93,47 @@
       rm -rf "$tmpdir"
       exit "$status"
     '')
+    (pkgs.writeShellScriptBin "sync-static-wallpapers" ''
+      set -euo pipefail
+
+      REPO_URL="''${WALLPAPER_REPO_URL:-}"
+      REPO_BRANCH="''${WALLPAPER_REPO_BRANCH:-main}"
+      REPO_SUBDIR="''${WALLPAPER_REPO_SUBDIR:-.}"
+      REPO_CHECKOUT="$HOME/repositories/static-wallpapers"
+      DEST_DIR="$HOME/wallpapers/static"
+
+      if [ -n "''${1:-}" ]; then
+        REPO_URL="$1"
+      fi
+
+      if [ -z "$REPO_URL" ]; then
+        echo "Set WALLPAPER_REPO_URL or pass a repo URL as first argument."
+        echo "Example: sync-static-wallpapers git@github.com:you/wallpapers.git"
+        exit 1
+      fi
+
+      if [ -d "$REPO_CHECKOUT/.git" ]; then
+        ${pkgs.git}/bin/git -C "$REPO_CHECKOUT" fetch --depth 1 origin "$REPO_BRANCH"
+        if ! ${pkgs.git}/bin/git -C "$REPO_CHECKOUT" show-ref --verify --quiet "refs/heads/$REPO_BRANCH"; then
+          ${pkgs.git}/bin/git -C "$REPO_CHECKOUT" checkout -b "$REPO_BRANCH" "origin/$REPO_BRANCH"
+        else
+          ${pkgs.git}/bin/git -C "$REPO_CHECKOUT" checkout -q "$REPO_BRANCH"
+        fi
+        ${pkgs.git}/bin/git -C "$REPO_CHECKOUT" reset --hard "origin/$REPO_BRANCH"
+      else
+        mkdir -p "$(dirname "$REPO_CHECKOUT")"
+        ${pkgs.git}/bin/git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" "$REPO_CHECKOUT"
+      fi
+
+      SRC_DIR="$REPO_CHECKOUT/$REPO_SUBDIR"
+      if [ ! -d "$SRC_DIR" ]; then
+        echo "Source subdir not found in repo: $SRC_DIR"
+        exit 1
+      fi
+
+      mkdir -p "$DEST_DIR"
+      ${pkgs.rsync}/bin/rsync -av --delete --exclude '.git' "$SRC_DIR"/ "$DEST_DIR"/
+      echo "Synced static wallpapers into $DEST_DIR"
+    '')
   ];
 }

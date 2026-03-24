@@ -15,12 +15,13 @@ Managed via **Nix Flakes** and **Home Manager**.
   - **Transmission:** BitTorrent daemon with `tremc` TUI frontend.
   - **Mailspring:** Email client; credentials stored via GNOME Keyring (runs standalone, no GNOME shell required).
   - **Obsidian:** Note-taking application with Home Manager plugin management.
-  - **Vesktop:** Discord client (Translucence CSS theme managed imperatively).
+  - **PearPass:** Declarative wrapper for the PearPass P2P password manager AppImage.
+  - **Brave + Vimium C:** Declarative extension install with best-effort Vimium C state seeding for portable keymaps/options.
+  - **Vesktop:** Discord client with declarative `Liquid Glass` + `dms-midnight` theme stack.
 - **Dev Ready:** Pre-configured environment for Node.js, Python, Go, and Neovim (via nixvim), plus Clang build essentials (`clang` + `gnumake`). Neovim uses the Dracula colorscheme with a transparent background (matches Ghostty glass). Also registered as the default text editor via an `nvim-text` XDG desktop entry (opens in Ghostty).
-- **AI Integrated:** Built-in configuration for **GitHub Copilot CLI** with per-repo `AGENTS.md` instructions. Global Copilot instructions at `~/.copilot/AGENTS.md`.
+- **AI Integrated:** Built-in configuration for **GitHub Copilot CLI** with per-repo `AGENTS.md` instructions. Global Copilot instructions live at `~/.copilot/copilot-instructions.md`.
 - **Greeter Avatar:** AccountsService user metadata + declarative avatar asset provisioning for consistent DMS greeter profile image rendering.
 - **Modular Architecture:** Configuration split across `hosts/` (system-level) and `modules/home/` (user-level) for maintainability.
-- **PearPass:** Declarative wrapper for the PearPass P2P password manager AppImage, with native messaging support for browser extensions.
 - **Voiden:** Declarative AppImage wrapper for the Voiden offline-first API client.
 - **Binary Caches:** Configured for `hyprland.cachix.org`, `nix-community.cachix.org`, and `ghostty.cachix.org` — pre-built binaries avoid local compilation.
 
@@ -35,7 +36,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 | `home-manager` | `github:nix-community/home-manager` | Tracks nixpkgs-unstable |
 | `nixvim` | `github:nix-community/nixvim` | Full Neovim config in Nix |
 | `spotify-player` | `github:aome510/spotify-player` | Picks up latest client fixes before nixpkgs |
-| `pearpass-app-desktop` | `github:tetherto/pearpass-app-desktop` | P2P password manager; AppImage wrapped with FHS env for NixOS |
+| `pearpass-app-desktop` | `github:tetherto/pearpass-app-desktop` | PearPass AppImage source for NixOS wrapper |
 | `voiden` | `https://voiden.md/api/download/stable/linux/x64/Voiden-1.3.1.AppImage` | Offline-first API client packaged as AppImage wrapper |
 | `visual-explainer` | `github:nicobailon/visual-explainer` | HTML visualization generator for architecture diagrams and code explanations |
 | `impeccable` | `github:pbakaus/impeccable` | Frontend design skill with 20 commands for typography, color, layout, and motion |
@@ -45,6 +46,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 
 - **Glassmorphism Aesthetics:** Ghostty uses `background-opacity = 0.40` (native RGBA) so the terminal background is near-transparent while text stays fully opaque, giving a liquid-glass terminal. `minimum-contrast = 3.0` improves legibility by enforcing a stronger foreground/background contrast floor. The hyprglass Hyprland plugin is active for blur/tint/refraction effects on transparent surfaces.
 - **Dynamic Theming:** Matugen-powered Hyprland border colours, GTK4 colours, and video wallpapers via **linux-wallpaperengine** synced via a custom `wallpaper-hook` daemon. GTK uses the **Dracula** theme; Ghostty uses the built-in **Dracula** colour scheme.
+- **Brave transparency note:** Chromium/Brave does not support the same reliable transparent-shell/opaque-content model used by Vesktop in this setup, so Brave remains opaque for readability and stability.
 - **Cursor:** Adwaita (system default). HollowKnight cursor theme is built and available for future use.
 - **Zellij Navigation:** `Alt`-based keybindings for all multiplexer actions; `Escape` exits any mode back to Normal and is unbound in Normal mode so it passes through to terminal apps (Vim, Copilot CLI, etc.).
 - **Keyboard Layout:** `us altgr-intl` + `gr simple`. `Super+Space` toggles layouts.
@@ -62,8 +64,8 @@ Packages tracked independently of nixpkgs for tighter version control:
 | `zs` | Zellij sessionizer — fuzzy-find project in `~/repositories`, attach or create session with 80/20 Neovim/terminal layout |
 | `screenshot-path-copy` | Wraps `dms screenshot` to copy the saved file path to clipboard (instead of image) |
 | `wallpaper-hook` | Daemon: picks wallpaper via linux-wallpaperengine, extracts palette via Matugen, reloads Hyprland border and GTK4 colours |
-| `we-sync` | Syncs Wallpaper Engine subscriptions into `~/wallpapers`, renders thumbnails, and prunes stale unsubscribed entries |
-| `generate-thumbnails` | Generates JPG thumbnails for WallpaperEngine projects in `~/wallpapers` for the DMS wallpaper picker |
+| `we-sync` | Syncs Wallpaper Engine subscriptions into `~/wallpapers/wallpaper-engine`, renders thumbnails, and prunes stale unsubscribed entries |
+| `sync-static-wallpapers` | Pulls static wallpapers from a dedicated Git repo into `~/wallpapers/static` (portable desktop ↔ usb workflow) |
 | `hypr-nav` | Hyprland focus movement with workspace wrapping at boundaries |
 | `sync-transmission-port` | Updates transmission-daemon listening port |
 | `sync-copilot-sessions` | Syncs `~/.copilot/session-state/` between desktop and USB (`to-usb` / `from-usb`) |

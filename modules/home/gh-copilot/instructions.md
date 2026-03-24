@@ -11,7 +11,7 @@ This is a NixOS system with declarative, reproducible configuration management. 
 - **Shell**: Bash (vi mode enabled)
 - **Language**: Greek + US keyboard layouts (Super+Space to toggle)
 
-**CRITICAL**: Always check `/home/stefan/system_manifest/AGENTS.md` for project-specific rules and best practices. Those take precedence over general guidance.
+**CRITICAL**: Always check the local repository for `AGENTS.md` or `copilot-instructions.md` first. Local repository instructions take precedence over general guidance.
 
 ## Workflow for NixOS Configuration
 
