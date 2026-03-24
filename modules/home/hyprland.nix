@@ -326,6 +326,9 @@ in {
         windowrule = [
           "opacity 1.0 override, match:class ^(mpv|vlc|imv|feh)$"
           "opacity 1.0 override, match:title ^(Picture-in-Picture)$"
+          # Keep Vesktop fully opaque at compositor level; transparent UI
+          # comes from Vesktop's native RGBA setting to preserve text opacity.
+          "opacity 1.0 override, match:class ^(vesktop)$"
           # Center credential/auth dialogs so they don't spawn between monitors
           "float 1, match:class ^(pinentry|pinentry-gtk-2|pinentry-gnome3|ssh-askpass|git-askpass)$"
           "center 1, match:class ^(pinentry|pinentry-gtk-2|pinentry-gnome3|ssh-askpass|git-askpass)$"
