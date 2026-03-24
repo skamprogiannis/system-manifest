@@ -67,6 +67,19 @@ div[class*="container_"][class*="isSidebarOpen_"] {
   overflow: hidden !important;
 }
 
+/* Round message containers and lower composer/status rails. */
+div[class*="messageListItem_"] > div[class*="message_"],
+div[class*="message_"][class*="cozy_"],
+div[class*="form_"],
+div[class*="channelTextArea_"],
+div[class*="chatContent_"] > form,
+main[class*="chatContent_"] > form,
+div[class*="messagesWrapper_"],
+div[class*="scroller_"],
+div[class*="base_"] > div[class*="content_"] {
+  border-radius: var(--roundness-m) !important;
+}
+
 /* Remove DM chip background behind labels. */
 nav[class*="privateChannels_"] div[class*="interactive_"],
 nav[class*="privateChannels_"] li[class*="channel_"] > div,
