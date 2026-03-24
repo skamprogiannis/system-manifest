@@ -95,6 +95,14 @@ sudo ./update_usb.sh
 
 The script auto-fetches `squashfs-tools` via `nix-shell` if needed. After `nixos-install`, it compresses `/nix/store` into a squashfs image. At boot, the USB mounts this compressed image via overlayfs — reads are sequential and fast (like an ISO), while writes go to a 2 GB tmpfs (volatile, reset on reboot).
 
+### Initialize / Reformat Persistent USB
+
+```bash
+sudo ./setup_persistent_usb.sh /dev/sdX
+```
+
+`setup_persistent_usb.sh` now requires an explicit target disk path (for safety). It will wipe the disk, create `NIXOS_BOOT` + `NIXOS_USB_CRYPT` partitions, initialize LUKS, and format the encrypted root as ext4.
+
 ### Switch to Gaming Mode
 
 Select **"NixOS - desktop-gaming-box"** from the bootloader menu (GRUB).
