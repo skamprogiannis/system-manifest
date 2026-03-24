@@ -168,7 +168,7 @@ in {
         input = {
           kb_layout = "us,gr";
           kb_variant = "altgr-intl,simple";
-          kb_options = "grp:win_space_toggle";
+          kb_options = "grp:win_space_toggle,caps:escape_shifted_capslock";
           resolve_binds_by_sym = false;
         };
 
