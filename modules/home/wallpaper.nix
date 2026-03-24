@@ -99,6 +99,16 @@
             kill -9 "$pid" 2>/dev/null || true
           fi
         fi
+        # Avoid blocking forever if WE wedges after SIGKILL in some GPU states.
+        for _ in $(seq 1 25); do
+          if ! kill -0 "$pid" 2>/dev/null; then
+            break
+          fi
+          sleep 0.2
+        done
+        if kill -0 "$pid" 2>/dev/null; then
+          return 1
+        fi
         wait "$pid" 2>/dev/null || true
         [ -s "$dst" ]
       }
