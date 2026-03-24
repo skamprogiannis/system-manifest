@@ -329,6 +329,7 @@ in {
           "$mod, Escape, exec, dms ipc call lock lock"
           "$mod, s, exec, dms ipc call settings toggle"
           "$mod, q, exec, dms ipc call powermenu toggle"
+          "$mod, w, exec, dms ipc call dash toggle wallpaper"
         ];
 
         windowrule = [
