@@ -3,7 +3,32 @@
   pkgs,
   lib,
   ...
-}: {
+}: let
+  yaziOpenWrapper = pkgs.writeShellScript "yazi-open-wrapper" ''
+    set -euo pipefail
+
+    target="''${1:-$HOME}"
+
+    if [ "''${target#file://}" != "$target" ]; then
+      target=$(${pkgs.python3}/bin/python3 - "$target" <<'PY'
+import sys
+from urllib.parse import unquote, urlparse
+
+uri = sys.argv[1]
+parsed = urlparse(uri)
+path = parsed.path or ""
+print(unquote(path))
+PY
+      )
+    fi
+
+    if [ ! -e "$target" ]; then
+      target="$HOME"
+    fi
+
+    exec ${pkgs.ghostty}/bin/ghostty -e ${pkgs.yazi}/bin/yazi "$target"
+  '';
+in {
   # Manage XDG User Directories (documents, downloads, music, etc.)
   # This ensures they are created and managed declaratively.
   xdg.userDirs = {
@@ -102,5 +127,29 @@
           fi
       fi
     '';
+  };
+
+  xdg.desktopEntries.yazi-opener = {
+    name = "Yazi File Manager";
+    genericName = "Terminal File Manager";
+    comment = "Open files and folders in Yazi";
+    exec = "${yaziOpenWrapper} %U";
+    terminal = false;
+    categories = ["Utility" "System" "FileManager"];
+    noDisplay = false;
+    mimeType = [
+      "inode/directory"
+      "x-directory/normal"
+      "x-scheme-handler/file"
+    ];
+  };
+
+  xdg.mimeApps = {
+    enable = true;
+    defaultApplications = {
+      "inode/directory" = ["yazi-opener.desktop"];
+      "x-directory/normal" = ["yazi-opener.desktop"];
+      "x-scheme-handler/file" = ["yazi-opener.desktop"];
+    };
   };
 }
