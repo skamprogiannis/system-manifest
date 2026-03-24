@@ -103,8 +103,43 @@
         [ -s "$dst" ]
       }
 
-      # Prefer Wallpaper Engine's authored previews for much cleaner thumbnails.
-      # Fallback to a live capture only if no preview asset exists.
+      normalize_thumb() {
+        local src="$1" dst="$2"
+        ${pkgs.imagemagick}/bin/magick "$src" \
+          -strip \
+          -colorspace sRGB \
+          -filter Lanczos \
+          -resize 1920x1080^ -gravity center \
+          -extent 1920x1080 \
+          -quality 92 \
+          "$dst" 2>/dev/null || true
+        [ -s "$dst" ]
+      }
+
+      # For video projects, extract the true middle frame from the actual
+      # project media file referenced in project.json.
+      generate_thumb_from_project_video() {
+        local dir="$1" dst="$2"
+        local rel_video
+        rel_video=$(${pkgs.jq}/bin/jq -r '.file // empty' "$dir/project.json")
+        [ -z "$rel_video" ] && return 1
+
+        local video_path="$dir/$rel_video"
+        [ -f "$video_path" ] || return 1
+
+        ${pkgs.ffmpegthumbnailer}/bin/ffmpegthumbnailer \
+          -i "$video_path" \
+          -o "$dst" \
+          -s 1920 \
+          -t 50 \
+          -q 10 \
+          -f >/dev/null 2>&1 || true
+
+        [ -s "$dst" ] || return 1
+        normalize_thumb "$dst" "$dst"
+      }
+
+      # Use Wallpaper Engine authored previews as fallback assets.
       generate_thumb_from_preview() {
         local dir="$1" dst="$2"
         local src=""
@@ -134,15 +169,7 @@
             frame="''${src}[''${mid}]"
           fi
 
-          ${pkgs.imagemagick}/bin/magick "$frame" \
-            -strip \
-            -colorspace sRGB \
-            -filter Lanczos \
-            -resize 1920x1080^ -gravity center \
-            -extent 1920x1080 \
-            -quality 92 \
-            "$dst" 2>/dev/null || true
-          [ -s "$dst" ] && return 0
+          normalize_thumb "$frame" "$dst" && return 0
         fi
 
         local movie=""
@@ -153,21 +180,11 @@
             -i "$movie" \
             -o "$dst" \
             -s 1920 \
-            -t 35 \
+            -t 50 \
             -q 10 \
             -f >/dev/null 2>&1 || true
 
-          if [ -s "$dst" ]; then
-            ${pkgs.imagemagick}/bin/magick "$dst" \
-              -strip \
-              -colorspace sRGB \
-              -filter Lanczos \
-              -resize 1920x1080^ -gravity center \
-              -extent 1920x1080 \
-              -quality 92 \
-              "$dst" 2>/dev/null || true
-            [ -s "$dst" ] && return 0
-          fi
+          [ -s "$dst" ] && normalize_thumb "$dst" "$dst" && return 0
         fi
 
         return 1
@@ -194,12 +211,22 @@
         EXPECTED_THUMBS["$THUMB_NAME"]=1
 
         THUMB_PATH="$WALL_DIR/$THUMB_NAME"
+        PROJECT_TYPE=$(${pkgs.jq}/bin/jq -r '.type // ""' "$dir/project.json" | tr '[:upper:]' '[:lower:]')
 
         if [ ! -f "$THUMB_PATH" ] || [ "$FORCE_REGEN" = "1" ]; then
           echo "  Rendering: $SAFE_TITLE..."
-          if ! generate_thumb_from_preview "$dir" "$THUMB_PATH"; then
-            echo "  Preview missing, using live capture fallback"
-            generate_screenshot "$dir" "$THUMB_PATH" || true
+          if [ "$PROJECT_TYPE" = "video" ]; then
+            if ! generate_thumb_from_project_video "$dir" "$THUMB_PATH"; then
+              echo "  Middle-frame capture failed, using preview/live fallback"
+              if ! generate_thumb_from_preview "$dir" "$THUMB_PATH"; then
+                generate_screenshot "$dir" "$THUMB_PATH" || true
+              fi
+            fi
+          else
+            if ! generate_screenshot "$dir" "$THUMB_PATH"; then
+              echo "  Live capture failed, using preview fallback"
+              generate_thumb_from_preview "$dir" "$THUMB_PATH" || true
+            fi
           fi
         fi
 
