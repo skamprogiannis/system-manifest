@@ -1,0 +1,79 @@
+/**
+ * @name dms-liquid
+ * @description DMS + Liquid Glass declarative theme
+ * @author stefan
+ * @version 1.0.0
+ */
+
+/* Keep DMS-generated palette in sync with Matugen updates. */
+@import url('file:///home/stefan/.config/vesktop/themes/dank-discord.css');
+
+/* Liquid Glass base: transparent shell. */
+:root,
+html,
+body,
+#app-mount,
+div[class^="app_"],
+div[class^="bg_"],
+div[class^="layers_"],
+div[class^="layer_"] {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+.theme-dark,
+.theme-light {
+  --background-primary: transparent !important;
+  --background-secondary: transparent !important;
+  --background-tertiary: transparent !important;
+  --background-base-low: transparent !important;
+  --background-base-lower: transparent !important;
+  --background-base-lowest: transparent !important;
+  --channeltextarea-background: rgba(17, 19, 26, 0.42) !important;
+  --background-floating: rgba(17, 19, 26, 0.58) !important;
+  --background-modifier-hover: rgba(255, 255, 255, 0.05) !important;
+  --background-modifier-active: rgba(255, 255, 255, 0.08) !important;
+  --background-modifier-selected: rgba(255, 255, 255, 0.10) !important;
+  --background-modifier-accent: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Main content pane. */
+div[class*="chat_"],
+div[class*="chatContent_"],
+div[class*="messagesWrapper_"],
+main[class*="chatContent_"],
+section[class*="chatContent_"] {
+  background-color: rgba(17, 19, 26, 0.32) !important;
+  backdrop-filter: none !important;
+}
+
+/* Sidebars slightly more transparent. */
+div[class*="sidebar_"],
+nav[class*="privateChannels_"],
+div[class*="membersWrap_"],
+div[class*="peopleColumn_"],
+div[class*="standardSidebarView_"],
+div[class*="panels_"] {
+  background-color: rgba(17, 19, 26, 0.20) !important;
+  backdrop-filter: none !important;
+}
+
+/* Remove DM chip background behind labels. */
+nav[class*="privateChannels_"] div[class*="interactive_"],
+nav[class*="privateChannels_"] li[class*="channel_"] > div,
+nav[class*="privateChannels_"] a[class*="link_"],
+nav[class*="privateChannels_"] div[class*="link_"],
+nav[class*="privateChannels_"] div[class*="nameAndDecorators_"] {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+nav[class*="privateChannels_"] div[class*="interactive_"]:hover,
+nav[class*="privateChannels_"] li[class*="channel_"] > div:hover {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+nav[class*="privateChannels_"] [aria-selected="true"],
+nav[class*="privateChannels_"] div[class*="selected_"] {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
