@@ -98,42 +98,50 @@
 
       REPO_URL="''${WALLPAPER_REPO_URL:-}"
       REPO_BRANCH="''${WALLPAPER_REPO_BRANCH:-main}"
-      REPO_SUBDIR="''${WALLPAPER_REPO_SUBDIR:-.}"
-      REPO_CHECKOUT="$HOME/repositories/static-wallpapers"
-      DEST_DIR="$HOME/wallpapers/static"
+      REPO_DIR="''${WALLPAPER_REPO_DIR:-$HOME/wallpapers}"
 
       if [ -n "''${1:-}" ]; then
         REPO_URL="$1"
       fi
 
-      if [ -z "$REPO_URL" ]; then
-        echo "Set WALLPAPER_REPO_URL or pass a repo URL as first argument."
-        echo "Example: sync-static-wallpapers git@github.com:you/wallpapers.git"
+      if [ -n "$REPO_URL" ] && [ ! -d "$REPO_DIR/.git" ]; then
+        mkdir -p "$(dirname "$REPO_DIR")"
+        ${pkgs.git}/bin/git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" "$REPO_DIR"
+      fi
+
+      if [ ! -d "$REPO_DIR/.git" ]; then
+        echo "No git repo found at $REPO_DIR and no repo URL provided."
+        echo "Usage (first run): sync-static-wallpapers git@github.com:you/wallpapers.git"
         exit 1
       fi
 
-      if [ -d "$REPO_CHECKOUT/.git" ]; then
-        ${pkgs.git}/bin/git -C "$REPO_CHECKOUT" fetch --depth 1 origin "$REPO_BRANCH"
-        if ! ${pkgs.git}/bin/git -C "$REPO_CHECKOUT" show-ref --verify --quiet "refs/heads/$REPO_BRANCH"; then
-          ${pkgs.git}/bin/git -C "$REPO_CHECKOUT" checkout -b "$REPO_BRANCH" "origin/$REPO_BRANCH"
+      if ${pkgs.git}/bin/git -C "$REPO_DIR" remote get-url origin >/dev/null 2>&1; then
+        ${pkgs.git}/bin/git -C "$REPO_DIR" fetch --depth 1 origin "$REPO_BRANCH"
+        if ! ${pkgs.git}/bin/git -C "$REPO_DIR" show-ref --verify --quiet "refs/heads/$REPO_BRANCH"; then
+          ${pkgs.git}/bin/git -C "$REPO_DIR" checkout -b "$REPO_BRANCH" "origin/$REPO_BRANCH"
         else
-          ${pkgs.git}/bin/git -C "$REPO_CHECKOUT" checkout -q "$REPO_BRANCH"
+          ${pkgs.git}/bin/git -C "$REPO_DIR" checkout -q "$REPO_BRANCH"
         fi
-        ${pkgs.git}/bin/git -C "$REPO_CHECKOUT" reset --hard "origin/$REPO_BRANCH"
+        ${pkgs.git}/bin/git -C "$REPO_DIR" reset --hard "origin/$REPO_BRANCH"
       else
-        mkdir -p "$(dirname "$REPO_CHECKOUT")"
-        ${pkgs.git}/bin/git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" "$REPO_CHECKOUT"
+        echo "No origin remote configured at $REPO_DIR; skipping fetch/reset."
       fi
 
-      SRC_DIR="$REPO_CHECKOUT/$REPO_SUBDIR"
-      if [ ! -d "$SRC_DIR" ]; then
-        echo "Source subdir not found in repo: $SRC_DIR"
-        exit 1
+      mkdir -p "$REPO_DIR/wallpaper-engine"
+      touch "$REPO_DIR/.gitignore"
+      if ! grep -qxF 'wallpaper-engine/' "$REPO_DIR/.gitignore"; then
+        echo "wallpaper-engine/" >> "$REPO_DIR/.gitignore"
+        echo "Added wallpaper-engine/ to $REPO_DIR/.gitignore"
       fi
 
-      mkdir -p "$DEST_DIR"
-      ${pkgs.rsync}/bin/rsync -av --delete --exclude '.git' "$SRC_DIR"/ "$DEST_DIR"/
-      echo "Synced static wallpapers into $DEST_DIR"
+      if ! grep -qxF '.DS_Store' "$REPO_DIR/.gitignore"; then
+        echo ".DS_Store" >> "$REPO_DIR/.gitignore"
+      fi
+      if ! grep -qxF 'Thumbs.db' "$REPO_DIR/.gitignore"; then
+        echo "Thumbs.db" >> "$REPO_DIR/.gitignore"
+      fi
+
+      echo "Synced static wallpapers repo at $REPO_DIR"
     '')
   ];
 }

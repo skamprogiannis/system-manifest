@@ -65,7 +65,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 | `screenshot-path-copy` | Wraps `dms screenshot` to copy the saved file path to clipboard (instead of image) |
 | `wallpaper-hook` | Daemon: picks wallpaper via linux-wallpaperengine, extracts palette via Matugen, reloads Hyprland border and GTK4 colours |
 | `we-sync` | Syncs Wallpaper Engine subscriptions into `~/wallpapers/wallpaper-engine`, renders thumbnails, and prunes stale unsubscribed entries |
-| `sync-static-wallpapers` | Pulls static wallpapers from a dedicated Git repo into `~/wallpapers/static` (portable desktop ↔ usb workflow) |
+| `sync-static-wallpapers` | Syncs a wallpapers Git repo rooted at `~/wallpapers` and ensures `wallpaper-engine/` is ignored |
 | `hypr-nav` | Hyprland focus movement with workspace wrapping at boundaries |
 | `sync-transmission-port` | Updates transmission-daemon listening port |
 | `sync-copilot-sessions` | Syncs `~/.copilot/session-state/` between desktop and USB (`to-usb` / `from-usb`) |
