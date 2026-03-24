@@ -78,12 +78,12 @@ Use **Spec Kit** (`specify` CLI) to scaffold spec-driven development for new pro
 - **Purpose:** Updates the bootable USB drive configuration from the `usb` flake output.
 - **Command:** `sudo ./update_usb.sh`
 - **Steps:**
-  1.  Ensures root privileges.
-  2.  Unlocks the LUKS container (hardcoded to `/dev/sdc2`).
+  1.  Ensures root privileges and validates required USB partition labels exist.
+  2.  Unlocks the LUKS container via `/dev/disk/by-partlabel/NIXOS_USB_CRYPT`.
   3.  Mounts root and boot partitions to `/mnt`.
   4.  Runs `nixos-install --flake .#usb --root /mnt --no-root-passwd`.
   5.  Unmounts and cleans up.
-- **Note:** The script currently hardcodes device paths (`/dev/sdc`). Verify device names with `lsblk` before running if devices have changed.
+- **Note:** Script preflight now checks mountpoint safety and can auto-enter `nix-shell` when `mksquashfs` is missing. Optional usage: `sudo ./update_usb.sh /path/to/system-manifest`.
 - **GH auth on foreign machines:** When booting the USB on a computer lab machine, gnome-keyring may not auto-unlock. Store a fine-grained PAT (with "Copilot Requests" permission) in `~/.config/github-pat` on the encrypted USB partition: `echo "ghp_..." > ~/.config/github-pat && chmod 600 ~/.config/github-pat`. The shell will auto-export it as `GH_TOKEN`. This file is protected by LUKS and never committed to git.
 
 ## Copilot Session Sync (Desktop ↔ USB)
