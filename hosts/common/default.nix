@@ -100,7 +100,7 @@
   services.xserver.xkb = {
     layout = "us,gr";
     variant = "altgr-intl,simple";
-    options = "grp:win_space_toggle";
+    options = "grp:win_space_toggle,caps:escape_shifted_capslock";
   };
 
   # Enable CUPS to print documents
