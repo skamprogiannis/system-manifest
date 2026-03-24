@@ -143,7 +143,7 @@ in {
           # Instant static wallpaper while DMS loads; killed after 8s
           ''sh -c 'wall=$(${pkgs.jq}/bin/jq -r ".wallpaperPath // empty" ~/.local/state/DankMaterialShell/session.json 2>/dev/null); [ -f "$wall" ] && swaybg -i "$wall" -m fill & BGPID=$!; sleep 8; kill $BGPID 2>/dev/null' ''
           "hyprctl setcursor ${config.home.pointerCursor.name} ${toString config.home.pointerCursor.size}"
-          "wallpaper-hook &"
+          "systemctl --user start wallpaper-hook.service"
           # home-manager user services show as "linked" in systemd and don't
           # auto-start on login; ensure they're running after Hyprland starts
           "systemctl --user start spotify-player.service"
@@ -238,6 +238,14 @@ in {
           "$mod CTRL, Right, resizeactive, 60 0"
           "$mod CTRL, Up, resizeactive, 0 -60"
           "$mod CTRL, Down, resizeactive, 0 60"
+          "$mod ALT, h, moveactive, -30 0"
+          "$mod ALT, l, moveactive, 30 0"
+          "$mod ALT, k, moveactive, 0 -30"
+          "$mod ALT, j, moveactive, 0 30"
+          "$mod ALT, Left, moveactive, -60 0"
+          "$mod ALT, Right, moveactive, 60 0"
+          "$mod ALT, Up, moveactive, 0 -60"
+          "$mod ALT, Down, moveactive, 0 60"
         ];
 
         bind = [
