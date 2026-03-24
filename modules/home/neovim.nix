@@ -65,6 +65,21 @@
 
     # Transparent background — let Ghostty's RGBA glass show through
     extraConfigLuaPost = ''
+      -- Snacks dashboard expects Lazy.nvim stats; provide a tiny fallback
+      -- in Nixvim setups where lazy.nvim is not used.
+      do
+        local ok = pcall(require, "lazy.stats")
+        if not ok then
+          package.preload["lazy.stats"] = function()
+            return {
+              stats = function()
+                return { startuptime = 0, loaded = 0, count = 0 }
+              end,
+            }
+          end
+        end
+      end
+
       vim.api.nvim_set_hl(0, "Normal", { bg = "NONE" })
       vim.api.nvim_set_hl(0, "NormalNC", { bg = "NONE" })
       vim.api.nvim_set_hl(0, "SignColumn", { bg = "NONE" })
