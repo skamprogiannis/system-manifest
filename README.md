@@ -93,7 +93,13 @@ nixos-rebuild dry-build --flake .#desktop
 sudo ./update_usb.sh
 ```
 
-The script auto-fetches `squashfs-tools` via `nix-shell` if needed. After `nixos-install`, it compresses `/nix/store` into a squashfs image. At boot, the USB mounts this compressed image via overlayfs — reads are sequential and fast (like an ISO), while writes go to a 2 GB tmpfs (volatile, reset on reboot).
+The script now performs preflight checks (root, partition labels, mountpoint safety, and required tools), auto-enters `nix-shell` when `mksquashfs` is missing, and accepts an optional flake directory path:
+
+```bash
+sudo ./update_usb.sh /path/to/system-manifest
+```
+
+After `nixos-install`, it compresses `/nix/store` into a squashfs image. At boot, the USB mounts this compressed image via overlayfs — reads are sequential and fast (like an ISO), while writes go to a 2 GB tmpfs (volatile, reset on reboot).
 
 ### Initialize / Reformat Persistent USB
 
