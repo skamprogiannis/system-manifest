@@ -93,7 +93,7 @@ nixos-rebuild dry-build --flake .#desktop
 sudo ./update_usb.sh
 ```
 
-The script now performs preflight checks (root, partition labels, mountpoint safety, and required tools), auto-enters `nix-shell` when `mksquashfs` is missing, and accepts an optional flake directory path:
+The script performs preflight checks (root, partition labels, mountpoint safety, and required tools), auto-enters `nix-shell` when `mksquashfs` is missing, and accepts an optional flake directory path:
 
 ```bash
 sudo ./update_usb.sh /path/to/system-manifest
@@ -107,7 +107,7 @@ After `nixos-install`, it compresses `/nix/store` into a squashfs image. At boot
 sudo ./setup_persistent_usb.sh /dev/sdX
 ```
 
-`setup_persistent_usb.sh` now requires an explicit target disk path (for safety). It will wipe the disk, create `NIXOS_BOOT` + `NIXOS_USB_CRYPT` partitions, initialize LUKS, and format the encrypted root as ext4.
+`setup_persistent_usb.sh` takes an explicit target disk path (for safety). It wipes the disk, creates `NIXOS_BOOT` + `NIXOS_USB_CRYPT` partitions, initializes LUKS, and formats the encrypted root as ext4.
 
 ### Switch to Gaming Mode
 
