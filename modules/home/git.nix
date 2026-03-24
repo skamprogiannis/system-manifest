@@ -27,6 +27,10 @@
 
       safe.directory = "/home/stefan/system_manifest";
 
+      init = {
+        defaultBranch = "main";
+      };
+
       push = {
         autoSetupRemote = true;
       };

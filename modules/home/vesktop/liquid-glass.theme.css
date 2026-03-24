@@ -1,8 +1,8 @@
 /**
- * @name dms-liquid
+ * @name Liquid Glass
  * @description DMS + Liquid Glass declarative theme
- * @author stefan
- * @version 1.0.0
+ * @author skamprogiannis
+ * @version 1.1.0
  */
 
 /* Keep DMS-generated palette in sync with Matugen updates. */
@@ -29,12 +29,12 @@ div[class^="layer_"] {
   --background-base-low: transparent !important;
   --background-base-lower: transparent !important;
   --background-base-lowest: transparent !important;
-  --channeltextarea-background: rgba(17, 19, 26, 0.42) !important;
-  --background-floating: rgba(17, 19, 26, 0.58) !important;
-  --background-modifier-hover: rgba(255, 255, 255, 0.05) !important;
-  --background-modifier-active: rgba(255, 255, 255, 0.08) !important;
-  --background-modifier-selected: rgba(255, 255, 255, 0.10) !important;
-  --background-modifier-accent: rgba(255, 255, 255, 0.08) !important;
+  --channeltextarea-background: color-mix(in srgb, var(--bg-2) 58%, transparent) !important;
+  --background-floating: color-mix(in srgb, var(--bg-2) 72%, transparent) !important;
+  --background-modifier-hover: color-mix(in srgb, var(--text-1) 8%, transparent) !important;
+  --background-modifier-active: color-mix(in srgb, var(--text-1) 14%, transparent) !important;
+  --background-modifier-selected: color-mix(in srgb, var(--text-1) 18%, transparent) !important;
+  --background-modifier-accent: color-mix(in srgb, var(--text-1) 14%, transparent) !important;
 }
 
 /* Main content pane. */
@@ -43,7 +43,7 @@ div[class*="chatContent_"],
 div[class*="messagesWrapper_"],
 main[class*="chatContent_"],
 section[class*="chatContent_"] {
-  background-color: rgba(17, 19, 26, 0.32) !important;
+  background-color: color-mix(in srgb, var(--bg-2) 48%, transparent) !important;
   backdrop-filter: none !important;
 }
 
@@ -54,8 +54,17 @@ div[class*="membersWrap_"],
 div[class*="peopleColumn_"],
 div[class*="standardSidebarView_"],
 div[class*="panels_"] {
-  background-color: rgba(17, 19, 26, 0.20) !important;
+  background-color: color-mix(in srgb, var(--bg-2) 38%, transparent) !important;
   backdrop-filter: none !important;
+}
+
+/* Round the square corners in the server/channel rail area. */
+div[class*="sidebar_"],
+div[class*="sidebarList_"],
+div[class*="panels_"],
+div[class*="container_"][class*="isSidebarOpen_"] {
+  border-radius: var(--roundness-l) !important;
+  overflow: hidden !important;
 }
 
 /* Remove DM chip background behind labels. */
@@ -70,10 +79,10 @@ nav[class*="privateChannels_"] div[class*="nameAndDecorators_"] {
 
 nav[class*="privateChannels_"] div[class*="interactive_"]:hover,
 nav[class*="privateChannels_"] li[class*="channel_"] > div:hover {
-  background-color: rgba(255, 255, 255, 0.06) !important;
+  background-color: color-mix(in srgb, var(--text-1) 10%, transparent) !important;
 }
 
 nav[class*="privateChannels_"] [aria-selected="true"],
 nav[class*="privateChannels_"] div[class*="selected_"] {
-  background-color: rgba(255, 255, 255, 0.08) !important;
+  background-color: color-mix(in srgb, var(--text-1) 14%, transparent) !important;
 }

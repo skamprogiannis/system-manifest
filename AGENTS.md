@@ -16,6 +16,12 @@
   - Scopes: `desktop`, `laptop`, `usb`, `common`, `home`, `system`, or specific module names.
   - Example: `feat(desktop): enable steam and gamemode`
   - Example: `fix(usb): correct luks mounting path`
+- **Worktree-First Git:** This repository is bare at `/home/stefan/system-manifest`; do not edit files there directly.
+  - Main checkout: `/home/stefan/system-manifest/checkouts/main`
+  - Create a feature worktree (run from bare repo root): `git worktree add checkouts/<branch> -b <branch> main`
+  - List active worktrees: `git worktree list`
+  - Remove merged worktree: `git worktree remove checkouts/<branch>` and then `git branch -d <branch>`
+  - Run all editing/build/git commands from the intended worktree path.
 - **System Git:** Ensure `git` is always in `environment.systemPackages` in `configuration.nix` (required for Flakes).
 - **Git Push:** Always `git push` (or force push if history was rewritten) immediately after creating a new commit.
 - **Squash Fix Chains:** If you need multiple attempts to fix something, squash them into a single commit before pushing (`git rebase -i` or `git commit --amend`). Avoid pushing fix→fix→fix chains that clutter history.

@@ -43,7 +43,7 @@
     (pkgs.writeShellScriptBin "we-sync" ''
       WE_WORKSHOP="$HOME/games/SteamLibrary/steamapps/workshop/content/431960"
       WE_DEFAULTS="$HOME/games/SteamLibrary/steamapps/common/wallpaper_engine/projects/defaultprojects"
-      WALL_DIR="$HOME/wallpapers"
+      WALL_DIR="$HOME/wallpapers/wallpaper-engine"
       CACHE_DIR="$HOME/.cache"
       MAP_FILE="$HOME/.cache/we-wallpaper-map.json"
       LOCK_FILE="$CACHE_DIR/we-sync.lock"
@@ -417,7 +417,7 @@ EOF
 
         # Mapping can get stale/corrupted after interrupted sessions.
         # If current wallpaper comes from the synced folder, refresh once.
-        if [ -f "$wall_path" ] && [ "''${wall_path#$HOME/wallpapers/}" != "$wall_path" ]; then
+        if [ -f "$wall_path" ] && [ "''${wall_path#$HOME/wallpapers/wallpaper-engine/}" != "$wall_path" ]; then
           we-sync &>/dev/null || true
           resolved=$(resolve_we_dir "$wall_path" || true)
           if [ -n "$resolved" ]; then

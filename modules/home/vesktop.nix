@@ -4,7 +4,8 @@
   lib,
   ...
 }: let
-  themeName = "dms-liquid.theme.css";
+  liquidGlassThemeName = "liquid-glass.theme.css";
+  midnightThemeName = "dms-midnight.theme.css";
 
   vesktopSettingsPatch = builtins.toJSON {
     minimizeToTray = true;
@@ -21,7 +22,7 @@
     disableAutostart = false;
     transparent = true;
     useQuickCss = false;
-    enabledThemes = [themeName];
+    enabledThemes = [midnightThemeName liquidGlassThemeName];
   };
 
   vesktopLaunchWrapper = pkgs.writeShellScript "vesktop-launch" ''
@@ -75,7 +76,7 @@ EOF
     apply_settings_patch "$CFG/settings.json"
     apply_settings_patch "$SETTINGS_DIR/settings.json"
 
-    # Keep client theme enabled and pinned to declarative dms-liquid theme.
+    # Keep client themes enabled and pinned to declarative theme set.
     enforce_theme_settings() {
       local target="$1"
       local tmp
@@ -84,12 +85,12 @@ EOF
       if [ -s "$target" ] && ${pkgs.jq}/bin/jq empty "$target" >/dev/null 2>&1; then
         ${pkgs.jq}/bin/jq \
           '.plugins = ((.plugins // {}) + {"ClientTheme": ((.plugins.ClientTheme // {}) + {"enabled": true})})
-          | .enabledThemes = ["${themeName}"]
+          | .enabledThemes = ["${midnightThemeName}", "${liquidGlassThemeName}"]
           | .useQuickCss = false
           | .transparent = true' \
           "$target" > "$tmp"
       else
-        printf '%s\n' '{"plugins":{"ClientTheme":{"enabled":true}},"enabledThemes":["${themeName}"],"useQuickCss":false,"transparent":true}' > "$tmp"
+        printf '%s\n' '{"plugins":{"ClientTheme":{"enabled":true}},"enabledThemes":["${midnightThemeName}","${liquidGlassThemeName}"],"useQuickCss":false,"transparent":true}' > "$tmp"
       fi
 
       mv "$tmp" "$target"
@@ -104,7 +105,8 @@ EOF
 in {
   home.packages = [ pkgs.vesktop ];
 
-  home.file.".config/vesktop/themes/${themeName}".source = ./vesktop/dms-liquid.theme.css;
+  home.file.".config/vesktop/themes/${liquidGlassThemeName}".source = ./vesktop/liquid-glass.theme.css;
+  home.file.".config/vesktop/themes/${midnightThemeName}".source = ./vesktop/dms-midnight.theme.css;
 
   xdg.desktopEntries.vesktop = {
     name = "Vesktop";
