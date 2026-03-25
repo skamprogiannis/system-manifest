@@ -22,7 +22,7 @@
   # AccountsService user config — required for the greeter avatar.
   environment.etc."AccountsService/users/stefan".text = ''
     [User]
-    Icon=/var/lib/AccountsService/icons/stefan
+    Icon=/var/lib/AccountsService/icons/stefan.png
     SystemAccount=false
   '';
 
@@ -32,15 +32,16 @@
 
     cat > /var/lib/AccountsService/users/stefan <<'EOF'
     [User]
-    Icon=/var/lib/AccountsService/icons/stefan
+    Icon=/var/lib/AccountsService/icons/stefan.png
     SystemAccount=false
     EOF
     chmod 0644 /var/lib/AccountsService/users/stefan
     chown root:root /var/lib/AccountsService/users/stefan
 
-    install -Dm0644 ${./assets/stefan-avatar.webp} /var/lib/AccountsService/icons/stefan
-    chmod 0644 /var/lib/AccountsService/icons/stefan
-    chown root:root /var/lib/AccountsService/icons/stefan
+    install -Dm0644 ${./assets/stefan-avatar.webp} /var/lib/AccountsService/icons/stefan.webp
+    cp /var/lib/AccountsService/icons/stefan.webp /var/lib/AccountsService/icons/stefan.png
+    chmod 0644 /var/lib/AccountsService/icons/stefan.webp /var/lib/AccountsService/icons/stefan.png
+    chown root:root /var/lib/AccountsService/icons/stefan.webp /var/lib/AccountsService/icons/stefan.png
   '';
 
   # System-wide cursor theme (needed for greeter and other non-HM contexts)
