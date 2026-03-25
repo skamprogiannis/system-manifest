@@ -155,9 +155,16 @@ in {
           disable_hyprland_logo = true;
           disable_splash_rendering = true;
           force_default_wallpaper = 0;
+          enable_anr_dialog = false;
+          anr_missed_pings = 20;
           # Solid black background before wallpaper loads — avoids the
           # default grey/teal flash during login transition.
           background_color = "rgb(000000)";
+        };
+
+        ecosystem = {
+          no_update_news = true;
+          no_donation_nag = true;
         };
 
         debug = {
@@ -170,6 +177,12 @@ in {
           kb_variant = "altgr-intl,simple";
           kb_options = "grp:win_space_toggle,caps:escape_shifted_capslock";
           resolve_binds_by_sym = false;
+        };
+
+        # Nvidia hardware cursors can bypass hide-on-keypress/inactivity behavior.
+        # Force software cursors so Hyprland/DMS cursor-hide works consistently.
+        cursor = {
+          no_hardware_cursors = true;
         };
 
         general = {
@@ -253,7 +266,7 @@ in {
           "$mod, Return, exec, ghostty"
           "$mod, b, exec, brave"
           "$mod, x, killactive,"
-          "$mod, m, exec, ghostty -e spotify_player"
+          "$mod, m, exec, systemctl --user start spotify-player.service && ghostty -e spotify_player"
           "$mod, e, exec, ghostty -e yazi"
           "$mod, v, togglefloating,"
           "$mod, f, fullscreen,"
