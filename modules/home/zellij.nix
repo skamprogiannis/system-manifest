@@ -215,23 +215,43 @@
     (pkgs.writeShellScriptBin "zs" ''
       resolve_path() {
         local input="$1"
+        local query
+        local cwd
+        cwd=$(pwd)
         
         if [[ -z "$input" ]]; then
           return 1
         fi
-        
-        if [[ -d "$input" ]]; then
-          echo "$input"
+
+        # Normalize trailing slashes so basename/session naming stays stable.
+        query="$input"
+        query="''${query%/}"
+        [[ -z "$query" ]] && query="/"
+
+        if [[ -d "$query" ]]; then
+          echo "$query"
+          return 0
+        fi
+
+        # Accept "/foo" shorthand as relative "foo" when absolute path does not exist.
+        if [[ "$query" == /* ]] && [[ "$query" != "/" ]]; then
+          query="''${query#/}"
+        fi
+
+        # Support relative paths from current directory (e.g. "go" in
+        # ~/repositories/leetcode-style-problems/leetcode).
+        if [[ -d "$cwd/$query" ]]; then
+          echo "$cwd/$query"
           return 0
         fi
         
-        if [[ -d ~/repositories/"$input" ]]; then
-          echo ~/repositories/"$input"
+        if [[ -d ~/repositories/"$query" ]]; then
+          echo ~/repositories/"$query"
           return 0
         fi
         
-        if [[ -d ~/"$input" ]]; then
-          echo ~/"$input"
+        if [[ -d ~/"$query" ]]; then
+          echo ~/"$query"
           return 0
         fi
         
