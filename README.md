@@ -17,7 +17,7 @@ Managed via **Nix Flakes** and **Home Manager**.
   - **Obsidian:** Note-taking application with Home Manager plugin management.
   - **PearPass:** Declarative wrapper for the PearPass P2P password manager AppImage.
   - **Brave + Vimium C:** Declarative extension install with best-effort Vimium C state seeding for portable keymaps/options.
-  - **Vesktop:** Discord client with declarative `Liquid Glass` + `dms-midnight` theme stack.
+  - **Vesktop:** Discord client with declarative `Liquid Glass` + `DMS Midnight Liquid Glass` theme stack.
 - **Dev Ready:** Pre-configured environment for Node.js, Python, Go, and Neovim (via nixvim), plus Clang build essentials (`clang` + `gnumake`). Neovim uses the Dracula colorscheme with a transparent background (matches Ghostty glass). Also registered as the default text editor via an `nvim-text` XDG desktop entry (opens in Ghostty).
 - **AI Integrated:** Built-in configuration for **GitHub Copilot CLI** with per-repo `AGENTS.md` instructions. Global Copilot instructions live at `~/.copilot/copilot-instructions.md`.
 - **Greeter Avatar:** AccountsService user metadata + declarative avatar asset provisioning for consistent DMS greeter profile image rendering.

@@ -1,0 +1,62 @@
+/* Midnight Liquid Glass overlay appended onto generated dms-midnight palette. */
+
+:root,
+html,
+body,
+#app-mount,
+div[class^="app_"],
+div[class^="bg_"],
+div[class^="layers_"],
+div[class^="layer_"] {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+.theme-dark,
+.theme-light {
+  --background-primary: color-mix(in srgb, var(--bg-2) 64%, transparent) !important;
+  --background-secondary: color-mix(in srgb, var(--bg-2) 72%, transparent) !important;
+  --background-tertiary: color-mix(in srgb, var(--bg-3) 78%, transparent) !important;
+  --background-floating: color-mix(in srgb, var(--bg-2) 84%, transparent) !important;
+  --channeltextarea-background: color-mix(in srgb, var(--bg-2) 76%, transparent) !important;
+  --background-modifier-hover: color-mix(in srgb, var(--text-1) 10%, transparent) !important;
+  --background-modifier-active: color-mix(in srgb, var(--text-1) 16%, transparent) !important;
+  --background-modifier-selected: color-mix(in srgb, var(--text-1) 22%, transparent) !important;
+}
+
+div[class*="chat_"],
+div[class*="chatContent_"],
+div[class*="messagesWrapper_"],
+main[class*="chatContent_"],
+section[class*="chatContent_"] {
+  background-color: color-mix(in srgb, var(--bg-2) 70%, transparent) !important;
+}
+
+div[class*="sidebar_"],
+nav[class*="privateChannels_"],
+div[class*="membersWrap_"],
+div[class*="peopleColumn_"],
+div[class*="standardSidebarView_"],
+div[class*="panels_"] {
+  background-color: color-mix(in srgb, var(--bg-2) 62%, transparent) !important;
+}
+
+div[class*="sidebar_"],
+div[class*="sidebarList_"],
+div[class*="panels_"],
+div[class*="container_"][class*="isSidebarOpen_"] {
+  border-radius: var(--roundness-l) !important;
+  overflow: hidden !important;
+}
+
+div[class*="messageListItem_"] > div[class*="message_"],
+div[class*="message_"][class*="cozy_"],
+div[class*="form_"],
+div[class*="channelTextArea_"],
+div[class*="chatContent_"] > form,
+main[class*="chatContent_"] > form,
+div[class*="messagesWrapper_"],
+div[class*="scroller_"],
+div[class*="base_"] > div[class*="content_"] {
+  border-radius: var(--roundness-m) !important;
+}
