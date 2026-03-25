@@ -29,6 +29,10 @@ PY
     exec ${pkgs.ghostty}/bin/ghostty -e ${pkgs.yazi}/bin/yazi "$target"
   '';
 in {
+  home.sessionVariables = {
+    GTK_USE_PORTAL = "1";
+  };
+
   # Manage XDG User Directories (documents, downloads, music, etc.)
   # This ensures they are created and managed declaratively.
   xdg.userDirs = {
@@ -100,8 +104,25 @@ in {
       path="$4"
       out="$5"
 
+      if [ "''${path#file://}" != "$path" ]; then
+          path=$(${pkgs.python3}/bin/python3 - "$path" <<'PY'
+import sys
+from urllib.parse import unquote, urlparse
+uri = sys.argv[1]
+parsed = urlparse(uri)
+print(unquote(parsed.path or ""))
+PY
+          )
+      fi
+
+      [ -n "$path" ] || path="$HOME"
+      [ -e "$path" ] || path="$HOME"
+      if [ -f "$path" ]; then
+          path=$(dirname "$path")
+      fi
+
       if [ "$save" = "1" ]; then
-          set -- --chooser-file="$out" "$path"
+          set -- --chooser-file="$out" --cwd-file="$out"".1" "$path"
       elif [ "$directory" = "1" ]; then
           set -- --chooser-file="$out" --cwd-file="$out"".1" "$path"
       elif [ "$multiple" = "1" ]; then
@@ -118,7 +139,7 @@ in {
 
       sh -c "$command"
 
-      if [ "$directory" = "1" ]; then
+      if [ "$save" = "1" ] || [ "$directory" = "1" ]; then
           if [ ! -s "$out" ] && [ -s "$out"".1" ]; then
               cat "$out"".1" > "$out"
               rm "$out"".1"
