@@ -70,6 +70,89 @@
       do
         local ok = pcall(require, "lazy.stats")
         if not ok then
+          local fallback_start = (vim.uv and vim.uv.hrtime) and vim.uv.hrtime() or nil
+          local cached_startup_ms = nil
+          local cached_clk_tck = nil
+
+          local function read_first_line(path)
+            local file = io.open(path, "r")
+            if not file then
+              return nil
+            end
+            local line = file:read("*l")
+            file:close()
+            return line
+          end
+
+          local function get_clk_tck()
+            if cached_clk_tck then
+              return cached_clk_tck
+            end
+            local out = vim.fn.system({ "getconf", "CLK_TCK" })
+            if vim.v.shell_error ~= 0 then
+              return nil
+            end
+            local value = tonumber(vim.fn.trim(out))
+            if not value or value <= 0 then
+              return nil
+            end
+            cached_clk_tck = value
+            return cached_clk_tck
+          end
+
+          local function linux_process_elapsed_ms()
+            local stat_line = read_first_line("/proc/self/stat")
+            local uptime_line = read_first_line("/proc/uptime")
+            if not stat_line or not uptime_line then
+              return nil
+            end
+
+            local fields = stat_line:match("^%d+ %b() (.+)$")
+            if not fields then
+              return nil
+            end
+
+            local start_ticks = nil
+            local field_index = 0
+            for field in fields:gmatch("%S+") do
+              field_index = field_index + 1
+              if field_index == 20 then
+                start_ticks = tonumber(field)
+                break
+              end
+            end
+
+            local uptime_s = tonumber(uptime_line:match("^(%S+)"))
+            local clk_tck = get_clk_tck()
+            if not start_ticks or not uptime_s or not clk_tck then
+              return nil
+            end
+
+            local elapsed_ms = (uptime_s - (start_ticks / clk_tck)) * 1000
+            if elapsed_ms < 0 then
+              return nil
+            end
+            return math.floor(elapsed_ms + 0.5)
+          end
+
+          local function fallback_elapsed_ms()
+            if not (fallback_start and vim.uv and vim.uv.hrtime) then
+              return 0
+            end
+            return math.floor(((vim.uv.hrtime() - fallback_start) / 1e6) + 0.5)
+          end
+
+          local function compute_startup_ms()
+            return linux_process_elapsed_ms() or fallback_elapsed_ms()
+          end
+
+          vim.api.nvim_create_autocmd("VimEnter", {
+            once = true,
+            callback = function()
+              cached_startup_ms = compute_startup_ms()
+            end,
+          })
+
           local function nixvim_stats()
             local seen = {}
             local count = 0
@@ -85,13 +168,12 @@
               end
             end
 
-            local startup_ms = 0
-            if vim.uv and vim.uv.hrtime then
-              startup_ms = math.floor((vim.uv.hrtime() / 1e6) + 0.5)
+            if cached_startup_ms == nil then
+              cached_startup_ms = compute_startup_ms()
             end
 
             return {
-              startuptime = startup_ms,
+              startuptime = cached_startup_ms,
               loaded = count,
               count = count,
             }
