@@ -399,8 +399,13 @@ set notification-error-fg "#$FG"
 set notification-warning-bg "#ffb86c"
 set notification-warning-fg "#$FG"
 set highlight-color "#$PRIMARY"
-set highlight-active-color "#$PRIMARY"
+        set highlight-active-color "#$PRIMARY"
 EOF
+
+        # Rebuild the combined Vesktop theme so it tracks fresh Matugen output.
+        if command -v regen-vesktop-midnight-liquid-glass-theme >/dev/null 2>&1; then
+          regen-vesktop-midnight-liquid-glass-theme || true
+        fi
       }
 
       # Resolve wallpaper image to WE directory via mapping file
@@ -444,6 +449,19 @@ EOF
 
       # Initial theme update on startup
       update_themes
+
+      # If DMS restored a static wallpaper, stop WE immediately so Hyprland
+      # does not keep probing a crashed renderer and showing ANR popups.
+      initial_wall=$(dms ipc wallpaper get 2>/dev/null || true)
+      if [ -n "$initial_wall" ]; then
+        initial_we_dir=$(resolve_we_dir_with_refresh "$initial_wall" || true)
+        if [ -n "$initial_we_dir" ]; then
+          systemctl --user set-environment WE_WALLPAPER_DIR="$initial_we_dir" WE_ASSETS_DIR="$WE_ASSETS"
+          systemctl --user restart linux-wallpaperengine.service
+        else
+          systemctl --user stop linux-wallpaperengine.service 2>/dev/null || true
+        fi
+      fi
 
       while true; do
         NEW_WALL=$(dms ipc wallpaper get 2>/dev/null)
