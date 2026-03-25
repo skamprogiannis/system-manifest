@@ -65,16 +65,41 @@
 
     # Transparent background — let Ghostty's RGBA glass show through
     extraConfigLuaPost = ''
-      -- Snacks dashboard expects Lazy.nvim stats; provide a tiny fallback
-      -- in Nixvim setups where lazy.nvim is not used.
+      -- Snacks dashboard expects Lazy.nvim stats. Nixvim doesn't use lazy.nvim,
+      -- so expose equivalent stats by counting packaged start plugins.
       do
         local ok = pcall(require, "lazy.stats")
         if not ok then
+          local function nixvim_stats()
+            local seen = {}
+            local count = 0
+            for _, root in ipairs(vim.opt.packpath:get()) do
+              if root:find("vim-pack-dir", 1, true) then
+                local plugins = vim.fn.globpath(root .. "/pack/*/start", "*", false, true)
+                for _, plugin_dir in ipairs(plugins) do
+                  if vim.fn.isdirectory(plugin_dir) == 1 and not seen[plugin_dir] then
+                    seen[plugin_dir] = true
+                    count = count + 1
+                  end
+                end
+              end
+            end
+
+            local startup_ms = 0
+            if vim.uv and vim.uv.hrtime then
+              startup_ms = math.floor((vim.uv.hrtime() / 1e6) + 0.5)
+            end
+
+            return {
+              startuptime = startup_ms,
+              loaded = count,
+              count = count,
+            }
+          end
+
           package.preload["lazy.stats"] = function()
             return {
-              stats = function()
-                return { startuptime = 0, loaded = 0, count = 0 }
-              end,
+              stats = nixvim_stats,
             }
           end
         end
