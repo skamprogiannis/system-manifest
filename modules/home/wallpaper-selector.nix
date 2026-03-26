@@ -272,7 +272,7 @@ in {
 
   xdg.desktopEntries.wallpaper-selector = {
     name = "Wallpaper Selector";
-    comment = "Open the Quickshell Wallpaper Selector";
+    comment = "Browse and apply wallpapers from your library";
     exec = "wallpaper-selector";
     icon = "preferences-desktop-wallpaper";
     terminal = false;

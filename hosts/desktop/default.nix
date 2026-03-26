@@ -156,6 +156,7 @@
       programs.steam = {
         enable = true;
         gamescopeSession.enable = true;
+        gamescopeSession.args = [ "--adaptive-sync" ];
       };
       programs.gamemode.enable = true;
       environment.sessionVariables = lib.mkForce {};
