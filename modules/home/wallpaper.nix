@@ -574,10 +574,6 @@ set highlight-color "#$PRIMARY"
         set highlight-active-color "#$PRIMARY"
 EOF
 
-        # Rebuild the combined Vesktop theme so it tracks fresh Matugen output.
-        if command -v regen-vesktop-midnight-liquid-glass-theme >/dev/null 2>&1; then
-          regen-vesktop-midnight-liquid-glass-theme || true
-        fi
       }
 
       # Resolve wallpaper image to WE directory via mapping file

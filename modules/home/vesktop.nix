@@ -5,40 +5,6 @@
   ...
 }: let
   liquidGlassThemeName = "liquid-glass.theme.css";
-  midnightLiquidGlassThemeName = "dms-midnight-liquid-glass.theme.css";
-  midnightLiquidGlassOverlayName = ".dms-midnight-liquid-glass.overlay.css";
-
-  regenMidnightLiquidGlassTheme = pkgs.writeShellScriptBin "regen-vesktop-midnight-liquid-glass-theme" ''
-    set -euo pipefail
-
-    THEME_DIR="$HOME/.config/vesktop/themes"
-    SRC_COLORS="$THEME_DIR/dank-discord.css"
-    OVERLAY="$THEME_DIR/${midnightLiquidGlassOverlayName}"
-    OUT="$THEME_DIR/${midnightLiquidGlassThemeName}"
-
-    [ -f "$SRC_COLORS" ] || exit 0
-    [ -f "$OVERLAY" ] || exit 0
-
-    tmp=$(mktemp)
-    src_hash=$(${pkgs.coreutils}/bin/md5sum "$SRC_COLORS" | ${pkgs.coreutils}/bin/cut -d' ' -f1)
-
-    cat > "$tmp" <<EOF
-/**
- * @name DMS Midnight Liquid Glass
- * @description Matugen-generated DMS Midnight palette blended with Liquid Glass surfaces
- * @author skamprogiannis
- * @version 1.0.0
- */
-
-/* Source hash: $src_hash */
-EOF
-
-    cat "$SRC_COLORS" >> "$tmp"
-    printf '\n/* ----- Liquid Glass overlay ----- */\n' >> "$tmp"
-    cat "$OVERLAY" >> "$tmp"
-
-    mv "$tmp" "$OUT"
-  '';
 
   vesktopSettingsPatch = builtins.toJSON {
     minimizeToTray = true;
@@ -55,7 +21,7 @@ EOF
     disableAutostart = false;
     transparent = true;
     useQuickCss = false;
-    enabledThemes = [midnightLiquidGlassThemeName liquidGlassThemeName];
+    enabledThemes = [liquidGlassThemeName];
   };
 
   vesktopLaunchWrapper = pkgs.writeShellScript "vesktop-launch" ''
@@ -118,12 +84,12 @@ EOF
       if [ -s "$target" ] && ${pkgs.jq}/bin/jq empty "$target" >/dev/null 2>&1; then
         ${pkgs.jq}/bin/jq \
           '.plugins = ((.plugins // {}) + {"ClientTheme": ((.plugins.ClientTheme // {}) + {"enabled": true})})
-          | .enabledThemes = ["${midnightLiquidGlassThemeName}", "${liquidGlassThemeName}"]
+          | .enabledThemes = ["${liquidGlassThemeName}"]
           | .useQuickCss = false
           | .transparent = true' \
           "$target" > "$tmp"
       else
-        printf '%s\n' '{"plugins":{"ClientTheme":{"enabled":true}},"enabledThemes":["${midnightLiquidGlassThemeName}","${liquidGlassThemeName}"],"useQuickCss":false,"transparent":true}' > "$tmp"
+        printf '%s\n' '{"plugins":{"ClientTheme":{"enabled":true}},"enabledThemes":["${liquidGlassThemeName}"],"useQuickCss":false,"transparent":true}' > "$tmp"
       fi
 
       mv "$tmp" "$target"
@@ -132,16 +98,13 @@ EOF
     enforce_theme_settings "$CFG/settings.json"
     enforce_theme_settings "$SETTINGS_DIR/settings.json"
 
-    ${regenMidnightLiquidGlassTheme}/bin/regen-vesktop-midnight-liquid-glass-theme
-
     # Stability-first: transparent visuals flag has caused Electron traps here.
     exec ${pkgs.vesktop}/bin/vesktop "$@"
   '';
 in {
-  home.packages = [ pkgs.vesktop regenMidnightLiquidGlassTheme ];
+  home.packages = [pkgs.vesktop];
 
   home.file.".config/vesktop/themes/${liquidGlassThemeName}".source = ./vesktop/liquid-glass.theme.css;
-  home.file.".config/vesktop/themes/${midnightLiquidGlassOverlayName}".source = ./vesktop/dms-midnight-liquid-glass.overlay.css;
 
   xdg.desktopEntries.vesktop = {
     name = "Vesktop";

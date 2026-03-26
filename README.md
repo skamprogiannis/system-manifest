@@ -20,8 +20,8 @@ This repository is licensed under **GNU GPL v3.0**. See `LICENSE`.
   - **Mailspring:** Email client; credentials stored via GNOME Keyring (runs standalone, no GNOME shell required).
   - **Obsidian:** Note-taking application with Home Manager plugin management.
   - **PearPass:** Declarative wrapper for the PearPass P2P password manager AppImage.
-  - **Brave + Vimium C:** Declarative extension install with best-effort Vimium C state seeding for portable keymaps/options.
-  - **Vesktop:** Discord client with declarative `Liquid Glass` + `DMS Midnight Liquid Glass` theme stack.
+  - **Brave + Vimium C:** Declarative extension install with profile preference patching (Rewards button, right vertical tabs, `Ctrl+\` tabbar toggle, hidden close `x`, sidebar/new-tab toggles) plus Vimium C state seeding for portable keymaps/options. Vimium snapshots live in `modules/home/brave/vimium-c/{local-settings,sync-settings}` and are applied via Home Manager activation when Brave is not running.
+  - **Vesktop:** Discord client with a declarative single-theme `Liquid Glass` stack driven by DMS/Matugen palette variables.
 - **Dev Ready:** Pre-configured environment for Node.js, Python, Go, and Neovim (via nixvim), plus Clang build essentials (`clang` + `gnumake`). Neovim uses the Dracula colorscheme with a transparent background (matches Ghostty glass). Also registered as the default text editor via an `nvim-text` XDG desktop entry (opens in Ghostty).
 - **AI Integrated:** Built-in configuration for **GitHub Copilot CLI** with per-repo `AGENTS.md` instructions. Global Copilot instructions live at `~/.copilot/copilot-instructions.md`.
 - **Greeter Avatar:** AccountsService user metadata + declarative avatar asset provisioning for consistent DMS greeter profile image rendering.
