@@ -6,25 +6,60 @@
 }: let
   spotifyPlayerPkg = inputs.spotify-player.defaultPackage.${pkgs.stdenv.hostPlatform.system};
   spotifyDaemonConfigDir = "${config.xdg.configHome}/spotify-player-daemon";
+  spotifyDaemonArgs = "-c ${spotifyDaemonConfigDir} --daemon";
+  spotifyDaemonPattern = "spotify_player ${spotifyDaemonArgs}";
+  spotifyDaemonStart = pkgs.writeShellScript "spotify-player-daemon-start" ''
+    set -eu
+
+    daemon_pids="$(${pkgs.procps}/bin/pgrep -f -- "${spotifyDaemonPattern}" || true)"
+
+    # Keep one daemon and terminate any extra instances to avoid API storms.
+    if [ -n "$daemon_pids" ]; then
+      keep_pid="$(printf '%s\n' "$daemon_pids" | ${pkgs.coreutils}/bin/head -n 1)"
+      for pid in $daemon_pids; do
+        if [ "$pid" != "$keep_pid" ]; then
+          ${pkgs.coreutils}/bin/kill "$pid"
+        fi
+      done
+      exit 0
+    fi
+
+    ${spotifyPlayerPkg}/bin/spotify_player ${spotifyDaemonArgs}
+  '';
   spotifyHealthcheck = pkgs.writeShellScript "spotify-player-healthcheck" ''
     set -eu
 
-    if ! ${pkgs.systemd}/bin/systemctl --user is-active --quiet spotify-player.service; then
+    daemon_pids="$(${pkgs.procps}/bin/pgrep -f -- "${spotifyDaemonPattern}" || true)"
+    if [ -z "$daemon_pids" ]; then
+      ${pkgs.systemd}/bin/systemctl --user restart spotify-player.service
+      exit 0
+    fi
+
+    if [ "$(printf '%s\n' "$daemon_pids" | ${pkgs.coreutils}/bin/wc -l)" -gt 1 ]; then
+      ${pkgs.systemd}/bin/systemctl --user restart spotify-player.service
       exit 0
     fi
 
     probe_output="$(${spotifyPlayerPkg}/bin/spotify_player -c ${spotifyDaemonConfigDir} get key devices 2>&1)" && exit 0
 
-    if printf '%s' "$probe_output" | ${pkgs.gnugrep}/bin/grep -q "400 Bad Request"; then
+    if printf '%s' "$probe_output" | ${pkgs.gnugrep}/bin/grep -Eq "400 Bad Request|429 Too Many Requests|status code 404|Connection failed|failed to send a Spotify API request"; then
       ${pkgs.systemd}/bin/systemctl --user restart spotify-player.service
+      exit 0
     fi
+
+    # Fallback: any failed daemon probe means we self-heal with a restart.
+    ${pkgs.systemd}/bin/systemctl --user restart spotify-player.service
   '';
   spotifyPauseOnStart = pkgs.writeShellScript "spotify-player-pause-on-start" ''
     set -eu
 
     attempts=0
     while [ "$attempts" -lt 20 ]; do
-      if ${spotifyPlayerPkg}/bin/spotify_player -c ${spotifyDaemonConfigDir} playback pause >/dev/null 2>&1; then
+      pause_output="$(${spotifyPlayerPkg}/bin/spotify_player -c ${spotifyDaemonConfigDir} playback pause 2>&1)" && exit 0
+
+      # If nothing is playing (or API is transiently throttled), there is
+      # nothing to pause and we should not block startup for long retries.
+      if printf '%s' "$pause_output" | ${pkgs.gnugrep}/bin/grep -Eq "no playback found|status code 404|status code 429|Too Many Requests"; then
         exit 0
       fi
       attempts=$((attempts + 1))
@@ -41,6 +76,7 @@ in {
     enable_streaming = "DaemonOnly"
     enable_media_control = false
     enable_notify = false
+    default_device = "nixos-desktop"
 
     [device]
     name = "nixos-desktop"
@@ -60,6 +96,7 @@ in {
     playback_refresh_duration_in_ms = 2000
     enable_notify = true
     notify_transient = true
+    default_device = "nixos-desktop"
 
     [device]
     name = "nixos-desktop"
@@ -82,17 +119,12 @@ in {
       Description = "Spotify Player Daemon";
       After = [ "network-online.target" ];
       Wants = [ "network-online.target" ];
-      StartLimitIntervalSec = 300;
-      StartLimitBurst = 3;
     };
     Service = {
-      Type = "forking";
-      ExecStartPre = "-${pkgs.psmisc}/bin/fuser -k 8081/tcp";
-      ExecStart = "${spotifyPlayerPkg}/bin/spotify_player -c ${spotifyDaemonConfigDir} --daemon";
+      Type = "oneshot";
+      ExecStart = spotifyDaemonStart;
       ExecStartPost = spotifyPauseOnStart;
-      Restart = "on-failure";
-      RestartSec = "30s";
-      TimeoutStopSec = "2s";
+      TimeoutStopSec = "5s";
     };
     Install = {
       WantedBy = [ "default.target" ];

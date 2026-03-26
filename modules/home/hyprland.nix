@@ -266,7 +266,9 @@ in {
           "$mod, Return, exec, ghostty"
           "$mod, b, exec, brave"
           "$mod, x, killactive,"
-          "$mod, m, exec, systemctl --user start spotify-player.service && ghostty -e spotify_player"
+          # Keep service start separate from app launch; if start fails transiently
+          # we still want Super+M to open spotify_player.
+          "$mod, m, exec, systemctl --user start spotify-player.service; ghostty -e spotify_player"
           "$mod, e, exec, ghostty -e yazi"
           "$mod, v, togglefloating,"
           "$mod, f, fullscreen,"
