@@ -266,7 +266,7 @@ in {
           "$mod, Return, exec, ghostty"
           "$mod, b, exec, brave"
           "$mod, x, killactive,"
-          "$mod, m, exec, systemctl --user start spotify-player.service && ghostty -e spotify_player"
+          "$mod, m, exec, ghostty -e spotify_player"
           "$mod, e, exec, ghostty -e yazi"
           "$mod, v, togglefloating,"
           "$mod, f, fullscreen,"
