@@ -4,7 +4,45 @@
   lib,
   ...
 }: let
-  liquidGlassThemeName = "liquid-glass.theme.css";
+  transluenceSourceThemeName = "Translucence.theme.css";
+  transluenceThemeName = "transluence-matugen.theme.css";
+  transluenceOverlayName = ".transluence-matugen.overlay.css";
+
+  regenTransluenceTheme = pkgs.writeShellScriptBin "regen-vesktop-transluence-theme" ''
+    set -euo pipefail
+
+    THEME_DIR="$HOME/.config/vesktop/themes"
+    SRC_THEME="$THEME_DIR/${transluenceSourceThemeName}"
+    SRC_COLORS="$THEME_DIR/dank-discord.css"
+    OVERLAY="$THEME_DIR/${transluenceOverlayName}"
+    OUT="$THEME_DIR/${transluenceThemeName}"
+
+    [ -f "$SRC_THEME" ] || exit 0
+    [ -f "$SRC_COLORS" ] || exit 0
+    [ -f "$OVERLAY" ] || exit 0
+
+    tmp=$(mktemp)
+    src_hash=$(${pkgs.coreutils}/bin/md5sum "$SRC_COLORS" | ${pkgs.coreutils}/bin/cut -d' ' -f1)
+
+    cat > "$tmp" <<EOF
+/**
+ * @name Transluence Matugen
+ * @description Transluence tuned for transparent Vesktop and Matugen palette sync
+ * @author skamprogiannis
+ * @version 1.0.0
+ */
+
+/* Source hash: $src_hash (dank-discord.css) */
+EOF
+
+    cat "$SRC_THEME" >> "$tmp"
+    printf '\n/* ----- Matugen + Transparency overlay ----- */\n' >> "$tmp"
+    cat "$SRC_COLORS" >> "$tmp"
+    printf '\n/* ----- Transluence overlay ----- */\n' >> "$tmp"
+    cat "$OVERLAY" >> "$tmp"
+
+    mv "$tmp" "$OUT"
+  '';
 
   vesktopSettingsPatch = builtins.toJSON {
     minimizeToTray = true;
@@ -21,7 +59,7 @@
     disableAutostart = false;
     transparent = true;
     useQuickCss = false;
-    enabledThemes = [liquidGlassThemeName];
+    enabledThemes = [transluenceThemeName];
   };
 
   vesktopLaunchWrapper = pkgs.writeShellScript "vesktop-launch" ''
@@ -84,12 +122,12 @@ EOF
       if [ -s "$target" ] && ${pkgs.jq}/bin/jq empty "$target" >/dev/null 2>&1; then
         ${pkgs.jq}/bin/jq \
           '.plugins = ((.plugins // {}) + {"ClientTheme": ((.plugins.ClientTheme // {}) + {"enabled": true})})
-          | .enabledThemes = ["${liquidGlassThemeName}"]
+          | .enabledThemes = ["${transluenceThemeName}"]
           | .useQuickCss = false
           | .transparent = true' \
           "$target" > "$tmp"
       else
-        printf '%s\n' '{"plugins":{"ClientTheme":{"enabled":true}},"enabledThemes":["${liquidGlassThemeName}"],"useQuickCss":false,"transparent":true}' > "$tmp"
+        printf '%s\n' '{"plugins":{"ClientTheme":{"enabled":true}},"enabledThemes":["${transluenceThemeName}"],"useQuickCss":false,"transparent":true}' > "$tmp"
       fi
 
       mv "$tmp" "$target"
@@ -97,14 +135,14 @@ EOF
 
     enforce_theme_settings "$CFG/settings.json"
     enforce_theme_settings "$SETTINGS_DIR/settings.json"
+    ${regenTransluenceTheme}/bin/regen-vesktop-transluence-theme
 
     # Stability-first: transparent visuals flag has caused Electron traps here.
     exec ${pkgs.vesktop}/bin/vesktop "$@"
   '';
 in {
-  home.packages = [pkgs.vesktop];
-
-  home.file.".config/vesktop/themes/${liquidGlassThemeName}".source = ./vesktop/liquid-glass.theme.css;
+  home.packages = [pkgs.vesktop regenTransluenceTheme];
+  home.file.".config/vesktop/themes/${transluenceOverlayName}".source = ./vesktop/transluence-matugen.overlay.css;
 
   xdg.desktopEntries.vesktop = {
     name = "Vesktop";
