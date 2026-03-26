@@ -4,25 +4,70 @@
   lib,
   ...
 }: let
-  transluenceSourceThemeName = "Translucence.theme.css";
   transluenceThemeName = "transluence-matugen.theme.css";
   transluenceOverlayName = ".transluence-matugen.overlay.css";
+  transluencePaletteName = ".transluence-matugen.palette.css";
 
   regenTransluenceTheme = pkgs.writeShellScriptBin "regen-vesktop-transluence-theme" ''
     set -euo pipefail
 
     THEME_DIR="$HOME/.config/vesktop/themes"
-    SRC_THEME="$THEME_DIR/${transluenceSourceThemeName}"
     SRC_COLORS="$THEME_DIR/dank-discord.css"
-    OVERLAY="$THEME_DIR/${transluenceOverlayName}"
-    OUT="$THEME_DIR/${transluenceThemeName}"
+    OUT="$THEME_DIR/${transluencePaletteName}"
 
-    [ -f "$SRC_THEME" ] || exit 0
     [ -f "$SRC_COLORS" ] || exit 0
-    [ -f "$OVERLAY" ] || exit 0
+
+    # DMS can rewrite palette files in bursts. Wait for a stable snapshot.
+    stable_hash=""
+    for _ in $(${pkgs.coreutils}/bin/seq 1 20); do
+      hash_a=$(${pkgs.coreutils}/bin/md5sum "$SRC_COLORS" | ${pkgs.coreutils}/bin/cut -d' ' -f1)
+      ${pkgs.coreutils}/bin/sleep 0.05
+      hash_b=$(${pkgs.coreutils}/bin/md5sum "$SRC_COLORS" | ${pkgs.coreutils}/bin/cut -d' ' -f1)
+      if [ "$hash_a" = "$hash_b" ] && ${pkgs.gnugrep}/bin/grep -q -- '--accent-3:' "$SRC_COLORS"; then
+        stable_hash="$hash_a"
+        break
+      fi
+    done
+
+    [ -n "$stable_hash" ] || exit 0
+
+    accent_hue="220"
+    accent_saturation="82%"
+    accent_lightness="76%"
+
+    accent_hex=$(
+      ${pkgs.gnugrep}/bin/grep -m1 -oE -- '--accent-3:[[:space:]]*#[0-9a-fA-F]{6}' "$SRC_COLORS" \
+        | ${pkgs.gnused}/bin/sed -E 's/.*#([0-9a-fA-F]{6}).*/\1/' \
+        || true
+    )
+    if [ -z "$accent_hex" ]; then
+      accent_hex=$(
+        ${pkgs.gnugrep}/bin/grep -m1 -oE -- '--accent-2:[[:space:]]*#[0-9a-fA-F]{6}' "$SRC_COLORS" \
+          | ${pkgs.gnused}/bin/sed -E 's/.*#([0-9a-fA-F]{6}).*/\1/' \
+          || true
+      )
+    fi
+
+    if [ -n "$accent_hex" ]; then
+      accent_triplet=$(${pkgs.python3}/bin/python3 - "$accent_hex" <<'PY'
+import colorsys
+import sys
+
+hexv = sys.argv[1].strip()
+r = int(hexv[0:2], 16) / 255.0
+g = int(hexv[2:4], 16) / 255.0
+b = int(hexv[4:6], 16) / 255.0
+h, l, s = colorsys.rgb_to_hls(r, g, b)
+print(f"{round(h * 360)} {s * 100:.1f}% {l * 100:.1f}%")
+PY
+)
+      accent_hue=$(printf '%s' "$accent_triplet" | ${pkgs.coreutils}/bin/cut -d' ' -f1)
+      accent_saturation=$(printf '%s' "$accent_triplet" | ${pkgs.coreutils}/bin/cut -d' ' -f2)
+      accent_lightness=$(printf '%s' "$accent_triplet" | ${pkgs.coreutils}/bin/cut -d' ' -f3)
+    fi
 
     tmp=$(mktemp)
-    src_hash=$(${pkgs.coreutils}/bin/md5sum "$SRC_COLORS" | ${pkgs.coreutils}/bin/cut -d' ' -f1)
+    src_hash="$stable_hash"
 
     cat > "$tmp" <<EOF
 /**
@@ -35,11 +80,23 @@
 /* Source hash: $src_hash (dank-discord.css) */
 EOF
 
-    cat "$SRC_THEME" >> "$tmp"
-    printf '\n/* ----- Matugen + Transparency overlay ----- */\n' >> "$tmp"
+    printf '\n/* ----- dms generated palette ----- */\n' >> "$tmp"
     cat "$SRC_COLORS" >> "$tmp"
-    printf '\n/* ----- Transluence overlay ----- */\n' >> "$tmp"
-    cat "$OVERLAY" >> "$tmp"
+    cat >> "$tmp" <<EOF
+
+/* ----- Derived accent HSL from Matugen accent ----- */
+:root {
+  --dms-accent-hue: $accent_hue;
+  --dms-accent-saturation: $accent_saturation;
+  --dms-accent-lightness: $accent_lightness;
+}
+EOF
+
+    # Avoid needless rewrites/reloads when content is unchanged.
+    if [ -f "$OUT" ] && ${pkgs.diffutils}/bin/cmp -s "$tmp" "$OUT"; then
+      rm -f "$tmp"
+      exit 0
+    fi
 
     mv "$tmp" "$OUT"
   '';
@@ -143,6 +200,18 @@ EOF
 in {
   home.packages = [pkgs.vesktop regenTransluenceTheme];
   home.file.".config/vesktop/themes/${transluenceOverlayName}".source = ./vesktop/transluence-matugen.overlay.css;
+  home.file.".config/vesktop/themes/${transluenceThemeName}".text = ''
+    /**
+     * @name Transluence Matugen
+     * @description Transluence tuned for transparent Vesktop and Matugen palette sync
+     * @author skamprogiannis
+     * @version 1.1.0
+     */
+
+    @import url(https://capnkitten.github.io/BetterDiscord/Themes/Translucence/css/source.css);
+    @import url('file://${config.home.homeDirectory}/.config/vesktop/themes/${transluencePaletteName}');
+    @import url('file://${config.home.homeDirectory}/.config/vesktop/themes/${transluenceOverlayName}');
+  '';
 
   xdg.desktopEntries.vesktop = {
     name = "Vesktop";
