@@ -30,7 +30,111 @@
       mkdir -p "$out/bin" "$out/share/wallpaper-selector/qml"
 
       cp qml/Selector.qml "$out/share/wallpaper-selector/qml/Selector.qml"
-      cp qml/Theme.qml "$out/share/wallpaper-selector/qml/Theme.qml"
+      cat > "$out/share/wallpaper-selector/qml/Theme.qml" <<'EOF'
+      pragma Singleton
+      import QtQuick
+      import Quickshell.Io
+      import Qt.labs.platform
+
+      QtObject {
+          id: root
+          property bool loaded: false
+
+          property color background: "#B2111718"
+          property color background90: "#E6111718"
+          property color border: "#D99E60"
+          property color accent: "#B27A8364"
+          property color text: "#edd1bf"
+
+          function normalizeHex6(value, fallback) {
+              const pick = value && String(value).length > 0 ? String(value) : String(fallback);
+              let hex = pick.replace(/^#/, "");
+              if (hex.length === 8)
+                  hex = hex.slice(2);
+              if (/^[0-9a-fA-F]{6}$/.test(hex))
+                  return "#" + hex.toLowerCase();
+              return "#111718";
+          }
+
+          function parseColorVar(name, fallback) {
+              let data = String(colorFile.text() || "");
+              let regex = new RegExp("^\\s*\\$" + name + "\\s*=\\s*rgb\\(([0-9a-fA-F]{6,8})\\)\\s*$", "m");
+              let match = data.match(regex);
+              if (!match || match.length < 2)
+                  return normalizeHex6(fallback, "#111718");
+              return normalizeHex6("#" + match[1], fallback);
+          }
+
+          function updateFromDmsColors() {
+              let surface = parseColorVar("surface", "#111718");
+              let onSurface = parseColorVar("onSurface", "#edd1bf");
+              let primary = parseColorVar("primary", border);
+              let outline = parseColorVar("outline", primary);
+
+              root.background = "#B2" + surface.slice(1);
+              root.background90 = "#E6" + surface.slice(1);
+              root.border = primary;
+              root.accent = "#B2" + outline.slice(1);
+              root.text = onSurface;
+              root.loaded = true;
+          }
+
+          Behavior on background {
+              ColorAnimation {
+                  duration: root.loaded ? 800 : 0
+                  easing.type: Easing.BezierSpline
+                  easing.bezierCurve: [0.22, 1, 0.36, 1, 1, 1]
+              }
+          }
+          Behavior on background90 {
+              ColorAnimation {
+                  duration: root.loaded ? 800 : 0
+                  easing.type: Easing.BezierSpline
+                  easing.bezierCurve: [0.22, 1, 0.36, 1, 1, 1]
+              }
+          }
+          Behavior on border {
+              ColorAnimation {
+                  duration: root.loaded ? 800 : 0
+                  easing.type: Easing.BezierSpline
+                  easing.bezierCurve: [0.22, 1, 0.36, 1, 1, 1]
+              }
+          }
+          Behavior on accent {
+              ColorAnimation {
+                  duration: root.loaded ? 800 : 0
+                  easing.type: Easing.BezierSpline
+                  easing.bezierCurve: [0.22, 1, 0.36, 1, 1, 1]
+              }
+          }
+          Behavior on text {
+              ColorAnimation {
+                  duration: root.loaded ? 800 : 0
+                  easing.type: Easing.BezierSpline
+                  easing.bezierCurve: [0.22, 1, 0.36, 1, 1, 1]
+              }
+          }
+
+          property string dmsColorsPath: String(StandardPaths.writableLocation(StandardPaths.HomeLocation)).replace(/^file:\/\//, "") + "/.config/hypr/dms/colors.conf"
+          property string dmsColorsUrl: dmsColorsPath.startsWith("file://") ? dmsColorsPath : "file://" + dmsColorsPath
+
+          property var _watcher: FileView {
+              id: colorFile
+              path: root.dmsColorsUrl
+              blockLoading: true
+              onLoaded: root.updateFromDmsColors()
+              onLoadFailed: error => console.warn("Wallpaper selector theme: failed to load DMS colors:", error)
+          }
+
+          property var _timer: Timer {
+              interval: 2000
+              repeat: true
+              running: true
+              onTriggered: colorFile.reload()
+              Component.onCompleted: colorFile.reload()
+          }
+      }
+      EOF
       cp qml/shell.qml "$out/share/wallpaper-selector/qml/shell.qml"
       cp scripts/wallpaper-playlist.sh "$out/bin/wallpaper-playlist.sh"
 
