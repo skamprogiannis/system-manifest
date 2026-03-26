@@ -88,10 +88,10 @@ Use **Spec Kit** (`specify` CLI) to scaffold spec-driven development for new pro
 
 ## Copilot Session Sync (Desktop ↔ USB)
 
-Copilot sessions live in `~/.copilot/session-state/`. To share them between desktop and USB, plug in the USB and use `sync-copilot-sessions`:
+Copilot sessions live in `~/.copilot/session-state/`. To share them between desktop and USB, plug in the USB and use `copilot-sessions-sync`:
 
-- `sync-copilot-sessions to-usb` — push desktop sessions to USB (run before leaving for a lab)
-- `sync-copilot-sessions from-usb` — pull USB sessions back to desktop (run when back home)
+- `copilot-sessions-sync to-usb` — push desktop sessions to USB (run before leaving for a lab)
+- `copilot-sessions-sync from-usb` — pull USB sessions back to desktop (run when back home)
 
 The script finds the USB automatically via the `NIXOS_USB_CRYPT` disk label, unlocks LUKS, mounts, rsyncs, and unmounts. Requires `sudo`.
 

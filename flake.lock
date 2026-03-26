@@ -670,7 +670,8 @@
         "nixvim": "nixvim",
         "pearpass-app-desktop": "pearpass-app-desktop",
         "spotify-player": "spotify-player",
-        "visual-explainer": "visual-explainer"
+        "visual-explainer": "visual-explainer",
+        "wallpaper-selector": "wallpaper-selector"
       }
     },
     "spotify-player": {
@@ -768,6 +769,22 @@
       "original": {
         "owner": "nicobailon",
         "repo": "visual-explainer",
+        "type": "github"
+      }
+    },
+    "wallpaper-selector": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1774527657,
+        "narHash": "sha256-vE8vuc3Hlprvmr5LOtOzfMeOloxlPxxbLMI6x4Gipn8=",
+        "owner": "skamprogiannis",
+        "repo": "wallpaper-selector",
+        "rev": "d101b74928c4be12de045c2919477fa7a0bec868",
+        "type": "github"
+      },
+      "original": {
+        "owner": "skamprogiannis",
+        "repo": "wallpaper-selector",
         "type": "github"
       }
     },

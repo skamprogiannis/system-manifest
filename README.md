@@ -4,6 +4,10 @@ My personal NixOS configuration — a declarative, reproducible system built aro
 
 Managed via **Nix Flakes** and **Home Manager**.
 
+## License
+
+This repository is licensed under **GNU GPL v3.0**. See `LICENSE`.
+
 ## Features
 
 - **Multi-Host Configuration:** Shared common configuration with host-specific overrides for `desktop` and `usb` (live/portable system).
@@ -36,6 +40,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 | `home-manager` | `github:nix-community/home-manager` | Tracks nixpkgs-unstable |
 | `nixvim` | `github:nix-community/nixvim` | Full Neovim config in Nix |
 | `spotify-player` | `github:aome510/spotify-player` | Picks up latest client fixes before nixpkgs |
+| `wallpaper-selector` | `github:skamprogiannis/wallpaper-selector` | Forked Quickshell wallpaper selector source, wrapped declaratively in Home Manager |
 | `pearpass-app-desktop` | `github:tetherto/pearpass-app-desktop` | PearPass AppImage source for NixOS wrapper |
 | `voiden` | `https://voiden.md/api/download/stable/linux/x64/Voiden-1.3.1.AppImage` | Offline-first API client packaged as AppImage wrapper |
 | `visual-explainer` | `github:nicobailon/visual-explainer` | HTML visualization generator for architecture diagrams and code explanations |
@@ -53,6 +58,8 @@ Packages tracked independently of nixpkgs for tighter version control:
 - **Window Controls:** `Super` + left-drag moves windows, `Super` + right-drag resizes. `Super+Ctrl+H/J/K/L` resizes by fine steps and `Super+Ctrl+Arrows` resizes by larger steps. `Super+Arrows` changes focus between monitors, while `Super+Shift+Arrows` moves the active window between monitors.
 - **Window Controls:** `Super` + left-drag moves windows, `Super` + right-drag resizes. `Super+Ctrl+H/J/K/L` (or arrows) resizes in directions.
 - **Launcher Shortcuts:** `Super+E` opens **Yazi** in Ghostty.
+- **Wallpaper Selector Rollout:** `Super+W` toggles the flake-packaged selector open/close; `Super+Shift+W` opens the DMS wallpaper dash fallback.
+- **Wallpaper selector content policy:** Mature/Questionable items are always filtered out and the `:sus` toggle is removed.
 - **Screenshots:** `dms screenshot` handles region/window/full capture with image-to-clipboard. `screenshot-path-copy` wraps it to copy the file path instead (useful for sharing with AI agents). Screen recording via **Kooha** GUI.
 - **GitHub Copilot CLI:** `Ctrl+Y` opens Neovim. `gh copilot` launched from the Zellij `copilot` tab.
 - **DNS:** Quad9 (`9.9.9.9`) for privacy-focused DNS resolution.
@@ -64,11 +71,13 @@ Packages tracked independently of nixpkgs for tighter version control:
 | `zs` | Zellij sessionizer — fuzzy-find project in `~/repositories`, attach or create session with 80/20 Neovim/terminal layout |
 | `screenshot-path-copy` | Wraps `dms screenshot` to copy the saved file path to clipboard (instead of image) |
 | `wallpaper-hook` | Daemon: picks wallpaper via linux-wallpaperengine, extracts palette via Matugen, reloads Hyprland border and GTK4 colours |
-| `we-sync` | Syncs Wallpaper Engine subscriptions into `~/wallpapers/wallpaper-engine`, renders thumbnails, and prunes stale unsubscribed entries |
-| `sync-static-wallpapers` | Syncs a wallpapers Git repo rooted at `~/wallpapers` and ensures `wallpaper-engine/` is ignored |
+| `wallpaper-selector` | Toggle wallpaper selector UI (`open` can force-open for scripts) |
+| `wallpaper-apply` | Internal apply entrypoint used by selector/playlist scripts (`static` or `dynamic`) |
+| `wallpaper-engine-sync` | Syncs Wallpaper Engine wallpapers into `~/wallpapers/wallpaper-engine` and updates selector assets |
+| `wallpaper-library-sync` | Syncs a wallpapers Git repo rooted at `~/wallpapers` and ensures `wallpaper-engine/` is ignored |
 | `hypr-nav` | Hyprland focus movement with workspace wrapping at boundaries |
-| `sync-transmission-port` | Updates transmission-daemon listening port |
-| `sync-copilot-sessions` | Syncs `~/.copilot/session-state/` between desktop and USB (`to-usb` / `from-usb`) |
+| `transmission-port-sync` | Updates transmission-daemon listening port |
+| `copilot-sessions-sync` | Syncs `~/.copilot/session-state/` between desktop and USB (`to-usb` / `from-usb`) |
 | `specify` | Spec Kit CLI wrapper — scaffolds spec-driven development for new projects |
 | `setup_persistent_usb.sh` | Initialises a fresh LUKS-encrypted persistent NixOS USB drive |
 | `update_usb.sh` | Builds the `usb` flake output, installs it onto the USB, then creates a squashfs image of the Nix store for fast boot performance |
@@ -116,6 +125,6 @@ Select **"NixOS - desktop-gaming-box"** from the bootloader menu (GRUB).
 ### Sync Copilot Sessions (Desktop ↔ USB)
 
 ```bash
-sync-copilot-sessions to-usb    # before leaving for a lab machine
-sync-copilot-sessions from-usb  # after returning
+copilot-sessions-sync to-usb    # before leaving for a lab machine
+copilot-sessions-sync from-usb  # after returning
 ```

@@ -20,6 +20,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    wallpaper-selector = {
+      url = "github:skamprogiannis/wallpaper-selector";
+      flake = false;
+    };
+
     pearpass-app-desktop = {
       url = "github:tetherto/pearpass-app-desktop";
       flake = false;

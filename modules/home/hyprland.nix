@@ -342,7 +342,8 @@ in {
           "$mod, Escape, exec, dms ipc call lock lock"
           "$mod, s, exec, dms ipc call settings toggle"
           "$mod, q, exec, dms ipc call powermenu toggle"
-          "$mod, w, exec, dms ipc call dash toggle wallpaper"
+          "$mod, w, exec, wallpaper-selector"
+          "$mod SHIFT, w, exec, dms ipc call dash toggle wallpaper"
         ];
 
         windowrule = [
@@ -355,7 +356,7 @@ in {
           "float 1, match:class ^(pinentry|pinentry-gtk-2|pinentry-gnome3|ssh-askpass|git-askpass)$"
           "center 1, match:class ^(pinentry|pinentry-gtk-2|pinentry-gnome3|ssh-askpass|git-askpass)$"
           "size 400 200, match:class ^(pinentry|pinentry-gtk-2|pinentry-gnome3|ssh-askpass|git-askpass)$"
-          # Hide WE screenshot windows (we-sync offscreen rendering)
+          # Hide WE screenshot windows (wallpaper-engine-sync offscreen rendering)
           "workspace special:wesync silent, match:title ^(wallpaperengine)$"
         ];
 
