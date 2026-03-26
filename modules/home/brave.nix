@@ -128,6 +128,7 @@ in {
   # Hide the duplicate Brave entry
   xdg.desktopEntries."com.brave.Browser" = {
     name = "Brave Web Browser";
+    comment = "Fast, private, and secure web browser";
     exec = "brave";
     noDisplay = true;
   };

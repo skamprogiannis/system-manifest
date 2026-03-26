@@ -22,4 +22,19 @@
       };
     };
   };
+
+  xdg.desktopEntries.firefox = {
+    name = "Firefox";
+    genericName = "Web Browser";
+    comment = "Fast, private and safe web browser";
+    exec = "firefox %u";
+    icon = "firefox";
+    terminal = false;
+    categories = ["Network" "WebBrowser"];
+    mimeType = [
+      "text/html"
+      "x-scheme-handler/http"
+      "x-scheme-handler/https"
+    ];
+  };
 }

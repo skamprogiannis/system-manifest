@@ -58,6 +58,9 @@ Packages tracked independently of nixpkgs for tighter version control:
 - **Window Controls:** `Super` + left-drag moves windows, `Super` + right-drag resizes. `Super+Ctrl+H/J/K/L` resizes by fine steps and `Super+Ctrl+Arrows` resizes by larger steps. `Super+Arrows` changes focus between monitors, while `Super+Shift+Arrows` moves the active window between monitors.
 - **Window Controls:** `Super` + left-drag moves windows, `Super` + right-drag resizes. `Super+Ctrl+H/J/K/L` (or arrows) resizes in directions.
 - **Launcher Shortcuts:** `Super+E` opens **Yazi** in Ghostty.
+- **DMS declarative shell settings:** Display config format is set to **Model** with snap enabled; DMS widgets (bar/OSD/toasts/notepad) are pinned to the BenQ with fallback routing, dock is disabled, and workspace/launcher behavior is declared in Nix instead of UI-only state.
+- **Notepad shortcut:** `Super+T` toggles the DMS notepad slideout.
+- **Launcher behavior notes:** Built-in DMS entries (Settings, Notepad, System Monitor) are explicitly enabled. `launchPrefix` (when set in DMS launcher settings) prepends a command to app launches, e.g. wrappers like `uwsm-app` or `systemd-run --user`.
 - **Wallpaper Selector Rollout:** `Super+W` toggles the flake-packaged selector open/close; `Super+Shift+W` opens the DMS wallpaper dash fallback.
 - **Wallpaper selector content policy:** Mature/Questionable items are always filtered out and the `:sus` toggle is removed.
 - **Screenshots:** `dms screenshot` handles region/window/full capture with image-to-clipboard. `screenshot-path-copy` wraps it to copy the file path instead (useful for sharing with AI agents). Screen recording via **Kooha** GUI.

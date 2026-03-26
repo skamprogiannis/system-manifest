@@ -81,6 +81,7 @@
     "nvim-text" = {
       name = "Neovim";
       genericName = "Text Editor";
+      comment = "Hyperextensible Vim-based text editor";
       exec = "ghostty -e nvim %F";
       icon = "nvim";
       terminal = false;

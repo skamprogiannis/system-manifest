@@ -157,7 +157,7 @@ PY
   xdg.desktopEntries.yazi-opener = {
     name = "Yazi File Manager";
     genericName = "Terminal File Manager";
-    comment = "Open files and folders in Yazi";
+    comment = "A terminal file explorer";
     exec = "${yaziOpenWrapper} %U";
     terminal = false;
     categories = ["Utility" "System" "FileManager"];
