@@ -21,6 +21,10 @@
     enableCalendarEvents = false;
     enableVPN = true;
     enableAudioWavelength = true;
+    clipboardSettings = {
+      maxPinned = 10;
+      autoClearDays = 1;
+    };
     settings = {
       # --- THEME & COLOR ---
       currentThemeName = "dynamic";
@@ -45,6 +49,12 @@
       use24HourClock = true;
       cornerRadius = 12;
       enablePerModeWallpapers = false;
+      muxType = "zellij";
+      muxSessionFilter = "";
+      clipboardEnterToPaste = false;
+      lockScreenShowProfileImage = true;
+      greeterRememberLastSession = true;
+      greeterRememberLastUser = true;
 
       # --- POWER & SLEEP ---
       acMonitorTimeout = 600;
@@ -88,4 +98,32 @@
       matugenTemplateEmacs = false;
     };
   };
+
+  # Ensure dms CLI can always resolve shell.qml (including greeter-sync calls
+  # started by DMS UI paths that don't use the profile wrapper).
+  home.file.".config/quickshell/dms".source =
+    "${config.programs.dank-material-shell.package}/share/quickshell/dms";
+
+  # Keep built-in analog devices hidden by default without making session.json
+  # immutable/read-only. Use stable PipeWire node names so sink/source can be
+  # hidden independently.
+  home.activation.dmsAudioDeviceVisibility = lib.hm.dag.entryAfter ["writeBoundary"] ''
+    session_file="$HOME/.local/state/DankMaterialShell/session.json"
+    mkdir -p "$(dirname "$session_file")"
+
+    if [ -s "$session_file" ] && ${pkgs.jq}/bin/jq empty "$session_file" >/dev/null 2>&1; then
+      :
+    else
+      printf '%s\n' '{}' > "$session_file"
+    fi
+
+    tmp_file=$(mktemp)
+    ${pkgs.jq}/bin/jq \
+      --argjson hiddenOutput '["alsa_output.pci-0000_00_1f.3.analog-stereo"]' \
+      --argjson hiddenInput '["alsa_input.pci-0000_00_1f.3.analog-stereo"]' \
+      '.hiddenOutputDeviceNames = (((.hiddenOutputDeviceNames // []) + $hiddenOutput) | unique)
+       | .hiddenInputDeviceNames = (((.hiddenInputDeviceNames // []) + $hiddenInput) | unique)' \
+      "$session_file" > "$tmp_file"
+    mv "$tmp_file" "$session_file"
+  '';
 }
