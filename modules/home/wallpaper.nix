@@ -4,6 +4,15 @@
   lib,
   ...
 }: {
+  programs.bash.initExtra = ''
+    _wallpaper_engine_sync_complete() {
+      local cur
+      cur="''${COMP_WORDS[COMP_CWORD]}"
+      COMPREPLY=($(compgen -W "--regen --list-subs --help -h" -- "$cur"))
+    }
+    complete -F _wallpaper_engine_sync_complete wallpaper-engine-sync
+  '';
+
   systemd.user.services.linux-wallpaperengine = {
     Unit = {
       Description = "Wallpaper Engine Live Wallpaper";
@@ -40,23 +49,59 @@
   };
 
   home.packages = [
-    (pkgs.writeShellScriptBin "we-sync" ''
+    (pkgs.writeShellScriptBin "wallpaper-engine-sync" ''
+      set -euo pipefail
+      shopt -s nullglob
+
       WE_WORKSHOP="$HOME/games/SteamLibrary/steamapps/workshop/content/431960"
-      WE_DEFAULTS="$HOME/games/SteamLibrary/steamapps/common/wallpaper_engine/projects/defaultprojects"
-      WALL_DIR="$HOME/wallpapers/wallpaper-engine"
+      WALL_DIR="$HOME/wallpapers/.wallpaper-engine"
       CACHE_DIR="$HOME/.cache"
       MAP_FILE="$HOME/.cache/we-wallpaper-map.json"
-      LOCK_FILE="$CACHE_DIR/we-sync.lock"
-      WE_SUBS=$(ls -1t "$HOME/.local/share/Steam/userdata"/*/ugc/431960_subscriptions.vdf 2>/dev/null | head -n 1)
+      LOCK_FILE="$CACHE_DIR/wallpaper-engine-sync.lock"
+      WE_MANIFEST="$(dirname "$(dirname "$WE_WORKSHOP")")/appworkshop_431960.acf"
+      WE_UI_LOG="$HOME/games/SteamLibrary/steamapps/common/wallpaper_engine/bin/uilog.txt"
+      SUBS_VDF_GLOBS=(
+        "$HOME/.local/share/Steam/userdata"/*/ugc/431960_subscriptions.vdf
+        "$HOME/.steam/steam/userdata"/*/ugc/431960_subscriptions.vdf
+        "$HOME/.var/app/com.valvesoftware.Steam/.local/share/Steam/userdata"/*/ugc/431960_subscriptions.vdf
+      )
       FORCE_REGEN=0
-      if [ "''${1:-}" = "--regen" ]; then
-        FORCE_REGEN=1
-      fi
+      LIST_SUBSCRIPTIONS=0
+
+      usage() {
+        cat <<'EOF'
+Usage: wallpaper-engine-sync [--regen] [--list-subs]
+
+  --regen      Regenerate all dynamic thumbnails.
+  --list-subs  Print discovered subscribed Wallpaper Engine IDs and exit.
+EOF
+      }
+
+      while [ "$#" -gt 0 ]; do
+        case "$1" in
+          --regen)
+            FORCE_REGEN=1
+            ;;
+          --list-subs)
+            LIST_SUBSCRIPTIONS=1
+            ;;
+          -h|--help)
+            usage
+            exit 0
+            ;;
+          *)
+            echo "Unknown argument: $1" >&2
+            usage >&2
+            exit 2
+            ;;
+        esac
+        shift
+      done
 
       mkdir -p "$WALL_DIR" "$CACHE_DIR"
       exec 8>"$LOCK_FILE"
       if ! ${pkgs.util-linux}/bin/flock -n 8; then
-        echo "we-sync already running, skipping"
+        echo "wallpaper-engine-sync already running, skipping"
         exit 0
       fi
 
@@ -65,8 +110,10 @@
 
       echo "{" > "$MAP_TMP"
       FIRST=true
-      declare -A EXPECTED_THUMBS
-      declare -A SUBSCRIBED_IDS
+      declare -A EXPECTED_THUMBS=()
+      declare -A SUBSCRIBED_IDS=()
+      declare -A UNSUBSCRIBED_IDS=()
+      declare -a SUBS_FILES=()
 
       WE_ASSETS="$HOME/games/SteamLibrary/steamapps/common/wallpaper_engine/assets"
 
@@ -200,14 +247,103 @@
         return 1
       }
 
+      load_subscribed_ids_from_file() {
+        local subs_file="$1"
+        while IFS= read -r wid; do
+          [ -n "$wid" ] || continue
+          SUBSCRIBED_IDS["$wid"]=1
+        done < <(${pkgs.gnused}/bin/sed -n 's/^[[:space:]]*"publishedfileid"[[:space:]]*"\([0-9]\+\)".*$/\1/p' "$subs_file")
+      }
+
+      # Wallpaper Engine's own log is usually the freshest unsubscribe signal
+      # when Steam metadata lags behind.
+      load_unsubscribed_ids_from_uilog() {
+        local log_file="$1"
+        local line wid
+        [ -f "$log_file" ] || return 0
+
+        while IFS= read -r line; do
+          if [[ "$line" =~ Unsubscribed[[:space:]]+from[[:space:]]+file[[:space:]]+([0-9]+) ]]; then
+            wid="''${BASH_REMATCH[1]}"
+            UNSUBSCRIBED_IDS["$wid"]=1
+            continue
+          fi
+          if [[ "$line" =~ Subscribed[[:space:]]+to[[:space:]]+file[[:space:]]+([0-9]+) ]]; then
+            wid="''${BASH_REMATCH[1]}"
+            unset "UNSUBSCRIBED_IDS[$wid]"
+          fi
+        done < "$log_file"
+      }
+
+      # Fallback: Workshop manifest from the active Steam library.
+      load_subscribed_ids_from_manifest() {
+        local manifest="$1"
+        [ -f "$manifest" ] || return 0
+
+        local in_items=0
+        local depth=0
+        local line trimmed wid
+
+        while IFS= read -r line; do
+          trimmed=$(echo "$line" | ${pkgs.gnused}/bin/sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+
+          if [ "$in_items" -eq 0 ]; then
+            if [ "$trimmed" = '"WorkshopItemsInstalled"' ]; then
+              in_items=1
+              depth=0
+            fi
+            continue
+          fi
+
+          if [ "$trimmed" = "{" ]; then
+            depth=$((depth + 1))
+            continue
+          fi
+
+          if [ "$trimmed" = "}" ]; then
+            depth=$((depth - 1))
+            if [ "$depth" -le 0 ]; then
+              break
+            fi
+            continue
+          fi
+
+          if [ "$depth" -eq 1 ]; then
+            wid=$(echo "$trimmed" | ${pkgs.gnused}/bin/sed -n 's/^"\([0-9]\{6,\}\)"$/\1/p')
+            if [ -n "$wid" ]; then
+              SUBSCRIBED_IDS["$wid"]=1
+            fi
+          fi
+        done < "$manifest"
+      }
+
+      collect_subscription_sources() {
+        local pattern
+        local file
+        SUBS_FILES=()
+        for pattern in "''${SUBS_VDF_GLOBS[@]}"; do
+          for file in $pattern; do
+            [ -f "$file" ] || continue
+            SUBS_FILES+=("$file")
+          done
+        done
+
+        if [ "''${#SUBS_FILES[@]}" -gt 0 ]; then
+          mapfile -t SUBS_FILES < <(printf '%s\n' "''${SUBS_FILES[@]}" | ${pkgs.coreutils}/bin/sort -u)
+        fi
+      }
+
       # Process a single wallpaper directory
       process_dir() {
         local dir="$1"
         [ -d "$dir" ] || return
         local dir_id
         dir_id=$(basename "$dir")
-        if [[ "$dir_id" =~ ^[0-9]+$ ]] && [ "''${#SUBSCRIBED_IDS[@]}" -gt 0 ] && [ -z "''${SUBSCRIBED_IDS[$dir_id]+x}" ]; then
-          return
+        if [[ "$dir_id" =~ ^[0-9]+$ ]]; then
+          # Strict filtering: only subscribed Workshop IDs should ever appear.
+          if [ "''${#SUBSCRIBED_IDS[@]}" -eq 0 ] || [ -z "''${SUBSCRIBED_IDS[$dir_id]+x}" ]; then
+            return
+          fi
         fi
         [ -f "$dir/project.json" ] || return
 
@@ -250,19 +386,54 @@
 
       # Read currently subscribed Workshop IDs so stale leftover directories
       # from unsubscribed wallpapers are ignored.
-      if [ -n "$WE_SUBS" ] && [ -f "$WE_SUBS" ]; then
-        while IFS= read -r wid; do
-          SUBSCRIBED_IDS["$wid"]=1
-        done < <(sed -n 's/^[[:space:]]*"publishedfileid"[[:space:]]*"\([0-9]\+\)".*$/\1/p' "$WE_SUBS")
+      collect_subscription_sources
+      if [ "''${#SUBS_FILES[@]}" -gt 0 ]; then
+        for subs_file in "''${SUBS_FILES[@]}"; do
+          load_subscribed_ids_from_file "$subs_file"
+        done
+      fi
+
+      if [ "''${#SUBSCRIBED_IDS[@]}" -eq 0 ]; then
+        load_subscribed_ids_from_manifest "$WE_MANIFEST"
+      fi
+
+      load_unsubscribed_ids_from_uilog "$WE_UI_LOG"
+      if [ "''${#UNSUBSCRIBED_IDS[@]}" -gt 0 ]; then
+        for wid in "''${!UNSUBSCRIBED_IDS[@]}"; do
+          unset "SUBSCRIBED_IDS[$wid]"
+        done
+      fi
+
+      if [ "$LIST_SUBSCRIPTIONS" = "1" ]; then
+        if [ "''${#SUBS_FILES[@]}" -gt 0 ]; then
+          echo "Subscription sources:"
+          printf '  %s\n' "''${SUBS_FILES[@]}"
+        else
+          echo "Subscription sources: none (using manifest fallback if available)"
+        fi
+
+        if [ "''${#UNSUBSCRIBED_IDS[@]}" -gt 0 ]; then
+          echo "Excluded IDs from Wallpaper Engine unsubscribe log (''${#UNSUBSCRIBED_IDS[@]}):"
+          printf '%s\n' "''${!UNSUBSCRIBED_IDS[@]}" | ${pkgs.coreutils}/bin/sort -n
+        fi
+
+        if [ "''${#SUBSCRIBED_IDS[@]}" -eq 0 ]; then
+          echo "No subscribed Wallpaper Engine IDs discovered."
+        else
+          echo "Subscribed Wallpaper Engine IDs (''${#SUBSCRIBED_IDS[@]}):"
+          printf '%s\n' "''${!SUBSCRIBED_IDS[@]}" | ${pkgs.coreutils}/bin/sort -n
+        fi
+        exit 0
+      fi
+
+      if [ "''${#SUBSCRIBED_IDS[@]}" -eq 0 ]; then
+        echo "Warning: no subscription IDs discovered; skipping dynamic workshop wallpapers." >&2
       fi
 
       # Scan workshop subscriptions
       for dir in "$WE_WORKSHOP"/*/; do
         process_dir "$dir"
       done
-
-      # Include select bundled wallpapers
-      process_dir "$WE_DEFAULTS/razer_vortex"
 
       echo "" >> "$MAP_TMP"
       echo "}" >> "$MAP_TMP"
@@ -288,7 +459,6 @@
 
       echo "Synced $(echo "''${!EXPECTED_THUMBS[@]}" | wc -w) Wallpaper Engine wallpapers"
     '')
-
     (pkgs.writeShellScriptBin "we-mute" ''
       WE_PID=$(systemctl --user show -p MainPID --value linux-wallpaperengine.service 2>/dev/null)
       if [ -z "$WE_PID" ] || [ "$WE_PID" = "0" ]; then
@@ -339,6 +509,8 @@
       CACHE_WALL="$HOME/.cache/current_wallpaper"
       MAP_FILE="$HOME/.cache/we-wallpaper-map.json"
       WE_ASSETS="$HOME/games/SteamLibrary/steamapps/common/wallpaper_engine/assets"
+      WE_WORKSHOP_ROOT="$HOME/games/SteamLibrary/steamapps/workshop/content/431960"
+      WE_DEFAULTS_ROOT="$HOME/games/SteamLibrary/steamapps/common/wallpaper_engine/projects/defaultprojects"
 
       cleanup() {
         systemctl --user stop linux-wallpaperengine.service 2>/dev/null
@@ -409,8 +581,36 @@ EOF
       }
 
       # Resolve wallpaper image to WE directory via mapping file
+      normalize_dir() {
+        ${pkgs.coreutils}/bin/realpath "$1" | ${pkgs.gnused}/bin/sed 's:/*$::'
+      }
+
+      resolve_direct_we_dir() {
+        local candidate="$1"
+        [ -d "$candidate" ] || return 1
+        [ -f "$candidate/project.json" ] || return 1
+        local normalized
+        normalized=$(normalize_dir "$candidate" 2>/dev/null || true)
+        [ -n "$normalized" ] || return 1
+        case "$normalized" in
+          "$WE_WORKSHOP_ROOT"/*|"$WE_DEFAULTS_ROOT"/*)
+            echo "$normalized"
+            return 0
+            ;;
+        esac
+        return 1
+      }
+
       resolve_we_dir() {
         local wall_path="$1"
+
+        local direct_dir=""
+        direct_dir=$(resolve_direct_we_dir "$wall_path" || true)
+        if [ -n "$direct_dir" ]; then
+          echo "$direct_dir"
+          return 0
+        fi
+
         [ ! -f "$MAP_FILE" ] && return 1
         local bname
         bname=$(basename "$wall_path")
@@ -432,8 +632,8 @@ EOF
 
         # Mapping can get stale/corrupted after interrupted sessions.
         # If current wallpaper comes from the synced folder, refresh once.
-        if [ -f "$wall_path" ] && [ "''${wall_path#$HOME/wallpapers/wallpaper-engine/}" != "$wall_path" ]; then
-          we-sync &>/dev/null || true
+        if [ -f "$wall_path" ] && [ "''${wall_path#$HOME/wallpapers/.wallpaper-engine/}" != "$wall_path" ]; then
+          wallpaper-engine-sync &>/dev/null || true
           resolved=$(resolve_we_dir "$wall_path" || true)
           if [ -n "$resolved" ]; then
             echo "$resolved"
@@ -445,7 +645,7 @@ EOF
       }
 
       # Ensure WE wallpaper map is fresh before first poll
-      we-sync &>/dev/null || true
+      wallpaper-engine-sync &>/dev/null || true
 
       # Initial theme update on startup
       update_themes

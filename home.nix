@@ -25,6 +25,7 @@
     ./modules/home/zellij.nix
     ./modules/home/scripts.nix
     ./modules/home/wallpaper.nix
+    ./modules/home/wallpaper-selector.nix
     ./modules/home/cursors.nix
     ./modules/home/vesktop.nix
     ./modules/home/keyring.nix

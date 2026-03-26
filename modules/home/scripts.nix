@@ -3,7 +3,7 @@
     (pkgs.writeShellScriptBin "specify" ''
       exec ${pkgs.uv}/bin/uvx --from git+https://github.com/github/spec-kit.git specify "$@"
     '')
-    (pkgs.writeShellScriptBin "sync-copilot-sessions" ''
+    (pkgs.writeShellScriptBin "copilot-sessions-sync" ''
       set -e
       MODE="''${1:-to-usb}"
       LUKS_DEVICE="/dev/disk/by-partlabel/NIXOS_USB_CRYPT"
@@ -32,7 +32,7 @@
           ${pkgs.rsync}/bin/rsync -av --update "$REMOTE/" "$LOCAL/"
           ;;
         *)
-          echo "Usage: sync-copilot-sessions [to-usb|from-usb]"
+          echo "Usage: copilot-sessions-sync [to-usb|from-usb]"
           sudo umount "$MOUNT"
           sudo ${pkgs.cryptsetup}/bin/cryptsetup luksClose "$MAPPER"
           exit 1
@@ -43,7 +43,7 @@
       sudo ${pkgs.cryptsetup}/bin/cryptsetup luksClose "$MAPPER"
       echo "Done."
     '')
-    (pkgs.writeShellScriptBin "sync-transmission-port" ''
+    (pkgs.writeShellScriptBin "transmission-port-sync" ''
       set -e
       CONFIG_DIR="$HOME/.config/fragments"
       SETTINGS_FILE="$CONFIG_DIR/settings.json"
@@ -93,7 +93,7 @@
       rm -rf "$tmpdir"
       exit "$status"
     '')
-    (pkgs.writeShellScriptBin "sync-static-wallpapers" ''
+    (pkgs.writeShellScriptBin "wallpaper-library-sync" ''
       set -euo pipefail
 
       REPO_URL="''${WALLPAPER_REPO_URL:-}"
@@ -111,7 +111,7 @@
 
       if [ ! -d "$REPO_DIR/.git" ]; then
         echo "No git repo found at $REPO_DIR and no repo URL provided."
-        echo "Usage (first run): sync-static-wallpapers git@github.com:you/wallpapers.git"
+        echo "Usage (first run): wallpaper-library-sync git@github.com:you/wallpapers.git"
         exit 1
       fi
 
@@ -127,11 +127,11 @@
         echo "No origin remote configured at $REPO_DIR; skipping fetch/reset."
       fi
 
-      mkdir -p "$REPO_DIR/wallpaper-engine"
+      mkdir -p "$REPO_DIR/.wallpaper-engine"
       touch "$REPO_DIR/.gitignore"
-      if ! grep -qxF 'wallpaper-engine/' "$REPO_DIR/.gitignore"; then
-        echo "wallpaper-engine/" >> "$REPO_DIR/.gitignore"
-        echo "Added wallpaper-engine/ to $REPO_DIR/.gitignore"
+      if ! grep -qxF '.wallpaper-engine/' "$REPO_DIR/.gitignore"; then
+        echo ".wallpaper-engine/" >> "$REPO_DIR/.gitignore"
+        echo "Added .wallpaper-engine/ to $REPO_DIR/.gitignore"
       fi
 
       if ! grep -qxF '.DS_Store' "$REPO_DIR/.gitignore"; then
