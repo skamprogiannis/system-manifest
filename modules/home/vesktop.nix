@@ -5,17 +5,17 @@
   ...
 }: let
   transluenceThemeName = "transluence-matugen.theme.css";
-  transluenceOverlayName = ".transluence-matugen.overlay.css";
-  transluencePaletteName = ".transluence-matugen.palette.css";
 
   regenTransluenceTheme = pkgs.writeShellScriptBin "regen-vesktop-transluence-theme" ''
     set -euo pipefail
 
     THEME_DIR="$HOME/.config/vesktop/themes"
     SRC_COLORS="$THEME_DIR/dank-discord.css"
-    OUT="$THEME_DIR/${transluencePaletteName}"
+    OUT="$THEME_DIR/${transluenceThemeName}"
+    OVERLAY_STORE="${./vesktop/transluence-matugen.overlay.css}"
 
     [ -f "$SRC_COLORS" ] || exit 0
+    [ -f "$OVERLAY_STORE" ] || exit 0
 
     # DMS can rewrite palette files in bursts. Wait for a stable snapshot.
     stable_hash=""
@@ -74,13 +74,15 @@ PY
  * @name Transluence Matugen
  * @description Transluence tuned for transparent Vesktop and Matugen palette sync
  * @author skamprogiannis
- * @version 1.0.0
+ * @version 1.2.0
  */
+
+@import url(https://capnkitten.github.io/BetterDiscord/Themes/Translucence/css/source.css);
 
 /* Source hash: $src_hash (dank-discord.css) */
 EOF
 
-    printf '\n/* ----- dms generated palette ----- */\n' >> "$tmp"
+    printf '\n/* ----- DMS-generated Matugen palette ----- */\n' >> "$tmp"
     cat "$SRC_COLORS" >> "$tmp"
     cat >> "$tmp" <<EOF
 
@@ -91,14 +93,25 @@ EOF
   --dms-accent-lightness: $accent_lightness;
 }
 EOF
+    printf '\n/* ----- Transluence overlay ----- */\n' >> "$tmp"
+    cat "$OVERLAY_STORE" >> "$tmp"
+
+    cleanup_legacy_files() {
+      ${pkgs.coreutils}/bin/rm -f \
+        "$THEME_DIR/.transluence-matugen.palette.css" \
+        "$THEME_DIR/.transluence-matugen.overlay.css" \
+        "$THEME_DIR/${transluenceThemeName}.backup"
+    }
 
     # Avoid needless rewrites/reloads when content is unchanged.
     if [ -f "$OUT" ] && ${pkgs.diffutils}/bin/cmp -s "$tmp" "$OUT"; then
       rm -f "$tmp"
+      cleanup_legacy_files
       exit 0
     fi
 
     mv "$tmp" "$OUT"
+    cleanup_legacy_files
   '';
 
   vesktopSettingsPatch = builtins.toJSON {
@@ -199,19 +212,6 @@ EOF
   '';
 in {
   home.packages = [pkgs.vesktop regenTransluenceTheme];
-  home.file.".config/vesktop/themes/${transluenceOverlayName}".source = ./vesktop/transluence-matugen.overlay.css;
-  home.file.".config/vesktop/themes/${transluenceThemeName}".text = ''
-    /**
-     * @name Transluence Matugen
-     * @description Transluence tuned for transparent Vesktop and Matugen palette sync
-     * @author skamprogiannis
-     * @version 1.1.0
-     */
-
-    @import url(https://capnkitten.github.io/BetterDiscord/Themes/Translucence/css/source.css);
-    @import url('file://${config.home.homeDirectory}/.config/vesktop/themes/${transluencePaletteName}');
-    @import url('file://${config.home.homeDirectory}/.config/vesktop/themes/${transluenceOverlayName}');
-  '';
 
   xdg.desktopEntries.vesktop = {
     name = "Vesktop";
