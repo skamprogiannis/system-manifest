@@ -574,6 +574,10 @@ set highlight-color "#$PRIMARY"
         set highlight-active-color "#$PRIMARY"
 EOF
 
+        # Keep Transluence-derived Vesktop theme synchronized with fresh Matugen output.
+        if command -v regen-vesktop-transluence-theme >/dev/null 2>&1; then
+          regen-vesktop-transluence-theme || true
+        fi
       }
 
       # Resolve wallpaper image to WE directory via mapping file
