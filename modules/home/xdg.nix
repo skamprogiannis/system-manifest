@@ -87,22 +87,28 @@ in {
   home.file.".config/xdg-desktop-portal-termfilechooser/config".text = ''
     [filechooser]
     cmd=${config.home.homeDirectory}/.config/xdg-desktop-portal-termfilechooser/ghostty-yazi-wrapper.sh
-    default_dir=$HOME
-    open_mode=suggested
-    save_mode=suggested
+    create_help_file=0
+    default_dir=$HOME/downloads
+    open_mode=last
+    save_mode=last
   '';
 
   home.file.".config/xdg-desktop-portal-termfilechooser/ghostty-yazi-wrapper.sh" = {
     executable = true;
     text = ''
       #!${pkgs.bash}/bin/bash
-      set -e
+      set -euo pipefail
 
-      multiple="$1"
-      directory="$2"
-      save="$3"
-      path="$4"
-      out="$5"
+      multiple="''${1:-0}"
+      directory="''${2:-0}"
+      save="''${3:-0}"
+      path="''${4:-}"
+      out="''${5:-}"
+      loglevel="''${6:-0}"
+
+      if [ "$loglevel" -ge 4 ]; then
+          set -x
+      fi
 
       if [ "''${path#file://}" != "$path" ]; then
           path=$(${pkgs.python3}/bin/python3 - "$path" <<'PY'
@@ -115,37 +121,35 @@ PY
           )
       fi
 
-      [ -n "$path" ] || path="$HOME"
-      [ -e "$path" ] || path="$HOME"
-      if [ -f "$path" ]; then
-          path=$(dirname "$path")
+      if [ -z "$path" ]; then
+          start_dir="$HOME"
+      elif [ -d "$path" ]; then
+          start_dir="$path"
+      elif [ -f "$path" ]; then
+          start_dir=$(dirname "$path")
+      elif [ -d "$(dirname "$path")" ]; then
+          start_dir=$(dirname "$path")
+      else
+          start_dir="$HOME"
       fi
 
       if [ "$save" = "1" ]; then
-          set -- --chooser-file="$out" --cwd-file="$out"".1" "$path"
+          set -- --chooser-file="$out" "$start_dir"
       elif [ "$directory" = "1" ]; then
-          set -- --chooser-file="$out" --cwd-file="$out"".1" "$path"
+          set -- --chooser-file="$out" --cwd-file="$out"".1" "$start_dir"
       elif [ "$multiple" = "1" ]; then
-          set -- --chooser-file="$out" "$path"
+          set -- --chooser-file="$out" "$start_dir"
       else
-          set -- --chooser-file="$out" "$path"
+          set -- --chooser-file="$out" "$start_dir"
       fi
 
-      command="${pkgs.ghostty}/bin/ghostty -e ${pkgs.yazi}/bin/yazi"
-      for arg in "$@"; do
-          escaped=$(printf "%s" "$arg" | sed 's/"/\\"/g')
-          command="$command \"$escaped\""
-      done
+      ${pkgs.ghostty}/bin/ghostty -e ${pkgs.yazi}/bin/yazi "$@"
 
-      sh -c "$command"
-
-      if [ "$save" = "1" ] || [ "$directory" = "1" ]; then
+      if [ "$directory" = "1" ]; then
           if [ ! -s "$out" ] && [ -s "$out"".1" ]; then
               cat "$out"".1" > "$out"
-              rm "$out"".1"
-          else
-              rm "$out"".1"
           fi
+          rm -f "$out"".1"
       fi
     '';
   };

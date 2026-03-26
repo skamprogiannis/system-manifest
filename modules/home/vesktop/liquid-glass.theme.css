@@ -1,14 +1,28 @@
 /**
  * @name Liquid Glass
- * @description DMS + Liquid Glass declarative theme
+ * @description DMS palette + Liquid Glass surfaces
  * @author skamprogiannis
- * @version 1.1.0
+ * @version 1.2.0
  */
 
-/* Keep DMS-generated palette in sync with Matugen updates. */
+/* Use DMS/Matugen palette variables (--bg-*, --accent-*, --text-*). */
 @import url('file:///home/stefan/.config/vesktop/themes/dank-discord.css');
 
-/* Liquid Glass base: transparent shell. */
+/* Global transparency and blur tiers (Ghostty-inspired: transparent base + readable overlays). */
+:root {
+  --lg-blur-soft: 14px;
+  --lg-blur-strong: 20px;
+  --lg-border: color-mix(in srgb, var(--text-1, #ffffff) 18%, transparent);
+  --lg-shadow: 0 18px 40px rgba(0, 0, 0, 0.34);
+  --lg-bg-base: color-mix(in srgb, var(--bg-4, #101114) 34%, transparent);
+  --lg-bg-chat: color-mix(in srgb, var(--bg-2, #24262b) 46%, transparent);
+  --lg-bg-sidebar: color-mix(in srgb, var(--bg-2, #24262b) 54%, transparent);
+  --lg-bg-popout: color-mix(in srgb, var(--bg-2, #24262b) 66%, transparent);
+  --lg-bg-settings: color-mix(in srgb, var(--bg-2, #24262b) 74%, transparent);
+  --lg-bg-settings-soft: color-mix(in srgb, var(--bg-3, #1c1d22) 62%, transparent);
+}
+
+/* Base shell: fully transparent so blur/refraction comes from compositor + backdrop-filter layers. */
 :root,
 html,
 body,
@@ -23,51 +37,106 @@ div[class^="layer_"] {
 
 .theme-dark,
 .theme-light {
-  --background-primary: transparent !important;
-  --background-secondary: transparent !important;
-  --background-tertiary: transparent !important;
+  --background-primary: var(--lg-bg-chat) !important;
+  --background-secondary: var(--lg-bg-sidebar) !important;
+  --background-tertiary: var(--lg-bg-settings-soft) !important;
   --background-base-low: transparent !important;
   --background-base-lower: transparent !important;
   --background-base-lowest: transparent !important;
-  --channeltextarea-background: color-mix(in srgb, var(--bg-2) 58%, transparent) !important;
-  --background-floating: color-mix(in srgb, var(--bg-2) 72%, transparent) !important;
-  --background-modifier-hover: color-mix(in srgb, var(--text-1) 8%, transparent) !important;
-  --background-modifier-active: color-mix(in srgb, var(--text-1) 14%, transparent) !important;
-  --background-modifier-selected: color-mix(in srgb, var(--text-1) 18%, transparent) !important;
-  --background-modifier-accent: color-mix(in srgb, var(--text-1) 14%, transparent) !important;
+  --background-floating: var(--lg-bg-popout) !important;
+  --channeltextarea-background: color-mix(in srgb, var(--bg-2, #24262b) 64%, transparent) !important;
+  --modal-background: var(--lg-bg-settings) !important;
+  --modal-footer-background: color-mix(in srgb, var(--bg-3, #1c1d22) 72%, transparent) !important;
+  --background-modifier-hover: color-mix(in srgb, var(--text-1, #fff) 10%, transparent) !important;
+  --background-modifier-active: color-mix(in srgb, var(--text-1, #fff) 16%, transparent) !important;
+  --background-modifier-selected: color-mix(in srgb, var(--accent-3, #8ea4ff) 24%, transparent) !important;
+  --background-modifier-accent: color-mix(in srgb, var(--text-1, #fff) 16%, transparent) !important;
+  --brand-500: var(--accent-3, #8ea4ff) !important;
+  --control-brand-foreground: var(--accent-3, #8ea4ff) !important;
+  --text-link: var(--accent-1, #9eb7ff) !important;
 }
 
-/* Main content pane. */
+/* App background layers. */
+div[class*="base_"],
+div[class*="content_"],
+div[class*="page_"] {
+  background-color: var(--lg-bg-base) !important;
+}
+
+/* Main chat column. */
 div[class*="chat_"],
 div[class*="chatContent_"],
 div[class*="messagesWrapper_"],
 main[class*="chatContent_"],
 section[class*="chatContent_"] {
-  background-color: color-mix(in srgb, var(--bg-2) 48%, transparent) !important;
-  backdrop-filter: none !important;
+  background-color: var(--lg-bg-chat) !important;
+  backdrop-filter: blur(var(--lg-blur-soft)) saturate(1.08) !important;
+  -webkit-backdrop-filter: blur(var(--lg-blur-soft)) saturate(1.08) !important;
 }
 
-/* Sidebars slightly more transparent. */
+/* Side rails + member list: transparent but slightly denser than base background. */
 div[class*="sidebar_"],
 nav[class*="privateChannels_"],
 div[class*="membersWrap_"],
 div[class*="peopleColumn_"],
 div[class*="standardSidebarView_"],
 div[class*="panels_"] {
-  background-color: color-mix(in srgb, var(--bg-2) 38%, transparent) !important;
-  backdrop-filter: none !important;
+  background-color: var(--lg-bg-sidebar) !important;
+  backdrop-filter: blur(var(--lg-blur-soft)) saturate(1.08) !important;
+  -webkit-backdrop-filter: blur(var(--lg-blur-soft)) saturate(1.08) !important;
 }
 
-/* Round the square corners in the server/channel rail area. */
+/* Settings view: keep readable with stronger opacity + blur and clear rounding. */
+div[class*="standardSidebarView_"],
+div[class*="sidebarRegion_"],
+div[class*="sidebarRegionScroller_"],
+div[class*="contentRegion_"],
+div[class*="contentRegionScroller_"] {
+  background-color: var(--lg-bg-settings) !important;
+  backdrop-filter: blur(var(--lg-blur-strong)) saturate(1.14) !important;
+  -webkit-backdrop-filter: blur(var(--lg-blur-strong)) saturate(1.14) !important;
+  border: 1px solid var(--lg-border) !important;
+  border-radius: var(--roundness-l, 20px) !important;
+}
+
+/* Settings cards/sections slightly less opaque than the settings shell. */
+div[class*="cardPrimary_"],
+div[class*="card_"],
+div[class*="container_"][class*="topSection_"],
+div[class*="container_"][class*="accountProfileCard_"],
+div[class*="children_"] > div[class*="container_"] {
+  background-color: var(--lg-bg-settings-soft) !important;
+  border-radius: var(--roundness-m, 16px) !important;
+  border: 1px solid color-mix(in srgb, var(--text-1, #fff) 14%, transparent) !important;
+}
+
+/* Popouts/modals (emoji picker, context menus, quick switcher, etc.). */
+div[class*="menu_"],
+div[class*="popout_"],
+div[class*="autocomplete_"],
+div[class*="emojiPicker_"],
+div[class*="drawerSizingWrapper_"],
+div[class*="root_"][class*="small_"],
+div[class*="root_"][class*="medium_"],
+div[class*="root_"][class*="large_"] {
+  background-color: var(--lg-bg-popout) !important;
+  backdrop-filter: blur(var(--lg-blur-strong)) saturate(1.14) !important;
+  -webkit-backdrop-filter: blur(var(--lg-blur-strong)) saturate(1.14) !important;
+  border: 1px solid var(--lg-border) !important;
+  box-shadow: var(--lg-shadow) !important;
+  border-radius: var(--roundness-l, 20px) !important;
+}
+
+/* Round server/channel rail area and keep corners clipped. */
 div[class*="sidebar_"],
 div[class*="sidebarList_"],
 div[class*="panels_"],
 div[class*="container_"][class*="isSidebarOpen_"] {
-  border-radius: var(--roundness-l) !important;
+  border-radius: var(--roundness-l, 20px) !important;
   overflow: hidden !important;
 }
 
-/* Round message containers and lower composer/status rails. */
+/* Round message containers and composer/status rails. */
 div[class*="messageListItem_"] > div[class*="message_"],
 div[class*="message_"][class*="cozy_"],
 div[class*="form_"],
@@ -77,10 +146,21 @@ main[class*="chatContent_"] > form,
 div[class*="messagesWrapper_"],
 div[class*="scroller_"],
 div[class*="base_"] > div[class*="content_"] {
-  border-radius: var(--roundness-m) !important;
+  border-radius: var(--roundness-m, 16px) !important;
 }
 
-/* Remove DM chip background behind labels. */
+/* Make composer and lower bars transparent but still readable. */
+div[class*="channelTextArea_"],
+div[class*="form_"],
+div[class*="panels_"],
+footer[class*="footer_"] {
+  background-color: color-mix(in srgb, var(--bg-3, #1c1d22) 62%, transparent) !important;
+  backdrop-filter: blur(var(--lg-blur-soft)) saturate(1.08) !important;
+  -webkit-backdrop-filter: blur(var(--lg-blur-soft)) saturate(1.08) !important;
+  border: 1px solid color-mix(in srgb, var(--text-1, #fff) 10%, transparent) !important;
+}
+
+/* DM list chip cleanup. */
 nav[class*="privateChannels_"] div[class*="interactive_"],
 nav[class*="privateChannels_"] li[class*="channel_"] > div,
 nav[class*="privateChannels_"] a[class*="link_"],
@@ -92,10 +172,10 @@ nav[class*="privateChannels_"] div[class*="nameAndDecorators_"] {
 
 nav[class*="privateChannels_"] div[class*="interactive_"]:hover,
 nav[class*="privateChannels_"] li[class*="channel_"] > div:hover {
-  background-color: color-mix(in srgb, var(--text-1) 10%, transparent) !important;
+  background-color: color-mix(in srgb, var(--text-1, #fff) 10%, transparent) !important;
 }
 
 nav[class*="privateChannels_"] [aria-selected="true"],
 nav[class*="privateChannels_"] div[class*="selected_"] {
-  background-color: color-mix(in srgb, var(--text-1) 14%, transparent) !important;
+  background-color: color-mix(in srgb, var(--accent-3, #8ea4ff) 24%, transparent) !important;
 }
