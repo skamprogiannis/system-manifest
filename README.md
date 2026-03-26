@@ -24,7 +24,6 @@ This repository is licensed under **GNU GPL v3.0**. See `LICENSE`.
   - **Vesktop:** Discord client with declarative `Transluence Matugen` theme generation: keeps Transluence UI, removes stock image background, enables true desktop transparency, adds stronger settings blur/readability, and maps translucent colors to Matugen (`dank-discord.css`) output.
 - **Dev Ready:** Pre-configured environment for Node.js, Python, Go, and Neovim (via nixvim), plus Clang build essentials (`clang` + `gnumake`). Neovim uses the Dracula colorscheme with a transparent background (matches Ghostty glass). Also registered as the default text editor via an `nvim-text` XDG desktop entry (opens in Ghostty).
 - **AI Integrated:** Built-in configuration for **GitHub Copilot CLI** with per-repo `AGENTS.md` instructions. Global Copilot instructions live at `~/.copilot/copilot-instructions.md`.
-- **Greeter Avatar:** AccountsService user metadata + declarative avatar asset provisioning for consistent DMS greeter profile image rendering.
 - **Modular Architecture:** Configuration split across `hosts/` (system-level) and `modules/home/` (user-level) for maintainability.
 - **Voiden:** Declarative AppImage wrapper for the Voiden offline-first API client.
 - **Binary Caches:** Configured for `hyprland.cachix.org`, `nix-community.cachix.org`, and `ghostty.cachix.org` — pre-built binaries avoid local compilation.
@@ -51,7 +50,6 @@ Packages tracked independently of nixpkgs for tighter version control:
 
 - **Glassmorphism Aesthetics:** Ghostty uses `background-opacity = 0.40` (native RGBA) so the terminal background is near-transparent while text stays fully opaque, giving a liquid-glass terminal. `minimum-contrast = 3.0` improves legibility by enforcing a stronger foreground/background contrast floor. The hyprglass Hyprland plugin is active for blur/tint/refraction effects on transparent surfaces.
 - **Dynamic Theming:** Matugen-powered Hyprland border colours, GTK4 colours, and video wallpapers via **linux-wallpaperengine** synced via a custom `wallpaper-hook` daemon. GTK uses the **Dracula** theme; Ghostty uses the built-in **Dracula** colour scheme.
-- **Brave transparency note:** Chromium/Brave does not support the same reliable transparent-shell/opaque-content model used by Vesktop in this setup, so Brave remains opaque for readability and stability.
 - **Cursor:** Adwaita (system default). HollowKnight cursor theme is built and available for future use.
 - **Zellij Navigation:** `Alt`-based keybindings for all multiplexer actions; `Escape` exits any mode back to Normal and is unbound in Normal mode so it passes through to terminal apps (Vim, Copilot CLI, etc.).
 - **Keyboard Layout:** `us altgr-intl` + `gr simple`. `Super+Space` toggles layouts.

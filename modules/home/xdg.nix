@@ -33,6 +33,17 @@ in {
     GTK_USE_PORTAL = "1";
   };
 
+  # Force FileChooser backend ordering at user level so portal-aware apps
+  # prefer termfilechooser (yazi) over gtk dialogs.
+  home.file.".config/xdg-desktop-portal/hyprland-portals.conf".text = ''
+    [preferred]
+    default=hyprland;gtk
+    org.freedesktop.impl.portal.FileChooser=termfilechooser;gtk
+    org.freedesktop.impl.portal.Settings=gtk
+    org.freedesktop.impl.portal.ScreenCast=hyprland
+    org.freedesktop.impl.portal.Screenshot=hyprland
+  '';
+
   # Manage XDG User Directories (documents, downloads, music, etc.)
   # This ensures they are created and managed declaratively.
   xdg.userDirs = {
