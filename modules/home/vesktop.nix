@@ -73,20 +73,19 @@ PY
           name = decl
           sub(/:.*/, "", name)
 
-          keep = (
-            name ~ /^--accent-[1-5]$/ ||
-            name ~ /^--text-[0-5]$/ ||
-            name ~ /^--bg-[1-4]$/ ||
-            name == "--hover" ||
-            name == "--active" ||
-            name == "--message-hover" ||
-            name == "--mention" ||
-            name == "--mention-hover" ||
-            name == "--online-indicator" ||
-            name == "--dnd-indicator" ||
-            name == "--idle-indicator" ||
-            name == "--streaming-indicator"
-          )
+          keep =
+            (name ~ /^--accent-[1-5]$/) ||
+            (name ~ /^--text-[0-5]$/) ||
+            (name ~ /^--bg-[1-4]$/) ||
+            (name == "--hover") ||
+            (name == "--active") ||
+            (name == "--message-hover") ||
+            (name == "--mention") ||
+            (name == "--mention-hover") ||
+            (name == "--online-indicator") ||
+            (name == "--dnd-indicator") ||
+            (name == "--idle-indicator") ||
+            (name == "--streaming-indicator")
 
           if (keep && !seen[name]++) {
             print "  " decl
