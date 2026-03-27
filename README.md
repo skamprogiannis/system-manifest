@@ -22,8 +22,9 @@ This repository is licensed under **GNU GPL v3.0**. See `LICENSE`.
   - **PearPass:** Declarative wrapper for the PearPass P2P password manager AppImage.
   - **Brave + Vimium C:** Declarative extension install with profile preference patching (Rewards button, right vertical tabs, `Ctrl+\` tabbar toggle, hidden close `x`, sidebar/new-tab toggles) plus Vimium C state seeding for portable keymaps/options. Vimium snapshots live in `modules/home/brave/vimium-c/{local-settings,sync-settings}` and are applied via Home Manager activation when Brave is not running.
   - **Vesktop:** Discord client with declarative `Transluence Matugen` theme generation: keeps Transluence UI, removes stock image background, enables true desktop transparency, adds stronger settings blur/readability, and maps translucent colors to Matugen (`dank-discord.css`) output.
-- **Dev Ready:** Pre-configured environment for Node.js, Python, Go, and Neovim (via nixvim), plus Clang build essentials (`clang` + `gnumake`). Neovim uses the **Catppuccin Mocha** colorscheme with a transparent background (matches Ghostty glass). Also registered as the default text editor via an `nvim-text` XDG desktop entry (opens in Ghostty).
+- **Dev Ready:** Pre-configured environment for Node.js, Python, Go, and Neovim (via nixvim), plus Clang build essentials (`clang` + `gnumake`). Neovim uses the Dracula colorscheme with a transparent background (matches Ghostty glass). Also registered as the default text editor via an `nvim-text` XDG desktop entry (opens in Ghostty).
 - **AI Integrated:** Built-in configuration for **GitHub Copilot CLI** with per-repo `AGENTS.md` instructions. Global Copilot instructions live at `~/.copilot/copilot-instructions.md`.
+- **Greeter Avatar:** AccountsService user metadata + declarative avatar asset provisioning for consistent DMS greeter profile image rendering.
 - **Modular Architecture:** Configuration split across `hosts/` (system-level) and `modules/home/` (user-level) for maintainability.
 - **Voiden:** Declarative AppImage wrapper for the Voiden offline-first API client.
 - **Binary Caches:** Configured for `hyprland.cachix.org`, `nix-community.cachix.org`, and `ghostty.cachix.org` — pre-built binaries avoid local compilation.
@@ -49,13 +50,18 @@ Packages tracked independently of nixpkgs for tighter version control:
 ## Workflow & UI
 
 - **Glassmorphism Aesthetics:** Ghostty uses `background-opacity = 0.40` (native RGBA) so the terminal background is near-transparent while text stays fully opaque, giving a liquid-glass terminal. `minimum-contrast = 3.0` improves legibility by enforcing a stronger foreground/background contrast floor. The hyprglass Hyprland plugin is active for blur/tint/refraction effects on transparent surfaces.
-- **Dynamic Theming:** Matugen-powered Hyprland border colours, GTK4 colours, and video wallpapers via **linux-wallpaperengine** synced via a custom `wallpaper-hook` daemon. GTK 3 uses the **Catppuccin Mocha** theme with **Papirus-Dark** icons (catppuccin folder colours); Ghostty uses the built-in **Catppuccin Mocha** colour scheme. Website theming via **Stylus** browser extension with [catppuccin/userstyles](https://github.com/catppuccin/userstyles).
+- **Dynamic Theming:** Matugen-powered Hyprland border colours, GTK4 colours, and video wallpapers via **linux-wallpaperengine** synced via a custom `wallpaper-hook` daemon. GTK uses the **Dracula** theme; Ghostty uses the built-in **Dracula** colour scheme.
+- **Brave transparency note:** Chromium/Brave does not support the same reliable transparent-shell/opaque-content model used by Vesktop in this setup, so Brave remains opaque for readability and stability.
 - **Cursor:** Adwaita (system default). HollowKnight cursor theme is built and available for future use.
 - **Zellij Navigation:** `Alt`-based keybindings for all multiplexer actions; `Escape` exits any mode back to Normal and is unbound in Normal mode so it passes through to terminal apps (Vim, Copilot CLI, etc.).
 - **Keyboard Layout:** `us altgr-intl` + `gr simple`. `Super+Space` toggles layouts.
 - **Window Controls:** `Super` + left-drag moves windows, `Super` + right-drag resizes. `Super+Ctrl+H/J/K/L` resizes by fine steps and `Super+Ctrl+Arrows` resizes by larger steps. `Super+Arrows` changes focus between monitors, while `Super+Shift+Arrows` moves the active window between monitors.
 - **Window Controls:** `Super` + left-drag moves windows, `Super` + right-drag resizes. `Super+Ctrl+H/J/K/L` (or arrows) resizes in directions.
 - **Launcher Shortcuts:** `Super+E` opens **Yazi** in Ghostty.
+- **DMS declarative shell settings:** Display config format is set to **Model** with snap enabled; DMS widgets (bar/OSD/toasts/notepad) are pinned to the BenQ with fallback routing, dock is disabled, widget style is **Colorful**, popup/notepad/system-monitor transparency is set to **60%**, and workspace/launcher behavior is declared in Nix instead of UI-only state.
+- **DMS updater policy on NixOS:** The built-in updater widget is hidden by default because upstream updater helpers target Arch/Fedora package managers, not the NixOS rebuild workflow.
+- **Notepad shortcut:** `Super+T` toggles the DMS notepad slideout.
+- **Launcher behavior notes:** Built-in DMS entries (Settings, Notepad, System Monitor) are explicitly enabled. `launchPrefix` (when set in DMS launcher settings) prepends a command to app launches, e.g. wrappers like `uwsm-app` or `systemd-run --user`.
 - **Wallpaper Selector Rollout:** `Super+W` toggles the flake-packaged selector open/close; `Super+Shift+W` opens the DMS wallpaper dash fallback.
 - **Wallpaper selector content policy:** Mature/Questionable items are always filtered out and the `:sus` toggle is removed.
 - **Screenshots:** `dms screenshot` handles region/window/full capture with image-to-clipboard. `screenshot-path-copy` wraps it to copy the file path instead (useful for sharing with AI agents). Screen recording via **Kooha** GUI.
