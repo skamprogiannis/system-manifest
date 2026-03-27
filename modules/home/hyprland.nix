@@ -343,6 +343,9 @@ in {
           "$mod, q, exec, dms ipc call powermenu toggle"
           "$mod, w, exec, wallpaper-selector"
           "$mod SHIFT, w, exec, dms ipc call dash toggle wallpaper"
+          "$mod SHIFT, o, exec, dms ipc call dash toggle overview"
+          "$mod SHIFT, m, exec, dms ipc call dash toggle media"
+          "$mod ALT, w, exec, dms ipc call dash toggle weather"
         ];
 
         windowrule = [
