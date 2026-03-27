@@ -11,8 +11,17 @@
     };
     # GTK 3: Catppuccin Mocha
     gtk3.extraConfig.gtk-theme-name = "catppuccin-mocha-blue-standard";
-    # GTK 4: matugen dynamic colors (unchanged)
-    gtk4.extraCss = ''@import url("dank-colors.css");'';
+    # GTK 4: matugen dynamic colors + slightly transparent popovers/menus (Ghostty context menu)
+    gtk4.extraCss = ''
+      @import url("dank-colors.css");
+
+      popover.background,
+      popover contents,
+      menu,
+      menu > contents {
+        background-color: alpha(#11111b, 0.88);
+      }
+    '';
   };
 
   # Catppuccin GTK theme (GTK 3 only — GTK 4 uses matugen/dank-colors.css) + hicolor icons
