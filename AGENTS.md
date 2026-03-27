@@ -106,3 +106,87 @@ At the lab: `copilot --resume` to pick up synced sessions.
 - **USB Formatting:** When formatting raw disks or running `update_usb.sh`, scripts often fail because NixOS root environments lack standard utilities (like `sgdisk`, `parted`, `mkfs.ext4`). **Always** run disk manipulation scripts inside a shell with the required tools: `sudo nix-shell -p gptfdisk parted cryptsetup dosfstools e2fsprogs util-linux --run ./script.sh`.
 - **Neovim Swap Files:** If Neovim throws an `E325: ATTENTION` error or fails to open a file from `neo-tree`, it is blocked by a `.swp` file. Do not try to debug the plugin. The solution is to delete `~/.local/state/nvim/swap/*`. (Swap files are globally disabled in `opts.swapfile = false`, but old ones may linger).
 - **Zellij Stacking Action Name:** On Zellij `0.43.1`, `TogglePaneEmbedOrEject` is invalid and causes config parse failure. Use `TogglePaneEmbedOrFloating` instead.
+
+## Wallpaper System Architecture
+
+The wallpaper stack has two independent renderers layered via `wlr-layer-shell`:
+
+1. **linux-wallpaperengine (WE)** — renders live/animated wallpapers as a Wayland layer-shell surface at `Background` level. Managed by `linux-wallpaperengine.service`. Configured via environment variables `WE_WALLPAPER_DIR` and `WE_ASSETS_DIR`.
+2. **DMS wallpaper** — renders static images as a Quickshell `PanelWindow` at `WlrLayer.Background`. Also triggers **matugen** color generation when set via `dms ipc wallpaper set`.
+
+**Z-order:** WE's layer surface is created *after* DMS, so WE paints ON TOP of DMS. When WE is running, the DMS wallpaper is invisible behind it.
+
+### Key files
+
+| File | What it contains |
+|------|-----------------|
+| `modules/home/wallpaper-selector.nix` | `wallpaper-apply` unified script (static/dynamic/audio subcommands), wallpaper-selector launcher, QML Theme.qml |
+| `modules/home/wallpaper.nix` | systemd services (WE, wallpaper-hook), `wallpaper-engine-sync` thumbnail generator, `wallpaper-hook` poll daemon |
+| `modules/home/wallpaper-common.nix` | Shared path constants (`MAP_FILE`, `WE_ASSETS`, `WE_WORKSHOP`, `WE_DEFAULTS_ROOT`, `WALL_DIR`) and `normalize_dir()` |
+| `modules/home/dms.nix` | DMS configuration, matugen template toggles |
+| Fork: `github.com/skamprogiannis/wallpaper-selector` | QML UI (`Selector.qml`), playlist daemon script |
+
+### Scripts in PATH (4 total)
+
+| Script | Purpose |
+|--------|---------|
+| `wallpaper-apply` | Unified entry point: `wallpaper-apply static <image>`, `wallpaper-apply dynamic <dir>`, `wallpaper-apply audio mute\|unmute` |
+| `wallpaper-selector` | Launches the Quickshell wallpaper picker UI |
+| `wallpaper-playlist` | Background daemon for timed wallpaper rotation |
+| `wallpaper-engine-sync` | Generates thumbnails from WE workshop folders (multi-strategy: offscreen GL → middle-frame extraction → author preview.jpg) |
+
+### Transition ordering (critical)
+
+When switching wallpapers, always **set DMS before restarting/stopping WE**:
+
+- **Dynamic→Dynamic:** Set new DMS thumbnail first (invisible behind running WE), then `systemctl restart` WE. The brief restart gap shows the correct new thumbnail.
+- **Dynamic→Static:** Set new static wallpaper in DMS first (invisible behind WE), then stop WE. DMS reveals the correct wallpaper.
+- **Static→Dynamic:** Set DMS thumbnail, then start WE. WE eventually paints over DMS.
+
+The DMS thumbnail MUST always be set because that's the only way to trigger **matugen** color generation.
+
+### wallpaper-hook daemon
+
+Runs as a systemd user service, polls `dms ipc wallpaper get` every 2s. Responsibilities:
+- Boot restore: detects last wallpaper from DMS, starts WE if dynamic
+- Wallpaper change detection: restarts WE when DMS wallpaper changes (skip if WE already running with same dir)
+- Theme sync: monitors `~/.config/hypr/dms/colors.conf` and regenerates Zathura, Vesktop, and other app themes
+
+### Thumbnail generation (`wallpaper-engine-sync`)
+
+Multi-strategy fallback for each workshop wallpaper:
+1. **Video type:** Extract middle frame via `ffmpegthumbnailer` → author `preview.jpg` → offscreen GL render
+2. **Scene type:** Offscreen GL render (5s delay, retry at 8s) → author `preview.jpg`
+
+`normalize_thumb()` scales to 1920×1080. For small sources (<640px wide) or non-16:9 aspect ratios, it letterboxes on a blurred background instead of aggressive crop+zoom.
+
+Thumbnails are stored in `~/wallpapers/.wallpaper-engine/` with a JSON map at `~/.cache/we-wallpaper-map.json`.
+
+### DMS IPC reference
+
+```bash
+dms ipc wallpaper set <path>      # Set wallpaper + trigger matugen
+dms ipc wallpaper get              # Get current wallpaper path
+dms ipc call dash toggle <tab>     # Toggle dash widget (wallpaper|overview|media|weather)
+dms ipc call spotlight toggle      # App launcher
+dms ipc call clipboard toggle      # Clipboard manager
+dms ipc call notifications toggle  # Notification center
+dms ipc call settings toggle       # Settings panel
+dms ipc call powermenu toggle      # Power menu
+dms ipc call lock lock             # Lock screen
+dms ipc call hypr toggleOverview   # Workspace overview
+dms ipc call mpris playPause       # Media control
+dms ipc call notifications clearAll  # Clear all notifications
+```
+
+### Wallpaper-selector QML (fork)
+
+Custom features on top of upstream (`Aino-Chan/wallpaper-selector`):
+- Vim keybinds (hjkl navigation)
+- Monitor scoping (multi-monitor via Hyprland.focusedMonitor)
+- DMS theme tracking (reads `colors.conf` instead of pywal `colors.json`)
+- Content filtering (mature content toggle)
+- Configurable card dimensions (`:width`, `:height`, `:spacing`, `:scale` commands)
+- Hover tracking with `hoveredIndex` state management
+
+The QML calls `wallpaper-apply` directly with mode argument (no `.sh` shim wrappers).

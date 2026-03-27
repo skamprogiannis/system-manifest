@@ -201,12 +201,15 @@
               exit 1
           fi
 
-          systemctl --user stop linux-wallpaperengine.service 2>/dev/null || true
-
+          # Set DMS wallpaper BEFORE stopping WE so the new image is ready
+          # underneath. When WE's layer surface disappears, DMS already shows
+          # the correct wallpaper — no old-thumbnail flash.
           if ! dms ipc wallpaper set "$wallpaper_image"; then
               echo "Failed to apply static wallpaper via DMS: $wallpaper_image" >&2
               exit 1
           fi
+
+          systemctl --user stop linux-wallpaperengine.service 2>/dev/null || true
 
           write_last_wallpaper "$wallpaper_image"
       }
@@ -260,14 +263,7 @@
           local target_dir
           target_dir="$(normalize_dir "$wallpaper_dir")"
 
-          # Start WE immediately so the live wallpaper begins rendering
-          # before we set the thumbnail in DMS (avoids visible thumbnail flash).
-          systemctl --user set-environment \
-              WE_WALLPAPER_DIR="$target_dir" \
-              WE_ASSETS_DIR="$we_assets"
-          systemctl --user restart linux-wallpaperengine.service
-
-          # Resolve thumbnail for DMS/matugen color generation while WE boots
+          # Resolve thumbnail for DMS/matugen color generation
           local thumb_name
           thumb_name="$(lookup_thumb_by_dir "$target_dir" || true)"
 
@@ -282,25 +278,34 @@
               thumb_name="$(lookup_thumb_by_id "$workshop_id" || true)"
           fi
 
-          if [ -z "$thumb_name" ]; then
-              echo "Warning: Could not resolve thumbnail for matugen: $wallpaper_dir" >&2
-              write_last_wallpaper "$target_dir"
-              return 0
+          local thumb_path=""
+          if [ -n "$thumb_name" ]; then
+              thumb_path="$thumb_dir/$thumb_name"
+              if [ ! -f "$thumb_path" ]; then
+                  wallpaper-engine-sync --regen >/dev/null 2>&1 || true
+              fi
           fi
 
-          local thumb_path="$thumb_dir/$thumb_name"
-          if [ ! -f "$thumb_path" ]; then
-              wallpaper-engine-sync --regen >/dev/null 2>&1 || true
-          fi
-
-          # Give WE time to start painting before setting DMS wallpaper
-          sleep 2
-
-          if [ -f "$thumb_path" ]; then
+          # Set DMS thumbnail BEFORE restarting WE. DMS is behind WE's
+          # layer surface so this is invisible while WE is running.
+          # When WE restarts, the brief gap reveals the correct new
+          # thumbnail instead of the stale old one.
+          if [ -n "$thumb_path" ] && [ -f "$thumb_path" ]; then
               dms ipc wallpaper set "$thumb_path" || true
           fi
 
-          write_last_wallpaper "$thumb_path"
+          # Now (re)start WE with the new wallpaper directory
+          systemctl --user set-environment \
+              WE_WALLPAPER_DIR="$target_dir" \
+              WE_ASSETS_DIR="$we_assets"
+          systemctl --user restart linux-wallpaperengine.service
+
+          if [ -n "$thumb_path" ] && [ -f "$thumb_path" ]; then
+              write_last_wallpaper "$thumb_path"
+          else
+              echo "Warning: Could not resolve thumbnail for matugen: $wallpaper_dir" >&2
+              write_last_wallpaper "$target_dir"
+          fi
       }
 
       mode="dynamic"
