@@ -6,18 +6,18 @@
   gtk = {
     enable = true;
     iconTheme = {
-      name = "Dracula";
-      package = pkgs.dracula-icon-theme;
+      name = "Papirus-Dark";
+      package = pkgs.catppuccin-papirus-folders.override { flavor = "mocha"; };
     };
-    # GTK 3: keep Dracula via extraConfig (theme package installed below)
-    gtk3.extraConfig.gtk-theme-name = "Dracula";
-    # GTK 4: use matugen dynamic colors instead of Dracula
+    # GTK 3: Catppuccin Mocha
+    gtk3.extraConfig.gtk-theme-name = "catppuccin-mocha-blue-standard";
+    # GTK 4: matugen dynamic colors (unchanged)
     gtk4.extraCss = ''@import url("dank-colors.css");'';
   };
 
-  # Dracula theme (GTK 3 only — GTK 4 uses matugen/dank-colors.css) + hicolor icons
+  # Catppuccin GTK theme (GTK 3 only — GTK 4 uses matugen/dank-colors.css) + hicolor icons
   home.packages = with pkgs; [
-    dracula-theme
+    (catppuccin-gtk.override { variant = "mocha"; })
     hicolor-icon-theme
   ];
 
@@ -26,8 +26,8 @@
     # System-wide Interface Settings (Fonts)
     "org/gnome/desktop/interface" = {
       color-scheme = "prefer-dark";
-      gtk-theme = "Dracula";
-      icon-theme = "Dracula";
+      gtk-theme = "catppuccin-mocha-blue-standard";
+      icon-theme = "Papirus-Dark";
       font-name = "Adwaita 9";
       document-font-name = "Adwaita 9";
       monospace-font-name = "JetBrainsMono Nerd Font 9";

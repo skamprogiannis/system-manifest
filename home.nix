@@ -180,7 +180,7 @@
   programs.bat = {
     enable = true;
     config = {
-      theme = "Dracula";
+      theme = "Catppuccin Mocha";
       italic-text = "always";
     };
   };

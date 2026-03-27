@@ -61,7 +61,11 @@
       }
     ];
 
-    colorschemes.dracula.enable = true;
+    colorschemes.catppuccin = {
+      enable = true;
+      settings.flavour = "mocha";
+      settings.transparent_background = true;
+    };
 
     # Transparent background — let Ghostty's RGBA glass show through
     extraConfigLuaPost = ''
@@ -308,7 +312,7 @@
 
       lualine = {
         enable = true;
-        settings.options.theme = "dracula";
+        settings.options.theme = "catppuccin";
       };
 
       gitsigns = {
@@ -325,20 +329,6 @@
       which-key.enable = true;
 
       flash.enable = true;
-      neo-tree = {
-        enable = true;
-        settings = {
-          close_if_last_window = true;
-          window = {
-            position = "right";
-            width = 30;
-            mappings = {
-              "l" = "close_node";
-              "h" = "open";
-            };
-          };
-        };
-      };
       treesitter = {
         enable = true;
         settings = {
@@ -366,12 +356,6 @@
     ];
 
     keymaps = [
-      {
-        mode = "n";
-        key = "<C-e>";
-        action = "<cmd>Neotree toggle<cr>";
-        options.desc = "Toggle File Explorer";
-      }
       # --- Clipboard (system) ---
       {
         mode = [ "n" "v" ];

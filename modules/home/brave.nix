@@ -101,7 +101,10 @@ in {
       ];
 
     };
-    extensions = [{id = vimiumCExtensionId;}];
+    extensions = [
+      {id = vimiumCExtensionId;}
+      {id = "clngdbkpkpeebahjckkjfobafhncgmne";} # Stylus — custom CSS for catppuccin userstyles
+    ];
   };
 
   # Declarative Brave profile patch + Vimium C state seeding.

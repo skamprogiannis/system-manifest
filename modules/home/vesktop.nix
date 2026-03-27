@@ -247,7 +247,7 @@ in {
     name = "Vesktop";
     genericName = "Internet Messenger";
     comment = "Vesktop with transparent background wrapper";
-    icon = "vesktop";
+    icon = "discord";
     terminal = false;
     categories = ["Network" "InstantMessaging"];
     startupNotify = true;
