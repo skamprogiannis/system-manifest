@@ -147,7 +147,6 @@ in {
           # home-manager user services show as "linked" in systemd and don't
           # auto-start on login; ensure they're running after Hyprland starts
           "systemctl --user start spotify-player.service"
-          "systemctl --user start spotify-player-healthcheck.timer"
           "systemctl --user start transmission-daemon.service"
         ];
 
