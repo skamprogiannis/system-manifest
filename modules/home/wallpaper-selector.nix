@@ -4,6 +4,8 @@
   lib,
   ...
 }: let
+  weCommon = import ./wallpaper-common.nix {inherit pkgs;};
+
   selectorRuntimePath = lib.makeBinPath [
     pkgs.bash
     pkgs.coreutils
@@ -13,7 +15,9 @@
     pkgs.gnugrep
     pkgs.gnused
     pkgs.jq
+    pkgs.pipewire
     pkgs.procps
+    pkgs.wireplumber
     pkgs.wl-clipboard
     pkgs.xdg-utils
   ];
@@ -136,18 +140,53 @@
       }
       EOF
       cp qml/shell.qml "$out/share/wallpaper-selector/qml/shell.qml"
-      cp scripts/wallpaper-playlist.sh "$out/bin/wallpaper-playlist.sh"
+      cp scripts/wallpaper-playlist.sh "$out/bin/wallpaper-playlist"
 
       cat > "$out/bin/wallpaper-apply" <<'EOF'
       #!${pkgs.bash}/bin/bash
       set -euo pipefail
+
+      ${weCommon.constants}
+      ${weCommon.normalizeDir}
 
       usage() {
           cat >&2 <<'USAGE'
       Usage:
         wallpaper-apply static <wallpaper_image>
         wallpaper-apply dynamic [--hash HASH --thumb-folder PATH] <wallpaper_folder_path>
+        wallpaper-apply audio mute|unmute
       USAGE
+      }
+
+      we_audio() {
+          local action="''${1:-}"
+          if [[ "$action" != "mute" && "$action" != "unmute" ]]; then
+              echo "Usage: wallpaper-apply audio mute|unmute" >&2
+              exit 1
+          fi
+          local WE_PID
+          WE_PID=$(systemctl --user show -p MainPID --value linux-wallpaperengine.service 2>/dev/null)
+          if [ -z "$WE_PID" ] || [ "$WE_PID" = "0" ]; then
+              echo "Wallpaper Engine is not running"
+              exit 1
+          fi
+          local NODE_ID
+          NODE_ID=$(pw-dump 2>/dev/null | jq -r \
+            --argjson pid "$WE_PID" \
+            '([ .[] | select(.type == "PipeWire:Interface:Client" and .info.props."application.process.id" == $pid) | .id ]) as $cids |
+             .[] | select(.type == "PipeWire:Interface:Node" and (.info.props."client.id" as $cid | $cids | contains([$cid])) and .info.props."media.class" == "Stream/Output/Audio") | .id' \
+            | head -1)
+          if [ -z "$NODE_ID" ]; then
+              echo "No audio stream found for Wallpaper Engine (wallpaper may have no sound)"
+              exit 0
+          fi
+          if [ "$action" = "mute" ]; then
+              wpctl set-mute "$NODE_ID" 1
+              echo "Wallpaper Engine audio muted (node $NODE_ID)"
+          else
+              wpctl set-mute "$NODE_ID" 0
+              echo "Wallpaper Engine audio unmuted (node $NODE_ID)"
+          fi
       }
 
       write_last_wallpaper() {
@@ -162,6 +201,8 @@
               exit 1
           fi
 
+          systemctl --user stop linux-wallpaperengine.service 2>/dev/null || true
+
           if ! dms ipc wallpaper set "$wallpaper_image"; then
               echo "Failed to apply static wallpaper via DMS: $wallpaper_image" >&2
               exit 1
@@ -172,8 +213,9 @@
 
       apply_dynamic_wallpaper() {
           local wallpaper_dir=""
-          local map_file="$HOME/.cache/we-wallpaper-map.json"
-          local thumb_dir="$HOME/wallpapers/.wallpaper-engine"
+          local map_file="$MAP_FILE"
+          local thumb_dir="$WALL_DIR"
+          local we_assets="$WE_ASSETS"
 
           while [ "$#" -gt 0 ]; do
               case "$1" in
@@ -194,10 +236,6 @@
               usage
               exit 1
           fi
-
-          normalize_dir() {
-              ${pkgs.coreutils}/bin/realpath "$1" | ${pkgs.gnused}/bin/sed 's:/*$::'
-          }
 
           lookup_thumb_by_dir() {
               local dir="$1"
@@ -222,13 +260,19 @@
           local target_dir
           target_dir="$(normalize_dir "$wallpaper_dir")"
 
+          # Start WE immediately so the live wallpaper begins rendering
+          # before we set the thumbnail in DMS (avoids visible thumbnail flash).
+          systemctl --user set-environment \
+              WE_WALLPAPER_DIR="$target_dir" \
+              WE_ASSETS_DIR="$we_assets"
+          systemctl --user restart linux-wallpaperengine.service
+
+          # Resolve thumbnail for DMS/matugen color generation while WE boots
           local thumb_name
           thumb_name="$(lookup_thumb_by_dir "$target_dir" || true)"
 
           if [ -z "$thumb_name" ]; then
-              if ! wallpaper-engine-sync >/dev/null 2>&1; then
-                  echo "Warning: wallpaper-engine-sync refresh failed while resolving $target_dir" >&2
-              fi
+              wallpaper-engine-sync >/dev/null 2>&1 || true
               thumb_name="$(lookup_thumb_by_dir "$target_dir" || true)"
           fi
 
@@ -239,25 +283,21 @@
           fi
 
           if [ -z "$thumb_name" ]; then
-              echo "Could not map wallpaper folder to synced thumbnail: $wallpaper_dir" >&2
-              exit 1
+              echo "Warning: Could not resolve thumbnail for matugen: $wallpaper_dir" >&2
+              write_last_wallpaper "$target_dir"
+              return 0
           fi
 
           local thumb_path="$thumb_dir/$thumb_name"
           if [ ! -f "$thumb_path" ]; then
-              if ! wallpaper-engine-sync --regen >/dev/null 2>&1; then
-                  echo "Warning: wallpaper-engine-sync --regen failed for $wallpaper_dir" >&2
-              fi
+              wallpaper-engine-sync --regen >/dev/null 2>&1 || true
           fi
 
-          if [ ! -f "$thumb_path" ]; then
-              echo "Mapped thumbnail missing after sync: $thumb_path" >&2
-              exit 1
-          fi
+          # Give WE time to start painting before setting DMS wallpaper
+          sleep 2
 
-          if ! dms ipc wallpaper set "$thumb_path"; then
-              echo "Failed to apply wallpaper through DMS: $thumb_path" >&2
-              exit 1
+          if [ -f "$thumb_path" ]; then
+              dms ipc wallpaper set "$thumb_path" || true
           fi
 
           write_last_wallpaper "$thumb_path"
@@ -266,7 +306,7 @@
       mode="dynamic"
       if [ "$#" -gt 0 ]; then
           case "$1" in
-              static|dynamic)
+              static|dynamic|audio)
                   mode="$1"
                   shift
                   ;;
@@ -280,23 +320,14 @@
           dynamic)
               apply_dynamic_wallpaper "$@"
               ;;
+          audio)
+              we_audio "''${1:-}"
+              ;;
           *)
               usage
               exit 1
               ;;
       esac
-      EOF
-
-      cat > "$out/bin/wallpaper-apply-static.sh" <<'EOF'
-      #!${pkgs.bash}/bin/bash
-      set -euo pipefail
-      exec "$HOME/.local/bin/wallpaper-apply" static "$@"
-      EOF
-
-      cat > "$out/bin/wallpaper-apply.sh" <<'EOF'
-      #!${pkgs.bash}/bin/bash
-      set -euo pipefail
-      exec "$HOME/.local/bin/wallpaper-apply" dynamic "$@"
       EOF
 
       cat > "$out/bin/wallpaper-selector" <<'EOF'
@@ -355,22 +386,21 @@ in {
     ${pkgs.coreutils}/bin/cp -f "${wallpaperSelectorPkg}/share/wallpaper-selector/qml/shell.qml" "$HOME/.config/quickshell/wallpaper/shell.qml"
 
     ${pkgs.coreutils}/bin/cp -f "${wallpaperSelectorPkg}/bin/wallpaper-apply" "$HOME/.local/bin/wallpaper-apply"
-    ${pkgs.coreutils}/bin/cp -f "${wallpaperSelectorPkg}/bin/wallpaper-apply.sh" "$HOME/.local/bin/wallpaper-apply.sh"
-    ${pkgs.coreutils}/bin/cp -f "${wallpaperSelectorPkg}/bin/wallpaper-apply-static.sh" "$HOME/.local/bin/wallpaper-apply-static.sh"
-    ${pkgs.coreutils}/bin/cp -f "${wallpaperSelectorPkg}/bin/wallpaper-playlist.sh" "$HOME/.local/bin/wallpaper-playlist.sh"
+    ${pkgs.coreutils}/bin/cp -f "${wallpaperSelectorPkg}/bin/wallpaper-playlist" "$HOME/.local/bin/wallpaper-playlist"
     ${pkgs.coreutils}/bin/cp -f "${wallpaperSelectorPkg}/bin/wallpaper-selector" "$HOME/.local/bin/wallpaper-selector"
 
     # Cleanup stale wrappers from previous iterations.
     ${pkgs.coreutils}/bin/rm -f \
       "$HOME/.local/bin/wallpaper-selector.sh" \
       "$HOME/.local/bin/wallpaper-selector-toggle" \
-      "$HOME/.local/bin/wallpaper-startup.sh"
+      "$HOME/.local/bin/wallpaper-startup.sh" \
+      "$HOME/.local/bin/wallpaper-apply.sh" \
+      "$HOME/.local/bin/wallpaper-apply-static.sh" \
+      "$HOME/.local/bin/wallpaper-playlist.sh"
 
     ${pkgs.coreutils}/bin/chmod 755 \
       "$HOME/.local/bin/wallpaper-apply" \
-      "$HOME/.local/bin/wallpaper-apply.sh" \
-      "$HOME/.local/bin/wallpaper-apply-static.sh" \
-      "$HOME/.local/bin/wallpaper-playlist.sh" \
+      "$HOME/.local/bin/wallpaper-playlist" \
       "$HOME/.local/bin/wallpaper-selector"
   '';
 

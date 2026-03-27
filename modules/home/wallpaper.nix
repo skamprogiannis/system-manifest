@@ -3,7 +3,9 @@
   config,
   lib,
   ...
-}: {
+}: let
+  weCommon = import ./wallpaper-common.nix {inherit pkgs;};
+in {
   programs.bash.initExtra = ''
     _wallpaper_engine_sync_complete() {
       local cur
@@ -53,10 +55,8 @@
       set -euo pipefail
       shopt -s nullglob
 
-      WE_WORKSHOP="$HOME/games/SteamLibrary/steamapps/workshop/content/431960"
-      WALL_DIR="$HOME/wallpapers/.wallpaper-engine"
+      ${weCommon.constants}
       CACHE_DIR="$HOME/.cache"
-      MAP_FILE="$HOME/.cache/we-wallpaper-map.json"
       LOCK_FILE="$CACHE_DIR/wallpaper-engine-sync.lock"
       WE_MANIFEST="$(dirname "$(dirname "$WE_WORKSHOP")")/appworkshop_431960.acf"
       WE_UI_LOG="$HOME/games/SteamLibrary/steamapps/common/wallpaper_engine/bin/uilog.txt"
@@ -115,61 +115,90 @@ EOF
       declare -A UNSUBSCRIBED_IDS=()
       declare -a SUBS_FILES=()
 
-      WE_ASSETS="$HOME/games/SteamLibrary/steamapps/common/wallpaper_engine/assets"
-
       # Render a 1920x1080 screenshot via WE's offscreen GL window
       generate_screenshot() {
         local bg_dir="$1" dst="$2"
-        rm -f "$dst"
-        ${pkgs.linux-wallpaperengine}/bin/linux-wallpaperengine \
-          --assets-dir "$WE_ASSETS" \
-          --window 0x0x1920x1080 \
-          --screenshot "$dst" \
-          --screenshot-delay 3 --fps 1 \
-          --silent --disable-mouse \
-          "$bg_dir" &>/dev/null &
-        local pid=$!
-        # Poll until screenshot file appears (max 10s)
-        local waited=0
-        while [ ! -s "$dst" ] && kill -0 "$pid" 2>/dev/null && [ "$waited" -lt 50 ]; do
-          sleep 0.2
-          waited=$((waited + 1))
-        done
-        if kill -0 "$pid" 2>/dev/null; then
-          kill "$pid" 2>/dev/null || true
-          local kill_wait=0
-          while kill -0 "$pid" 2>/dev/null && [ "$kill_wait" -lt 10 ]; do
+        local attempt delay
+        # Retry with increasing screenshot delay for complex scenes.
+        for attempt in 1 2; do
+          delay=$(( attempt == 1 ? 5 : 8 ))
+          rm -f "$dst"
+          ${pkgs.linux-wallpaperengine}/bin/linux-wallpaperengine \
+            --assets-dir "$WE_ASSETS" \
+            --window 0x0x1920x1080 \
+            --screenshot "$dst" \
+            --screenshot-delay "$delay" --fps 1 \
+            --silent --disable-mouse \
+            "$bg_dir" &>/dev/null &
+          local pid=$!
+          local waited=0
+          local max_wait=$(( (delay + 7) * 5 ))
+          while [ ! -s "$dst" ] && kill -0 "$pid" 2>/dev/null && [ "$waited" -lt "$max_wait" ]; do
             sleep 0.2
-            kill_wait=$((kill_wait + 1))
+            waited=$((waited + 1))
           done
           if kill -0 "$pid" 2>/dev/null; then
-            kill -9 "$pid" 2>/dev/null || true
+            kill "$pid" 2>/dev/null || true
+            local kill_wait=0
+            while kill -0 "$pid" 2>/dev/null && [ "$kill_wait" -lt 10 ]; do
+              sleep 0.2
+              kill_wait=$((kill_wait + 1))
+            done
+            if kill -0 "$pid" 2>/dev/null; then
+              kill -9 "$pid" 2>/dev/null || true
+            fi
           fi
-        fi
-        # Avoid blocking forever if WE wedges after SIGKILL in some GPU states.
-        for _ in $(seq 1 25); do
-          if ! kill -0 "$pid" 2>/dev/null; then
-            break
+          for _ in $(seq 1 25); do
+            if ! kill -0 "$pid" 2>/dev/null; then
+              break
+            fi
+            sleep 0.2
+          done
+          if kill -0 "$pid" 2>/dev/null; then
+            continue
           fi
-          sleep 0.2
+          wait "$pid" 2>/dev/null || true
+          if [ -s "$dst" ]; then
+            return 0
+          fi
+          [ "$attempt" -eq 1 ] && echo "    Screenshot attempt $attempt failed, retrying with longer delay..."
         done
-        if kill -0 "$pid" 2>/dev/null; then
-          return 1
-        fi
-        wait "$pid" 2>/dev/null || true
-        [ -s "$dst" ]
+        return 1
       }
 
       normalize_thumb() {
         local src="$1" dst="$2"
-        ${pkgs.imagemagick}/bin/magick "$src" \
-          -strip \
-          -colorspace sRGB \
-          -filter Lanczos \
-          -resize 1920x1080^ -gravity center \
-          -extent 1920x1080 \
-          -quality 92 \
-          "$dst" 2>/dev/null || true
+        local geom w h
+        geom=$(${pkgs.imagemagick}/bin/magick identify -format '%wx%h' "$src[0]" 2>/dev/null) || {
+          # Can't read dimensions — fall through to basic resize.
+          ${pkgs.imagemagick}/bin/magick "$src" \
+            -strip -colorspace sRGB -filter Lanczos \
+            -resize 1920x1080^ -gravity center -extent 1920x1080 \
+            -quality 92 "$dst" 2>/dev/null || true
+          [ -s "$dst" ]
+          return
+        }
+        w="''${geom%%x*}"
+        h="''${geom##*x}"
+
+        # If the source is very small (<640px wide) or aspect ratio differs
+        # significantly from 16:9, letterbox on a blurred background instead
+        # of aggressively zooming/cropping.
+        local src_ratio
+        src_ratio=$(( w * 100 / (h > 0 ? h : 1) ))
+        if [ "$w" -lt 640 ] || [ "$src_ratio" -lt 120 ] || [ "$src_ratio" -gt 230 ]; then
+          ${pkgs.imagemagick}/bin/magick "$src" \
+            -strip -colorspace sRGB \
+            \( +clone -filter Gaussian -resize 1920x1080! -blur 0x20 \) \
+            +swap -gravity center -filter Lanczos \
+            -resize 1920x1080 -composite \
+            -quality 92 "$dst" 2>/dev/null || true
+        else
+          ${pkgs.imagemagick}/bin/magick "$src" \
+            -strip -colorspace sRGB -filter Lanczos \
+            -resize 1920x1080^ -gravity center -extent 1920x1080 \
+            -quality 92 "$dst" 2>/dev/null || true
+        fi
         [ -s "$dst" ]
       }
 
@@ -459,45 +488,6 @@ EOF
 
       echo "Synced $(echo "''${!EXPECTED_THUMBS[@]}" | wc -w) Wallpaper Engine wallpapers"
     '')
-    (pkgs.writeShellScriptBin "we-mute" ''
-      WE_PID=$(systemctl --user show -p MainPID --value linux-wallpaperengine.service 2>/dev/null)
-      if [ -z "$WE_PID" ] || [ "$WE_PID" = "0" ]; then
-        echo "Wallpaper Engine is not running"
-        exit 1
-      fi
-      # WE has multiple Client objects per PID; find the Node whose client.id is any of them
-      NODE_ID=$(${pkgs.pipewire}/bin/pw-dump 2>/dev/null | ${pkgs.jq}/bin/jq -r \
-        --argjson pid "$WE_PID" \
-        '([ .[] | select(.type == "PipeWire:Interface:Client" and .info.props."application.process.id" == $pid) | .id ]) as $cids |
-         .[] | select(.type == "PipeWire:Interface:Node" and (.info.props."client.id" as $cid | $cids | contains([$cid])) and .info.props."media.class" == "Stream/Output/Audio") | .id' \
-        | head -1)
-      if [ -z "$NODE_ID" ]; then
-        echo "No audio stream found for Wallpaper Engine (wallpaper may have no sound)"
-        exit 0
-      fi
-      ${pkgs.wireplumber}/bin/wpctl set-mute "$NODE_ID" 1
-      echo "Wallpaper Engine audio muted (node $NODE_ID)"
-    '')
-
-    (pkgs.writeShellScriptBin "we-unmute" ''
-      WE_PID=$(systemctl --user show -p MainPID --value linux-wallpaperengine.service 2>/dev/null)
-      if [ -z "$WE_PID" ] || [ "$WE_PID" = "0" ]; then
-        echo "Wallpaper Engine is not running"
-        exit 1
-      fi
-      # WE has multiple Client objects per PID; find the Node whose client.id is any of them
-      NODE_ID=$(${pkgs.pipewire}/bin/pw-dump 2>/dev/null | ${pkgs.jq}/bin/jq -r \
-        --argjson pid "$WE_PID" \
-        '([ .[] | select(.type == "PipeWire:Interface:Client" and .info.props."application.process.id" == $pid) | .id ]) as $cids |
-         .[] | select(.type == "PipeWire:Interface:Node" and (.info.props."client.id" as $cid | $cids | contains([$cid])) and .info.props."media.class" == "Stream/Output/Audio") | .id' \
-        | head -1)
-      if [ -z "$NODE_ID" ]; then
-        echo "No audio stream found for Wallpaper Engine (wallpaper may have no sound)"
-        exit 0
-      fi
-      ${pkgs.wireplumber}/bin/wpctl set-mute "$NODE_ID" 0
-      echo "Wallpaper Engine audio unmuted (node $NODE_ID)"
-    '')
 
     (pkgs.writeShellScriptBin "wallpaper-hook" ''
       LOCKFILE="''${XDG_RUNTIME_DIR:-/tmp}/wallpaper-hook.lock"
@@ -506,11 +496,10 @@ EOF
         exit 1
       fi
 
+      ${weCommon.constants}
+      ${weCommon.normalizeDir}
       CACHE_WALL="$HOME/.cache/current_wallpaper"
-      MAP_FILE="$HOME/.cache/we-wallpaper-map.json"
-      WE_ASSETS="$HOME/games/SteamLibrary/steamapps/common/wallpaper_engine/assets"
-      WE_WORKSHOP_ROOT="$HOME/games/SteamLibrary/steamapps/workshop/content/431960"
-      WE_DEFAULTS_ROOT="$HOME/games/SteamLibrary/steamapps/common/wallpaper_engine/projects/defaultprojects"
+      WE_WORKSHOP_ROOT="$WE_WORKSHOP"
 
       cleanup() {
         systemctl --user stop linux-wallpaperengine.service 2>/dev/null
@@ -578,11 +567,6 @@ EOF
         if command -v regen-vesktop-transluence-theme >/dev/null 2>&1; then
           regen-vesktop-transluence-theme || true
         fi
-      }
-
-      # Resolve wallpaper image to WE directory via mapping file
-      normalize_dir() {
-        ${pkgs.coreutils}/bin/realpath "$1" | ${pkgs.gnused}/bin/sed 's:/*$::'
       }
 
       resolve_direct_we_dir() {
@@ -673,9 +657,19 @@ EOF
           WE_DIR=$(resolve_we_dir_with_refresh "$NEW_WALL" || true)
 
           if [ -n "$WE_DIR" ]; then
-            echo "Wallpaper Engine: $WE_DIR"
-            systemctl --user set-environment WE_WALLPAPER_DIR="$WE_DIR" WE_ASSETS_DIR="$WE_ASSETS"
-            systemctl --user restart linux-wallpaperengine.service
+            # wallpaper-apply may have already started WE with this directory;
+            # skip the restart if the service is running with the same wallpaper.
+            CURRENT_WE_DIR=$(systemctl --user show-environment 2>/dev/null \
+              | grep '^WE_WALLPAPER_DIR=' | cut -d= -f2- || true)
+            WE_ACTIVE=$(systemctl --user is-active linux-wallpaperengine.service 2>/dev/null || true)
+
+            if [ "$WE_ACTIVE" = "active" ] && [ "$CURRENT_WE_DIR" = "$WE_DIR" ]; then
+              echo "Wallpaper Engine already running: $WE_DIR (skipped restart)"
+            else
+              echo "Wallpaper Engine: $WE_DIR"
+              systemctl --user set-environment WE_WALLPAPER_DIR="$WE_DIR" WE_ASSETS_DIR="$WE_ASSETS"
+              systemctl --user restart linux-wallpaperengine.service
+            fi
           else
             # Static wallpaper — DMS renders it natively, just stop WE
             echo "Static wallpaper: $NEW_WALL"
