@@ -58,7 +58,8 @@ Packages tracked independently of nixpkgs for tighter version control:
 - **Window Controls:** `Super` + left-drag moves windows, `Super` + right-drag resizes. `Super+Ctrl+H/J/K/L` resizes by fine steps and `Super+Ctrl+Arrows` resizes by larger steps. `Super+Arrows` changes focus between monitors, while `Super+Shift+Arrows` moves the active window between monitors.
 - **Window Controls:** `Super` + left-drag moves windows, `Super` + right-drag resizes. `Super+Ctrl+H/J/K/L` (or arrows) resizes in directions.
 - **Launcher Shortcuts:** `Super+E` opens **Yazi** in Ghostty.
-- **DMS declarative shell settings:** Display config format is set to **Model** with snap enabled; DMS widgets (bar/OSD/toasts/notepad) are pinned to the BenQ with fallback routing, dock is disabled, and workspace/launcher behavior is declared in Nix instead of UI-only state.
+- **DMS declarative shell settings:** Display config format is set to **Model** with snap enabled; DMS widgets (bar/OSD/toasts/notepad) are pinned to the BenQ with fallback routing, dock is disabled, widget style is **Colorful**, popup/notepad/system-monitor transparency is set to **60%**, and workspace/launcher behavior is declared in Nix instead of UI-only state.
+- **DMS updater policy on NixOS:** The built-in updater widget is hidden by default because upstream updater helpers target Arch/Fedora package managers, not the NixOS rebuild workflow.
 - **Notepad shortcut:** `Super+T` toggles the DMS notepad slideout.
 - **Launcher behavior notes:** Built-in DMS entries (Settings, Notepad, System Monitor) are explicitly enabled. `launchPrefix` (when set in DMS launcher settings) prepends a command to app launches, e.g. wrappers like `uwsm-app` or `systemd-run --user`.
 - **Wallpaper Selector Rollout:** `Super+W` toggles the flake-packaged selector open/close; `Super+Shift+W` opens the DMS wallpaper dash fallback.

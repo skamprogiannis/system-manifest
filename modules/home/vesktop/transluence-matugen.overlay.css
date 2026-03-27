@@ -43,7 +43,7 @@
   --textarea-alpha: 0.46;
   --textarea-alpha-focus: 0.56;
   --textarea-text-color: var(--text-1, #e3e2e8);
-  --textarea-radius: 18px;
+  --textarea-radius: 12px;
 }
 
 /* Ensure actual transparent shell and no baked image layers. */

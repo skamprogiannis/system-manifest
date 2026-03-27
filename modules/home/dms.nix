@@ -31,35 +31,97 @@
           name = "Main Bar";
           enabled = true;
           position = 0;
-          screenPreferences = ["BenQ XL2411Z"];
-          showOnLastDisplay = true;
-          leftWidgets = ["launcherButton" "workspaceSwitcher" "focusedWindow"];
-          centerWidgets = ["music" "clock" "weather"];
-          rightWidgets = ["systemTray" "clipboard" "cpuUsage" "memUsage" "notificationButton" "battery" "controlCenterButton"];
+          screenPreferences = [
+            {
+              name = "DP-1";
+              model = "BenQ XL2411Z";
+            }
+          ];
+          showOnLastDisplay = false;
+          leftWidgets = [
+            "workspaceSwitcher"
+            {
+              id = "runningApps";
+              enabled = true;
+              runningAppsCompactMode = true;
+              runningAppsGroupByApp = false;
+              runningAppsCurrentWorkspace = true;
+              runningAppsCurrentMonitor = false;
+            }
+            {
+              id = "systemTray";
+              enabled = true;
+            }
+          ];
+          centerWidgets = [
+            {
+              id = "clock";
+              enabled = true;
+              clockCompactMode = false;
+            }
+            {
+              id = "music";
+              enabled = true;
+              mediaSize = 2;
+            }
+            {
+              id = "weather";
+              enabled = true;
+            }
+          ];
+          rightWidgets = [
+            {
+              id = "cpuUsage";
+              enabled = true;
+            }
+            {
+              id = "memUsage";
+              enabled = true;
+              showSwap = true;
+            }
+            {
+              id = "gpuTemp";
+              enabled = true;
+              selectedGpuIndex = 0;
+              pciId = "10de:220a";
+            }
+            {
+              id = "notificationButton";
+              enabled = true;
+            }
+            {
+              id = "battery";
+              enabled = true;
+            }
+            {
+              id = "controlCenterButton";
+              enabled = true;
+            }
+          ];
           spacing = 4;
           innerPadding = 4;
-          bottomGap = 0;
-          transparency = 1.0;
-          widgetTransparency = 1.0;
+          bottomGap = -2;
+          transparency = 0.55;
+          widgetTransparency = 0.6;
           squareCorners = false;
           noBackground = false;
           maximizeWidgetIcons = false;
           maximizeWidgetText = false;
           removeWidgetPadding = false;
-          widgetPadding = 8;
+          widgetPadding = 12;
           gothCornersEnabled = false;
           gothCornerRadiusOverride = false;
           gothCornerRadiusValue = 12;
-          borderEnabled = false;
-          borderColor = "surfaceText";
+          borderEnabled = true;
+          borderColor = "primary";
           borderOpacity = 1.0;
-          borderThickness = 1;
+          borderThickness = 2;
           widgetOutlineEnabled = false;
           widgetOutlineColor = "primary";
           widgetOutlineOpacity = 1.0;
           widgetOutlineThickness = 1;
           fontScale = 1.0;
-          iconScale = 1.0;
+          iconScale = 1.1;
           autoHide = false;
           autoHideDelay = 250;
           showOnWindowsOpen = false;
@@ -77,42 +139,191 @@
           shadowCustomColor = "#000000";
           clickThrough = false;
         }
+        {
+          id = "bar1774633251014";
+          name = "Secondary Bar";
+          enabled = true;
+          position = 0;
+          screenPreferences = [
+            {
+              name = "HDMI-A-1";
+              model = "S24E510C";
+            }
+          ];
+          showOnLastDisplay = false;
+          leftWidgets = [
+            {
+              id = "launcherButton";
+              enabled = true;
+            }
+            {
+              id = "clipboard";
+              enabled = true;
+            }
+            {
+              id = "notepadButton";
+              enabled = true;
+            }
+            {
+              id = "colorPicker";
+              enabled = true;
+            }
+            {
+              id = "idleInhibitor";
+              enabled = true;
+            }
+            {
+              id = "powerMenuButton";
+              enabled = true;
+            }
+          ];
+          centerWidgets = [
+            {
+              id = "network_speed_monitor";
+              enabled = true;
+            }
+            {
+              id = "vpn";
+              enabled = true;
+            }
+          ];
+          rightWidgets = [
+            {
+              id = "keyboard_layout_name";
+              enabled = true;
+            }
+            {
+              id = "workspaceSwitcher";
+              enabled = true;
+            }
+            {
+              id = "focusedWindow";
+              enabled = true;
+            }
+          ];
+          spacing = 4;
+          innerPadding = 4;
+          bottomGap = -2;
+          transparency = 0.55;
+          widgetTransparency = 0.6;
+          squareCorners = false;
+          noBackground = false;
+          maximizeWidgetIcons = false;
+          maximizeWidgetText = false;
+          removeWidgetPadding = false;
+          widgetPadding = 12;
+          gothCornersEnabled = false;
+          gothCornerRadiusOverride = false;
+          gothCornerRadiusValue = 12;
+          borderEnabled = true;
+          borderColor = "primary";
+          borderOpacity = 1.0;
+          borderThickness = 2;
+          widgetOutlineEnabled = false;
+          widgetOutlineColor = "primary";
+          widgetOutlineOpacity = 1.0;
+          widgetOutlineThickness = 1;
+          fontScale = 1.0;
+          iconScale = 1.1;
+          autoHide = false;
+          autoHideDelay = 250;
+          showOnWindowsOpen = false;
+          openOnOverview = false;
+          visible = true;
+          popupGapsAuto = true;
+          popupGapsManual = 4;
+          maximizeDetection = true;
+          scrollEnabled = true;
+          scrollXBehavior = "column";
+          scrollYBehavior = "workspace";
+          shadowIntensity = 0;
+          shadowOpacity = 60;
+          shadowDirectionMode = "inherit";
+          shadowDirection = "top";
+          shadowColorMode = "default";
+          shadowCustomColor = "#000000";
+          clickThrough = false;
+        }
+        {
+          id = "bar1774633251575";
+          name = "Unified Bar";
+          enabled = true;
+          position = 0;
+          screenPreferences = [];
+          showOnLastDisplay = true;
+          leftWidgets = ["launcherButton" "workspaceSwitcher" "focusedWindow"];
+          centerWidgets = ["music" "clock" "weather"];
+          rightWidgets = ["systemTray" "clipboard" "cpuUsage" "memUsage" "notificationButton" "battery" "controlCenterButton"];
+          spacing = 4;
+          innerPadding = 4;
+          bottomGap = -2;
+          transparency = 0.55;
+          widgetTransparency = 0.6;
+          squareCorners = false;
+          noBackground = false;
+          maximizeWidgetIcons = false;
+          maximizeWidgetText = false;
+          removeWidgetPadding = false;
+          widgetPadding = 12;
+          gothCornersEnabled = false;
+          gothCornerRadiusOverride = false;
+          gothCornerRadiusValue = 12;
+          borderEnabled = true;
+          borderColor = "primary";
+          borderOpacity = 1.0;
+          borderThickness = 2;
+          widgetOutlineEnabled = false;
+          widgetOutlineColor = "primary";
+          widgetOutlineOpacity = 1.0;
+          widgetOutlineThickness = 1;
+          fontScale = 1.0;
+          iconScale = 1.1;
+          autoHide = false;
+          autoHideDelay = 250;
+          showOnWindowsOpen = false;
+          openOnOverview = false;
+          visible = true;
+          popupGapsAuto = true;
+          popupGapsManual = 4;
+          maximizeDetection = true;
+          scrollEnabled = true;
+          scrollXBehavior = "column";
+          scrollYBehavior = "workspace";
+          shadowIntensity = 0;
+          shadowOpacity = 60;
+          shadowDirectionMode = "inherit";
+          shadowDirection = "top";
+          shadowColorMode = "default";
+          shadowCustomColor = "#000000";
+          clickThrough = false;
+        }
       ];
 
       # --- DISPLAYS & WIDGET SCREENS ---
-      displayNameMode = "model";
+      displayNameMode = "system";
       displaySnapToEdge = true;
       displayProfileAutoSelect = false;
       showDock = false;
-      screenPreferences = {
-        notifications = ["BenQ XL2411Z"];
-        osd = ["BenQ XL2411Z"];
-        toast = ["BenQ XL2411Z"];
-        notepad = ["BenQ XL2411Z"];
-      };
-      showOnLastDisplay = {
-        notifications = true;
-        osd = true;
-        toast = true;
-        notepad = true;
-      };
+      screenPreferences = {};
+      showOnLastDisplay = {};
 
       # --- THEME & COLOR ---
       currentThemeName = "dynamic";
       currentThemeCategory = "dynamic";
       matugenScheme = "scheme-fidelity";
       matugenPaletteFidelity = 1;
-      popupTransparency = 0.95;
-      notepadTransparencyOverride = 0.95;
-      systemMonitorTransparency = 0.95;
+      widgetColorMode = "default";
+      popupTransparency = 1.0;
+      notepadTransparencyOverride = -1;
+      systemMonitorTransparency = 0.8;
 
       # --- WORKSPACES ---
-      showWorkspaceIndex = true;
+      showWorkspaceIndex = false;
       showWorkspaceName = false;
       showWorkspacePadding = false;
       showWorkspaceApps = false;
-      workspaceFollowFocus = true;
-      showOccupiedWorkspacesOnly = true;
+      workspaceFollowFocus = false;
+      showOccupiedWorkspacesOnly = false;
       reverseScrolling = false;
       workspaceColorMode = "s";
       workspaceOccupiedColorMode = "none";
@@ -124,12 +335,12 @@
 
       # --- LAUNCHER ---
       launcherLogoMode = "apps";
-      launcherLogoSizeOffset = 5;
+      launcherLogoSizeOffset = 0;
       sortAppsAlphabetically = false;
       appLauncherGridColumns = 4;
       dankLauncherV2Size = "compact";
       dankLauncherV2ShowFooter = true;
-      dankLauncherV2BorderEnabled = true;
+      dankLauncherV2BorderEnabled = false;
       dankLauncherV2BorderThickness = 2;
       dankLauncherV2BorderColor = "primary";
       launcherPluginVisibility = {
@@ -211,6 +422,12 @@
       notificationTimeoutNormal = 10000;
       notificationTimeoutLow = 5000;
       notificationHistorySaveLow = false;
+
+      # --- SYSTEM UPDATER ---
+      updaterHideWidget = false;
+      updaterUseCustomCommand = false;
+      updaterCustomCommand = "";
+      updaterTerminalAdditionalParams = "";
 
       # --- MATUGEN TEMPLATES ---
       runDmsMatugenTemplates = true;
