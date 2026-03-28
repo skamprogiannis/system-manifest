@@ -76,7 +76,7 @@ Use **Spec Kit** (`specify` CLI) to scaffold spec-driven development for new pro
 ## USB Update Workflow
 
 - **Purpose:** Updates the bootable USB drive configuration from the `usb` flake output.
-- **Command:** `sudo update_usb /path/to/system-manifest/checkouts/<worktree>`
+- **Command:** `sudo update-usb /path/to/system-manifest/checkouts/<worktree>`
 - **Steps:**
   1.  Ensures root privileges and validates required USB partition labels exist.
   2.  Unlocks the LUKS container via `/dev/disk/by-partlabel/NIXOS_USB_CRYPT`.
@@ -103,7 +103,7 @@ At the lab: `copilot --resume` to pick up synced sessions.
 
 - **Attribute Re-definition:** Nix doesn't allow defining the same attribute set key (like `home.file`) multiple times in the same file. You must merge them into a single block.
 
-- **USB Formatting:** When formatting raw disks or running `update_usb`, scripts often fail because NixOS root environments lack standard utilities (like `sgdisk`, `parted`, `mkfs.ext4`). **Always** run disk manipulation scripts inside a shell with the required tools: `sudo nix-shell -p gptfdisk parted cryptsetup dosfstools e2fsprogs util-linux --run '<command>'`.
+- **USB Formatting:** When formatting raw disks or running `update-usb`, scripts often fail because NixOS root environments lack standard utilities (like `sgdisk`, `parted`, `mkfs.ext4`). **Always** run disk manipulation scripts inside a shell with the required tools: `sudo nix-shell -p gptfdisk parted cryptsetup dosfstools e2fsprogs util-linux --run '<command>'`.
 - **Neovim Swap Files:** If Neovim throws an `E325: ATTENTION` error or fails to open a file from `neo-tree`, it is blocked by a `.swp` file. Do not try to debug the plugin. The solution is to delete `~/.local/state/nvim/swap/*`. (Swap files are globally disabled in `opts.swapfile = false`, but old ones may linger).
 - **Zellij Stacking Action Name:** On Zellij `0.43.1`, `TogglePaneEmbedOrEject` is invalid and causes config parse failure. Use `TogglePaneEmbedOrFloating` instead.
 

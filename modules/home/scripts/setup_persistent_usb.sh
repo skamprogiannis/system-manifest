@@ -11,8 +11,8 @@ OPENED_MAPPER=0
 usage() {
   cat <<'EOF'
 Usage:
-  sudo $(command -v setup_persistent_usb) /dev/sdX
-  sudo $(command -v setup_persistent_usb) sdX
+  sudo setup-persistent-usb /dev/sdX
+  sudo setup-persistent-usb sdX
 
 Creates a fresh persistent NixOS USB with:
   - GPT partition table
@@ -41,7 +41,7 @@ fi
 
 if [ "$EUID" -ne 0 ]; then
   echo "Error: please run with sudo."
-  echo "Example: sudo \$(command -v setup_persistent_usb) /dev/sdX"
+  echo "Example: sudo setup-persistent-usb /dev/sdX"
   exit 1
 fi
 
@@ -155,4 +155,4 @@ cryptsetup close "$USB_MAPPER_NAME"
 OPENED_MAPPER=0
 
 echo "USB is partitioned and formatted."
-echo "Next step: sudo \$(command -v update_usb) /path/to/system-manifest/checkouts/<worktree>"
+echo "Next step: sudo update-usb /path/to/system-manifest/checkouts/<worktree>"

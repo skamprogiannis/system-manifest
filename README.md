@@ -82,8 +82,8 @@ Packages tracked independently of nixpkgs for tighter version control:
 | `transmission-port-sync` | Updates transmission-daemon listening port |
 | `copilot-sessions-sync` | Syncs `~/.copilot/session-state/` between desktop and USB (`to-usb` / `from-usb`) |
 | `specify` | Spec Kit CLI wrapper — scaffolds spec-driven development for new projects |
-| `setup_persistent_usb` | Initialises a fresh LUKS-encrypted persistent NixOS USB drive |
-| `update_usb` | Builds the `usb` flake output from a checkout path, installs it onto the USB, then creates a squashfs image of the Nix store |
+| `setup-persistent-usb` | Initialises a fresh LUKS-encrypted persistent NixOS USB drive |
+| `update-usb` | Builds the `usb` flake output from a checkout path, installs it onto the USB, then creates a squashfs image of the Nix store |
 
 ## Usage
 
@@ -102,13 +102,13 @@ nixos-rebuild dry-build --flake .#desktop
 ### Update USB Drive
 
 ```bash
-sudo update_usb /path/to/system-manifest/checkouts/main
+sudo update-usb /path/to/system-manifest/checkouts/main
 ```
 
 The script performs preflight checks (root, partition labels, mountpoint safety, and required tools), auto-enters `nix-shell` when `mksquashfs` is missing, and accepts an optional flake directory path:
 
 ```bash
-sudo update_usb /path/to/system-manifest/checkouts/<worktree>
+sudo update-usb /path/to/system-manifest/checkouts/<worktree>
 ```
 
 After `nixos-install`, it compresses `/nix/store` into a squashfs image. At boot, the USB mounts this compressed image via overlayfs — reads are sequential and fast (like an ISO), while writes go to a 2 GB tmpfs (volatile, reset on reboot).
@@ -116,10 +116,10 @@ After `nixos-install`, it compresses `/nix/store` into a squashfs image. At boot
 ### Initialize / Reformat Persistent USB
 
 ```bash
-sudo setup_persistent_usb /dev/sdX
+sudo setup-persistent-usb /dev/sdX
 ```
 
-`setup_persistent_usb` takes an explicit target disk path (for safety). It wipes the disk, creates `NIXOS_BOOT` + `NIXOS_USB_CRYPT` partitions, initializes LUKS, and formats the encrypted root as ext4.
+`setup-persistent-usb` takes an explicit target disk path (for safety). It wipes the disk, creates `NIXOS_BOOT` + `NIXOS_USB_CRYPT` partitions, initializes LUKS, and formats the encrypted root as ext4.
 
 ### Switch to Gaming Mode
 

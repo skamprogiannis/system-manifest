@@ -1,9 +1,9 @@
 { pkgs, ... }: {
   home.packages = [
-    (pkgs.writeShellScriptBin "setup_persistent_usb" ''
+    (pkgs.writeShellScriptBin "setup-persistent-usb" ''
       exec ${pkgs.bash}/bin/bash ${./scripts/setup_persistent_usb.sh} "$@"
     '')
-    (pkgs.writeShellScriptBin "update_usb" ''
+    (pkgs.writeShellScriptBin "update-usb" ''
       exec ${pkgs.bash}/bin/bash ${./scripts/update_usb.sh} "$@"
     '')
     (pkgs.writeShellScriptBin "specify" ''
