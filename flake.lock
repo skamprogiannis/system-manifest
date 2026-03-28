@@ -775,11 +775,11 @@
     "wallpaper-selector": {
       "flake": false,
       "locked": {
-        "lastModified": 1774621689,
-        "narHash": "sha256-3h+w6K+buDT+4EMeHRrVJHEJMyOymGqtUbcW+dFj+HA=",
+        "lastModified": 1774640171,
+        "narHash": "sha256-tIOfKn/ibUztx2xU0j9lbQODsYtKige/p3BbxaK5lzs=",
         "owner": "skamprogiannis",
         "repo": "wallpaper-selector",
-        "rev": "82a06c54521e80485db72b244a51e011665d1e2b",
+        "rev": "45e34b7a8b410b40903f9ba41eaf6cbb4b2a56e8",
         "type": "github"
       },
       "original": {
