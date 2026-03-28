@@ -7,10 +7,23 @@
   vimiumCSeedLocalDir = ./brave/vimium-c/local-settings;
   vimiumCSeedSyncDir = ./brave/vimium-c/sync-settings;
   bravePreferencePatch = builtins.toJSON {
+    intl = {
+      accept_languages = "en,el";
+      selected_languages = "en,el";
+    };
     brave = {
+      enable_window_closing_confirm = true;
       rewards.show_brave_rewards_button_in_location_bar = false;
-      ai_chat.show_toolbar_button = false;
-      wallet.show_wallet_icon_on_toolbar = false;
+      ai_chat = {
+        show_toolbar_button = false;
+        tab_organization_enabled = true;
+      };
+      wallet = {
+        show_wallet_icon_on_toolbar = false;
+        should_show_wallet_suggestion_badge = false;
+      };
+      brave_ads.should_allow_ads_subdivision_targeting = false;
+      news."open-articles-in-new-tab" = true;
       new_tab_page = {
         show_brave_news = false;
         show_rewards = false;
@@ -28,7 +41,10 @@
         vertical_tabs_show_scrollbar = false;
         vertical_tabs_show_title_on_window = false;
       };
-      accelerators."56215" = ["Control+Backslash"];
+      accelerators."56215" = [
+        "Alt+Backslash"
+        "Control+Backslash"
+      ];
       default_accelerators."56215" = [];
       sidebar = {
         hidden_built_in_items = [2];
@@ -53,9 +69,30 @@
       };
     };
     browser = {
+      enable_spellchecking = true;
       show_home_button = false;
       # false = use system title bar and borders
       custom_chrome_frame = false;
+    };
+    account_values.browser.enable_spellchecking = true;
+    privacy_sandbox = {
+      first_party_sets_enabled = false;
+      m1 = {
+        ad_measurement_enabled = false;
+        fledge_enabled = false;
+        topics_enabled = false;
+      };
+    };
+  };
+
+  braveLocalStatePatch = builtins.toJSON {
+    brave = {
+      dont_ask_for_crash_reporting = true;
+      p3a = {
+        enabled = false;
+        notice_acknowledged = true;
+      };
+      brave_ads.enabled_last_profile = false;
     };
   };
 
@@ -73,16 +110,23 @@
   '';
 
   writeBravePreferences = pkgs.writeShellScript "brave-write-preferences" ''
-    pref_file="$HOME/.config/BraveSoftware/Brave-Browser/Default/Preferences"
-    mkdir -p "$(dirname "$pref_file")"
+    patch_json() {
+      local target="$1"
+      local patch="$2"
+      mkdir -p "$(dirname "$target")"
 
-    tmp=$(mktemp)
-    if [ -s "$pref_file" ] && ${pkgs.jq}/bin/jq empty "$pref_file" >/dev/null 2>&1; then
-      ${pkgs.jq}/bin/jq --argjson patch '${bravePreferencePatch}' '. * $patch' "$pref_file" > "$tmp"
-    else
-      printf '%s\n' '${bravePreferencePatch}' > "$tmp"
-    fi
-    mv "$tmp" "$pref_file"
+      local tmp
+      tmp=$(mktemp)
+      if [ -s "$target" ] && ${pkgs.jq}/bin/jq empty "$target" >/dev/null 2>&1; then
+        ${pkgs.jq}/bin/jq --argjson patch "$patch" '. * $patch' "$target" > "$tmp"
+      else
+        printf '%s\n' "$patch" > "$tmp"
+      fi
+      mv "$tmp" "$target"
+    }
+
+    patch_json "$HOME/.config/BraveSoftware/Brave-Browser/Default/Preferences" '${bravePreferencePatch}'
+    patch_json "$HOME/.config/BraveSoftware/Brave-Browser/Local State" '${braveLocalStatePatch}'
   '';
 in {
   programs.brave = {
