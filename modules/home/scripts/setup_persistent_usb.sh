@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_NAME="$(basename "$0")"
 USB_MAPPER_NAME="NIXOS_USB_CRYPT"
 USB_ROOT_DEV="/dev/mapper/$USB_MAPPER_NAME"
 NIX_SHELL_PACKAGES=(gptfdisk parted cryptsetup dosfstools e2fsprogs util-linux)
@@ -10,7 +11,8 @@ OPENED_MAPPER=0
 usage() {
   cat <<'EOF'
 Usage:
-  sudo ./setup_persistent_usb.sh /dev/sdX
+  sudo $(command -v setup_persistent_usb) /dev/sdX
+  sudo $(command -v setup_persistent_usb) sdX
 
 Creates a fresh persistent NixOS USB with:
   - GPT partition table
@@ -38,11 +40,17 @@ if [ "$#" -ne 1 ]; then
 fi
 
 if [ "$EUID" -ne 0 ]; then
-  echo "Error: please run as root (sudo)"
+  echo "Error: please run with sudo."
+  echo "Example: sudo \$(command -v setup_persistent_usb) /dev/sdX"
   exit 1
 fi
 
-USB_DEV="$1"
+USB_INPUT="$1"
+if [[ "$USB_INPUT" != /dev/* ]]; then
+  USB_DEV="/dev/$USB_INPUT"
+else
+  USB_DEV="$USB_INPUT"
+fi
 
 MISSING_TOOLS=()
 for tool in "${REQUIRED_TOOLS[@]}"; do
@@ -60,7 +68,7 @@ if [ "${#MISSING_TOOLS[@]}" -gt 0 ]; then
 
   echo "Error: missing required tools: ${MISSING_TOOLS[*]}"
   echo "Run manually:"
-  echo "  sudo nix-shell -p ${NIX_SHELL_PACKAGES[*]} --run './setup_persistent_usb.sh /dev/sdX'"
+  echo "  sudo nix-shell -p ${NIX_SHELL_PACKAGES[*]} --run '$SCRIPT_NAME /dev/sdX'"
   exit 1
 fi
 
@@ -147,4 +155,4 @@ cryptsetup close "$USB_MAPPER_NAME"
 OPENED_MAPPER=0
 
 echo "USB is partitioned and formatted."
-echo "Next step: sudo ./update_usb.sh"
+echo "Next step: sudo \$(command -v update_usb) /path/to/system-manifest/checkouts/<worktree>"

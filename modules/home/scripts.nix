@@ -1,5 +1,11 @@
 { pkgs, ... }: {
   home.packages = [
+    (pkgs.writeShellScriptBin "setup_persistent_usb" ''
+      exec ${pkgs.bash}/bin/bash ${./scripts/setup_persistent_usb.sh} "$@"
+    '')
+    (pkgs.writeShellScriptBin "update_usb" ''
+      exec ${pkgs.bash}/bin/bash ${./scripts/update_usb.sh} "$@"
+    '')
     (pkgs.writeShellScriptBin "specify" ''
       exec ${pkgs.uv}/bin/uvx --from git+https://github.com/github/spec-kit.git specify "$@"
     '')
