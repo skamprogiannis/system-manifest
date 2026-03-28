@@ -33,6 +33,8 @@ in {
     };
   };
 
+  systemd.user.services.dms.Service.ExecStartPost = "${config.home.profileDirectory}/bin/dms-restore-wallpaper";
+
   systemd.user.services.wallpaper-hook = {
     Unit = {
       Description = "DMS wallpaper sync hook";
