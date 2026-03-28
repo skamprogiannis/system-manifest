@@ -28,9 +28,9 @@ EOF
 
 if ! command -v mksquashfs >/dev/null 2>&1; then
   if [ "${USB_UPDATE_IN_NIX_SHELL:-0}" != "1" ] && command -v nix-shell >/dev/null 2>&1; then
-    REEXEC_CMD=$(printf '%q ' "$0" "$@")
+    REEXEC_ARGS=$(printf ' %q' "$@")
     echo "Entering nix-shell for required USB update tools..."
-    exec nix-shell -p "${NIX_SHELL_PACKAGES[@]}" --run "USB_UPDATE_IN_NIX_SHELL=1 ${REEXEC_CMD}"
+    exec nix-shell -p "${NIX_SHELL_PACKAGES[@]}" --run "USB_UPDATE_IN_NIX_SHELL=1 bash \"$0\"${REEXEC_ARGS}"
   fi
   echo "Error: mksquashfs is missing and nix-shell is unavailable."
   echo "Run manually:"
