@@ -11,6 +11,30 @@
 
   xdg.configFile."DankMaterialShell/.firstlaunch".text = "";
 
+  home.activation.ensureWritableDmsSession = lib.hm.dag.entryAfter ["writeBoundary"] ''
+    state_dir="$HOME/.local/state/DankMaterialShell"
+    session_file="$state_dir/session.json"
+
+    mkdir -p "$state_dir"
+
+    if [ -L "$session_file" ] || { [ -e "$session_file" ] && [ ! -w "$session_file" ]; }; then
+      tmp_file=$(mktemp)
+      if ! cat "$session_file" > "$tmp_file" 2>/dev/null; then
+        cat > "$tmp_file" <<'EOF'
+{"nightModeEnabled":false,"nightModeAutoEnabled":false,"themeModeAutoEnabled":false,"themeModeShareGammaSettings":false,"nightModeUseIPLocation":false}
+EOF
+      fi
+      rm -f "$session_file"
+      mv "$tmp_file" "$session_file"
+      chmod 600 "$session_file"
+    elif [ ! -e "$session_file" ]; then
+      cat > "$session_file" <<'EOF'
+{"nightModeEnabled":false,"nightModeAutoEnabled":false,"themeModeAutoEnabled":false,"themeModeShareGammaSettings":false,"nightModeUseIPLocation":false}
+EOF
+      chmod 600 "$session_file"
+    fi
+  '';
+
   programs.dank-material-shell = {
     enable = true;
     systemd = {
@@ -62,7 +86,7 @@
             {
               id = "music";
               enabled = true;
-              mediaSize = 2;
+              mediaSize = 1;
             }
             {
               id = "weather";
@@ -193,11 +217,11 @@
               enabled = true;
             }
             {
-              id = "workspaceSwitcher";
+              id = "focusedWindow";
               enabled = true;
             }
             {
-              id = "focusedWindow";
+              id = "workspaceSwitcher";
               enabled = true;
             }
           ];
@@ -300,55 +324,68 @@
       ];
 
       # --- DISPLAYS & WIDGET SCREENS ---
-      displayNameMode = "system";
+      displayNameMode = "model";
       displaySnapToEdge = true;
       displayProfileAutoSelect = false;
       showDock = false;
-      screenPreferences = {};
-      showOnLastDisplay = {};
+      screenPreferences = {
+        notifications = ["BenQ XL2411Z"];
+        osd = ["BenQ XL2411Z"];
+        toast = ["BenQ XL2411Z"];
+        notepad = ["BenQ XL2411Z"];
+      };
+      showOnLastDisplay = {
+        notifications = true;
+        osd = true;
+        toast = true;
+        notepad = true;
+      };
 
       # --- THEME & COLOR ---
       currentThemeName = "dynamic";
       currentThemeCategory = "dynamic";
       matugenScheme = "scheme-fidelity";
       matugenPaletteFidelity = 1;
-      widgetColorMode = "default";
-      popupTransparency = 1.0;
-      notepadTransparencyOverride = -1;
-      systemMonitorTransparency = 0.8;
+      widgetColorMode = "colorful";
+      popupTransparency = 0.70;
+      notepadTransparencyOverride = 0.70;
+      systemMonitorTransparency = 0.70;
 
       # --- WORKSPACES ---
-      showWorkspaceIndex = false;
+      showWorkspaceIndex = true;
       showWorkspaceName = false;
       showWorkspacePadding = false;
       showWorkspaceApps = false;
       workspaceFollowFocus = false;
-      showOccupiedWorkspacesOnly = false;
+      showOccupiedWorkspacesOnly = true;
       reverseScrolling = false;
-      workspaceColorMode = "s";
+      workspaceColorMode = "default";
       workspaceOccupiedColorMode = "none";
-      workspaceUnfocusedColorMode = "s";
-      workspaceUrgentColorMode = "primary";
+      workspaceUnfocusedColorMode = "default";
+      workspaceUrgentColorMode = "default";
       workspaceFocusedBorderEnabled = false;
       workspaceFocusedBorderColor = "primary";
       workspaceFocusedBorderThickness = 2;
 
       # --- LAUNCHER ---
-      launcherLogoMode = "apps";
-      launcherLogoSizeOffset = 0;
+      launcherLogoMode = "os";
+      launcherLogoColorOverride = "primary";
+      launcherLogoSizeOffset = 5;
       sortAppsAlphabetically = false;
       appLauncherGridColumns = 4;
       dankLauncherV2Size = "compact";
       dankLauncherV2ShowFooter = true;
-      dankLauncherV2BorderEnabled = false;
+      dankLauncherV2BorderEnabled = true;
       dankLauncherV2BorderThickness = 2;
       dankLauncherV2BorderColor = "primary";
       launcherPluginVisibility = {
-        dms_settings_search.allowWithoutTrigger = true;
+        dms_settings.allowWithoutTrigger = false;
+        dms_notepad.allowWithoutTrigger = false;
+        dms_settings_search.allowWithoutTrigger = false;
       };
       builtInPluginSettings = {
-        dms_settings.enabled = true;
-        dms_notepad.enabled = true;
+        dms_settings.enabled = false;
+        dms_notepad.enabled = false;
         dms_sysmon.enabled = true;
         dms_settings_search = {
           enabled = true;
@@ -408,6 +445,10 @@
       nightModeEnabled = false;
       themeModeAutoEnabled = false;
 
+      # --- OSD ---
+      osdCapsLockEnabled = false;
+      osdPowerProfileEnabled = true;
+
       # --- POWER & SLEEP ---
       acMonitorTimeout = 600;
       acLockTimeout = 1800;
@@ -424,10 +465,8 @@
       notificationHistorySaveLow = false;
 
       # --- SYSTEM UPDATER ---
-      updaterHideWidget = false;
-      updaterUseCustomCommand = false;
-      updaterCustomCommand = "";
-      updaterTerminalAdditionalParams = "";
+      # Intentionally unmanaged here: updater behavior depends on host-specific,
+      # non-Nix commands, so we do not force it declaratively.
 
       # --- MATUGEN TEMPLATES ---
       runDmsMatugenTemplates = true;
@@ -456,12 +495,5 @@
       matugenTemplateEmacs = false;
     };
 
-    session = {
-      nightModeEnabled = false;
-      nightModeAutoEnabled = false;
-      themeModeAutoEnabled = false;
-      themeModeShareGammaSettings = false;
-      nightModeUseIPLocation = false;
-    };
   };
 }
