@@ -67,31 +67,26 @@ PY
     fi
 
     render_palette_root() {
-      ${pkgs.gawk}/bin/awk '
-        match($0, /--[a-zA-Z0-9-]+:[^;]+;/) {
-          decl = substr($0, RSTART, RLENGTH)
-          name = decl
-          sub(/:.*/, "", name)
+      ${pkgs.python3}/bin/python3 - "$SRC_COLORS" <<'PY'
+import re
+import sys
 
-          keep =
-            (name ~ /^--accent-[1-5]$/) ||
-            (name ~ /^--text-[0-5]$/) ||
-            (name ~ /^--bg-[1-4]$/) ||
-            (name == "--hover") ||
-            (name == "--active") ||
-            (name == "--message-hover") ||
-            (name == "--mention") ||
-            (name == "--mention-hover") ||
-            (name == "--online-indicator") ||
-            (name == "--dnd-indicator") ||
-            (name == "--idle-indicator") ||
-            (name == "--streaming-indicator")
+text = open(sys.argv[1], encoding="utf-8").read()
+allowed = {
+    "--accent-1", "--accent-2", "--accent-3", "--accent-4", "--accent-5",
+    "--text-0", "--text-1", "--text-2", "--text-3", "--text-4", "--text-5",
+    "--bg-1", "--bg-2", "--bg-3", "--bg-4",
+    "--hover", "--active", "--message-hover", "--mention", "--mention-hover",
+    "--online-indicator", "--dnd-indicator", "--idle-indicator", "--streaming-indicator",
+}
 
-          if (keep && !seen[name]++) {
-            print "  " decl
-          }
-        }
-      ' "$SRC_COLORS"
+seen = set()
+for match in re.finditer(r'(--[A-Za-z0-9-]+)\s*:\s*([^;]+);', text):
+    name, value = match.group(1), match.group(2).strip()
+    if name in allowed and name not in seen:
+        print(f"  {name}: {value};")
+        seen.add(name)
+PY
     }
 
     tmp=$(mktemp)
@@ -102,7 +97,7 @@ PY
  * @name Transluence Matugen
  * @description Transluence tuned for transparent Vesktop and Matugen palette sync
  * @author skamprogiannis
- * @version 1.3.0
+ * @version 1.4.0
  */
 
 @import url(https://capnkitten.github.io/BetterDiscord/Themes/Translucence/css/source.css);
