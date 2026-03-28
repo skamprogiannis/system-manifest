@@ -61,9 +61,9 @@ done
 
 if [ "${#MISSING_TOOLS[@]}" -gt 0 ]; then
   if [ "${USB_SETUP_IN_NIX_SHELL:-0}" != "1" ] && command -v nix-shell >/dev/null 2>&1; then
-    REEXEC_CMD=$(printf '%q ' "$0" "$@")
+    REEXEC_ARGS=$(printf ' %q' "$@")
     echo "Missing required tools (${MISSING_TOOLS[*]}). Re-running inside nix-shell..."
-    exec nix-shell -p "${NIX_SHELL_PACKAGES[@]}" --run "USB_SETUP_IN_NIX_SHELL=1 ${REEXEC_CMD}"
+    exec nix-shell -p "${NIX_SHELL_PACKAGES[@]}" --run "USB_SETUP_IN_NIX_SHELL=1 bash \"$0\"${REEXEC_ARGS}"
   fi
 
   echo "Error: missing required tools: ${MISSING_TOOLS[*]}"
