@@ -402,8 +402,8 @@ in {
 
         # Give DMS overlays/popouts compositor blur without increasing the
         # global blur strength for every window.
-        layerrule = blur on, match:namespace ^dms:(notification-popup|toast|osd|control-center|notification-center-popout|clipboard-popout|dash|process-list-popout|modal|slideout)$
-        layerrule = ignorealpha 0.2, match:namespace ^dms:(notification-popup|toast|osd|control-center|notification-center-popout|clipboard-popout|dash|process-list-popout|modal|slideout)$
+        layerrule = match:namespace ^dms:(notification-popup|toast|osd|control-center|notification-center-popout|clipboard-popout|dash|process-list-popout|modal|slideout)$, blur on
+        layerrule = match:namespace ^dms:(notification-popup|toast|osd|control-center|notification-center-popout|clipboard-popout|dash|process-list-popout|modal|slideout)$, ignore_alpha 0.2
 
       '';
     };
