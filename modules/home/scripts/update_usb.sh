@@ -17,7 +17,7 @@ MOUNTED_BOOT=0
 usage() {
   cat <<EOF
 Usage:
-  sudo \$(command -v update_usb) [path-to-flake-dir]
+  sudo update-usb [path-to-flake-dir]
 
 Defaults:
   flake dir: $FLAKE_DIR
@@ -50,7 +50,7 @@ fi
 
 if [ "$EUID" -ne 0 ]; then
   echo "Error: please run with sudo."
-  echo "Example: sudo \$(command -v update_usb) /path/to/system-manifest/checkouts/<worktree>"
+  echo "Example: sudo update-usb /path/to/system-manifest/checkouts/<worktree>"
   exit 1
 fi
 
@@ -68,13 +68,13 @@ fi
 
 if [ ! -e "$USB_ROOT_PART" ]; then
   echo "Error: USB root partition not found at $USB_ROOT_PART"
-  echo "Run sudo \$(command -v setup_persistent_usb) /dev/sdX first, then retry."
+  echo "Run sudo setup-persistent-usb /dev/sdX first, then retry."
   exit 1
 fi
 
 if [ ! -e "$USB_BOOT_DEV" ]; then
   echo "Error: USB boot partition not found at $USB_BOOT_DEV"
-  echo "Run sudo \$(command -v setup_persistent_usb) /dev/sdX first, then retry."
+  echo "Run sudo setup-persistent-usb /dev/sdX first, then retry."
   exit 1
 fi
 
