@@ -76,14 +76,14 @@ Use **Spec Kit** (`specify` CLI) to scaffold spec-driven development for new pro
 ## USB Update Workflow
 
 - **Purpose:** Updates the bootable USB drive configuration from the `usb` flake output.
-- **Command:** `sudo ./update_usb.sh`
+- **Command:** `sudo update_usb /path/to/system-manifest/checkouts/<worktree>`
 - **Steps:**
   1.  Ensures root privileges and validates required USB partition labels exist.
   2.  Unlocks the LUKS container via `/dev/disk/by-partlabel/NIXOS_USB_CRYPT`.
   3.  Mounts root and boot partitions to `/mnt`.
   4.  Runs `nixos-install --flake .#usb --root /mnt --no-root-passwd`.
   5.  Unmounts and cleans up.
-- **Note:** Script preflight checks mountpoint safety and can auto-enter `nix-shell` when `mksquashfs` is missing. Optional usage: `sudo ./update_usb.sh /path/to/system-manifest`.
+- **Note:** Script preflight checks mountpoint safety and can auto-enter `nix-shell` when `mksquashfs` is missing. Always pass a checkout path (e.g. `.../checkouts/main`).
 - **GH auth on foreign machines:** When booting the USB on a computer lab machine, gnome-keyring may not auto-unlock. Store a fine-grained PAT (with "Copilot Requests" permission) in `~/.config/github-pat` on the encrypted USB partition: `echo "ghp_..." > ~/.config/github-pat && chmod 600 ~/.config/github-pat`. The shell will auto-export it as `GH_TOKEN`. This file is protected by LUKS and never committed to git.
 
 ## Copilot Session Sync (Desktop ↔ USB)
@@ -103,7 +103,7 @@ At the lab: `copilot --resume` to pick up synced sessions.
 
 - **Attribute Re-definition:** Nix doesn't allow defining the same attribute set key (like `home.file`) multiple times in the same file. You must merge them into a single block.
 
-- **USB Formatting:** When formatting raw disks or running `update_usb.sh`, scripts often fail because NixOS root environments lack standard utilities (like `sgdisk`, `parted`, `mkfs.ext4`). **Always** run disk manipulation scripts inside a shell with the required tools: `sudo nix-shell -p gptfdisk parted cryptsetup dosfstools e2fsprogs util-linux --run ./script.sh`.
+- **USB Formatting:** When formatting raw disks or running `update_usb`, scripts often fail because NixOS root environments lack standard utilities (like `sgdisk`, `parted`, `mkfs.ext4`). **Always** run disk manipulation scripts inside a shell with the required tools: `sudo nix-shell -p gptfdisk parted cryptsetup dosfstools e2fsprogs util-linux --run '<command>'`.
 - **Neovim Swap Files:** If Neovim throws an `E325: ATTENTION` error or fails to open a file from `neo-tree`, it is blocked by a `.swp` file. Do not try to debug the plugin. The solution is to delete `~/.local/state/nvim/swap/*`. (Swap files are globally disabled in `opts.swapfile = false`, but old ones may linger).
 - **Zellij Stacking Action Name:** On Zellij `0.43.1`, `TogglePaneEmbedOrEject` is invalid and causes config parse failure. Use `TogglePaneEmbedOrFloating` instead.
 
