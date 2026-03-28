@@ -246,6 +246,9 @@ in {
     terminal = false;
     categories = ["Network" "InstantMessaging"];
     startupNotify = true;
+    settings = {
+      StartupWMClass = "Vesktop";
+    };
     exec = "${vesktopLaunchWrapper} %U";
     mimeType = ["x-scheme-handler/discord"];
   };
