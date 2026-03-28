@@ -4,7 +4,55 @@
   lib,
   inputs,
   ...
-}: {
+}: let
+  dmsBasePackage = inputs.dms.packages.${pkgs.stdenv.hostPlatform.system}.dms-shell;
+  dmsPatchedPackage = dmsBasePackage.overrideAttrs (old: {
+    postInstall = (old.postInstall or "") + ''
+      ${pkgs.python3}/bin/python3 - <<PY
+from pathlib import Path
+
+root = Path("$out/share/quickshell/dms")
+
+replacements = {
+    root / "Modals/Settings/SettingsModal.qml": [
+        ("property bool disablePopupTransparency: true", "property bool disablePopupTransparency: false"),
+        ("color: Theme.surfaceContainer", "color: Theme.withAlpha(Theme.surfaceContainer, Theme.popupTransparency)"),
+    ],
+    root / "Widgets/DankPopout.qml": [
+        (
+            "targetColor: Theme.withAlpha(Theme.surfaceContainer, Theme.popupTransparency)",
+            'targetColor: Theme.withAlpha(Theme.surfaceContainer, root.layerNamespace === "dms:dash" ? Math.max(0.0, Theme.popupTransparency - 0.12) : Theme.popupTransparency)',
+        ),
+        (
+            "color: Theme.withAlpha(Theme.surfaceContainer, Theme.popupTransparency)",
+            'color: Theme.withAlpha(Theme.surfaceContainer, root.layerNamespace === "dms:dash" ? Math.max(0.0, Theme.popupTransparency - 0.12) : Theme.popupTransparency)',
+        ),
+    ],
+    root / "Modules/DankDash/Overview/Card.qml": [
+        (
+            "color: Theme.withAlpha(Theme.surfaceContainerHigh, Theme.popupTransparency)",
+            "color: Theme.withAlpha(Theme.surfaceContainerHigh, Math.max(0.0, Theme.popupTransparency - 0.22))",
+        ),
+    ],
+    root / "Modules/DankDash/Overview/CalendarOverviewCard.qml": [
+        (
+            "color: Theme.withAlpha(Theme.surfaceContainerHigh, Theme.popupTransparency)",
+            "color: Theme.withAlpha(Theme.surfaceContainerHigh, Math.max(0.0, Theme.popupTransparency - 0.22))",
+        ),
+    ],
+}
+
+for path, edits in replacements.items():
+    text = path.read_text(encoding="utf-8")
+    for old, new in edits:
+        if old not in text:
+            raise SystemExit(f"Expected snippet not found in {path}: {old}")
+        text = text.replace(old, new, 1)
+    path.write_text(text, encoding="utf-8")
+PY
+    '';
+  });
+in {
   imports = [
     inputs.dms.homeModules.dank-material-shell
   ];
@@ -37,6 +85,7 @@ EOF
 
   programs.dank-material-shell = {
     enable = true;
+    package = dmsPatchedPackage;
     systemd = {
       enable = true;
       target = "hyprland-session.target";
@@ -374,7 +423,7 @@ EOF
       sortAppsAlphabetically = false;
       appLauncherGridColumns = 4;
       dankLauncherV2Size = "compact";
-      dankLauncherV2ShowFooter = true;
+      dankLauncherV2ShowFooter = false;
       dankLauncherV2BorderEnabled = true;
       dankLauncherV2BorderThickness = 2;
       dankLauncherV2BorderColor = "primary";
