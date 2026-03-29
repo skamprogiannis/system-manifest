@@ -451,6 +451,16 @@ EOF
           type = "exact";
         }
         {
+          pattern = "vesktop";
+          replacement = "discord";
+          type = "exact";
+        }
+        {
+          pattern = "Vesktop";
+          replacement = "discord";
+          type = "exact";
+        }
+        {
           pattern = "beepertexts";
           replacement = "beeper";
           type = "exact";
