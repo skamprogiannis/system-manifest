@@ -128,6 +128,19 @@
     patch_json "$HOME/.config/BraveSoftware/Brave-Browser/Default/Preferences" '${bravePreferencePatch}'
     patch_json "$HOME/.config/BraveSoftware/Brave-Browser/Local State" '${braveLocalStatePatch}'
   '';
+
+  braveApplyState = pkgs.writeShellScriptBin "brave-apply-state" ''
+    set -euo pipefail
+
+    if ${pkgs.procps}/bin/pgrep -x brave >/dev/null || ${pkgs.procps}/bin/pgrep -x brave-browser >/dev/null; then
+      echo "Brave is running; close it completely and run brave-apply-state again." >&2
+      exit 1
+    fi
+
+    ${writeBravePreferences}
+    ${writeVimiumCState}
+    echo "Applied declarative Brave preferences and Vimium C state."
+  '';
 in {
   programs.brave = {
     enable = true;
@@ -154,12 +167,14 @@ in {
   # Declarative Brave profile patch + Vimium C state seeding.
   home.activation.vimiumCState = lib.hm.dag.entryAfter ["writeBoundary"] ''
     if ${pkgs.procps}/bin/pgrep -x brave >/dev/null || ${pkgs.procps}/bin/pgrep -x brave-browser >/dev/null; then
-      echo "warning: Brave is running; skipping Brave preference/Vimium C sync this activation (close Brave and re-activate to apply)" >&2
+      echo "warning: Brave is running; skipping Brave preference/Vimium C sync this activation (close Brave and run brave-apply-state, or re-activate after closing Brave)" >&2
     else
       run ${writeBravePreferences}
       run ${writeVimiumCState}
     fi
   '';
+
+  home.packages = [braveApplyState];
 
   xdg.mimeApps = {
     enable = true;
