@@ -13,11 +13,51 @@ from pathlib import Path
 import stat
 
 root = Path("$out/share/quickshell/dms")
+settings_shell_alpha = "Math.min(1.0, Theme.popupTransparency + 0.24)"
+settings_header_alpha = "Math.min(1.0, Theme.popupTransparency + 0.18)"
 
 replacements = {
     root / "Modals/Settings/SettingsModal.qml": [
         ("property bool disablePopupTransparency: true", "property bool disablePopupTransparency: false"),
         ("color: Theme.surfaceContainer", "color: Theme.withAlpha(Theme.surfaceContainer, Theme.popupTransparency)"),
+        (
+            "                    color: Theme.surfaceContainer\n                    opacity: 0.5",
+            f"                    color: Theme.withAlpha(Theme.surfaceContainer, {settings_header_alpha})\n                    opacity: 1.0",
+        ),
+        (
+            "                color: Theme.surfaceContainerHigh",
+            f"                color: Theme.withAlpha(Theme.surfaceContainerHigh, {settings_shell_alpha})",
+        ),
+    ],
+    root / "Modals/Settings/SettingsSidebar.qml": [
+        (
+            "    color: Theme.surfaceContainer",
+            f"    color: Theme.withAlpha(Theme.surfaceContainer, {settings_shell_alpha})",
+        ),
+    ],
+    root / "Modules/Settings/Widgets/SettingsCard.qml": [
+        (
+            "    color: Theme.surfaceContainerHigh",
+            f"    color: Theme.withAlpha(Theme.surfaceContainerHigh, {settings_shell_alpha})",
+        ),
+    ],
+    root / "Modules/Settings/Widgets/SettingsSliderCard.qml": [
+        (
+            "    color: Theme.surfaceContainerHigh",
+            f"    color: Theme.withAlpha(Theme.surfaceContainerHigh, {settings_shell_alpha})",
+        ),
+    ],
+    root / "Modules/Settings/Widgets/SettingsToggleCard.qml": [
+        (
+            "    color: Theme.surfaceContainerHigh",
+            f"    color: Theme.withAlpha(Theme.surfaceContainerHigh, {settings_shell_alpha})",
+        ),
+    ],
+    root / "Modules/Settings/Widgets/SystemMonitorVariantCard.qml": [
+        (
+            "    color: Theme.surfaceContainerHigh",
+            f"    color: Theme.withAlpha(Theme.surfaceContainerHigh, {settings_shell_alpha})",
+        ),
     ],
     root / "Widgets/DankPopout.qml": [
         (
@@ -399,7 +439,7 @@ EOF
       matugenScheme = "scheme-fidelity";
       matugenPaletteFidelity = 1;
       widgetColorMode = "colorful";
-      popupTransparency = 0.70;
+      popupTransparency = 0.60;
       notepadTransparencyOverride = 0.70;
       systemMonitorTransparency = 0.70;
 
