@@ -325,7 +325,7 @@
 
       lualine = {
         enable = true;
-        settings.options.theme = "catppuccin";
+        settings.options.theme = "auto";
       };
 
       gitsigns = {
