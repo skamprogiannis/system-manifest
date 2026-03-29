@@ -10,20 +10,46 @@
     set -euo pipefail
 
     THEME_DIR="$HOME/.config/vesktop/themes"
-    SRC_COLORS="$THEME_DIR/dank-discord.css"
     OUT="$THEME_DIR/${transluenceThemeName}"
+    PALETTE_OUT="$THEME_DIR/.transluence-matugen.palette.css"
+    SRC_JSON="$HOME/.cache/DankMaterialShell/dms-colors.json"
     OVERLAY_STORE="${./vesktop/transluence-matugen.overlay.css}"
 
-    [ -f "$SRC_COLORS" ] || exit 0
+    mkdir -p "$THEME_DIR"
+    [ -f "$SRC_JSON" ] || exit 0
     [ -f "$OVERLAY_STORE" ] || exit 0
 
-    # DMS can rewrite palette files in bursts. Wait for a stable snapshot.
+    # DMS can rewrite palette state in bursts. Wait for a stable snapshot.
     stable_hash=""
-    for _ in $(${pkgs.coreutils}/bin/seq 1 20); do
-      hash_a=$(${pkgs.coreutils}/bin/md5sum "$SRC_COLORS" | ${pkgs.coreutils}/bin/cut -d' ' -f1)
+    for _ in $(${pkgs.coreutils}/bin/seq 1 40); do
+      hash_a=$(${pkgs.coreutils}/bin/md5sum "$SRC_JSON" | ${pkgs.coreutils}/bin/cut -d' ' -f1)
       ${pkgs.coreutils}/bin/sleep 0.05
-      hash_b=$(${pkgs.coreutils}/bin/md5sum "$SRC_COLORS" | ${pkgs.coreutils}/bin/cut -d' ' -f1)
-      if [ "$hash_a" = "$hash_b" ] && ${pkgs.gnugrep}/bin/grep -q -- '--accent-3:' "$SRC_COLORS"; then
+      hash_b=$(${pkgs.coreutils}/bin/md5sum "$SRC_JSON" | ${pkgs.coreutils}/bin/cut -d' ' -f1)
+      if [ "$hash_a" = "$hash_b" ] && ${pkgs.python3}/bin/python3 - "$SRC_JSON" <<'PY'
+import json
+import sys
+
+data = json.load(open(sys.argv[1], encoding="utf-8"))
+dark = data["colors"]["dark"]
+required = (
+    "background",
+    "error",
+    "inverse_primary",
+    "on_surface",
+    "on_surface_variant",
+    "outline",
+    "primary_fixed_dim",
+    "surface_bright",
+    "surface_container_highest",
+    "surface_container_low",
+    "surface_variant",
+    "tertiary_container",
+    "tertiary_fixed_dim",
+)
+missing = [key for key in required if key not in dark]
+raise SystemExit(0 if not missing else 1)
+PY
+      then
         stable_hash="$hash_a"
         break
       fi
@@ -35,18 +61,15 @@
     accent_saturation="82%"
     accent_lightness="76%"
 
-    accent_hex=$(
-      ${pkgs.gnugrep}/bin/grep -m1 -oE -- '--accent-3:[[:space:]]*#[0-9a-fA-F]{6}' "$SRC_COLORS" \
-        | ${pkgs.gnused}/bin/sed -E 's/.*#([0-9a-fA-F]{6}).*/\1/' \
-        || true
+    accent_hex=$(${pkgs.python3}/bin/python3 - "$SRC_JSON" <<'PY'
+import json
+import sys
+
+data = json.load(open(sys.argv[1], encoding="utf-8"))
+dark = data["colors"]["dark"]
+print((dark.get("primary_fixed_dim") or dark.get("primary") or "").lstrip("#"))
+PY
     )
-    if [ -z "$accent_hex" ]; then
-      accent_hex=$(
-        ${pkgs.gnugrep}/bin/grep -m1 -oE -- '--accent-2:[[:space:]]*#[0-9a-fA-F]{6}' "$SRC_COLORS" \
-          | ${pkgs.gnused}/bin/sed -E 's/.*#([0-9a-fA-F]{6}).*/\1/' \
-          || true
-      )
-    fi
 
     if [ -n "$accent_hex" ]; then
       accent_triplet=$(${pkgs.python3}/bin/python3 - "$accent_hex" <<'PY'
@@ -67,49 +90,61 @@ PY
     fi
 
     render_palette_root() {
-      ${pkgs.python3}/bin/python3 - "$SRC_COLORS" <<'PY'
-import re
+      ${pkgs.python3}/bin/python3 - "$SRC_JSON" <<'PY'
+import json
 import sys
 
-text = open(sys.argv[1], encoding="utf-8").read()
-allowed = {
-    "--accent-1", "--accent-2", "--accent-3", "--accent-4", "--accent-5",
-    "--text-0", "--text-1", "--text-2", "--text-3", "--text-4", "--text-5",
-    "--bg-1", "--bg-2", "--bg-3", "--bg-4",
-    "--hover", "--active", "--message-hover", "--mention", "--mention-hover",
-    "--online-indicator", "--dnd-indicator", "--idle-indicator", "--streaming-indicator",
-}
+data = json.load(open(sys.argv[1], encoding="utf-8"))
+dark = data["colors"]["dark"]
 
-seen = set()
-for match in re.finditer(r'(--[A-Za-z0-9-]+)\s*:\s*([^;]+);', text):
-    name, value = match.group(1), match.group(2).strip()
-    if name in allowed and name not in seen:
-        print(f"  {name}: {value};")
-        seen.add(name)
+mapping = [
+    ("--online-indicator", dark["inverse_primary"]),
+    ("--dnd-indicator", dark["error"]),
+    ("--idle-indicator", dark["tertiary_container"]),
+    ("--streaming-indicator", dark["on_primary"]),
+    ("--accent-1", dark["tertiary_fixed_dim"]),
+    ("--accent-2", dark["primary_fixed_dim"]),
+    ("--accent-3", dark["primary_fixed_dim"]),
+    ("--accent-4", dark["surface_bright"]),
+    ("--accent-5", dark["primary_fixed_dim"]),
+    ("--mention", dark["background"]),
+    ("--mention-hover", dark["surface_bright"]),
+    ("--text-0", dark["background"]),
+    ("--text-1", dark["on_surface"]),
+    ("--text-2", dark["on_surface"]),
+    ("--text-3", dark["on_surface_variant"]),
+    ("--text-4", dark["on_surface_variant"]),
+    ("--text-5", dark["outline"]),
+    ("--bg-1", dark["surface_variant"]),
+    ("--bg-2", dark["surface_container_highest"]),
+    ("--bg-3", dark["surface_container_low"]),
+    ("--bg-4", dark["background"]),
+    ("--hover", dark["surface_bright"]),
+    ("--active", dark["surface_bright"]),
+    ("--message-hover", dark["surface_bright"]),
+]
+
+for name, value in mapping:
+    print(f"  {name}: {value};")
 PY
     }
 
-    tmp=$(mktemp)
+    palette_tmp=$(mktemp)
+    wrapper_tmp=$(mktemp)
     src_hash="$stable_hash"
+    trap 'rm -f "$palette_tmp" "$wrapper_tmp"' EXIT
 
-    cat > "$tmp" <<EOF
-/**
- * @name Transluence Matugen
- * @description Transluence tuned for transparent Vesktop and Matugen palette sync
- * @author skamprogiannis
- * @version 1.4.0
- */
+    cat > "$palette_tmp" <<EOF
+/* Source hash: $src_hash (dms-colors.json) */
+/* Derived palette tokens for the Transluence wrapper. */
 
-@import url(https://capnkitten.github.io/BetterDiscord/Themes/Translucence/css/source.css);
-
-/* Source hash: $src_hash (dank-discord.css) */
+/* ----- Matugen palette tokens (derived from DMS colors cache) ----- */
+:root {
 EOF
+    render_palette_root >> "$palette_tmp"
+    printf '}\n' >> "$palette_tmp"
 
-    printf '\n/* ----- Matugen palette tokens (sanitized from DMS output) ----- */\n:root {\n' >> "$tmp"
-    render_palette_root >> "$tmp"
-    printf '}\n' >> "$tmp"
-
-    cat >> "$tmp" <<EOF
+    cat >> "$palette_tmp" <<EOF
 
 /* ----- Derived accent HSL from Matugen accent ----- */
 :root {
@@ -118,24 +153,42 @@ EOF
   --dms-accent-lightness: $accent_lightness;
 }
 EOF
-    printf '\n/* ----- Transluence overlay ----- */\n' >> "$tmp"
-    cat "$OVERLAY_STORE" >> "$tmp"
+
+    cat > "$wrapper_tmp" <<EOF
+/**
+ * @name Transluence Matugen
+ * @description Transluence tuned for transparent Vesktop and Matugen palette sync
+ * @author skamprogiannis
+ * @version 1.5.0
+ */
+
+@import url(https://capnkitten.github.io/BetterDiscord/Themes/Translucence/css/source.css);
+@import url("file://$PALETTE_OUT");
+EOF
+
+    printf '\n/* ----- Transluence overlay ----- */\n' >> "$wrapper_tmp"
+    cat "$OVERLAY_STORE" >> "$wrapper_tmp"
+
+    write_if_changed() {
+      local src="$1"
+      local dst="$2"
+      if [ -f "$dst" ] && ${pkgs.diffutils}/bin/cmp -s "$src" "$dst"; then
+        rm -f "$src"
+        return 1
+      fi
+      mv "$src" "$dst"
+      return 0
+    }
 
     cleanup_legacy_files() {
       ${pkgs.coreutils}/bin/rm -f \
-        "$THEME_DIR/.transluence-matugen.palette.css" \
         "$THEME_DIR/.transluence-matugen.overlay.css" \
+        "$THEME_DIR/dank-discord.css" \
         "$THEME_DIR/${transluenceThemeName}.backup"
     }
 
-    # Avoid needless rewrites/reloads when content is unchanged.
-    if [ -f "$OUT" ] && ${pkgs.diffutils}/bin/cmp -s "$tmp" "$OUT"; then
-      rm -f "$tmp"
-      cleanup_legacy_files
-      exit 0
-    fi
-
-    mv "$tmp" "$OUT"
+    write_if_changed "$palette_tmp" "$PALETTE_OUT" || true
+    write_if_changed "$wrapper_tmp" "$OUT" || true
     cleanup_legacy_files
   '';
 
