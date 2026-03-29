@@ -472,7 +472,13 @@
         options.desc = "Flash treesitter jump";
       }
 
-      # --- Find (snacks picker) ---
+      # --- Find / Explorer (snacks picker) ---
+      {
+        mode = "n";
+        key = "<leader>e";
+        action = "<cmd>lua Snacks.explorer()<cr>";
+        options.desc = "File explorer";
+      }
       {
         mode = "n";
         key = "<leader>ff";
@@ -484,6 +490,12 @@
         key = "<leader>fg";
         action = "<cmd>lua Snacks.picker.grep()<cr>";
         options.desc = "Live grep";
+      }
+      {
+        mode = "n";
+        key = "<leader>fr";
+        action = "<cmd>lua Snacks.picker.recent()<cr>";
+        options.desc = "Recent files";
       }
       {
         mode = "n";
@@ -514,9 +526,21 @@
       # --- Diagnostics ---
       {
         mode = "n";
-        key = "<leader>e";
+        key = "<leader>cd";
         action = "<cmd>lua vim.diagnostic.open_float()<cr>";
-        options.desc = "Show line diagnostics";
+        options.desc = "Line diagnostics";
+      }
+      {
+        mode = "n";
+        key = "<leader>sd";
+        action = "<cmd>lua Snacks.picker.diagnostics()<cr>";
+        options.desc = "Diagnostics";
+      }
+      {
+        mode = "n";
+        key = "<leader>sD";
+        action = "<cmd>lua Snacks.picker.diagnostics_buffer()<cr>";
+        options.desc = "Buffer diagnostics";
       }
       {
         mode = "n";
