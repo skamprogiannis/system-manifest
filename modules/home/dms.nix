@@ -536,7 +536,7 @@ EOF
       matugenTemplateGtk = true;
       matugenTemplateHyprland = true;
       matugenTemplateFirefox = false;
-      matugenTemplateVesktop = true;
+      matugenTemplateVesktop = false;
       matugenTemplateGhostty = false;
       matugenTemplateNeovim = true;
       matugenTemplateZellij = true;
