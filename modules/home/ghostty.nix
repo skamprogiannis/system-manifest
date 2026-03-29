@@ -16,7 +16,9 @@
       font-size = 11;
 
       # Cursor and shell settings
-      minimum-contrast = 2.0; 
+      # Keep translucent glyph edges stable on the glass background.
+      alpha-blending = "linear-corrected";
+      minimum-contrast = 1.0;
       cursor-style = "block";
       cursor-style-blink = false;
       shell-integration-features = "no-cursor";
