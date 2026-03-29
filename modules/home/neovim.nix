@@ -341,7 +341,6 @@
 
       which-key.enable = true;
 
-      flash.enable = true;
       treesitter = {
         enable = true;
         settings = {
@@ -471,20 +470,6 @@
         action = "<cmd>Gitsigns preview_hunk<cr>";
         options.desc = "Preview hunk";
       }
-      # --- Flash jump ---
-      {
-        mode = [ "n" "o" "v" ];
-        key = "s";
-        action = "<cmd>lua require('flash').jump()<cr>";
-        options.desc = "Flash jump";
-      }
-      {
-        mode = [ "n" "o" "v" ];
-        key = "S";
-        action = "<cmd>lua require('flash').treesitter()<cr>";
-        options.desc = "Flash treesitter jump";
-      }
-
       # --- Find / Explorer (snacks picker) ---
       {
         mode = "n";
