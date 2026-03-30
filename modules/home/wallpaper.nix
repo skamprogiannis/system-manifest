@@ -2,9 +2,30 @@
   pkgs,
   config,
   lib,
+  inputs,
   ...
 }: let
-  weCommon = import ./wallpaper-common.nix {inherit pkgs;};
+  # Shared wallpaper-engine path constants (inlined from former wallpaper-common.nix)
+  weConstants = ''
+    MAP_FILE="$HOME/.cache/we-wallpaper-map.json"
+    WE_ASSETS="$HOME/games/SteamLibrary/steamapps/common/wallpaper_engine/assets"
+    WE_WORKSHOP="$HOME/games/SteamLibrary/steamapps/workshop/content/431960"
+    WE_DEFAULTS_ROOT="$HOME/games/SteamLibrary/steamapps/common/wallpaper_engine/projects/defaultprojects"
+    WALL_DIR="$HOME/wallpapers/.wallpaper-engine"
+  '';
+  weNormalizeDir = ''
+    normalize_dir() {
+      ${pkgs.coreutils}/bin/realpath "$1" | ${pkgs.gnused}/bin/sed 's:/*$::'
+    }
+  '';
+
+  # DMS paths for matugen queue and deferred capture
+  dmsPackage = inputs.dms.packages.${pkgs.stdenv.hostPlatform.system}.dms-shell;
+  dmsConstants = ''
+    DMS_SHELL_DIR="${dmsPackage}/share/quickshell/dms"
+    DMS_STATE_DIR="$HOME/.local/state/DankMaterialShell"
+    DMS_CONFIG_DIR="$HOME/.config/DankMaterialShell"
+  '';
 in {
   programs.bash.initExtra = ''
     _wallpaper_engine_sync_complete() {
@@ -57,7 +78,7 @@ in {
       set -euo pipefail
       shopt -s nullglob
 
-      ${weCommon.constants}
+      ${weConstants}
       CACHE_DIR="$HOME/.cache"
       LOCK_FILE="$CACHE_DIR/wallpaper-engine-sync.lock"
       WE_MANIFEST="$(dirname "$(dirname "$WE_WORKSHOP")")/appworkshop_431960.acf"
@@ -220,19 +241,22 @@ EOF
           -o "$dst" \
           -s 1920 \
           -t 50 \
-          -q 10 \
-          -f >/dev/null 2>&1 || true
+          -q 10 >/dev/null 2>&1 || true
 
         [ -s "$dst" ] || return 1
         normalize_thumb "$dst" "$dst"
       }
 
-      # Use Wallpaper Engine authored previews as fallback assets.
-      generate_thumb_from_preview() {
-        local dir="$1" dst="$2"
-        local src=""
-        local frame="$src"
+      resolve_preview_source() {
+        local dir="$1"
+        local declared=""
+        declared=$(${pkgs.jq}/bin/jq -r '.preview // empty' "$dir/project.json" 2>/dev/null || true)
+        if [ -n "$declared" ] && [ -f "$dir/$declared" ]; then
+          printf '%s\n' "$dir/$declared"
+          return 0
+        fi
 
+        local candidate=""
         for candidate in \
           "$dir/preview.jpg" \
           "$dir/preview.png" \
@@ -243,21 +267,75 @@ EOF
           "$dir/thumbnail.png" \
           "$dir/thumbnail.webp"; do
           if [ -f "$candidate" ]; then
-            src="$candidate"
-            break
+            printf '%s\n' "$candidate"
+            return 0
           fi
         done
 
-        if [ -n "$src" ]; then
-          frame="$src"
-          if [[ "$src" == *.gif ]]; then
-            local nframes
-            nframes=$(${pkgs.imagemagick}/bin/magick identify "$src" 2>/dev/null | wc -l)
-            local mid=$(( nframes / 2 ))
-            frame="''${src}[''${mid}]"
-          fi
+        return 1
+      }
 
-          normalize_thumb "$frame" "$dst" && return 0
+      preview_source_geometry() {
+        local src="$1"
+        ${pkgs.imagemagick}/bin/magick identify -format '%wx%h' "$src[0]" 2>/dev/null
+      }
+
+      preview_source_is_low_confidence() {
+        local dir="$1"
+        local src=""
+        src=$(resolve_preview_source "$dir" || true)
+        [ -n "$src" ] || return 1
+
+        local geom=""
+        geom=$(preview_source_geometry "$src" || true)
+        [ -n "$geom" ] || return 1
+
+        local w="''${geom%%x*}"
+        local h="''${geom##*x}"
+        local src_ratio=$(( w * 100 / (h > 0 ? h : 1) ))
+
+        [ "$w" -lt 640 ] || [ "$h" -lt 360 ] || [ "$src_ratio" -lt 120 ] || [ "$src_ratio" -gt 230 ]
+      }
+
+      # Extract a usable still from a GIF: flatten onto black to eliminate
+      # transparency artifacts, then pick the middle frame.
+      flatten_gif_frame() {
+        local src="$1" dst="$2"
+
+        local nframes
+        nframes=$(${pkgs.imagemagick}/bin/magick identify "$src" 2>/dev/null | ${pkgs.coreutils}/bin/wc -l)
+        [ -n "$nframes" ] && [ "$nframes" -gt 0 ] || return 1
+
+        local mid_idx=$(( nframes / 2 ))
+        ${pkgs.imagemagick}/bin/magick "$src[$mid_idx]" \
+          -background black -flatten \
+          -strip -colorspace sRGB \
+          -quality 95 "$dst" 2>/dev/null || return 1
+        [ -s "$dst" ]
+      }
+
+      # Use Wallpaper Engine authored preview assets when they look trustworthy.
+      # Tiny/square previews (like some workshop GIFs) are treated as low
+      # confidence so we can try a proper WE render first and fall back cleanly.
+      generate_thumb_from_preview() {
+        local dir="$1" dst="$2"
+        local src=""
+        src=$(resolve_preview_source "$dir" || true)
+
+        if [ -n "$src" ]; then
+          if [[ "$src" == *.gif ]]; then
+            local flat_tmp=""
+            flat_tmp=$(${pkgs.coreutils}/bin/mktemp /tmp/we-flat-XXXXXX.jpg)
+            if flatten_gif_frame "$src" "$flat_tmp"; then
+              normalize_thumb "$flat_tmp" "$dst"
+              local rc=$?
+              rm -f "$flat_tmp"
+              [ "$rc" -eq 0 ] && return 0
+            fi
+            rm -f "$flat_tmp"
+          else
+            normalize_thumb "$src" "$dst" && return 0
+          fi
         fi
 
         local movie=""
@@ -269,8 +347,7 @@ EOF
             -o "$dst" \
             -s 1920 \
             -t 50 \
-            -q 10 \
-            -f >/dev/null 2>&1 || true
+            -q 10 >/dev/null 2>&1 || true
 
           [ -s "$dst" ] && normalize_thumb "$dst" "$dst" && return 0
         fi
@@ -390,19 +467,60 @@ EOF
         THUMB_PATH="$WALL_DIR/$THUMB_NAME"
         PROJECT_TYPE=$(${pkgs.jq}/bin/jq -r '.type // ""' "$dir/project.json" | tr '[:upper:]' '[:lower:]')
 
-        if [ ! -f "$THUMB_PATH" ] || [ "$FORCE_REGEN" = "1" ]; then
+        if [ ! -s "$THUMB_PATH" ] || [ "$FORCE_REGEN" = "1" ]; then
+          local render_target=""
+          local render_source=""
+          local preview_low_confidence=0
+          render_target=$(${pkgs.coreutils}/bin/mktemp "$CACHE_DIR/we-thumb.XXXXXX.jpg")
+          rm -f "$render_target"
           echo "  Rendering: $SAFE_TITLE..."
+          if preview_source_is_low_confidence "$dir"; then
+            preview_low_confidence=1
+          fi
           if [ "$PROJECT_TYPE" = "video" ]; then
-            if ! generate_thumb_from_project_video "$dir" "$THUMB_PATH"; then
-              echo "  Middle-frame capture failed, using preview/live fallback"
-              if ! generate_thumb_from_preview "$dir" "$THUMB_PATH"; then
-                generate_screenshot "$dir" "$THUMB_PATH" || true
+            if generate_thumb_from_project_video "$dir" "$render_target"; then
+              render_source="project video middle frame"
+            else
+              echo "    -> project video extraction failed, trying preview assets"
+              if generate_thumb_from_preview "$dir" "$render_target"; then
+                render_source="preview asset"
+              else
+                echo "    -> preview assets unavailable, trying offscreen WE render"
+                if generate_screenshot "$dir" "$render_target"; then
+                  render_source="offscreen WE render"
+                fi
               fi
             fi
           else
-            if ! generate_screenshot "$dir" "$THUMB_PATH"; then
-              echo "  Live capture failed, using preview fallback"
-              generate_thumb_from_preview "$dir" "$THUMB_PATH" || true
+            if [ "$preview_low_confidence" -eq 1 ]; then
+              echo "    -> preview asset is low confidence, trying offscreen WE render first"
+              if generate_screenshot "$dir" "$render_target"; then
+                render_source="offscreen WE render"
+              elif generate_thumb_from_preview "$dir" "$render_target"; then
+                render_source="preview asset"
+              fi
+            else
+              if generate_thumb_from_preview "$dir" "$render_target"; then
+                render_source="preview asset"
+              else
+                echo "    -> preview assets unavailable, trying offscreen WE render"
+                if generate_screenshot "$dir" "$render_target"; then
+                  render_source="offscreen WE render"
+                fi
+              fi
+            fi
+          fi
+
+          if [ -n "$render_source" ] && [ -s "$render_target" ]; then
+            mv -f "$render_target" "$THUMB_PATH"
+            echo "    -> $render_source"
+          else
+            rm -f "$render_target"
+            if [ -s "$THUMB_PATH" ]; then
+              echo "    -> keeping existing thumbnail (refresh failed)"
+            else
+              echo "    -> failed to generate thumbnail" >&2
+              return
             fi
           fi
         fi
@@ -498,9 +616,11 @@ EOF
         exit 1
       fi
 
-      ${weCommon.constants}
-      ${weCommon.normalizeDir}
+      ${weConstants}
+      ${weNormalizeDir}
+      ${dmsConstants}
       CACHE_WALL="$HOME/.cache/current_wallpaper"
+      FALLBACK_CACHE="$HOME/.cache/quickshell-last-wallpaper"
       WE_WORKSHOP_ROOT="$WE_WORKSHOP"
 
       cleanup() {
@@ -649,6 +769,115 @@ EOF
         return 1
       }
 
+      # Invoke matugen directly without changing the DMS wallpaper
+      invoke_matugen_direct() {
+        local kind="$1" value="$2"
+        dms matugen queue \
+          --kind "$kind" \
+          --value "$value" \
+          --mode dark \
+          --matugen-type scheme-fidelity \
+          --shell-dir "$DMS_SHELL_DIR" \
+          --state-dir "$DMS_STATE_DIR" \
+          --config-dir "$DMS_CONFIG_DIR" >/dev/null 2>&1 || true
+        # Dismiss the Hyprland "reloaded the configuration" notification
+        # that autoreload shows when matugen rewrites colors.conf.
+        (sleep 2 && hyprctl dismissnotify -1 >/dev/null 2>&1) &
+      }
+
+      extract_dominant_color() {
+        local img="$1"
+        ${pkgs.imagemagick}/bin/magick "$img" -resize 1x1\! -format '#%[hex:u.p{0,0}]' info:- 2>/dev/null \
+          | ${pkgs.gnused}/bin/sed 's/#\(......\).*/\1/' || echo ""
+      }
+
+      current_we_dir() {
+        local current_target=""
+        current_target=$(systemctl --user show-environment 2>/dev/null \
+          | grep '^WE_WALLPAPER_DIR=' | cut -d= -f2- || true)
+        if [ -n "$current_target" ]; then
+          current_target=$(normalize_dir "$current_target" 2>/dev/null || printf '%s\n' "$current_target")
+        fi
+        printf '%s\n' "$current_target"
+      }
+
+      publish_dms_wallpaper() {
+        local image_path="$1"
+        local refresh_colors="''${2:-1}"
+        [ -n "$image_path" ] || return 1
+        [ -f "$image_path" ] || return 1
+
+        dms ipc wallpaper set "$image_path" || return 1
+        # DMS's own matugen triggers a Hyprland autoreload notification;
+        # dismiss it after the internal generation settles.
+        (sleep 4 && hyprctl dismissnotify -1 >/dev/null 2>&1) &
+
+        if [ "$refresh_colors" = "1" ]; then
+          invoke_matugen_direct "image" "$image_path"
+        fi
+
+        return 0
+      }
+
+      lookup_thumb_by_dir() {
+        local dir="$1"
+        [ -f "$MAP_FILE" ] || return 1
+        ${pkgs.jq}/bin/jq -r --arg dir "$dir" '
+            to_entries[]
+            | select((.value | sub("/$"; "")) == $dir)
+            | .key
+        ' "$MAP_FILE" | ${pkgs.coreutils}/bin/head -n 1
+      }
+
+      lookup_thumb_by_id() {
+        local wid="$1"
+        [ -f "$MAP_FILE" ] || return 1
+        ${pkgs.jq}/bin/jq -r --arg wid "$wid" '
+            to_entries[]
+            | select((.value | sub("/$"; "") | split("/") | last) == $wid)
+            | .key
+        ' "$MAP_FILE" | ${pkgs.coreutils}/bin/head -n 1
+      }
+
+      # Look up the generated thumbnail for a WE directory and publish it
+      # as DMS wallpaper. This advances SessionData.wallpaperPath and
+      # triggers full DMS theme generation.
+      publish_we_thumbnail() {
+        local we_dir="$1"
+        local map_file="$MAP_FILE"
+        local thumb_dir="$WALL_DIR"
+
+        local thumb_name=""
+        thumb_name=$(lookup_thumb_by_dir "$we_dir" || true)
+        if [ -z "$thumb_name" ]; then
+          local workshop_id=""
+          workshop_id=$(basename "$we_dir")
+          thumb_name=$(lookup_thumb_by_id "$workshop_id" || true)
+        fi
+
+        local thumb_path=""
+        if [ -n "$thumb_name" ]; then
+          thumb_path="$thumb_dir/$thumb_name"
+        fi
+
+        if [ -n "$thumb_path" ] && [ -f "$thumb_path" ]; then
+          publish_dms_wallpaper "$thumb_path" "1"
+          return $?
+        fi
+
+        # No thumbnail available — at least generate colors from preview
+        local preview="$we_dir/preview.jpg"
+        [ -f "$preview" ] || preview="$we_dir/preview.gif"
+        if [ -f "$preview" ]; then
+          local hex=""
+          hex=$(extract_dominant_color "$preview")
+          if [ -n "$hex" ]; then
+            invoke_matugen_direct "hex" "#$hex"
+          fi
+        fi
+        return 1
+      }
+
       # Ensure WE wallpaper map is fresh before first poll
       wallpaper-engine-sync &>/dev/null || true
 
@@ -657,12 +886,38 @@ EOF
 
       # If DMS restored a static wallpaper, stop WE immediately so Hyprland
       # does not keep probing a crashed renderer and showing ANR popups.
+      # If the cached wallpaper is a WE directory, start WE and capture live.
       initial_wall=$(dms ipc wallpaper get 2>/dev/null || true)
-      if [ -n "$initial_wall" ]; then
+      boot_cache=""
+      if [ -s "$CACHE_WALL" ]; then
+        boot_cache=$(cat "$CACHE_WALL")
+      fi
+      fallback_wall=""
+      if [ -s "$FALLBACK_CACHE" ]; then
+        fallback_wall=$(cat "$FALLBACK_CACHE")
+      fi
+
+      # Check if boot cache points to a WE directory (new persistence format)
+      boot_we_dir=""
+      if [ -n "$fallback_wall" ]; then
+        boot_we_dir=$(resolve_direct_we_dir "$fallback_wall" || true)
+      fi
+      if [ -z "$boot_we_dir" ] && [ -n "$boot_cache" ] && [ -d "$boot_cache" ] && [ -f "$boot_cache/project.json" ]; then
+        boot_we_dir=$(normalize_dir "$boot_cache" 2>/dev/null || true)
+      fi
+
+      if [ -n "$boot_we_dir" ]; then
+        # Boot cache is a WE directory — start WE and set thumbnail as DMS wallpaper
+        echo "Boot restore: WE directory $boot_we_dir"
+        systemctl --user set-environment WE_WALLPAPER_DIR="$boot_we_dir" WE_ASSETS_DIR="$WE_ASSETS"
+        systemctl --user restart linux-wallpaperengine.service
+        publish_we_thumbnail "$boot_we_dir"
+      elif [ -n "$initial_wall" ]; then
         initial_we_dir=$(resolve_we_dir_with_refresh "$initial_wall" || true)
         if [ -n "$initial_we_dir" ]; then
           systemctl --user set-environment WE_WALLPAPER_DIR="$initial_we_dir" WE_ASSETS_DIR="$WE_ASSETS"
           systemctl --user restart linux-wallpaperengine.service
+          publish_we_thumbnail "$initial_we_dir"
         else
           systemctl --user stop linux-wallpaperengine.service 2>/dev/null || true
         fi
@@ -713,6 +968,104 @@ EOF
         update_themes
         sleep 2
       done
+    '')
+
+    (pkgs.writeShellScriptBin "dms-restore-wallpaper" ''
+      set -eu
+
+      CACHE_WALL="$HOME/.cache/current_wallpaper"
+      FALLBACK_CACHE="$HOME/.cache/quickshell-last-wallpaper"
+
+      for _ in $(seq 1 60); do
+        if dms ipc wallpaper get >/dev/null 2>&1; then
+          break
+        fi
+        sleep 0.25
+      done
+
+      wall=""
+      if [ -s "$CACHE_WALL" ]; then
+        wall=$(cat "$CACHE_WALL")
+      elif [ -s "$FALLBACK_CACHE" ]; then
+        wall=$(cat "$FALLBACK_CACHE")
+      fi
+
+      # If the cached path is a WE directory, skip DMS restore — the
+      # wallpaper-hook will handle WE startup and deferred capture.
+      if [ -n "$wall" ] && [ -d "$wall" ]; then
+        exit 0
+      fi
+
+      if [ -z "$wall" ] || [ ! -f "$wall" ]; then
+        exit 0
+      fi
+
+      current=$(dms ipc wallpaper get 2>/dev/null || true)
+      if [ "$current" = "$wall" ]; then
+        exit 0
+      fi
+
+      for _ in $(seq 1 20); do
+        dms ipc wallpaper set "$wall" >/dev/null 2>&1 || true
+        sleep 0.5
+        current=$(dms ipc wallpaper get 2>/dev/null || true)
+        if [ "$current" = "$wall" ]; then
+          exit 0
+        fi
+      done
+
+      echo "dms-restore-wallpaper: failed to restore $wall" >&2
+    '')
+
+    (pkgs.writeShellScriptBin "wallpaper-library-sync" ''
+      set -euo pipefail
+
+      REPO_URL="''${WALLPAPER_REPO_URL:-}"
+      REPO_BRANCH="''${WALLPAPER_REPO_BRANCH:-main}"
+      REPO_DIR="''${WALLPAPER_REPO_DIR:-$HOME/wallpapers}"
+
+      if [ -n "''${1:-}" ]; then
+        REPO_URL="$1"
+      fi
+
+      if [ -n "$REPO_URL" ] && [ ! -d "$REPO_DIR/.git" ]; then
+        mkdir -p "$(dirname "$REPO_DIR")"
+        ${pkgs.git}/bin/git clone --depth 1 --branch "$REPO_BRANCH" "$REPO_URL" "$REPO_DIR"
+      fi
+
+      if [ ! -d "$REPO_DIR/.git" ]; then
+        echo "No git repo found at $REPO_DIR and no repo URL provided."
+        echo "Usage (first run): wallpaper-library-sync git@github.com:you/wallpapers.git"
+        exit 1
+      fi
+
+      if ${pkgs.git}/bin/git -C "$REPO_DIR" remote get-url origin >/dev/null 2>&1; then
+        ${pkgs.git}/bin/git -C "$REPO_DIR" fetch --depth 1 origin "$REPO_BRANCH"
+        if ! ${pkgs.git}/bin/git -C "$REPO_DIR" show-ref --verify --quiet "refs/heads/$REPO_BRANCH"; then
+          ${pkgs.git}/bin/git -C "$REPO_DIR" checkout -b "$REPO_BRANCH" "origin/$REPO_BRANCH"
+        else
+          ${pkgs.git}/bin/git -C "$REPO_DIR" checkout -q "$REPO_BRANCH"
+        fi
+        ${pkgs.git}/bin/git -C "$REPO_DIR" reset --hard "origin/$REPO_BRANCH"
+      else
+        echo "No origin remote configured at $REPO_DIR; skipping fetch/reset."
+      fi
+
+      mkdir -p "$REPO_DIR/.wallpaper-engine"
+      touch "$REPO_DIR/.gitignore"
+      if ! grep -qxF '.wallpaper-engine/' "$REPO_DIR/.gitignore"; then
+        echo ".wallpaper-engine/" >> "$REPO_DIR/.gitignore"
+        echo "Added .wallpaper-engine/ to $REPO_DIR/.gitignore"
+      fi
+
+      if ! grep -qxF '.DS_Store' "$REPO_DIR/.gitignore"; then
+        echo ".DS_Store" >> "$REPO_DIR/.gitignore"
+      fi
+      if ! grep -qxF 'Thumbs.db' "$REPO_DIR/.gitignore"; then
+        echo "Thumbs.db" >> "$REPO_DIR/.gitignore"
+      fi
+
+      echo "Synced static wallpapers repo at $REPO_DIR"
     '')
   ];
 }
