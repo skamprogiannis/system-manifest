@@ -70,9 +70,6 @@ in {
       RestartSec = "15s";
       TimeoutStopSec = "5s";
     };
-    Install = {
-      WantedBy = [ "default.target" ];
-    };
   };
 
 }

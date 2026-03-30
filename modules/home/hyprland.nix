@@ -147,9 +147,6 @@ in {
           ''sh -c 'wall=$(${pkgs.jq}/bin/jq -r ".wallpaperPath // empty" ~/.local/state/DankMaterialShell/session.json 2>/dev/null); [ -f "$wall" ] && swaybg -i "$wall" -m fill & BGPID=$!; sleep 8; kill $BGPID 2>/dev/null' ''
           "hyprctl setcursor ${config.home.pointerCursor.name} ${toString config.home.pointerCursor.size}"
           "systemctl --user start wallpaper-hook.service"
-          # home-manager user services show as "linked" in systemd and don't
-          # auto-start on login; ensure they're running after Hyprland starts
-          "systemctl --user start spotify-player.service"
           "systemctl --user start transmission-daemon.service"
         ];
 
