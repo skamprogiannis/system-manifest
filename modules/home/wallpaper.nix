@@ -602,7 +602,16 @@ EOF
         bname=$(basename "$wall_path")
         local we_dir
         we_dir=$(${pkgs.jq}/bin/jq -r --arg k "$bname" '.[$k] // empty' "$MAP_FILE")
-        [ -n "$we_dir" ] && echo "$we_dir" && return 0
+        if [ -n "$we_dir" ]; then
+          local normalized
+          normalized=$(normalize_dir "$we_dir" 2>/dev/null || true)
+          if [ -n "$normalized" ]; then
+            echo "$normalized"
+            return 0
+          fi
+          echo "$we_dir"
+          return 0
+        fi
         return 1
       }
 
@@ -663,9 +672,17 @@ EOF
             # skip the restart if the service is running with the same wallpaper.
             CURRENT_WE_DIR=$(systemctl --user show-environment 2>/dev/null \
               | grep '^WE_WALLPAPER_DIR=' | cut -d= -f2- || true)
+            if [ -n "$CURRENT_WE_DIR" ]; then
+              CURRENT_WE_DIR=$(normalize_dir "$CURRENT_WE_DIR" 2>/dev/null || printf '%s\n' "$CURRENT_WE_DIR")
+            fi
+            WE_DIR=$(normalize_dir "$WE_DIR" 2>/dev/null || printf '%s\n' "$WE_DIR")
             WE_ACTIVE=$(systemctl --user is-active linux-wallpaperengine.service 2>/dev/null || true)
 
-            if [ "$WE_ACTIVE" = "active" ] && [ "$CURRENT_WE_DIR" = "$WE_DIR" ]; then
+            if [ "$CURRENT_WE_DIR" = "$WE_DIR" ] \
+              && [ -n "$WE_ACTIVE" ] \
+              && [ "$WE_ACTIVE" != "inactive" ] \
+              && [ "$WE_ACTIVE" != "failed" ] \
+              && [ "$WE_ACTIVE" != "deactivating" ]; then
               echo "Wallpaper Engine already running: $WE_DIR (skipped restart)"
             else
               echo "Wallpaper Engine: $WE_DIR"

@@ -13,8 +13,8 @@ from pathlib import Path
 import stat
 
 root = Path("$out/share/quickshell/dms")
-settings_shell_alpha = "Math.min(1.0, Theme.popupTransparency + 0.24)"
-settings_header_alpha = "Math.min(1.0, Theme.popupTransparency + 0.18)"
+settings_shell_alpha = "Math.min(1.0, Theme.popupTransparency + 0.08)"
+settings_header_alpha = "Math.min(1.0, Theme.popupTransparency + 0.10)"
 
 replacements = {
     root / "Modals/Settings/SettingsModal.qml": [
@@ -488,16 +488,6 @@ EOF
         {
           pattern = "Spotify";
           replacement = "spotify";
-          type = "exact";
-        }
-        {
-          pattern = "vesktop";
-          replacement = "discord";
-          type = "exact";
-        }
-        {
-          pattern = "Vesktop";
-          replacement = "discord";
           type = "exact";
         }
         {
