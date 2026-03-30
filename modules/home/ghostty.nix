@@ -11,10 +11,10 @@
     settings = {
       theme = "Catppuccin Mocha";
       background-opacity = 0.40;
-      # Let selections and app-drawn backgrounds participate in the same glass
-      # effect instead of rendering as fully opaque blocks.
       background-opacity-cells = true;
       background = "000000";
+      selection-foreground = "cdd6f4";
+      selection-background = "3f4152";
       font-family = "JetBrainsMono Nerd Font";
       font-size = 11;
 
