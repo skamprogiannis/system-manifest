@@ -207,8 +207,9 @@ EOF
     enabledThemes = [translucenceThemeName];
   };
 
-  vesktopLaunchWrapper = pkgs.writeShellScript "vesktop-launch" ''
+  vesktopStateSync = pkgs.writeShellScript "vesktop-state-sync" ''
     set -euo pipefail
+
     CFG="$HOME/.config/vesktop"
     SETTINGS_DIR="$CFG/settings"
     USER_ASSETS="$CFG/userAssets"
@@ -218,6 +219,49 @@ EOF
       rm -f "$USER_ASSETS/tray" "$USER_ASSETS/trayUnread"
       rmdir "$USER_ASSETS" 2>/dev/null || true
     }
+
+    apply_settings_patch() {
+      local target="$1"
+      local tmp
+      tmp=$(mktemp)
+      if [ -s "$target" ] && ${pkgs.jq}/bin/jq empty "$target" >/dev/null 2>&1; then
+        ${pkgs.jq}/bin/jq --argjson patch '${vesktopSettingsPatch}' '. + $patch' "$target" > "$tmp"
+      else
+        printf '%s\n' '${vesktopSettingsPatch}' > "$tmp"
+      fi
+      mv "$tmp" "$target"
+    }
+
+    enforce_theme_settings() {
+      local target="$1"
+      local tmp
+      tmp=$(mktemp)
+
+      if [ -s "$target" ] && ${pkgs.jq}/bin/jq empty "$target" >/dev/null 2>&1; then
+        ${pkgs.jq}/bin/jq \
+          '.plugins = ((.plugins // {}) + {"ClientTheme": ((.plugins.ClientTheme // {}) + {"enabled": true})})
+          | del(.plugins.ClientTheme.color)
+          | .enabledThemes = ["${translucenceThemeName}"]
+          | .useQuickCss = false
+          | .transparent = true' \
+          "$target" > "$tmp"
+      else
+        printf '%s\n' '{"plugins":{"ClientTheme":{"enabled":true}},"enabledThemes":["${translucenceThemeName}"],"useQuickCss":false,"transparent":true}' > "$tmp"
+      fi
+
+      mv "$tmp" "$target"
+    }
+
+    cleanup_legacy_icon_overrides
+    apply_settings_patch "$CFG/settings.json"
+    apply_settings_patch "$SETTINGS_DIR/settings.json"
+    enforce_theme_settings "$CFG/settings.json"
+    enforce_theme_settings "$SETTINGS_DIR/settings.json"
+    ${regenTransluenceTheme}/bin/regen-vesktop-transluence-theme
+  '';
+
+  vesktopLaunchWrapper = pkgs.writeShellScript "vesktop-launch" ''
+    set -euo pipefail
 
     # Ensure "Open Theme Folder" and other file:// opens resolve to Yazi.
     XDG_OPEN_WRAPPER=$(mktemp -d)
@@ -248,46 +292,7 @@ EOF
     chmod +x "$XDG_OPEN_WRAPPER/xdg-open"
     export PATH="$XDG_OPEN_WRAPPER:$PATH"
 
-    cleanup_legacy_icon_overrides
-
-    apply_settings_patch() {
-      local target="$1"
-      local tmp
-      tmp=$(mktemp)
-      if [ -s "$target" ] && ${pkgs.jq}/bin/jq empty "$target" >/dev/null 2>&1; then
-        ${pkgs.jq}/bin/jq --argjson patch '${vesktopSettingsPatch}' '. + $patch' "$target" > "$tmp"
-      else
-        printf '%s\n' '${vesktopSettingsPatch}' > "$tmp"
-      fi
-      mv "$tmp" "$target"
-    }
-
-    apply_settings_patch "$CFG/settings.json"
-    apply_settings_patch "$SETTINGS_DIR/settings.json"
-
-    enforce_theme_settings() {
-      local target="$1"
-      local tmp
-      tmp=$(mktemp)
-
-      if [ -s "$target" ] && ${pkgs.jq}/bin/jq empty "$target" >/dev/null 2>&1; then
-        ${pkgs.jq}/bin/jq \
-          '.plugins = ((.plugins // {}) + {"ClientTheme": ((.plugins.ClientTheme // {}) + {"enabled": true})})
-          | del(.plugins.ClientTheme.color)
-          | .enabledThemes = ["${translucenceThemeName}"]
-          | .useQuickCss = false
-          | .transparent = true' \
-          "$target" > "$tmp"
-      else
-        printf '%s\n' '{"plugins":{"ClientTheme":{"enabled":true}},"enabledThemes":["${translucenceThemeName}"],"useQuickCss":false,"transparent":true}' > "$tmp"
-      fi
-
-      mv "$tmp" "$target"
-    }
-
-    enforce_theme_settings "$CFG/settings.json"
-    enforce_theme_settings "$SETTINGS_DIR/settings.json"
-    ${regenTransluenceTheme}/bin/regen-vesktop-transluence-theme
+    ${vesktopStateSync}
 
     # Stability-first: transparent visuals flag has caused Electron traps here.
     exec ${pkgs.vesktop}/bin/vesktop "$@"
@@ -295,11 +300,8 @@ EOF
 in {
   home.packages = [pkgs.vesktop regenTransluenceTheme];
 
-  home.activation.cleanupVesktopLegacyAssets = lib.hm.dag.entryAfter ["writeBoundary"] ''
-    CFG="$HOME/.config/vesktop"
-    USER_ASSETS="$CFG/userAssets"
-    rm -f "$USER_ASSETS/tray" "$USER_ASSETS/trayUnread"
-    rmdir "$USER_ASSETS" 2>/dev/null || true
+  home.activation.syncVesktopThemeState = lib.hm.dag.entryAfter ["writeBoundary"] ''
+    ${vesktopStateSync}
   '';
 
   xdg.desktopEntries.vesktop = {
