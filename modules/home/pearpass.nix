@@ -123,7 +123,7 @@ in {
     name = "PearPass";
     exec = "pearpass-gui";
     icon = "${pearpassIcon}/PearPass.png";
-    comment = "PearPass Password Manager";
+    comment = "Password manager with browser integration";
     categories = ["Utility"];
     settings = {
       StartupWMClass = "pear-runtime";
