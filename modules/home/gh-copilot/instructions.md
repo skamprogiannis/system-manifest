@@ -24,13 +24,6 @@ This is a NixOS system with declarative, reproducible configuration management. 
 
 **Always commit before rebuilding** - this ensures clean generation tracking and rollback capability.
 
-## Keybinds & Keyboard Configuration
-
-- **Use keycodes**: `code:36` (not key names like `Return`) for cross-layout support
-- **Greek layout**: Simple variant only (basic accents via apostrophe, no polytonic)
-- **Toggle**: Super+Space switches between US and Greek
-- **Test both layouts**: After any keybind change, verify it works in both US and Greek
-
 ## Code Organization Rules
 
 - **Modular**: One feature per file (e.g., `modules/home/hyprland.nix`)
@@ -42,7 +35,6 @@ This is a NixOS system with declarative, reproducible configuration management. 
 
 | Issue | Solution |
 |-------|----------|
-| "InvalidFormat" keybind error | Use keycodes (code:36) not key names (Return) |
 | Window rules not applying | Windows must be opened AFTER the rule is added |
 | Keyboard switching broken | Ensure kb_variant is compatible with xkb option (simple vs ext) |
 | Zellij config parse error | Validate key names (no "Escape"; use specific keys) |
@@ -51,7 +43,6 @@ This is a NixOS system with declarative, reproducible configuration management. 
 
 ## Testing & Validation
 
-- **After keybind changes**: Test in both US and Greek layouts
 - **After window rule changes**: Close/reopen windows to see effect
 - **After config changes**: `hyprctl reload` or full restart as needed
 - **Before marking done**: Run `nixos-rebuild dry-build` to ensure no regressions
