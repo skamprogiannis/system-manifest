@@ -15,8 +15,6 @@
       # effect instead of rendering as fully opaque blocks.
       background-opacity-cells = true;
       background = "000000";
-      selection-background = "6c7086";
-      selection-foreground = "cdd6f4";
       font-family = "JetBrainsMono Nerd Font";
       font-size = 11;
 
