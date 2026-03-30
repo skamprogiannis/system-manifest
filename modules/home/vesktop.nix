@@ -6,7 +6,7 @@
 }: let
   translucenceThemeName = "Translucence.theme.css";
   legacyGeneratedThemeName = "transluence-matugen.theme.css";
-  vesktopLauncherIcon = "${pkgs.dracula-icon-theme}/share/icons/Dracula/scalable/apps/discord.svg";
+  vesktopLauncherIcon = "${pkgs.vesktop}/share/icons/hicolor/256x256/apps/vesktop.png";
 
   regenTransluenceTheme = pkgs.writeShellScriptBin "regen-vesktop-transluence-theme" ''
     set -euo pipefail

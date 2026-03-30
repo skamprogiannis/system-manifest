@@ -2,7 +2,12 @@
   config,
   pkgs,
   ...
-}: {
+}: let
+  firefoxDesktopFile = pkgs.runCommand "firefox-desktop-with-comment" {} ''
+    cp ${(config.programs.firefox.package or pkgs.firefox)}/share/applications/firefox.desktop $out
+    ${pkgs.gnused}/bin/sed -i '/^GenericName=/a Comment=Fast, standards-focused web browser' $out
+  '';
+in {
   gtk = {
     enable = true;
     iconTheme = {
@@ -41,6 +46,8 @@
     dracula-icon-theme
     hicolor-icon-theme
   ];
+
+  home.file.".local/share/applications/firefox.desktop".source = firefoxDesktopFile;
 
   # GTK 4 settings are managed via dconf
   dconf.settings = {
@@ -102,6 +109,7 @@
     "nvim-text" = {
       name = "Neovim";
       genericName = "Text Editor";
+      comment = "Edit text and code in Ghostty";
       exec = "ghostty -e nvim %F";
       icon = "nvim";
       terminal = false;
