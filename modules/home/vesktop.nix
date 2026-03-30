@@ -4,14 +4,14 @@
   lib,
   ...
 }: let
-  transluenceThemeName = "transluence-matugen.theme.css";
+  translucenceThemeName = "Translucence.theme.css";
+  legacyGeneratedThemeName = "transluence-matugen.theme.css";
 
   regenTransluenceTheme = pkgs.writeShellScriptBin "regen-vesktop-transluence-theme" ''
     set -euo pipefail
 
     THEME_DIR="$HOME/.config/vesktop/themes"
-    OUT="$THEME_DIR/${transluenceThemeName}"
-    PALETTE_OUT="$THEME_DIR/.transluence-matugen.palette.css"
+    OUT="$THEME_DIR/${translucenceThemeName}"
     SRC_JSON="$HOME/.cache/DankMaterialShell/dms-colors.json"
     OVERLAY_STORE="${./vesktop/transluence-matugen.overlay.css}"
 
@@ -32,19 +32,21 @@ import sys
 data = json.load(open(sys.argv[1], encoding="utf-8"))
 dark = data["colors"]["dark"]
 required = (
-    "background",
     "error",
     "inverse_primary",
+    "on_primary",
     "on_surface",
     "on_surface_variant",
     "outline",
+    "primary",
     "primary_fixed_dim",
+    "surface",
     "surface_bright",
-    "surface_container_highest",
+    "surface_container_high",
     "surface_container_low",
     "surface_variant",
+    "tertiary",
     "tertiary_container",
-    "tertiary_fixed_dim",
 )
 missing = [key for key in required if key not in dark]
 raise SystemExit(0 if not missing else 1)
@@ -67,7 +69,7 @@ import sys
 
 data = json.load(open(sys.argv[1], encoding="utf-8"))
 dark = data["colors"]["dark"]
-print((dark.get("primary_fixed_dim") or dark.get("primary") or "").lstrip("#"))
+print((dark.get("primary") or dark.get("primary_fixed_dim") or "").lstrip("#"))
 PY
     )
 
@@ -102,23 +104,23 @@ mapping = [
     ("--dnd-indicator", dark["error"]),
     ("--idle-indicator", dark["tertiary_container"]),
     ("--streaming-indicator", dark["on_primary"]),
-    ("--accent-1", dark["tertiary_fixed_dim"]),
-    ("--accent-2", dark["primary_fixed_dim"]),
-    ("--accent-3", dark["primary_fixed_dim"]),
+    ("--accent-1", dark["tertiary"]),
+    ("--accent-2", dark["primary"]),
+    ("--accent-3", dark["primary"]),
     ("--accent-4", dark["surface_bright"]),
     ("--accent-5", dark["primary_fixed_dim"]),
-    ("--mention", dark["background"]),
+    ("--mention", dark["surface"]),
     ("--mention-hover", dark["surface_bright"]),
-    ("--text-0", dark["background"]),
+    ("--text-0", dark["surface"]),
     ("--text-1", dark["on_surface"]),
     ("--text-2", dark["on_surface"]),
     ("--text-3", dark["on_surface_variant"]),
     ("--text-4", dark["on_surface_variant"]),
     ("--text-5", dark["outline"]),
     ("--bg-1", dark["surface_variant"]),
-    ("--bg-2", dark["surface_container_highest"]),
+    ("--bg-2", dark["surface_container_high"]),
     ("--bg-3", dark["surface_container_low"]),
-    ("--bg-4", dark["background"]),
+    ("--bg-4", dark["surface"]),
     ("--hover", dark["surface_bright"]),
     ("--active", dark["surface_bright"]),
     ("--message-hover", dark["surface_bright"]),
@@ -129,66 +131,61 @@ for name, value in mapping:
 PY
     }
 
-    palette_tmp=$(mktemp)
-    wrapper_tmp=$(mktemp)
+    tmp=$(mktemp "$THEME_DIR/.Translucence.theme.css.tmp.XXXXXX")
     src_hash="$stable_hash"
-    trap 'rm -f "$palette_tmp" "$wrapper_tmp"' EXIT
+    trap 'rm -f "$tmp"' EXIT
 
-    cat > "$palette_tmp" <<EOF
-/* Source hash: $src_hash (dms-colors.json) */
-/* Derived palette tokens for the Transluence wrapper. */
+    cat > "$tmp" <<EOF
+/**
+ * @name Translucence Matugen
+ * @description Translucence tuned for transparent Vesktop and Matugen palette sync
+ * @author skamprogiannis
+ * @version 1.6.0
+ */
 
-/* ----- Matugen palette tokens (derived from DMS colors cache) ----- */
+@import url(https://capnkitten.github.io/BetterDiscord/Themes/Translucence/css/source.css);
+
+/* Source hash: $src_hash (dms-colors.json, DMS Vesktop token mapping) */
+
+/* ----- Matugen palette tokens ----- */
 :root {
 EOF
-    render_palette_root >> "$palette_tmp"
-    printf '}\n' >> "$palette_tmp"
+    render_palette_root >> "$tmp"
+    printf '}\n' >> "$tmp"
 
-    cat >> "$palette_tmp" <<EOF
+    cat >> "$tmp" <<EOF
 
 /* ----- Derived accent HSL from Matugen accent ----- */
 :root {
   --dms-accent-hue: $accent_hue;
   --dms-accent-saturation: $accent_saturation;
   --dms-accent-lightness: $accent_lightness;
+
+  /* Keep the non-structural icon filter variables from the old DMS template. */
+  --green-to-accent-3-filter: hue-rotate(56deg) saturate(1.43);
+  --blurple-to-accent-3-filter: hue-rotate(304deg) saturate(0.84) brightness(1.2);
 }
 EOF
 
-    cat > "$wrapper_tmp" <<EOF
-/**
- * @name Transluence Matugen
- * @description Transluence tuned for transparent Vesktop and Matugen palette sync
- * @author skamprogiannis
- * @version 1.5.0
- */
-
-@import url(https://capnkitten.github.io/BetterDiscord/Themes/Translucence/css/source.css);
-@import url("file://$PALETTE_OUT");
-EOF
-
-    printf '\n/* ----- Transluence overlay ----- */\n' >> "$wrapper_tmp"
-    cat "$OVERLAY_STORE" >> "$wrapper_tmp"
-
-    write_if_changed() {
-      local src="$1"
-      local dst="$2"
-      if [ -f "$dst" ] && ${pkgs.diffutils}/bin/cmp -s "$src" "$dst"; then
-        rm -f "$src"
-        return 1
-      fi
-      mv "$src" "$dst"
-      return 0
-    }
+    printf '\n/* ----- Transluence overlay ----- */\n' >> "$tmp"
+    cat "$OVERLAY_STORE" >> "$tmp"
 
     cleanup_legacy_files() {
       ${pkgs.coreutils}/bin/rm -f \
+        "$THEME_DIR/.transluence-matugen.palette.css" \
         "$THEME_DIR/.transluence-matugen.overlay.css" \
         "$THEME_DIR/dank-discord.css" \
-        "$THEME_DIR/${transluenceThemeName}.backup"
+        "$THEME_DIR/${legacyGeneratedThemeName}" \
+        "$THEME_DIR/${legacyGeneratedThemeName}.backup"
     }
 
-    write_if_changed "$palette_tmp" "$PALETTE_OUT" || true
-    write_if_changed "$wrapper_tmp" "$OUT" || true
+    if [ -f "$OUT" ] && ${pkgs.diffutils}/bin/cmp -s "$tmp" "$OUT"; then
+      rm -f "$tmp"
+      cleanup_legacy_files
+      exit 0
+    fi
+
+    mv "$tmp" "$OUT"
     cleanup_legacy_files
   '';
 
@@ -207,14 +204,20 @@ EOF
     disableAutostart = false;
     transparent = true;
     useQuickCss = false;
-    enabledThemes = [transluenceThemeName];
+    enabledThemes = [translucenceThemeName];
   };
 
   vesktopLaunchWrapper = pkgs.writeShellScript "vesktop-launch" ''
     set -euo pipefail
     CFG="$HOME/.config/vesktop"
     SETTINGS_DIR="$CFG/settings"
+    USER_ASSETS="$CFG/userAssets"
     mkdir -p "$SETTINGS_DIR"
+
+    cleanup_legacy_icon_overrides() {
+      rm -f "$USER_ASSETS/tray" "$USER_ASSETS/trayUnread"
+      rmdir "$USER_ASSETS" 2>/dev/null || true
+    }
 
     # Ensure "Open Theme Folder" and other file:// opens resolve to Yazi.
     XDG_OPEN_WRAPPER=$(mktemp -d)
@@ -245,6 +248,8 @@ EOF
     chmod +x "$XDG_OPEN_WRAPPER/xdg-open"
     export PATH="$XDG_OPEN_WRAPPER:$PATH"
 
+    cleanup_legacy_icon_overrides
+
     apply_settings_patch() {
       local target="$1"
       local tmp
@@ -257,11 +262,9 @@ EOF
       mv "$tmp" "$target"
     }
 
-    # Preserve user settings, but enforce transparency-critical keys.
     apply_settings_patch "$CFG/settings.json"
     apply_settings_patch "$SETTINGS_DIR/settings.json"
 
-    # Keep client themes enabled and pinned to declarative theme set.
     enforce_theme_settings() {
       local target="$1"
       local tmp
@@ -270,12 +273,13 @@ EOF
       if [ -s "$target" ] && ${pkgs.jq}/bin/jq empty "$target" >/dev/null 2>&1; then
         ${pkgs.jq}/bin/jq \
           '.plugins = ((.plugins // {}) + {"ClientTheme": ((.plugins.ClientTheme // {}) + {"enabled": true})})
-          | .enabledThemes = ["${transluenceThemeName}"]
+          | del(.plugins.ClientTheme.color)
+          | .enabledThemes = ["${translucenceThemeName}"]
           | .useQuickCss = false
           | .transparent = true' \
           "$target" > "$tmp"
       else
-        printf '%s\n' '{"plugins":{"ClientTheme":{"enabled":true}},"enabledThemes":["${transluenceThemeName}"],"useQuickCss":false,"transparent":true}' > "$tmp"
+        printf '%s\n' '{"plugins":{"ClientTheme":{"enabled":true}},"enabledThemes":["${translucenceThemeName}"],"useQuickCss":false,"transparent":true}' > "$tmp"
       fi
 
       mv "$tmp" "$target"
@@ -291,11 +295,18 @@ EOF
 in {
   home.packages = [pkgs.vesktop regenTransluenceTheme];
 
+  home.activation.cleanupVesktopLegacyAssets = lib.hm.dag.entryAfter ["writeBoundary"] ''
+    CFG="$HOME/.config/vesktop"
+    USER_ASSETS="$CFG/userAssets"
+    rm -f "$USER_ASSETS/tray" "$USER_ASSETS/trayUnread"
+    rmdir "$USER_ASSETS" 2>/dev/null || true
+  '';
+
   xdg.desktopEntries.vesktop = {
     name = "Vesktop";
     genericName = "Internet Messenger";
     comment = "Vesktop with transparent background wrapper";
-    icon = "discord";
+    icon = "vesktop";
     terminal = false;
     categories = ["Network" "InstantMessaging"];
     startupNotify = true;
