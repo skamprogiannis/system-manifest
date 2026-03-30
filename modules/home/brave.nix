@@ -151,7 +151,7 @@ in {
         "--extensions-on-chrome-urls"
         "--ozone-platform-hint=auto"
         "--force-dark-mode"
-        "--enable-features=UsePortalFileChooser,WebUIDarkMode,VaapiVideoDecoder,VaapiVideoEncoder,Vulkan,UseSkiaRenderer"
+        "--enable-features=WebUIDarkMode,VaapiVideoDecoder,VaapiVideoEncoder,Vulkan,UseSkiaRenderer"
         "--use-gl=egl"
         "--enable-gpu-rasterization"
         "--enable-zero-copy"
