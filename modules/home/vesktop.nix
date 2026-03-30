@@ -11,11 +11,13 @@
     set -euo pipefail
 
     THEME_DIR="$HOME/.config/vesktop/themes"
+    SETTINGS_DIR="$HOME/.config/vesktop/settings"
     OUT="$THEME_DIR/${translucenceThemeName}"
+    QUICKCSS_OUT="$SETTINGS_DIR/quickCss.css"
     SRC_JSON="$HOME/.cache/DankMaterialShell/dms-colors.json"
     OVERLAY_STORE="${./vesktop/transluence-matugen.overlay.css}"
 
-    mkdir -p "$THEME_DIR"
+    mkdir -p "$THEME_DIR" "$SETTINGS_DIR"
     [ -f "$SRC_JSON" ] || exit 0
     [ -f "$OVERLAY_STORE" ] || exit 0
 
@@ -131,29 +133,32 @@ for name, value in mapping:
 PY
     }
 
-    tmp=$(mktemp "$THEME_DIR/.Translucence.theme.css.tmp.XXXXXX")
+    theme_tmp=$(mktemp "$THEME_DIR/.Translucence.theme.css.tmp.XXXXXX")
+    quickcss_tmp=$(mktemp "$SETTINGS_DIR/.quickCss.css.tmp.XXXXXX")
     src_hash="$stable_hash"
-    trap 'rm -f "$tmp"' EXIT
+    trap 'rm -f "$theme_tmp" "$quickcss_tmp"' EXIT
 
-    cat > "$tmp" <<EOF
+    cat > "$theme_tmp" <<EOF
 /**
  * @name Translucence Matugen
- * @description Translucence tuned for transparent Vesktop and Matugen palette sync
+ * @description Static Translucence base; Matugen palette and glass tuning are injected via QuickCSS
  * @author skamprogiannis
- * @version 1.6.0
+ * @version 1.7.0
  */
 
 @import url(https://capnkitten.github.io/BetterDiscord/Themes/Translucence/css/source.css);
+EOF
 
+    cat > "$quickcss_tmp" <<EOF
 /* Source hash: $src_hash (dms-colors.json, DMS Vesktop token mapping) */
 
 /* ----- Matugen palette tokens ----- */
 :root {
 EOF
-    render_palette_root >> "$tmp"
-    printf '}\n' >> "$tmp"
+    render_palette_root >> "$quickcss_tmp"
+    printf '}\n' >> "$quickcss_tmp"
 
-    cat >> "$tmp" <<EOF
+    cat >> "$quickcss_tmp" <<EOF
 
 /* ----- Derived accent HSL from Matugen accent ----- */
 :root {
@@ -167,8 +172,8 @@ EOF
 }
 EOF
 
-    printf '\n/* ----- Transluence overlay ----- */\n' >> "$tmp"
-    cat "$OVERLAY_STORE" >> "$tmp"
+    printf '\n/* ----- Transluence overlay ----- */\n' >> "$quickcss_tmp"
+    cat "$OVERLAY_STORE" >> "$quickcss_tmp"
 
     cleanup_legacy_files() {
       ${pkgs.coreutils}/bin/rm -f \
@@ -179,13 +184,19 @@ EOF
         "$THEME_DIR/${legacyGeneratedThemeName}.backup"
     }
 
-    if [ -f "$OUT" ] && ${pkgs.diffutils}/bin/cmp -s "$tmp" "$OUT"; then
-      rm -f "$tmp"
-      cleanup_legacy_files
-      exit 0
-    fi
+    write_if_changed() {
+      local src="$1"
+      local dst="$2"
+      if [ -f "$dst" ] && ${pkgs.diffutils}/bin/cmp -s "$src" "$dst"; then
+        rm -f "$src"
+        return 1
+      fi
+      mv "$src" "$dst"
+      return 0
+    }
 
-    mv "$tmp" "$OUT"
+    write_if_changed "$theme_tmp" "$OUT" || true
+    write_if_changed "$quickcss_tmp" "$QUICKCSS_OUT" || true
     cleanup_legacy_files
   '';
 
@@ -203,7 +214,7 @@ EOF
     customTitleBar = false;
     disableAutostart = false;
     transparent = true;
-    useQuickCss = false;
+    useQuickCss = true;
     enabledThemes = [translucenceThemeName];
   };
 
@@ -242,11 +253,11 @@ EOF
           '.plugins = ((.plugins // {}) + {"ClientTheme": ((.plugins.ClientTheme // {}) + {"enabled": true})})
           | del(.plugins.ClientTheme.color)
           | .enabledThemes = ["${translucenceThemeName}"]
-          | .useQuickCss = false
+          | .useQuickCss = true
           | .transparent = true' \
           "$target" > "$tmp"
       else
-        printf '%s\n' '{"plugins":{"ClientTheme":{"enabled":true}},"enabledThemes":["${translucenceThemeName}"],"useQuickCss":false,"transparent":true}' > "$tmp"
+        printf '%s\n' '{"plugins":{"ClientTheme":{"enabled":true}},"enabledThemes":["${translucenceThemeName}"],"useQuickCss":true,"transparent":true}' > "$tmp"
       fi
 
       mv "$tmp" "$target"
@@ -262,6 +273,35 @@ EOF
 
   vesktopLaunchWrapper = pkgs.writeShellScript "vesktop-launch" ''
     set -euo pipefail
+
+    XDG_OPEN_WRAPPER=$(mktemp -d)
+    trap 'rm -rf "$XDG_OPEN_WRAPPER"' EXIT
+    cat > "$XDG_OPEN_WRAPPER/xdg-open" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+target="''${1:-$HOME}"
+if [ "''${target#file://}" != "$target" ]; then
+  target=$(${pkgs.python3}/bin/python3 - "$target" <<'PY'
+import sys
+from urllib.parse import unquote, urlparse
+uri = sys.argv[1]
+parsed = urlparse(uri)
+path = parsed.path or ""
+print(unquote(path))
+PY
+  )
+fi
+
+if [ -d "$target" ]; then
+  exec ${pkgs.ghostty}/bin/ghostty -e ${pkgs.yazi}/bin/yazi "$target"
+fi
+
+exec ${pkgs.xdg-utils}/bin/xdg-open "$@"
+EOF
+    chmod +x "$XDG_OPEN_WRAPPER/xdg-open"
+    export PATH="$XDG_OPEN_WRAPPER:$PATH"
+
     ${vesktopStateSync}
     exec ${pkgs.vesktop}/bin/vesktop "$@"
   '';
