@@ -81,6 +81,16 @@ replacements = {
             "color: Theme.withAlpha(Theme.surfaceContainerHigh, Math.max(0.0, Theme.popupTransparency - 0.22))",
         ),
     ],
+    root / "Services/AppSearchService.qml": [
+        (
+            '                comment: "DMS",\n                action: "ipc:processlist",',
+            '                comment: "Inspect processes and live system usage",\n                action: "ipc:processlist",',
+        ),
+        (
+            '                comment: "DMS",\n                action: "ipc:color-picker",',
+            '                comment: "Sample colors from anywhere on screen",\n                action: "ipc:color-picker",',
+        ),
+    ],
 }
 
 for path, edits in replacements.items():
