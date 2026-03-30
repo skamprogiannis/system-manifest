@@ -6,6 +6,7 @@
 }: let
   translucenceThemeName = "Translucence.theme.css";
   legacyGeneratedThemeName = "transluence-matugen.theme.css";
+  vesktopLauncherIcon = "${pkgs.dracula-icon-theme}/share/icons/Dracula/scalable/apps/discord.svg";
 
   regenTransluenceTheme = pkgs.writeShellScriptBin "regen-vesktop-transluence-theme" ''
     set -euo pipefail
@@ -347,7 +348,7 @@ in {
     name = "Vesktop";
     genericName = "Internet Messenger";
     comment = "Vesktop with transparent background wrapper";
-    icon = "vesktop";
+    icon = vesktopLauncherIcon;
     terminal = false;
     categories = ["Network" "InstantMessaging"];
     startupNotify = true;
