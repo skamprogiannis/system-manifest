@@ -516,34 +516,36 @@ EOF
 
       CURRENT_WALL=""
       LAST_COLORS_HASH=""
+      LAST_VESKTOP_PALETTE_HASH=""
 
       update_themes() {
         local color_file="$HOME/.config/hypr/dms/colors.conf"
-        [ ! -f "$color_file" ] && return
+        local palette_json="$HOME/.cache/DankMaterialShell/dms-colors.json"
 
-        local current_hash=$(${pkgs.coreutils}/bin/md5sum "$color_file" | cut -d' ' -f1)
-        [ "$current_hash" = "$LAST_COLORS_HASH" ] && return
-        LAST_COLORS_HASH="$current_hash"
+        if [ -f "$color_file" ]; then
+          local current_hash=$(${pkgs.coreutils}/bin/md5sum "$color_file" | cut -d' ' -f1)
+          if [ "$current_hash" != "$LAST_COLORS_HASH" ]; then
+            LAST_COLORS_HASH="$current_hash"
 
-        PRIMARY=$(grep "\$primary =" "$color_file" | cut -d'(' -f2 | cut -d')' -f1 | sed 's/ff$//')
-        BG=$(grep "\$surface =" "$color_file" | cut -d'(' -f2 | cut -d')' -f1 | sed 's/ff$//')
-        FG=$(grep "\$onSurface =" "$color_file" | cut -d'(' -f2 | cut -d')' -f1 | sed 's/ff$//')
-        ACCENT=$(grep "\$secondary =" "$color_file" | cut -d'(' -f2 | cut -d')' -f1 | sed 's/ff$//')
+            PRIMARY=$(grep "\$primary =" "$color_file" | cut -d'(' -f2 | cut -d')' -f1 | sed 's/ff$//')
+            BG=$(grep "\$surface =" "$color_file" | cut -d'(' -f2 | cut -d')' -f1 | sed 's/ff$//')
+            FG=$(grep "\$onSurface =" "$color_file" | cut -d'(' -f2 | cut -d')' -f1 | sed 's/ff$//')
+            ACCENT=$(grep "\$secondary =" "$color_file" | cut -d'(' -f2 | cut -d')' -f1 | sed 's/ff$//')
 
-        # If primary is too dark, use accent instead
-        if [ -n "$PRIMARY" ] && [ $((''${#PRIMARY})) -ge 6 ] 2>/dev/null; then
-          PRIMARY_R=$((16#''${PRIMARY:0:2})) 2>/dev/null || PRIMARY_R=0
-          PRIMARY_G=$((16#''${PRIMARY:2:2})) 2>/dev/null || PRIMARY_G=0
-          PRIMARY_B=$((16#''${PRIMARY:4:2})) 2>/dev/null || PRIMARY_B=0
-          BRIGHTNESS=$(( (PRIMARY_R * 299 + PRIMARY_G * 587 + PRIMARY_B * 114) / 1000 ))
-          if [ "$BRIGHTNESS" -lt 80 ]; then
-            PRIMARY="$ACCENT"
-          fi
-        fi
+            # If primary is too dark, use accent instead
+            if [ -n "$PRIMARY" ] && [ $((''${#PRIMARY})) -ge 6 ] 2>/dev/null; then
+              PRIMARY_R=$((16#''${PRIMARY:0:2})) 2>/dev/null || PRIMARY_R=0
+              PRIMARY_G=$((16#''${PRIMARY:2:2})) 2>/dev/null || PRIMARY_G=0
+              PRIMARY_B=$((16#''${PRIMARY:4:2})) 2>/dev/null || PRIMARY_B=0
+              BRIGHTNESS=$(( (PRIMARY_R * 299 + PRIMARY_G * 587 + PRIMARY_B * 114) / 1000 ))
+              if [ "$BRIGHTNESS" -lt 80 ]; then
+                PRIMARY="$ACCENT"
+              fi
+            fi
 
-        echo "Updating Zathura colors..."
-        mkdir -p ~/.config/zathura
-        cat <<EOF > ~/.config/zathura/zathurarc
+            echo "Updating Zathura colors..."
+            mkdir -p ~/.config/zathura
+            cat <<EOF > ~/.config/zathura/zathurarc
 set recolor "true"
 set completion-bg "#$BG"
 set completion-fg "#$FG"
@@ -564,10 +566,18 @@ set notification-warning-fg "#$FG"
 set highlight-color "#$PRIMARY"
         set highlight-active-color "#$PRIMARY"
 EOF
+          fi
+        fi
 
-        # Keep Transluence-derived Vesktop theme synchronized with fresh Matugen output.
-        if command -v regen-vesktop-transluence-theme >/dev/null 2>&1; then
-          regen-vesktop-transluence-theme || true
+        # Keep Transluence-derived Vesktop theme synchronized with the same
+        # palette artifact it actually consumes, not just colors.conf.
+        if command -v regen-vesktop-transluence-theme >/dev/null 2>&1 && [ -f "$palette_json" ]; then
+          local current_palette_hash=$(${pkgs.coreutils}/bin/md5sum "$palette_json" | cut -d' ' -f1)
+          if [ "$current_palette_hash" != "$LAST_VESKTOP_PALETTE_HASH" ]; then
+            if regen-vesktop-transluence-theme; then
+              LAST_VESKTOP_PALETTE_HASH=$(${pkgs.coreutils}/bin/md5sum "$palette_json" | cut -d' ' -f1)
+            fi
+          fi
         fi
       }
 
@@ -695,8 +705,12 @@ EOF
             systemctl --user stop linux-wallpaperengine.service 2>/dev/null
           fi
 
-          update_themes
         fi
+
+        # Static wallpapers can lag behind the wallpaper-path change, so keep
+        # polling Matugen output independently and let the color hash gate
+        # skip no-op work once the new palette lands.
+        update_themes
         sleep 2
       done
     '')
