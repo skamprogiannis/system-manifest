@@ -191,10 +191,26 @@
         end
       end
 
+      local selection_bg = "#3f4152"
+
+      local function to_hex(color)
+        if not color then
+          return nil
+        end
+        return string.format("#%06x", color)
+      end
+
+      local float_border_hl = vim.api.nvim_get_hl(0, { name = "FloatBorder", link = false })
+
       vim.api.nvim_set_hl(0, "Normal", { bg = "NONE" })
       vim.api.nvim_set_hl(0, "NormalNC", { bg = "NONE" })
       vim.api.nvim_set_hl(0, "SignColumn", { bg = "NONE" })
       vim.api.nvim_set_hl(0, "LineNr", { bg = "NONE" })
+      vim.api.nvim_set_hl(0, "Visual", { bg = selection_bg, bold = true })
+      vim.api.nvim_set_hl(0, "FloatBorder", {
+        fg = to_hex(float_border_hl.fg),
+        bg = "NONE",
+      })
 
       vim.o.winblend = 12
       if vim.fn.exists("+winborder") == 1 then
