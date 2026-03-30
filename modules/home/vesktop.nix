@@ -176,8 +176,11 @@ PY
 EOF
     }
 
-    theme_tmp=$(mktemp "$THEME_DIR/.Translucence.theme.css.tmp.XXXXXX")
-    quickcss_tmp=$(mktemp "$SETTINGS_DIR/.quickCss.css.tmp.XXXXXX")
+    # Keep temp files outside the watched Vesktop paths:
+    # - the themes directory is watched as a directory, so temp files there trigger reload flicker
+    # - quickCss.css is watched as a file, so replacing it breaks/inconsistently reattaches the watcher
+    theme_tmp=$(mktemp)
+    quickcss_tmp=$(mktemp)
     src_hash="$stable_hash"
     trap 'rm -f "$theme_tmp" "$quickcss_tmp"' EXIT
 
@@ -239,8 +242,21 @@ EOF
       return 0
     }
 
+    write_in_place_if_changed() {
+      local src="$1"
+      local dst="$2"
+      if [ -f "$dst" ] && ${pkgs.diffutils}/bin/cmp -s "$src" "$dst"; then
+        rm -f "$src"
+        return 1
+      fi
+      ${pkgs.coreutils}/bin/mkdir -p "$(${pkgs.coreutils}/bin/dirname "$dst")"
+      ${pkgs.coreutils}/bin/cat "$src" > "$dst"
+      rm -f "$src"
+      return 0
+    }
+
     write_if_changed "$theme_tmp" "$OUT" || true
-    write_if_changed "$quickcss_tmp" "$QUICKCSS_OUT" || true
+    write_in_place_if_changed "$quickcss_tmp" "$QUICKCSS_OUT" || true
     cleanup_legacy_files
   '';
 
