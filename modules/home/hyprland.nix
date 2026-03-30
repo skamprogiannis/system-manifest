@@ -265,6 +265,7 @@ in {
           "$mod, Return, exec, ghostty"
           "$mod, b, exec, brave"
           "$mod, x, killactive,"
+          "$mod SHIFT, x, exec, hypr-quit-active"
           "$mod, m, exec, ghostty -e spotify_player"
           "$mod, e, exec, ghostty -e yazi"
           "$mod, v, togglefloating,"
