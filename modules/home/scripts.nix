@@ -85,20 +85,7 @@
           ${pkgs.libnotify}/bin/notify-send -u low -i "$dest" "Screenshot" "Path copied: $dest"
       fi
     '')
-    (pkgs.writeShellScriptBin "portal-yazi-filechooser" ''
-      output="$1"
-      [ -z "$output" ] && exit 1
 
-      tmpdir=$(mktemp -d)
-      chooser="$tmpdir/selection"
-      ${pkgs.yazi}/bin/yazi --chooser-file "$chooser"
-      status=$?
-      if [ "$status" -eq 0 ] && [ -s "$chooser" ]; then
-        cat "$chooser" > "$output"
-      fi
-      rm -rf "$tmpdir"
-      exit "$status"
-    '')
     (pkgs.writeShellScriptBin "dms-restore-wallpaper" ''
       set -eu
 
