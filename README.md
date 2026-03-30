@@ -50,7 +50,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 ## Workflow & UI
 
 - **Glassmorphism Aesthetics:** Ghostty uses `background-opacity = 0.40` (native RGBA) so the terminal background is near-transparent while text stays fully opaque, giving a liquid-glass terminal. GTK4 popover styling also softens the Ghostty context menu with a lighter outer border and more translucency. The hyprglass Hyprland plugin is active for blur/tint/refraction effects on transparent surfaces.
-- **Dynamic Theming:** Matugen-powered Hyprland border colours, GTK4 colours, and video wallpapers via **linux-wallpaperengine** synced via a custom `wallpaper-hook` daemon. GTK uses the **Dracula** theme, `Papirus-Dark` remains the active icon theme, and Ghostty uses the built-in **Dracula** colour scheme.
+- **Dynamic Theming:** Matugen-powered Hyprland border colours, GTK4 colours, and video wallpapers via **linux-wallpaperengine** synced via a custom `wallpaper-hook` daemon. GTK uses the **Dracula** theme, `Papirus-Dark` comes from the full Papirus icon theme so DMS can resolve real app icons without breaking Papirus' shared symlinks, and Ghostty uses the built-in **Dracula** colour scheme.
 - **Brave transparency note:** Chromium/Brave does not support the same reliable transparent-shell/opaque-content model used by Vesktop in this setup, so Brave remains opaque for readability and stability.
 - **Cursor:** Adwaita (system default).
 - **Zellij Navigation:** `Alt`-based keybindings for all multiplexer actions; `Escape` exits any mode back to Normal and is unbound in Normal mode so it passes through to terminal apps (Vim, Copilot CLI, etc.).

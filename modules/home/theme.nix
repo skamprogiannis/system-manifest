@@ -2,18 +2,12 @@
   config,
   pkgs,
   ...
-}: let
-  papirusBase = pkgs.catppuccin-papirus-folders.override { flavor = "mocha"; };
-  papirusDarkOnly = pkgs.runCommand "papirus-dark-only" {} ''
-    mkdir -p $out/share/icons
-    cp -a ${papirusBase}/share/icons/Papirus-Dark $out/share/icons/
-  '';
-in {
+}: {
   gtk = {
     enable = true;
     iconTheme = {
       name = "Papirus-Dark";
-      package = papirusDarkOnly;
+      package = pkgs.papirus-icon-theme;
     };
     # GTK 3: Catppuccin Mocha
     gtk3.extraConfig.gtk-theme-name = "catppuccin-mocha-blue-standard";
