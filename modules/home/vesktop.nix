@@ -93,7 +93,7 @@ PY
       accent_lightness=$(printf '%s' "$accent_triplet" | ${pkgs.coreutils}/bin/cut -d' ' -f3)
     fi
 
-    render_palette_root() {
+    render_quickcss_source_root() {
       ${pkgs.python3}/bin/python3 - "$SRC_JSON" <<'PY'
 import json
 import sys
@@ -129,8 +129,51 @@ mapping = [
 ]
 
 for name, value in mapping:
-    print(f"  {name}: {value};")
+    print(f"  --dms-{name[2:]}: {value};")
 PY
+    }
+
+    render_theme_bridge_root() {
+      cat <<'EOF'
+:root {
+  --online-indicator: var(--dms-online-indicator, #43a25a);
+  --dnd-indicator: var(--dms-dnd-indicator, #f23f43);
+  --idle-indicator: var(--dms-idle-indicator, #f0b232);
+  --streaming-indicator: var(--dms-streaming-indicator, #593695);
+
+  --accent-1: var(--dms-accent-1, #c9d0ff);
+  --accent-2: var(--dms-accent-2, #b0c6ff);
+  --accent-3: var(--dms-accent-3, #b0c6ff);
+  --accent-4: var(--dms-accent-4, #38393e);
+  --accent-5: var(--dms-accent-5, #4e5058);
+
+  --mention: var(--dms-mention, #17191f);
+  --mention-hover: var(--dms-mention-hover, #1e2128);
+
+  --text-0: var(--dms-text-0, #121317);
+  --text-1: var(--dms-text-1, #f2f3f5);
+  --text-2: var(--dms-text-2, #dbdee1);
+  --text-3: var(--dms-text-3, #b5bac1);
+  --text-4: var(--dms-text-4, #949ba4);
+  --text-5: var(--dms-text-5, #6d727a);
+
+  --bg-1: var(--dms-bg-1, #202225);
+  --bg-2: var(--dms-bg-2, #2b2d31);
+  --bg-3: var(--dms-bg-3, #1e1f22);
+  --bg-4: var(--dms-bg-4, #111214);
+
+  --hover: var(--dms-hover, #35373c);
+  --active: var(--dms-active, #3f4248);
+  --message-hover: var(--dms-message-hover, #2a2d31);
+
+  --accent-hue: var(--dms-accent-hue, 220);
+  --accent-saturation: var(--dms-accent-saturation, 82%);
+  --accent-lightness: var(--dms-accent-lightness, 76%);
+
+  --green-to-accent-3-filter: var(--dms-green-to-accent-3-filter, hue-rotate(56deg) saturate(1.43));
+  --blurple-to-accent-3-filter: var(--dms-blurple-to-accent-3-filter, hue-rotate(304deg) saturate(0.84) brightness(1.2));
+}
+EOF
     }
 
     theme_tmp=$(mktemp "$THEME_DIR/.Translucence.theme.css.tmp.XXXXXX")
@@ -141,21 +184,25 @@ PY
     cat > "$theme_tmp" <<EOF
 /**
  * @name Translucence Matugen
- * @description Static Translucence base; Matugen palette and glass tuning are injected via QuickCSS
+ * @description Custom Translucence base with dynamic Matugen source vars bridged from QuickCSS
  * @author skamprogiannis
- * @version 1.7.0
+ * @version 1.7.1
  */
 
 @import url(https://capnkitten.github.io/BetterDiscord/Themes/Translucence/css/source.css);
 EOF
+    printf '\n/* ----- QuickCSS source bridge ----- */\n' >> "$theme_tmp"
+    render_theme_bridge_root >> "$theme_tmp"
+    printf '\n/* ----- Transluence overlay ----- */\n' >> "$theme_tmp"
+    cat "$OVERLAY_STORE" >> "$theme_tmp"
 
     cat > "$quickcss_tmp" <<EOF
 /* Source hash: $src_hash (dms-colors.json, DMS Vesktop token mapping) */
 
-/* ----- Matugen palette tokens ----- */
+/* ----- QuickCSS source vars for the static Translucence bridge ----- */
 :root {
 EOF
-    render_palette_root >> "$quickcss_tmp"
+    render_quickcss_source_root >> "$quickcss_tmp"
     printf '}\n' >> "$quickcss_tmp"
 
     cat >> "$quickcss_tmp" <<EOF
@@ -167,13 +214,10 @@ EOF
   --dms-accent-lightness: $accent_lightness;
 
   /* Keep the non-structural icon filter variables from the old DMS template. */
-  --green-to-accent-3-filter: hue-rotate(56deg) saturate(1.43);
-  --blurple-to-accent-3-filter: hue-rotate(304deg) saturate(0.84) brightness(1.2);
+  --dms-green-to-accent-3-filter: hue-rotate(56deg) saturate(1.43);
+  --dms-blurple-to-accent-3-filter: hue-rotate(304deg) saturate(0.84) brightness(1.2);
 }
 EOF
-
-    printf '\n/* ----- Transluence overlay ----- */\n' >> "$quickcss_tmp"
-    cat "$OVERLAY_STORE" >> "$quickcss_tmp"
 
     cleanup_legacy_files() {
       ${pkgs.coreutils}/bin/rm -f \
@@ -273,35 +317,6 @@ EOF
 
   vesktopLaunchWrapper = pkgs.writeShellScript "vesktop-launch" ''
     set -euo pipefail
-
-    XDG_OPEN_WRAPPER=$(mktemp -d)
-    trap 'rm -rf "$XDG_OPEN_WRAPPER"' EXIT
-    cat > "$XDG_OPEN_WRAPPER/xdg-open" <<'EOF'
-#!/usr/bin/env bash
-set -euo pipefail
-
-target="''${1:-$HOME}"
-if [ "''${target#file://}" != "$target" ]; then
-  target=$(${pkgs.python3}/bin/python3 - "$target" <<'PY'
-import sys
-from urllib.parse import unquote, urlparse
-uri = sys.argv[1]
-parsed = urlparse(uri)
-path = parsed.path or ""
-print(unquote(path))
-PY
-  )
-fi
-
-if [ -d "$target" ]; then
-  exec ${pkgs.ghostty}/bin/ghostty -e ${pkgs.yazi}/bin/yazi "$target"
-fi
-
-exec ${pkgs.xdg-utils}/bin/xdg-open "$@"
-EOF
-    chmod +x "$XDG_OPEN_WRAPPER/xdg-open"
-    export PATH="$XDG_OPEN_WRAPPER:$PATH"
-
     ${vesktopStateSync}
     exec ${pkgs.vesktop}/bin/vesktop "$@"
   '';
