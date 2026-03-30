@@ -48,6 +48,13 @@
 - **Bug Reporting:** When a bug is reported, prioritize writing a reproduction test before attempting a fix. Use subagents to implement the fix and verify it with the passing test.
 - **Pre-Completion Dry Build:** After any config/code change and before reporting "done," run `nixos-rebuild dry-build --flake .#desktop` yourself and fix any failures before handing back to the user.
 
+## Hyprland Keybind Guidance
+
+- **Prefer readable key names**: use bindings like `x` or `Return` by default; only fall back to `code:<n>` when Hyprland rejects the named key or layout-independent behavior is truly required.
+- **Keyboard layouts**: This repo uses `us altgr-intl` and `gr simple`; `Super+Space` toggles between them.
+- **Validation**: After keybind changes, test in both US and Greek layouts.
+- **InvalidFormat troubleshooting**: Try a valid Hyprland key name first; use `code:<n>` only if the named key is rejected.
+
 ## Greenfield Projects: Spec Kit Workflow
 
 Use **Spec Kit** (`specify` CLI) to scaffold spec-driven development for new projects. This unlocks `/speckit.*` slash commands in Copilot CLI.
