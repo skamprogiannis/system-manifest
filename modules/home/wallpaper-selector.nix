@@ -4,7 +4,27 @@
   lib,
   ...
 }: let
-  weCommon = import ./wallpaper-common.nix {inherit pkgs;};
+  # Shared wallpaper-engine path constants (inlined from former wallpaper-common.nix)
+  weConstants = ''
+    MAP_FILE="$HOME/.cache/we-wallpaper-map.json"
+    WE_ASSETS="$HOME/games/SteamLibrary/steamapps/common/wallpaper_engine/assets"
+    WE_WORKSHOP="$HOME/games/SteamLibrary/steamapps/workshop/content/431960"
+    WE_DEFAULTS_ROOT="$HOME/games/SteamLibrary/steamapps/common/wallpaper_engine/projects/defaultprojects"
+    WALL_DIR="$HOME/wallpapers/.wallpaper-engine"
+  '';
+  weNormalizeDir = ''
+    normalize_dir() {
+      ${pkgs.coreutils}/bin/realpath "$1" | ${pkgs.gnused}/bin/sed 's:/*$::'
+    }
+  '';
+
+  # DMS paths for matugen queue and screenshot — resolved at build time
+  dmsPackage = inputs.dms.packages.${pkgs.stdenv.hostPlatform.system}.dms-shell;
+  dmsConstants = ''
+    DMS_SHELL_DIR="${dmsPackage}/share/quickshell/dms"
+    DMS_STATE_DIR="$HOME/.local/state/DankMaterialShell"
+    DMS_CONFIG_DIR="$HOME/.config/DankMaterialShell"
+  '';
 
   selectorRuntimePath = lib.makeBinPath [
     pkgs.bash
@@ -146,8 +166,9 @@
       #!${pkgs.bash}/bin/bash
       set -euo pipefail
 
-      ${weCommon.constants}
-      ${weCommon.normalizeDir}
+      ${weConstants}
+      ${weNormalizeDir}
+      ${dmsConstants}
 
       usage() {
           cat >&2 <<'USAGE'
@@ -208,6 +229,8 @@
               echo "Failed to apply static wallpaper via DMS: $wallpaper_image" >&2
               exit 1
           fi
+          # Dismiss the Hyprland autoreload notification triggered by DMS matugen.
+          (sleep 4 && hyprctl dismissnotify -1 >/dev/null 2>&1) &
 
           systemctl --user stop linux-wallpaperengine.service 2>/dev/null || true
 
@@ -260,10 +283,61 @@
               ' "$map_file" | ${pkgs.coreutils}/bin/head -n 1
           }
 
+          # Extract the dominant hex color from an image for matugen fallback
+          extract_dominant_color() {
+              local img="$1"
+              ${pkgs.imagemagick}/bin/magick "$img" -resize 1x1! -format '#%[hex:u.p{0,0}]' info:- 2>/dev/null \
+                | ${pkgs.gnused}/bin/sed 's/#\(......\).*/\1/' || echo ""
+          }
+
+          # Invoke matugen directly without changing the DMS wallpaper
+          invoke_matugen_direct() {
+              local kind="$1" value="$2"
+              dms matugen queue \
+                --kind "$kind" \
+                --value "$value" \
+                --mode dark \
+                --matugen-type scheme-fidelity \
+                --shell-dir "$DMS_SHELL_DIR" \
+                --state-dir "$DMS_STATE_DIR" \
+                --config-dir "$DMS_CONFIG_DIR" >/dev/null 2>&1 || true
+              # Dismiss the Hyprland "reloaded the configuration" notification
+              # that autoreload shows when matugen rewrites colors.conf.
+              (sleep 2 && hyprctl dismissnotify -1 >/dev/null 2>&1) &
+          }
+
+          current_we_dir() {
+              local current_target=""
+              current_target=$(systemctl --user show-environment 2>/dev/null \
+                | grep '^WE_WALLPAPER_DIR=' | cut -d= -f2- || true)
+              if [ -n "$current_target" ]; then
+                  current_target=$(normalize_dir "$current_target" 2>/dev/null || printf '%s\n' "$current_target")
+              fi
+              printf '%s\n' "$current_target"
+          }
+
+          publish_dms_wallpaper() {
+              local image_path="$1"
+              local refresh_colors="''${2:-1}"
+              [ -n "$image_path" ] || return 1
+              [ -f "$image_path" ] || return 1
+
+              dms ipc wallpaper set "$image_path" || return 1
+              # DMS's own matugen triggers a Hyprland autoreload notification;
+              # dismiss it after the internal generation settles.
+              (sleep 4 && hyprctl dismissnotify -1 >/dev/null 2>&1) &
+
+              if [ "$refresh_colors" = "1" ]; then
+                  invoke_matugen_direct "image" "$image_path"
+              fi
+
+              return 0
+          }
+
           local target_dir
           target_dir="$(normalize_dir "$wallpaper_dir")"
 
-          # Resolve thumbnail for DMS/matugen color generation
+          # Resolve thumbnail for immediate matugen color generation
           local thumb_name
           thumb_name="$(lookup_thumb_by_dir "$target_dir" || true)"
 
@@ -286,26 +360,33 @@
               fi
           fi
 
-          # Set DMS thumbnail BEFORE restarting WE. DMS is behind WE's
-          # layer surface so this is invisible while WE is running.
-          # When WE restarts, the brief gap reveals the correct new
-          # thumbnail instead of the stale old one.
+          # Set the thumbnail as DMS wallpaper immediately — this advances
+          # SessionData.wallpaperPath (Settings preview, lock screen) and
+          # triggers full DMS theme generation. For video-type WE wallpapers
+          # the thumbnail is a real 1080p frame and looks great.
           if [ -n "$thumb_path" ] && [ -f "$thumb_path" ]; then
-              dms ipc wallpaper set "$thumb_path" || true
+              publish_dms_wallpaper "$thumb_path" "1"
+          else
+              # Try the author's preview.jpg as color source only
+              local author_preview="$target_dir/preview.jpg"
+              if [ -f "$author_preview" ]; then
+                  local hex
+                  hex=$(extract_dominant_color "$author_preview")
+                  if [ -n "$hex" ]; then
+                      invoke_matugen_direct "hex" "#$hex"
+                  fi
+              fi
           fi
 
-          # Now (re)start WE with the new wallpaper directory
+          # Start/restart WE with the new wallpaper directory
           systemctl --user set-environment \
               WE_WALLPAPER_DIR="$target_dir" \
               WE_ASSETS_DIR="$we_assets"
           systemctl --user restart linux-wallpaperengine.service
 
-          if [ -n "$thumb_path" ] && [ -f "$thumb_path" ]; then
-              write_last_wallpaper "$thumb_path"
-          else
-              echo "Warning: Could not resolve thumbnail for matugen: $wallpaper_dir" >&2
-              write_last_wallpaper "$target_dir"
-          fi
+          # Write persistence cache pointing to the WE directory so
+          # wallpaper-hook can restore it on boot.
+          write_last_wallpaper "$target_dir"
       }
 
       mode="dynamic"
