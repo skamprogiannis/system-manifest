@@ -262,39 +262,7 @@ EOF
 
   vesktopLaunchWrapper = pkgs.writeShellScript "vesktop-launch" ''
     set -euo pipefail
-
-    # Ensure "Open Theme Folder" and other file:// opens resolve to Yazi.
-    XDG_OPEN_WRAPPER=$(mktemp -d)
-    trap 'rm -rf "$XDG_OPEN_WRAPPER"' EXIT
-    cat > "$XDG_OPEN_WRAPPER/xdg-open" <<'EOF'
-#!/usr/bin/env bash
-set -euo pipefail
-
-target="''${1:-$HOME}"
-if [ "''${target#file://}" != "$target" ]; then
-  target=$(${pkgs.python3}/bin/python3 - "$target" <<'PY'
-import sys
-from urllib.parse import unquote, urlparse
-uri = sys.argv[1]
-parsed = urlparse(uri)
-path = parsed.path or ""
-print(unquote(path))
-PY
-  )
-fi
-
-if [ -d "$target" ]; then
-  exec ${pkgs.ghostty}/bin/ghostty -e ${pkgs.yazi}/bin/yazi "$target"
-fi
-
-exec ${pkgs.xdg-utils}/bin/xdg-open "$@"
-EOF
-    chmod +x "$XDG_OPEN_WRAPPER/xdg-open"
-    export PATH="$XDG_OPEN_WRAPPER:$PATH"
-
     ${vesktopStateSync}
-
-    # Stability-first: transparent visuals flag has caused Electron traps here.
     exec ${pkgs.vesktop}/bin/vesktop "$@"
   '';
 in {
