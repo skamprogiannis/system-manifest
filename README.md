@@ -109,6 +109,8 @@ The script performs preflight checks (root, partition labels, mountpoint safety,
 sudo update-usb /path/to/system-manifest/checkouts/<worktree>
 ```
 
+To stop an in-progress USB update, press `Ctrl+C`. The script traps interruption signals, performs safe cleanup (unmount + LUKS close when needed), and prints a cancellation status so you can retry safely.
+
 After `nixos-install`, it activates the target Home Manager generation and then compresses `/nix/store` into a squashfs image. At boot, the USB mounts this compressed image via overlayfs — reads are sequential and fast (like an ISO), while writes go to a 2 GB tmpfs (volatile, reset on reboot). The encrypted root and home directories remain persistent, so user state such as GNOME Keyring data survives reboots on the same USB.
 
 ### Initialize / Reformat Persistent USB
