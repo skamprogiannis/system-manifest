@@ -14,7 +14,7 @@
       background-opacity-cells = true;
       background = "000000";
       selection-foreground = "cdd6f4";
-      selection-background = "3f4152";
+      selection-background = "313244";
       font-family = "JetBrainsMono Nerd Font";
       font-size = 11;
 
