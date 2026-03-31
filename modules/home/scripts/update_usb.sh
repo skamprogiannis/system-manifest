@@ -13,6 +13,8 @@ REQUIRED_TOOLS=(nixos-install cryptsetup mount umount find rm du cut nproc mount
 OPENED_MAPPER=0
 MOUNTED_ROOT=0
 MOUNTED_BOOT=0
+CANCELED=0
+CURRENT_PHASE="startup"
 
 usage() {
   cat <<EOF
@@ -85,7 +87,12 @@ if mountpoint -q "$MOUNT_POINT"; then
 fi
 
 cleanup() {
-  echo "Cleaning up mounts..."
+  if [ "$CANCELED" -eq 1 ]; then
+    echo "=== USB Update: Cleanup after cancellation ==="
+  else
+    echo "Cleaning up mounts..."
+  fi
+
   if [ "$MOUNTED_BOOT" -eq 1 ]; then
     umount "$MOUNT_POINT/boot" 2>/dev/null || true
   fi
@@ -95,15 +102,39 @@ cleanup() {
   if [ "$OPENED_MAPPER" -eq 1 ]; then
     cryptsetup close "$USB_MAPPER_NAME" 2>/dev/null || true
   fi
-}
-trap cleanup EXIT
 
+  if [ "$CANCELED" -eq 1 ]; then
+    echo "Canceled during phase: $CURRENT_PHASE"
+    echo "You can safely retry: sudo update-usb /path/to/system-manifest/checkouts/<worktree>"
+  fi
+}
+
+cancel_update() {
+  local signal="$1"
+  local exit_code=130
+  if [ "$signal" = "TERM" ]; then
+    exit_code=143
+  fi
+
+  CANCELED=1
+  echo
+  echo "=== USB Update: Canceled ($signal) ==="
+  echo "Interrupt received; attempting safe cleanup."
+  exit "$exit_code"
+}
+
+trap cleanup EXIT
+trap 'cancel_update INT' INT
+trap 'cancel_update TERM' TERM
+
+CURRENT_PHASE="opening-luks"
 echo "=== USB Update: Opening LUKS ==="
 if [ ! -e "$USB_ROOT_DEV" ]; then
   cryptsetup open "$USB_ROOT_PART" "$USB_MAPPER_NAME"
   OPENED_MAPPER=1
 fi
 
+CURRENT_PHASE="mounting"
 umount "$MOUNT_POINT/boot" 2>/dev/null || true
 umount "$MOUNT_POINT" 2>/dev/null || true
 
@@ -114,14 +145,17 @@ mkdir -p "$MOUNT_POINT/boot"
 mount "$USB_BOOT_DEV" "$MOUNT_POINT/boot"
 MOUNTED_BOOT=1
 
+CURRENT_PHASE="cleaning-stale-nix-state"
 echo "=== USB Update: Cleaning stale Nix state ==="
 rm -rf "$MOUNT_POINT/nix/var/nix/db"
 rm -rf "$MOUNT_POINT/nix/var/nix/profiles"
 find "$MOUNT_POINT/nix/store" -mindepth 1 -maxdepth 1 -exec rm -rf {} + 2>/dev/null || true
 
+CURRENT_PHASE="installing-nixos"
 echo "=== USB Update: Installing NixOS ==="
 nixos-install --flake "$FLAKE_DIR#usb" --root "$MOUNT_POINT" --no-root-passwd
 
+CURRENT_PHASE="activating-home-manager"
 echo "=== USB Update: Activating Home Manager ==="
 HM_SERVICE="$MOUNT_POINT/etc/systemd/system/home-manager-stefan.service"
 if [ ! -f "$HM_SERVICE" ]; then
@@ -138,6 +172,7 @@ fi
 chroot "$MOUNT_POINT" /nix/var/nix/profiles/system/sw/bin/su - stefan -c \
   "HOME_MANAGER_BACKUP_EXT=backup $HM_EXEC"
 
+CURRENT_PHASE="building-squashfs"
 echo "=== USB Update: Building squashfs (this takes 15-30 minutes) ==="
 rm -f "$MOUNT_POINT/nix-store.squashfs"
 mksquashfs "$MOUNT_POINT/nix/store" "$MOUNT_POINT/nix-store.squashfs" \
@@ -149,9 +184,11 @@ mksquashfs "$MOUNT_POINT/nix/store" "$MOUNT_POINT/nix-store.squashfs" \
 SQFS_SIZE=$(du -sh "$MOUNT_POINT/nix-store.squashfs" | cut -f1)
 echo "squashfs image: $SQFS_SIZE"
 
+CURRENT_PHASE="cleaning-ext4-store"
 echo "=== USB Update: Cleaning ext4 store ==="
 find "$MOUNT_POINT/nix/store" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
 rm -rf "$MOUNT_POINT/nix/var/nix/db"
 
+CURRENT_PHASE="done"
 echo "=== USB Update: Done ==="
 echo "Boot flow: LUKS unlock -> squashfs overlay on /nix/store -> fast reads"
