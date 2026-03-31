@@ -8,8 +8,8 @@ USB_MAPPER_NAME="NIXOS_USB_CRYPT"
 USB_ROOT_DEV="/dev/mapper/$USB_MAPPER_NAME"
 MOUNT_POINT="/mnt"
 FLAKE_DIR="${1:-$PWD}"
-NIX_SHELL_PACKAGES=(squashfsTools cryptsetup util-linux coreutils findutils)
-REQUIRED_TOOLS=(nixos-install cryptsetup mount umount find rm du cut nproc mountpoint)
+NIX_SHELL_PACKAGES=(squashfsTools cryptsetup util-linux coreutils findutils gnused)
+REQUIRED_TOOLS=(nixos-install cryptsetup mount umount find rm du cut nproc mountpoint chroot sed)
 OPENED_MAPPER=0
 MOUNTED_ROOT=0
 MOUNTED_BOOT=0
@@ -121,6 +121,22 @@ find "$MOUNT_POINT/nix/store" -mindepth 1 -maxdepth 1 -exec rm -rf {} + 2>/dev/n
 
 echo "=== USB Update: Installing NixOS ==="
 nixos-install --flake "$FLAKE_DIR#usb" --root "$MOUNT_POINT" --no-root-passwd
+
+echo "=== USB Update: Activating Home Manager ==="
+HM_SERVICE="$MOUNT_POINT/etc/systemd/system/home-manager-stefan.service"
+if [ ! -f "$HM_SERVICE" ]; then
+  echo "Error: expected Home Manager service not found at $HM_SERVICE"
+  exit 1
+fi
+
+HM_EXEC=$(sed -n 's/^ExecStart=//p' "$HM_SERVICE" | head -n1)
+if [ -z "$HM_EXEC" ]; then
+  echo "Error: could not determine Home Manager activation command from $HM_SERVICE"
+  exit 1
+fi
+
+chroot "$MOUNT_POINT" /nix/var/nix/profiles/system/sw/bin/su - stefan -c \
+  "HOME_MANAGER_BACKUP_EXT=backup $HM_EXEC"
 
 echo "=== USB Update: Building squashfs (this takes 15-30 minutes) ==="
 rm -f "$MOUNT_POINT/nix-store.squashfs"
