@@ -75,7 +75,10 @@
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
             home-manager.backupFileExtension = "backup";
-            home-manager.extraSpecialArgs = { inherit inputs; hostType = "desktop"; };
+            home-manager.extraSpecialArgs = {
+              inherit inputs;
+              hostType = "desktop";
+            };
             # sd-switch ensures user systemd services are properly enabled/started after activation
             home-manager.users.stefan.systemd.user.startServices = "sd-switch";
             home-manager.users.stefan = {
@@ -98,7 +101,12 @@
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
             home-manager.backupFileExtension = "backup";
-            home-manager.extraSpecialArgs = { inherit inputs; hostType = "usb"; };
+            home-manager.extraSpecialArgs = {
+              inherit inputs;
+              hostType = "usb";
+            };
+            # Keep USB user-service activation behavior in parity with desktop.
+            home-manager.users.stefan.systemd.user.startServices = "sd-switch";
             home-manager.users.stefan = {
               imports = [
                 ./hosts/usb/home-manager.nix

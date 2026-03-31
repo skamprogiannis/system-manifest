@@ -2,6 +2,7 @@
   pkgs,
   inputs,
   lib,
+  hostType ? null,
   ...
 }: let
   # Shared wallpaper-engine path constants (inlined from former wallpaper-common.nix)
@@ -490,12 +491,14 @@ in {
       "$HOME/.local/bin/wallpaper-selector"
   '';
 
-  xdg.desktopEntries.wallpaper-selector = {
-    name = "Wallpaper Selector";
-    comment = "Open the Quickshell Wallpaper Selector";
-    exec = "wallpaper-selector";
-    icon = "preferences-desktop-wallpaper";
-    terminal = false;
-    categories = ["Utility" "Graphics"];
+  xdg.desktopEntries = lib.mkIf (hostType != "usb") {
+    wallpaper-selector = {
+      name = "Wallpaper Selector";
+      comment = "Open the Quickshell Wallpaper Selector";
+      exec = "wallpaper-selector";
+      icon = "preferences-desktop-wallpaper";
+      terminal = false;
+      categories = ["Utility" "Graphics"];
+    };
   };
 }
