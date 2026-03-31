@@ -90,6 +90,17 @@ li[class*="messageListItem_"] div[class*="mentioned_"] {
   border-left: 2px solid var(--accent-2, #b0c6ff) !important;
 }
 
+/* Message selection / replying: match Matugen accent instead of default cyan. */
+div[class*="message_"][class*="replying_"],
+li[class*="messageListItem_"] div[class*="replying_"] {
+  background-color: color-mix(in srgb, var(--accent-2, #b0c6ff) 14%, transparent) !important;
+  border-left: 2px solid var(--accent-2, #b0c6ff) !important;
+}
+
+div[class*="message_"][class*="selected_"] {
+  background-color: color-mix(in srgb, var(--accent-2, #b0c6ff) 10%, transparent) !important;
+}
+
 /* Hard-override brand filled buttons that still render blurple in some views. */
 button[class*="lookFilled_"][class*="colorBrand_"] {
   background-color: var(--button-filled-brand-background, var(--accent-3, #b0c6ff)) !important;
