@@ -12,7 +12,7 @@ This repository is licensed under **GNU GPL v3.0**. See `LICENSE`.
 
 - **Multi-Host Configuration:** Shared common configuration with host-specific overrides for `desktop` and `usb` (live/portable system).
 - **Hyprland Desktop:** Wayland tiling compositor with glassmorphism aesthetics powered by the [hyprglass](https://github.com/hyprnux/hyprglass) blur/vibrancy plugin (`light` theme, `default` preset), patched locally for current Hyprland API compatibility. Ghostty uses native `background-opacity` for true liquid-glass (background transparent, text fully opaque).
-- **USB: Dual Session** — USB host boots with GDM offering a session picker between **GNOME** and **Hyprland**. Uses a **hybrid squashfs** Nix store (compressed read-only image + tmpfs overlay) for near-ISO boot performance on lab machines.
+- **USB: Dual Session** — USB host boots with GDM offering **Hyprland** as the primary portable session plus **GNOME** as a fallback. Uses a **hybrid squashfs** Nix store (compressed read-only image + tmpfs overlay) for near-ISO boot performance on lab machines.
 - **Gaming Mode:** A dedicated specialisation (`gaming-box`) that boots directly into Steam Big Picture Mode with Gamescope.
 - **Media & Productivity:**
   - **Spotify Player:** Terminal-based Spotify client (`spotify_player`) with streaming support.
@@ -105,13 +105,13 @@ nixos-rebuild dry-build --flake .#desktop
 sudo update-usb /path/to/system-manifest/checkouts/main
 ```
 
-The script performs preflight checks (root, partition labels, mountpoint safety, and required tools), auto-enters `nix-shell` when `mksquashfs` is missing, and accepts an optional flake directory path:
+The script performs preflight checks (root, partition labels, mountpoint safety, and required tools), auto-enters `nix-shell` when `mksquashfs` is missing, activates the target Home Manager profile so first boot uses the declarative user config immediately, and accepts an optional flake directory path:
 
 ```bash
 sudo update-usb /path/to/system-manifest/checkouts/<worktree>
 ```
 
-After `nixos-install`, it compresses `/nix/store` into a squashfs image. At boot, the USB mounts this compressed image via overlayfs — reads are sequential and fast (like an ISO), while writes go to a 2 GB tmpfs (volatile, reset on reboot).
+After `nixos-install`, it activates the target Home Manager generation and then compresses `/nix/store` into a squashfs image. At boot, the USB mounts this compressed image via overlayfs — reads are sequential and fast (like an ISO), while writes go to a 2 GB tmpfs (volatile, reset on reboot). The encrypted root and home directories remain persistent, so user state such as GNOME Keyring data survives reboots on the same USB.
 
 ### Initialize / Reformat Persistent USB
 
