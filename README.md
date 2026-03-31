@@ -4,10 +4,6 @@ My personal NixOS configuration — a declarative, reproducible system built aro
 
 Managed via **Nix Flakes** and **Home Manager**.
 
-## License
-
-This repository is licensed under **GNU GPL v3.0**. See `LICENSE`.
-
 ## Features
 
 - **Multi-Host Configuration:** Shared common configuration with host-specific overrides for `desktop` and `usb` (live/portable system).
@@ -21,7 +17,7 @@ This repository is licensed under **GNU GPL v3.0**. See `LICENSE`.
   - **Obsidian:** Note-taking application with Home Manager plugin management.
   - **PearPass:** Declarative wrapper for the PearPass P2P password manager AppImage.
   - **Brave + Vimium C:** Declarative extension install with profile preference patching (Rewards button, right vertical tabs, `Ctrl+\` tabbar toggle, hidden close `x`, sidebar/new-tab toggles) plus Vimium C state seeding for portable keymaps/options. Vimium snapshots live in `modules/home/brave/vimium-c/{local-settings,sync-settings}` and are applied via Home Manager activation when Brave is not running.
-- **Vesktop:** Discord client with declarative `Translucence + Matugen` theming: generates a canonical `Translucence.theme.css` from DMS' cached Matugen palette, atomically replaces it to reduce live wallpaper-change flicker, uses the Dracula Discord icon for the Vesktop launcher, removes the stock image background, and uses stronger blur/readability tuning over true desktop transparency.
+- **Vesktop:** Discord client with declarative `Translucence + Matugen` theming: generates a canonical `Translucence.theme.css` from DMS' cached Matugen palette, atomically replaces it to reduce live wallpaper-change flicker, uses the stock Vesktop launcher icon, removes the stock image background, and uses stronger blur/readability tuning over true desktop transparency.
 - **Dev Ready:** Pre-configured environment for Node.js, Python, Go, and Neovim (via nixvim), plus Clang build essentials (`clang` + `gnumake`). Neovim uses the Dracula colorscheme with a transparent background (matches Ghostty glass). Also registered as the default text editor via an `nvim-text` XDG desktop entry (opens in Ghostty).
 - **AI Integrated:** Built-in configuration for **GitHub Copilot CLI** with per-repo `AGENTS.md` instructions. Global Copilot instructions live at `~/.copilot/copilot-instructions.md`.
 - **Greeter Avatar:** AccountsService user metadata + declarative avatar asset provisioning for consistent DMS greeter profile image rendering.
@@ -56,6 +52,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 - **Zellij Navigation:** `Alt`-based keybindings for all multiplexer actions; `Escape` exits any mode back to Normal and is unbound in Normal mode so it passes through to terminal apps (Vim, Copilot CLI, etc.).
 - **Keyboard Layout:** `us altgr-intl` + `gr simple`. `Super+Space` toggles layouts.
 - **Window Controls:** `Super` + left-drag moves windows, `Super` + right-drag resizes. `Super+Ctrl+H/L` resizes horizontally, `Super+Ctrl+K/J` grows or shrinks the active window in fine steps, and `Super+Ctrl+Up/Down` do the same in larger steps. `Super+Arrows` changes focus between monitors, while `Super+Shift+Arrows` moves the active window between monitors.
+- **Hard Quit:** `Super+Shift+X` force-terminates the active app process for clients like Vesktop or ProtonVPN that minimize to tray on normal close.
 - **Launcher Shortcuts:** `Super+E` opens **Yazi** in Ghostty.
 - **DMS declarative shell settings:** Live bar layout is mirrored from saved DMS settings, display config format is set to **Model** with snap enabled, DMS widgets use the **Colorful** style, OSD/toasts/notepad are pinned to the BenQ with fallback routing, popup/notepad/system-monitor opacity is set to `0.70`, occupied-only workspaces and OSD toggles are declared in Nix, the launcher uses the larger NixOS logo with a `2px` border while hiding DMS Settings/Notepad from normal launcher results, and DMS restarts reapply the cached wallpaper to avoid falling back to the stock background.
 - **DMS updater policy on NixOS:** The built-in updater is intentionally left unmanaged declaratively because upstream updater helpers target Arch/Fedora package managers, not the NixOS rebuild workflow.
@@ -79,6 +76,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 | `wallpaper-engine-sync` | Syncs Wallpaper Engine wallpapers into `~/wallpapers/wallpaper-engine` and updates selector assets |
 | `wallpaper-library-sync` | Syncs a wallpapers Git repo rooted at `~/wallpapers` and ensures `wallpaper-engine/` is ignored |
 | `hypr-nav` | Hyprland focus movement with workspace wrapping at boundaries |
+| `hypr-quit-active` | Force-quits the active app process when a client minimizes to tray instead of exiting |
 | `transmission-port-sync` | Updates transmission-daemon listening port |
 | `copilot-sessions-sync` | Syncs `~/.copilot/session-state/` between desktop and USB (`to-usb` / `from-usb`) |
 | `specify` | Spec Kit CLI wrapper — scaffolds spec-driven development for new projects |
@@ -131,3 +129,7 @@ Select **"NixOS - desktop-gaming-box"** from the bootloader menu (GRUB).
 copilot-sessions-sync to-usb    # before leaving for a lab machine
 copilot-sessions-sync from-usb  # after returning
 ```
+
+## License
+
+This repository is licensed under **GNU GPL v3.0**. See [LICENSE](./LICENSE).
