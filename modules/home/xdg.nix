@@ -26,33 +26,38 @@
     };
   };
 
-  # Set custom icons for the directories using gio metadata
+  # Set custom icons for the directories using gio metadata.
+  # Boot-time Home Manager activation runs before a user desktop session exists,
+  # so skip this step until a real graphical session is available.
   home.activation.applyIcons = lib.hm.dag.entryAfter ["writeBoundary"] ''
-    function set_icon() {
-      if [ -d "$1" ]; then
-        ${pkgs.glib}/bin/gio set -t string "$1" metadata::custom-icon-name "$2"
-      fi
-    }
+    if [ -n "''${DBUS_SESSION_BUS_ADDRESS-}" ] || [ -n "''${DISPLAY-}" ] || [ -n "''${WAYLAND_DISPLAY-}" ]; then
+      function set_icon() {
+        if [ -d "$1" ]; then
+          ${pkgs.glib}/bin/gio set -t string "$1" metadata::custom-icon-name "$2"
+        fi
+      }
 
-    set_icon "$HOME/desktop" "folder-desktop"
-    set_icon "$HOME/documents" "folder-documents"
-    set_icon "$HOME/downloads" "folder-download"
-    set_icon "$HOME/music" "folder-music"
-    set_icon "$HOME/pictures" "folder-pictures"
-    set_icon "$HOME/public" "folder-public"
-    set_icon "$HOME/templates" "folder-templates"
-    set_icon "$HOME/videos" "folder-videos"
-    set_icon "$HOME/games" "folder-games"
-    set_icon "$HOME/repositories" "folder-code"
-    set_icon "$HOME/pictures/screenshots" "applets-screenshooter"
-    set_icon "$HOME/wallpapers" "preferences-desktop-wallpaper"
-    set_icon "$HOME/videos/camera" "folder-videos"
-    set_icon "$HOME/videos/screencasts" "camera-video"
-    set_icon "$HOME/go" "folder-development"
-    set_icon "$HOME/system-manifest" "folder-development"
-    set_icon "$HOME/tabletop-games" "folder-books"
-    set_icon "$HOME/scripts" "folder"
-    set_icon "$HOME/wallpapers/.thumbnails" "folder-pictures"
+      set_icon "$HOME/desktop" "folder-desktop"
+      set_icon "$HOME/documents" "folder-documents"
+      set_icon "$HOME/downloads" "folder-download"
+      set_icon "$HOME/music" "folder-music"
+      set_icon "$HOME/pictures" "folder-pictures"
+      set_icon "$HOME/public" "folder-public"
+      set_icon "$HOME/templates" "folder-templates"
+      set_icon "$HOME/videos" "folder-videos"
+      set_icon "$HOME/games" "folder-games"
+      set_icon "$HOME/repositories" "folder-code"
+      set_icon "$HOME/pictures/screenshots" "applets-screenshooter"
+      set_icon "$HOME/wallpapers" "preferences-desktop-wallpaper"
+      set_icon "$HOME/videos/camera" "folder-videos"
+      set_icon "$HOME/videos/screencasts" "camera-video"
+      set_icon "$HOME/go" "folder-development"
+      set_icon "$HOME/system-manifest" "folder-development"
+      set_icon "$HOME/tabletop-games" "folder-books"
+      set_icon "$HOME/scripts" "folder"
+      set_icon "$HOME/wallpapers/.thumbnails" "folder-pictures"
+    else
+      echo "Skipping applyIcons: no graphical session available yet"
+    fi
   '';
-
 }
