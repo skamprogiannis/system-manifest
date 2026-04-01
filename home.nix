@@ -81,6 +81,10 @@
         ]}"
         fi
 
+        if [[ -z "$GH_TOKEN" && -f "$HOME/.config/github-pat" ]]; then
+          export GH_TOKEN="$(<"$HOME/.config/github-pat")"
+        fi
+
         args=()
         for arg in "$@"; do
           if [[ "$arg" == "--no-warnings" ]]; then

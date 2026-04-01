@@ -88,8 +88,10 @@ Use **Spec Kit** (`specify` CLI) to scaffold spec-driven development for new pro
   1.  Ensures root privileges and validates required USB partition labels exist.
   2.  Unlocks the LUKS container via `/dev/disk/by-partlabel/NIXOS_USB_CRYPT`.
   3.  Mounts root and boot partitions to `/mnt`.
-  4.  Runs `nixos-install --flake .#usb --root /mnt --no-root-passwd`.
-  5.  Unmounts and cleans up.
+  4.  By default (`--mode prebuild`), bind-mounts a local staging store and runs `nixos-install` against USB root while store writes stay local.
+  5.  Verifies the Home Manager systemd service is present (activation happens on first boot).
+  6.  Builds `nix-store.squashfs` locally and syncs final image to USB (`--in-place` keeps old USB-local squash path).
+  7.  Unmounts and cleans up.
 - **Note:** Script preflight checks mountpoint safety and can auto-enter `nix-shell` when `mksquashfs` is missing. Always pass a checkout path (e.g. `.../checkouts/main`).
 - **GH auth on foreign machines:** When booting the USB on a computer lab machine, gnome-keyring may not auto-unlock. Store a fine-grained PAT (with "Copilot Requests" permission) in `~/.config/github-pat` on the encrypted USB partition: `echo "ghp_..." > ~/.config/github-pat && chmod 600 ~/.config/github-pat`. The shell will auto-export it as `GH_TOKEN`. This file is protected by LUKS and never committed to git.
 
