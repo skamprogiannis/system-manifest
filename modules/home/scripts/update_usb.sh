@@ -11,7 +11,7 @@ DEFAULT_MODE="prebuild"
 MODE="$DEFAULT_MODE"
 FLAKE_DIR="$PWD"
 NIX_SHELL_PACKAGES=(squashfsTools cryptsetup util-linux coreutils findutils gnused)
-REQUIRED_TOOLS=(nixos-install cryptsetup mount umount find rm du cut nproc mountpoint sed mktemp cp mv date)
+REQUIRED_TOOLS=(nixos-install cryptsetup mount umount find rm du cut nproc mountpoint sed mktemp cp mv date chroot)
 OPENED_MAPPER=0
 MOUNTED_ROOT=0
 MOUNTED_BOOT=0
@@ -302,6 +302,17 @@ else
 fi
 phase_end
 
+phase_begin "preparing-home-manager-state" "Preparing Home Manager state"
+# Home Manager's first-boot activation writes GC roots and per-user profiles
+# under ~/.local/state. Seed the directories in the target root now so the
+# activation service can succeed on a fresh USB image.
+chroot "$MOUNT_POINT" /nix/var/nix/profiles/system/sw/bin/install -d -m 0755 -o stefan -g users \
+  /home/stefan/.local/state/home-manager \
+  /home/stefan/.local/state/home-manager/gcroots \
+  /home/stefan/.local/state/nix \
+  /home/stefan/.local/state/nix/profiles
+phase_end
+
 if [ "$MODE" = "prebuild" ]; then
   phase_begin "building-squashfs" "Building squashfs locally (desktop SSD)"
   LOCAL_SQUASHFS="$STAGE_DIR/nix-store.squashfs"
@@ -343,7 +354,8 @@ if [ "$MODE" = "in-place" ]; then
 else
   echo "Prebuild mode: leaving ext4 /nix/store untouched."
 fi
-rm -rf "$MOUNT_POINT/nix/var/nix/db"
+# Preserve the target Nix DB. The booted squashfs store still needs valid DB
+# registration so Home Manager can realize its generation and add GC roots.
 phase_end
 
 CURRENT_PHASE="done"
