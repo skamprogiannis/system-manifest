@@ -5,6 +5,7 @@
   ...
 }: let
   spotifyDeviceName = "nixos-desktop";
+  spotifyServiceName = "spotify-player.service";
   spotifyPlayerRawPkg = inputs.spotify-player.defaultPackage.${pkgs.stdenv.hostPlatform.system};
   spotifyDaemonConfigDir = "${config.xdg.configHome}/spotify-player-daemon";
   spotifyDaemonArgs = "-c ${spotifyDaemonConfigDir} --daemon";
@@ -12,58 +13,85 @@
     set -eu
 
     real_player="${spotifyPlayerRawPkg}/bin/spotify_player"
+    service_name="${spotifyServiceName}"
+    initial_device_wait_attempts=20
+    retry_device_wait_attempts=10
 
-    has_device() {
-      devices="$("$real_player" -c ${spotifyDaemonConfigDir} get key devices 2>/dev/null || true)"
-      printf '%s' "$devices" | ${pkgs.gnugrep}/bin/grep -q "${spotifyDeviceName}"
+    exec_real_player() {
+      exec "$real_player" "$@"
     }
 
-    for arg in "$@"; do
-      case "$arg" in
-        -d|--daemon)
-          exec "$real_player" "$@"
-          ;;
-      esac
-    done
+    should_bypass_wrapper() {
+      if [ "$#" -eq 0 ]; then
+        return 1
+      fi
 
-    if [ "$#" -gt 0 ]; then
       case "$1" in
         -h|--help|-V|--version|features|generate)
-          exec "$real_player" "$@"
+          return 0
           ;;
       esac
-    fi
 
-    if ! ${pkgs.systemd}/bin/systemctl --user is-active --quiet spotify-player.service; then
-      if ! ${pkgs.systemd}/bin/systemctl --user start spotify-player.service; then
-        echo "spotify_player: failed to start spotify-player.service; launching the client anyway" >&2
-        exec "$real_player" "$@"
-      fi
-    fi
+      for arg in "$@"; do
+        case "$arg" in
+          -d|--daemon)
+            return 0
+            ;;
+        esac
+      done
 
-    attempts=0
-    while [ "$attempts" -lt 20 ]; do
-      if has_device; then
-        exec "$real_player" "$@"
-      fi
+      return 1
+    }
 
-      attempts=$((attempts + 1))
-      ${pkgs.coreutils}/bin/sleep 0.5
-    done
+    daemon_has_device() {
+      devices="$("$real_player" -c ${spotifyDaemonConfigDir} get key devices 2>/dev/null || true)"
+      printf '%s' "$devices" | ${pkgs.gnugrep}/bin/grep -Fq -- "${spotifyDeviceName}"
+    }
 
-    if ${pkgs.systemd}/bin/systemctl --user restart spotify-player.service; then
-      attempts=0
-      while [ "$attempts" -lt 10 ]; do
-        if has_device; then
-          exec "$real_player" "$@"
+    wait_for_device() {
+      local attempts="$1"
+      local attempt=0
+
+      while [ "$attempt" -lt "$attempts" ]; do
+        if daemon_has_device; then
+          return 0
         fi
 
-        attempts=$((attempts + 1))
+        attempt=$((attempt + 1))
         ${pkgs.coreutils}/bin/sleep 0.5
       done
+
+      return 1
+    }
+
+    ensure_service_started() {
+      ${pkgs.systemd}/bin/systemctl --user is-active --quiet "$service_name" && return 0
+      ${pkgs.systemd}/bin/systemctl --user start "$service_name"
+    }
+
+    ensure_device_ready() {
+      if wait_for_device "$initial_device_wait_attempts"; then
+        return 0
+      fi
+
+      ${pkgs.systemd}/bin/systemctl --user restart "$service_name"
+      wait_for_device "$retry_device_wait_attempts"
+    }
+
+    if should_bypass_wrapper "$@"; then
+      exec_real_player "$@"
     fi
 
-    exec "$real_player" "$@"
+    if ! ensure_service_started; then
+      echo "spotify_player: failed to start ${spotifyServiceName}; launching the client anyway" >&2
+      exec_real_player "$@"
+    fi
+
+    if ! ensure_device_ready; then
+      echo "spotify_player: ${spotifyDeviceName} did not become ready; launching the client anyway" >&2
+    fi
+
+    exec_real_player "$@"
   '';
 in {
   # TUI config: no MPRIS or notifications (daemon handles those)
@@ -110,8 +138,9 @@ in {
     package = spotifyPlayerPkg;
   };
 
-  # Daemon keeps the Spotify Connect device alive persistently so playback
-  # never gets dropped even during network hiccups or TUI restarts.
+  # Keep the user-facing wrapper and the background daemon separate: the
+  # wrapper bootstraps the service on demand, while systemd must launch the
+  # raw binary directly to avoid recursive self-start.
   systemd.user.services.spotify-player = {
     Unit = {
       Description = "Spotify Player Daemon";
