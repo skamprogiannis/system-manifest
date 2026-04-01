@@ -4,9 +4,67 @@
   inputs,
   ...
 }: let
-  spotifyPlayerPkg = inputs.spotify-player.defaultPackage.${pkgs.stdenv.hostPlatform.system};
+  spotifyDeviceName = "nixos-desktop";
+  spotifyPlayerRawPkg = inputs.spotify-player.defaultPackage.${pkgs.stdenv.hostPlatform.system};
   spotifyDaemonConfigDir = "${config.xdg.configHome}/spotify-player-daemon";
   spotifyDaemonArgs = "-c ${spotifyDaemonConfigDir} --daemon";
+  spotifyPlayerPkg = pkgs.writeShellScriptBin "spotify_player" ''
+    set -eu
+
+    real_player="${spotifyPlayerRawPkg}/bin/spotify_player"
+
+    has_device() {
+      devices="$("$real_player" -c ${spotifyDaemonConfigDir} get key devices 2>/dev/null || true)"
+      printf '%s' "$devices" | ${pkgs.gnugrep}/bin/grep -q "${spotifyDeviceName}"
+    }
+
+    for arg in "$@"; do
+      case "$arg" in
+        -d|--daemon)
+          exec "$real_player" "$@"
+          ;;
+      esac
+    done
+
+    if [ "$#" -gt 0 ]; then
+      case "$1" in
+        -h|--help|-V|--version|features|generate)
+          exec "$real_player" "$@"
+          ;;
+      esac
+    fi
+
+    if ! ${pkgs.systemd}/bin/systemctl --user is-active --quiet spotify-player.service; then
+      if ! ${pkgs.systemd}/bin/systemctl --user start spotify-player.service; then
+        echo "spotify_player: failed to start spotify-player.service; launching the client anyway" >&2
+        exec "$real_player" "$@"
+      fi
+    fi
+
+    attempts=0
+    while [ "$attempts" -lt 20 ]; do
+      if has_device; then
+        exec "$real_player" "$@"
+      fi
+
+      attempts=$((attempts + 1))
+      ${pkgs.coreutils}/bin/sleep 0.5
+    done
+
+    if ${pkgs.systemd}/bin/systemctl --user restart spotify-player.service; then
+      attempts=0
+      while [ "$attempts" -lt 10 ]; do
+        if has_device; then
+          exec "$real_player" "$@"
+        fi
+
+        attempts=$((attempts + 1))
+        ${pkgs.coreutils}/bin/sleep 0.5
+      done
+    fi
+
+    exec "$real_player" "$@"
+  '';
 in {
   # TUI config: no MPRIS or notifications (daemon handles those)
   home.file."${config.xdg.configHome}/spotify-player/app.toml".text = ''
@@ -16,10 +74,10 @@ in {
     playback_refresh_duration_in_ms = 2000
     enable_media_control = false
     enable_notify = false
-    default_device = "nixos-desktop"
+    default_device = "${spotifyDeviceName}"
 
     [device]
-    name = "nixos-desktop"
+    name = "${spotifyDeviceName}"
     device_type = "computer"
     volume = 90
     bitrate = 320
@@ -36,10 +94,10 @@ in {
     playback_refresh_duration_in_ms = 2000
     enable_notify = true
     notify_transient = true
-    default_device = "nixos-desktop"
+    default_device = "${spotifyDeviceName}"
 
     [device]
-    name = "nixos-desktop"
+    name = "${spotifyDeviceName}"
     device_type = "computer"
     volume = 90
     bitrate = 320
@@ -65,7 +123,7 @@ in {
     Service = {
       Type = "forking";
       ExecStartPre = "-${pkgs.psmisc}/bin/fuser -k 8081/tcp";
-      ExecStart = "${spotifyPlayerPkg}/bin/spotify_player ${spotifyDaemonArgs}";
+      ExecStart = "${spotifyPlayerRawPkg}/bin/spotify_player ${spotifyDaemonArgs}";
       Restart = "on-failure";
       RestartSec = "15s";
       TimeoutStopSec = "5s";
