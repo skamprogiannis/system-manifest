@@ -89,7 +89,7 @@ Use **Spec Kit** (`specify` CLI) to scaffold spec-driven development for new pro
   2.  Unlocks the LUKS container via `/dev/disk/by-partlabel/NIXOS_USB_CRYPT`.
   3.  Mounts root and boot partitions to `/mnt`.
   4.  By default (`--mode prebuild`), bind-mounts a local staging store and runs `nixos-install` against USB root while store writes stay local.
-  5.  Activates Home Manager in target root.
+  5.  Verifies the Home Manager systemd service is present (activation happens on first boot).
   6.  Builds `nix-store.squashfs` locally and syncs final image to USB (`--in-place` keeps old USB-local squash path).
   7.  Unmounts and cleans up.
 - **Note:** Script preflight checks mountpoint safety and can auto-enter `nix-shell` when `mksquashfs` is missing. Always pass a checkout path (e.g. `.../checkouts/main`).
