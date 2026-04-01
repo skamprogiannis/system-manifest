@@ -270,7 +270,11 @@ phase_end
 phase_begin "cleaning-stale-nix-state" "Cleaning stale Nix state"
 rm -rf "$MOUNT_POINT/nix/var/nix/db"
 rm -rf "$MOUNT_POINT/nix/var/nix/profiles"
-find "$MOUNT_POINT/nix/store" -mindepth 1 -maxdepth 1 -exec rm -rf {} + 2>/dev/null || true
+if [ "$MODE" = "in-place" ]; then
+  find "$MOUNT_POINT/nix/store" -mindepth 1 -maxdepth 1 -exec rm -rf {} + 2>/dev/null || true
+else
+  echo "Prebuild mode: skipping ext4 /nix/store wipe (slow USB random I/O)."
+fi
 phase_end
 
 if [ "$MODE" = "prebuild" ]; then
@@ -341,7 +345,11 @@ else
 fi
 
 phase_begin "cleaning-ext4-store" "Cleaning ext4 store"
-find "$MOUNT_POINT/nix/store" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+if [ "$MODE" = "in-place" ]; then
+  find "$MOUNT_POINT/nix/store" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+else
+  echo "Prebuild mode: leaving ext4 /nix/store untouched."
+fi
 rm -rf "$MOUNT_POINT/nix/var/nix/db"
 phase_end
 
