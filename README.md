@@ -115,7 +115,7 @@ For low local disk scenarios, use the old USB-heavy path explicitly:
 sudo update-usb --in-place /path/to/system-manifest/checkouts/<worktree>
 ```
 
-The script performs preflight checks (root, partition labels, mountpoint safety, and required tools), auto-enters `nix-shell` when `mksquashfs` is missing, and accepts an optional flake directory path. Home Manager activates automatically on first boot via its systemd service (before user login):
+The script performs preflight checks (root, partition labels, mountpoint safety, and required tools), auto-enters `nix-shell` when `mksquashfs` is missing, accepts an optional flake directory path, preserves the installed Nix DB, and pre-creates Home Manager's per-user state directories so first-boot activation can add its GC roots successfully. Home Manager activates automatically on first boot via its systemd service (before user login):
 
 ```bash
 sudo update-usb /path/to/system-manifest/checkouts/<worktree>
