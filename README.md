@@ -115,7 +115,7 @@ For low local disk scenarios, use the old USB-heavy path explicitly:
 sudo update-usb --in-place /path/to/system-manifest/checkouts/<worktree>
 ```
 
-The script performs preflight checks (root, partition labels, mountpoint safety, and required tools), auto-enters `nix-shell` when `mksquashfs` is missing, activates the target Home Manager profile so first boot uses the declarative user config immediately, and accepts an optional flake directory path:
+The script performs preflight checks (root, partition labels, mountpoint safety, and required tools), auto-enters `nix-shell` when `mksquashfs` is missing, and accepts an optional flake directory path. Home Manager activates automatically on first boot via its systemd service (before user login):
 
 ```bash
 sudo update-usb /path/to/system-manifest/checkouts/<worktree>
@@ -123,7 +123,7 @@ sudo update-usb /path/to/system-manifest/checkouts/<worktree>
 
 To stop an in-progress USB update, press `Ctrl+C`. The script traps interruption signals, performs safe cleanup (unmount + LUKS close when needed), and prints a cancellation status so you can retry safely.
 
-After `nixos-install`, it activates the target Home Manager generation and then compresses `/nix/store` into a squashfs image. In prebuild mode, the script skips expensive ext4 `/nix/store` wipes on USB and keeps the USB ext4 store untouched (runtime still uses squashfs overlay at boot). At boot, the USB mounts this compressed image via overlayfs — reads are sequential and fast (like an ISO), while writes go to a 2 GB tmpfs (volatile, reset on reboot). The encrypted root and home directories remain persistent, so user state such as GNOME Keyring data survives reboots on the same USB. Phase timings are printed at the end to compare performance between modes.
+After `nixos-install`, it compresses `/nix/store` into a squashfs image. In prebuild mode, the script skips expensive ext4 `/nix/store` wipes on USB and keeps the USB ext4 store untouched (runtime still uses squashfs overlay at boot). Home Manager activates on first boot via systemd (`Before=systemd-user-sessions.service`), so the user environment is fully configured by login time. At boot, the USB mounts the compressed image via overlayfs — reads are sequential and fast (like an ISO), while writes go to a 2 GB tmpfs (volatile, reset on reboot). The encrypted root and home directories remain persistent, so user state such as GNOME Keyring data survives reboots on the same USB. Phase timings are printed at the end to compare performance between modes.
 
 ### Initialize / Reformat Persistent USB
 

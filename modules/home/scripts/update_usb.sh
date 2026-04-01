@@ -11,7 +11,7 @@ DEFAULT_MODE="prebuild"
 MODE="$DEFAULT_MODE"
 FLAKE_DIR="$PWD"
 NIX_SHELL_PACKAGES=(squashfsTools cryptsetup util-linux coreutils findutils gnused)
-REQUIRED_TOOLS=(nixos-install cryptsetup mount umount find rm du cut nproc mountpoint chroot sed mktemp cp mv date)
+REQUIRED_TOOLS=(nixos-install cryptsetup mount umount find rm du cut nproc mountpoint sed mktemp cp mv date)
 OPENED_MAPPER=0
 MOUNTED_ROOT=0
 MOUNTED_BOOT=0
@@ -292,21 +292,14 @@ phase_begin "installing-nixos" "Installing NixOS (${MODE})"
 nixos-install --flake "$FLAKE_DIR#usb" --root "$MOUNT_POINT" --no-root-passwd
 phase_end
 
-phase_begin "activating-home-manager" "Activating Home Manager"
+phase_begin "verifying-home-manager" "Verifying Home Manager"
 HM_SERVICE="$MOUNT_POINT/etc/systemd/system/home-manager-stefan.service"
-if [ ! -f "$HM_SERVICE" ]; then
-  echo "Error: expected Home Manager service not found at $HM_SERVICE"
-  exit 1
+if [ -f "$HM_SERVICE" ]; then
+  echo "Home Manager service found. It will activate on first boot."
+else
+  echo "Warning: Home Manager service not found at $HM_SERVICE"
+  echo "First boot may not have the full user environment."
 fi
-
-HM_EXEC=$(sed -n 's/^ExecStart=//p' "$HM_SERVICE" | head -n1)
-if [ -z "$HM_EXEC" ]; then
-  echo "Error: could not determine Home Manager activation command from $HM_SERVICE"
-  exit 1
-fi
-
-chroot "$MOUNT_POINT" /nix/var/nix/profiles/system/sw/bin/su - stefan -c \
-  "HOME_MANAGER_BACKUP_EXT=backup $HM_EXEC"
 phase_end
 
 if [ "$MODE" = "prebuild" ]; then
