@@ -55,6 +55,9 @@
       mkdir -p "$out/bin" "$out/share/wallpaper-selector/qml"
 
       cp qml/Selector.qml "$out/share/wallpaper-selector/qml/Selector.qml"
+      ${pkgs.gnused}/bin/sed -i \
+        's|/\\.local/bin/wallpaper-playlist|/.local/bin/.wallpaper-playlist|g' \
+        "$out/share/wallpaper-selector/qml/Selector.qml"
       cat > "$out/share/wallpaper-selector/qml/Theme.qml" <<'EOF'
       pragma Singleton
       import QtQuick
@@ -161,7 +164,7 @@
       }
       EOF
       cp qml/shell.qml "$out/share/wallpaper-selector/qml/shell.qml"
-      cp scripts/wallpaper-playlist.sh "$out/bin/wallpaper-playlist"
+      install -m755 scripts/wallpaper-playlist.sh "$out/bin/.wallpaper-playlist"
 
       cat > "$out/bin/wallpaper-apply" <<'EOF'
       #!${pkgs.bash}/bin/bash
@@ -187,7 +190,10 @@
               exit 1
           fi
           local WE_PID
-          WE_PID=$(systemctl --user show -p MainPID --value linux-wallpaperengine.service 2>/dev/null)
+          WE_PID=$(systemctl --user show -p MainPID --value linux-wallpaperengine-a.service 2>/dev/null)
+          if [ -z "$WE_PID" ] || [ "$WE_PID" = "0" ]; then
+              WE_PID=$(systemctl --user show -p MainPID --value linux-wallpaperengine-b.service 2>/dev/null)
+          fi
           if [ -z "$WE_PID" ] || [ "$WE_PID" = "0" ]; then
               echo "Wallpaper Engine is not running"
               exit 1
@@ -230,10 +236,9 @@
               echo "Failed to apply static wallpaper via DMS: $wallpaper_image" >&2
               exit 1
           fi
-          # Dismiss the Hyprland autoreload notification triggered by DMS matugen.
-          (sleep 4 && hyprctl dismissnotify -1 >/dev/null 2>&1) &
 
-          systemctl --user stop linux-wallpaperengine.service 2>/dev/null || true
+          systemctl --user stop linux-wallpaperengine-a.service 2>/dev/null || true
+          systemctl --user stop linux-wallpaperengine-b.service 2>/dev/null || true
 
           write_last_wallpaper "$wallpaper_image"
       }
@@ -284,29 +289,6 @@
               ' "$map_file" | ${pkgs.coreutils}/bin/head -n 1
           }
 
-          # Extract the dominant hex color from an image for matugen fallback
-          extract_dominant_color() {
-              local img="$1"
-              ${pkgs.imagemagick}/bin/magick "$img" -resize 1x1! -format '#%[hex:u.p{0,0}]' info:- 2>/dev/null \
-                | ${pkgs.gnused}/bin/sed 's/#\(......\).*/\1/' || echo ""
-          }
-
-          # Invoke matugen directly without changing the DMS wallpaper
-          invoke_matugen_direct() {
-              local kind="$1" value="$2"
-              dms matugen queue \
-                --kind "$kind" \
-                --value "$value" \
-                --mode dark \
-                --matugen-type scheme-fidelity \
-                --shell-dir "$DMS_SHELL_DIR" \
-                --state-dir "$DMS_STATE_DIR" \
-                --config-dir "$DMS_CONFIG_DIR" >/dev/null 2>&1 || true
-              # Dismiss the Hyprland "reloaded the configuration" notification
-              # that autoreload shows when matugen rewrites colors.conf.
-              (sleep 2 && hyprctl dismissnotify -1 >/dev/null 2>&1) &
-          }
-
           current_we_dir() {
               local current_target=""
               current_target=$(systemctl --user show-environment 2>/dev/null \
@@ -319,20 +301,9 @@
 
           publish_dms_wallpaper() {
               local image_path="$1"
-              local refresh_colors="''${2:-1}"
               [ -n "$image_path" ] || return 1
               [ -f "$image_path" ] || return 1
-
-              dms ipc wallpaper set "$image_path" || return 1
-              # DMS's own matugen triggers a Hyprland autoreload notification;
-              # dismiss it after the internal generation settles.
-              (sleep 4 && hyprctl dismissnotify -1 >/dev/null 2>&1) &
-
-              if [ "$refresh_colors" = "1" ]; then
-                  invoke_matugen_direct "image" "$image_path"
-              fi
-
-              return 0
+              dms ipc wallpaper set "$image_path"
           }
 
           local target_dir
@@ -361,29 +332,36 @@
               fi
           fi
 
-          # Set the thumbnail as DMS wallpaper immediately — this advances
-          # SessionData.wallpaperPath (Settings preview, lock screen) and
-          # triggers full DMS theme generation. For video-type WE wallpapers
-          # the thumbnail is a real 1080p frame and looks great.
-          if [ -n "$thumb_path" ] && [ -f "$thumb_path" ]; then
-              publish_dms_wallpaper "$thumb_path" "1"
-          else
-              # Try the author's preview.jpg as color source only
-              local author_preview="$target_dir/preview.jpg"
-              if [ -f "$author_preview" ]; then
-                  local hex
-                  hex=$(extract_dominant_color "$author_preview")
-                  if [ -n "$hex" ]; then
-                      invoke_matugen_direct "hex" "#$hex"
-                  fi
-              fi
-          fi
-
-          # Start/restart WE with the new wallpaper directory
+          # Set the env BEFORE starting WE so the wallpaper-hook's skip
+          # check sees a matching WE_WALLPAPER_DIR and doesn't undo our swap.
           systemctl --user set-environment \
               WE_WALLPAPER_DIR="$target_dir" \
               WE_ASSETS_DIR="$we_assets"
-          systemctl --user restart linux-wallpaperengine.service
+
+          # Seamless WE transition: start new slot first (renders on top
+          # of old via wlr-layer-shell stacking), then stop the old slot.
+          local WE_SLOT_FILE="$HOME/.cache/we-active-slot"
+          local current_slot
+          current_slot=$(cat "$WE_SLOT_FILE" 2>/dev/null || echo "a")
+          local next_slot="b"
+          [ "$current_slot" = "b" ] && next_slot="a"
+
+          systemctl --user start "linux-wallpaperengine-''${next_slot}.service"
+          sleep 2
+          systemctl --user stop "linux-wallpaperengine-''${current_slot}.service" 2>/dev/null || true
+          echo "$next_slot" > "$WE_SLOT_FILE"
+
+          # Publish the thumbnail to DMS AFTER WE is rendering — WE's layer
+          # surface covers DMS, so the thumbnail is never visible. This
+          # triggers matugen color generation and updates Settings preview.
+          if [ -n "$thumb_path" ] && [ -f "$thumb_path" ]; then
+              publish_dms_wallpaper "$thumb_path"
+          else
+              local author_preview="$target_dir/preview.jpg"
+              if [ -f "$author_preview" ]; then
+                  publish_dms_wallpaper "$author_preview"
+              fi
+          fi
 
           # Write persistence cache pointing to the WE directory so
           # wallpaper-hook can restore it on boot.
@@ -473,7 +451,7 @@ in {
     ${pkgs.coreutils}/bin/cp -f "${wallpaperSelectorPkg}/share/wallpaper-selector/qml/shell.qml" "$HOME/.config/quickshell/wallpaper/shell.qml"
 
     ${pkgs.coreutils}/bin/cp -f "${wallpaperSelectorPkg}/bin/wallpaper-apply" "$HOME/.local/bin/wallpaper-apply"
-    ${pkgs.coreutils}/bin/cp -f "${wallpaperSelectorPkg}/bin/wallpaper-playlist" "$HOME/.local/bin/wallpaper-playlist"
+    ${pkgs.coreutils}/bin/cp -f "${wallpaperSelectorPkg}/bin/.wallpaper-playlist" "$HOME/.local/bin/.wallpaper-playlist"
     ${pkgs.coreutils}/bin/cp -f "${wallpaperSelectorPkg}/bin/wallpaper-selector" "$HOME/.local/bin/wallpaper-selector"
 
     # Cleanup stale wrappers from previous iterations.
@@ -483,11 +461,12 @@ in {
       "$HOME/.local/bin/wallpaper-startup.sh" \
       "$HOME/.local/bin/wallpaper-apply.sh" \
       "$HOME/.local/bin/wallpaper-apply-static.sh" \
-      "$HOME/.local/bin/wallpaper-playlist.sh"
+      "$HOME/.local/bin/wallpaper-playlist.sh" \
+      "$HOME/.local/bin/wallpaper-playlist"
 
     ${pkgs.coreutils}/bin/chmod 755 \
       "$HOME/.local/bin/wallpaper-apply" \
-      "$HOME/.local/bin/wallpaper-playlist" \
+      "$HOME/.local/bin/.wallpaper-playlist" \
       "$HOME/.local/bin/wallpaper-selector"
   '';
 
