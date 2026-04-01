@@ -26,22 +26,13 @@
     DMS_STATE_DIR="$HOME/.local/state/DankMaterialShell"
     DMS_CONFIG_DIR="$HOME/.config/DankMaterialShell"
   '';
-in {
-  programs.bash.initExtra = ''
-    _wallpaper_engine_sync_complete() {
-      local cur
-      cur="''${COMP_WORDS[COMP_CWORD]}"
-      COMPREPLY=($(compgen -W "--regen --list-subs --help -h" -- "$cur"))
-    }
-    complete -F _wallpaper_engine_sync_complete wallpaper-engine-sync
-  '';
 
-  systemd.user.services.linux-wallpaperengine = {
+  # Shared service definition for both WE slots (a/b)
+  weServiceConfig = {
     Unit = {
       Description = "Wallpaper Engine Live Wallpaper";
       After = ["hyprland-session.target"];
       PartOf = ["hyprland-session.target"];
-      # GPU may segfault repeatedly after suspend on Nvidia; keep retrying
       StartLimitBurst = 20;
       StartLimitIntervalSec = 120;
     };
@@ -53,6 +44,21 @@ in {
       TimeoutStopSec = "2s";
     };
   };
+in {
+  programs.bash.initExtra = ''
+    _wallpaper_engine_sync_complete() {
+      local cur
+      cur="''${COMP_WORDS[COMP_CWORD]}"
+      COMPREPLY=($(compgen -W "--regen --list-subs --help -h" -- "$cur"))
+    }
+    complete -F _wallpaper_engine_sync_complete wallpaper-engine-sync
+  '';
+
+  # Two identical WE services that alternate for seamless transitions.
+  # When switching wallpapers, the idle slot starts first (its layer
+  # surface renders on top), then the old slot is stopped — zero gap.
+  systemd.user.services.linux-wallpaperengine-a = weServiceConfig;
+  systemd.user.services.linux-wallpaperengine-b = weServiceConfig;
 
   systemd.user.services.dms.Service.ExecStartPost = "${config.home.profileDirectory}/bin/dms-restore-wallpaper";
 
@@ -64,7 +70,7 @@ in {
     };
     Service = {
       Type = "simple";
-      ExecStart = "${config.home.profileDirectory}/bin/wallpaper-hook";
+      ExecStart = "${config.home.profileDirectory}/bin/.wallpaper-hook";
       Restart = "on-failure";
       RestartSec = "2";
     };
@@ -204,9 +210,18 @@ EOF
         w="''${geom%%x*}"
         h="''${geom##*x}"
 
-        # If the source is very small (<640px wide) or aspect ratio differs
-        # significantly from 16:9, letterbox on a blurred background instead
-        # of aggressively zooming/cropping.
+        # Sources smaller than 400px (e.g., 192-250px workshop GIFs) look
+        # terrible when upscaled to 1920x1080. Just convert to a clean JPEG
+        # at native size — DMS scales small images smoothly via QML, and
+        # matugen only needs colors.
+        if [ "$w" -lt 400 ] && [ "$h" -lt 400 ]; then
+          ${pkgs.imagemagick}/bin/magick "$src" \
+            -strip -colorspace sRGB \
+            -quality 92 "$dst" 2>/dev/null || true
+          [ -s "$dst" ]
+          return
+        fi
+
         local src_ratio
         src_ratio=$(( w * 100 / (h > 0 ? h : 1) ))
         if [ "$w" -lt 640 ] || [ "$src_ratio" -lt 120 ] || [ "$src_ratio" -gt 230 ]; then
@@ -609,7 +624,7 @@ EOF
       echo "Synced $(echo "''${!EXPECTED_THUMBS[@]}" | wc -w) Wallpaper Engine wallpapers"
     '')
 
-    (pkgs.writeShellScriptBin "wallpaper-hook" ''
+    (pkgs.writeShellScriptBin ".wallpaper-hook" ''
       LOCKFILE="''${XDG_RUNTIME_DIR:-/tmp}/wallpaper-hook.lock"
       exec 9>"$LOCKFILE"
       if ! ${pkgs.util-linux}/bin/flock -n 9; then
@@ -624,7 +639,7 @@ EOF
       WE_WORKSHOP_ROOT="$WE_WORKSHOP"
 
       cleanup() {
-        systemctl --user stop linux-wallpaperengine.service 2>/dev/null
+        stop_all_we
         rm -f "$LOCKFILE"
       }
       trap cleanup EXIT SIGTERM
@@ -769,28 +784,6 @@ EOF
         return 1
       }
 
-      # Invoke matugen directly without changing the DMS wallpaper
-      invoke_matugen_direct() {
-        local kind="$1" value="$2"
-        dms matugen queue \
-          --kind "$kind" \
-          --value "$value" \
-          --mode dark \
-          --matugen-type scheme-fidelity \
-          --shell-dir "$DMS_SHELL_DIR" \
-          --state-dir "$DMS_STATE_DIR" \
-          --config-dir "$DMS_CONFIG_DIR" >/dev/null 2>&1 || true
-        # Dismiss the Hyprland "reloaded the configuration" notification
-        # that autoreload shows when matugen rewrites colors.conf.
-        (sleep 2 && hyprctl dismissnotify -1 >/dev/null 2>&1) &
-      }
-
-      extract_dominant_color() {
-        local img="$1"
-        ${pkgs.imagemagick}/bin/magick "$img" -resize 1x1\! -format '#%[hex:u.p{0,0}]' info:- 2>/dev/null \
-          | ${pkgs.gnused}/bin/sed 's/#\(......\).*/\1/' || echo ""
-      }
-
       current_we_dir() {
         local current_target=""
         current_target=$(systemctl --user show-environment 2>/dev/null \
@@ -803,20 +796,9 @@ EOF
 
       publish_dms_wallpaper() {
         local image_path="$1"
-        local refresh_colors="''${2:-1}"
         [ -n "$image_path" ] || return 1
         [ -f "$image_path" ] || return 1
-
-        dms ipc wallpaper set "$image_path" || return 1
-        # DMS's own matugen triggers a Hyprland autoreload notification;
-        # dismiss it after the internal generation settles.
-        (sleep 4 && hyprctl dismissnotify -1 >/dev/null 2>&1) &
-
-        if [ "$refresh_colors" = "1" ]; then
-          invoke_matugen_direct "image" "$image_path"
-        fi
-
-        return 0
+        dms ipc wallpaper set "$image_path"
       }
 
       lookup_thumb_by_dir() {
@@ -861,21 +843,51 @@ EOF
         fi
 
         if [ -n "$thumb_path" ] && [ -f "$thumb_path" ]; then
-          publish_dms_wallpaper "$thumb_path" "1"
+          publish_dms_wallpaper "$thumb_path"
           return $?
         fi
 
-        # No thumbnail available — at least generate colors from preview
+        # No thumbnail — try the author's preview.jpg directly
         local preview="$we_dir/preview.jpg"
-        [ -f "$preview" ] || preview="$we_dir/preview.gif"
         if [ -f "$preview" ]; then
-          local hex=""
-          hex=$(extract_dominant_color "$preview")
-          if [ -n "$hex" ]; then
-            invoke_matugen_direct "hex" "#$hex"
-          fi
+          publish_dms_wallpaper "$preview"
+          return $?
         fi
         return 1
+      }
+
+      WE_SLOT_FILE="$HOME/.cache/we-active-slot"
+
+      # Start WE on the idle slot; once it renders, stop the old slot.
+      swap_we_service() {
+        local new_dir="$1" assets_dir="$2"
+        local current_slot
+        current_slot=$(cat "$WE_SLOT_FILE" 2>/dev/null || echo "a")
+        local next_slot="b"
+        [ "$current_slot" = "b" ] && next_slot="a"
+
+        systemctl --user set-environment \
+          WE_WALLPAPER_DIR="$new_dir" \
+          WE_ASSETS_DIR="$assets_dir"
+        systemctl --user start "linux-wallpaperengine-''${next_slot}.service"
+        sleep 2
+        systemctl --user stop "linux-wallpaperengine-''${current_slot}.service" 2>/dev/null || true
+        echo "$next_slot" > "$WE_SLOT_FILE"
+      }
+
+      stop_all_we() {
+        systemctl --user stop linux-wallpaperengine-a.service 2>/dev/null || true
+        systemctl --user stop linux-wallpaperengine-b.service 2>/dev/null || true
+        rm -f "$WE_SLOT_FILE"
+      }
+
+      # Check if either WE slot is active
+      we_is_active() {
+        local a b
+        a=$(systemctl --user is-active linux-wallpaperengine-a.service 2>/dev/null || true)
+        b=$(systemctl --user is-active linux-wallpaperengine-b.service 2>/dev/null || true)
+        [ "$a" = "active" ] || [ "$a" = "activating" ] || \
+        [ "$b" = "active" ] || [ "$b" = "activating" ]
       }
 
       # Ensure WE wallpaper map is fresh before first poll
@@ -907,19 +919,17 @@ EOF
       fi
 
       if [ -n "$boot_we_dir" ]; then
-        # Boot cache is a WE directory — start WE and set thumbnail as DMS wallpaper
+        # Boot restore: start WE on first slot and set thumbnail as DMS wallpaper
         echo "Boot restore: WE directory $boot_we_dir"
-        systemctl --user set-environment WE_WALLPAPER_DIR="$boot_we_dir" WE_ASSETS_DIR="$WE_ASSETS"
-        systemctl --user restart linux-wallpaperengine.service
+        swap_we_service "$boot_we_dir" "$WE_ASSETS"
         publish_we_thumbnail "$boot_we_dir"
       elif [ -n "$initial_wall" ]; then
         initial_we_dir=$(resolve_we_dir_with_refresh "$initial_wall" || true)
         if [ -n "$initial_we_dir" ]; then
-          systemctl --user set-environment WE_WALLPAPER_DIR="$initial_we_dir" WE_ASSETS_DIR="$WE_ASSETS"
-          systemctl --user restart linux-wallpaperengine.service
+          swap_we_service "$initial_we_dir" "$WE_ASSETS"
           publish_we_thumbnail "$initial_we_dir"
         else
-          systemctl --user stop linux-wallpaperengine.service 2>/dev/null || true
+          stop_all_we
         fi
       fi
 
@@ -941,23 +951,17 @@ EOF
               CURRENT_WE_DIR=$(normalize_dir "$CURRENT_WE_DIR" 2>/dev/null || printf '%s\n' "$CURRENT_WE_DIR")
             fi
             WE_DIR=$(normalize_dir "$WE_DIR" 2>/dev/null || printf '%s\n' "$WE_DIR")
-            WE_ACTIVE=$(systemctl --user is-active linux-wallpaperengine.service 2>/dev/null || true)
 
-            if [ "$CURRENT_WE_DIR" = "$WE_DIR" ] \
-              && [ -n "$WE_ACTIVE" ] \
-              && [ "$WE_ACTIVE" != "inactive" ] \
-              && [ "$WE_ACTIVE" != "failed" ] \
-              && [ "$WE_ACTIVE" != "deactivating" ]; then
+            if [ "$CURRENT_WE_DIR" = "$WE_DIR" ] && we_is_active; then
               echo "Wallpaper Engine already running: $WE_DIR (skipped restart)"
             else
               echo "Wallpaper Engine: $WE_DIR"
-              systemctl --user set-environment WE_WALLPAPER_DIR="$WE_DIR" WE_ASSETS_DIR="$WE_ASSETS"
-              systemctl --user restart linux-wallpaperengine.service
+              swap_we_service "$WE_DIR" "$WE_ASSETS"
             fi
           else
             # Static wallpaper — DMS renders it natively, just stop WE
             echo "Static wallpaper: $NEW_WALL"
-            systemctl --user stop linux-wallpaperengine.service 2>/dev/null
+            stop_all_we
           fi
 
         fi
