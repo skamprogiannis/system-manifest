@@ -377,9 +377,63 @@ EOF
           position = 0;
           screenPreferences = [];
           showOnLastDisplay = true;
-          leftWidgets = ["launcherButton" "workspaceSwitcher" "focusedWindow"];
+          leftWidgets = [
+            {
+              id = "launcherButton";
+              enabled = true;
+            }
+            {
+              id = "workspaceSwitcher";
+              enabled = true;
+            }
+            {
+              id = "systemTray";
+              enabled = true;
+            }
+            {
+              id = "runningApps";
+              enabled = true;
+              runningAppsCompactMode = true;
+              runningAppsGroupByApp = false;
+              runningAppsCurrentWorkspace = true;
+              runningAppsCurrentMonitor = false;
+            }
+            {
+              id = "focusedWindow";
+              enabled = true;
+            }
+          ];
           centerWidgets = ["music" "clock" "weather"];
-          rightWidgets = ["systemTray" "clipboard" "cpuUsage" "memUsage" "notificationButton" "battery" "controlCenterButton"];
+          rightWidgets = [
+            {
+              id = "cpuUsage";
+              enabled = true;
+            }
+            {
+              id = "memUsage";
+              enabled = true;
+              showSwap = true;
+            }
+            {
+              id = "gpuTemp";
+              enabled = true;
+              selectedGpuIndex = 0;
+              pciId = "";
+              minimumWidth = true;
+            }
+            {
+              id = "notificationButton";
+              enabled = true;
+            }
+            {
+              id = "battery";
+              enabled = true;
+            }
+            {
+              id = "controlCenterButton";
+              enabled = true;
+            }
+          ];
           spacing = 4;
           innerPadding = 4;
           bottomGap = -2;
