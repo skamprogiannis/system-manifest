@@ -59,19 +59,19 @@
         's|/\\.local/bin/wallpaper-playlist|/.local/bin/.wallpaper-playlist|g' \
         "$out/share/wallpaper-selector/qml/Selector.qml"
       ${pkgs.python3}/bin/python <<'PY'
-      from pathlib import Path
-      import re
+from pathlib import Path
+import re
 
-      path = Path("$out/share/wallpaper-selector/qml/Selector.qml")
-      text = path.read_text()
+path = Path("$out/share/wallpaper-selector/qml/Selector.qml")
+text = path.read_text()
 
-      old_playlist = """                    command = ["bash", "-c", `pgrep -fx 'bash.*wallpaper-playlist' > /dev/null || { nohup ''${home}/.local/bin/wallpaper-playlist > /dev/null 2>&1 & disown; }`];"""
-      new_playlist = """                    command = ["bash", "-c", `pgrep -fx 'bash.*wallpaper-playlist' > /dev/null || { nohup ''${home}/.local/bin/.wallpaper-playlist > /dev/null 2>&1 & disown; }`];"""
-      if old_playlist not in text:
-          raise SystemExit("Failed to patch wallpaper playlist daemon path in Selector.qml")
-      text = text.replace(old_playlist, new_playlist, 1)
+old_playlist = """                    command = ["bash", "-c", `pgrep -fx 'bash.*wallpaper-playlist' > /dev/null || { nohup ''${home}/.local/bin/wallpaper-playlist > /dev/null 2>&1 & disown; }`];"""
+new_playlist = """                    command = ["bash", "-c", `pgrep -fx 'bash.*wallpaper-playlist' > /dev/null || { nohup ''${home}/.local/bin/.wallpaper-playlist > /dev/null 2>&1 & disown; }`];"""
+if old_playlist not in text:
+    raise SystemExit("Failed to patch wallpaper playlist daemon path in Selector.qml")
+text = text.replace(old_playlist, new_playlist, 1)
 
-      new_scan = """
+new_scan = """
             function scanWallpapers() {
                 console.log("Scanning:", baseFolder);
 
@@ -171,7 +171,7 @@
                                     }
 
                                     remaining--;
-                                    if (remaining === 0)
+                                    if (remaining == 0)
                                         finalizeStaticScan();
                                 });
                             });
@@ -180,7 +180,10 @@
 
                     staticFiles.onStatusChanged.connect(function () {
                         processStaticFiles();
-                        if (!staticProcessed && staticFiles.status === FolderListModel.Ready && staticFiles.count === 0) {
+                        if (!staticProcessed && staticFiles.status !== FolderListModel.Ready) {
+                            return;
+                        }
+                        if (!staticProcessed && staticFiles.count === 0) {
                             Qt.callLater(function () {
                                 if (!staticProcessed) {
                                     staticProcessed = true;
@@ -249,25 +252,25 @@
                 folders.onCountChanged.connect(processDynamicFolders);
             }
 """
-      text, count = re.subn(
-          r"""
+text, count = re.subn(
+    r"""
             function\ scanWallpapers\(\)\ \{
             .*?
             \}
             \s*Component\.onCompleted:
           """,
-          new_scan + """
+    new_scan + """
             Component.onCompleted:
 """,
-          text,
-          count=1,
-          flags=re.S | re.X,
-      )
-      if count != 1:
-          raise SystemExit("Failed to patch scanWallpapers in Selector.qml")
+    text,
+    count=1,
+    flags=re.S | re.X,
+)
+if count != 1:
+    raise SystemExit("Failed to patch scanWallpapers in Selector.qml")
 
-      path.write_text(text)
-      PY
+path.write_text(text)
+PY
       cat > "$out/share/wallpaper-selector/qml/Theme.qml" <<'EOF'
       pragma Singleton
       import QtQuick
