@@ -66,9 +66,9 @@ in {
   fonts.fontconfig = {
     enable = true;
     defaultFonts = {
-      monospace = ["JetBrainsMono Nerd Font"];
-      sansSerif = ["Adwaita"];
-      serif = ["Noto Serif"];
+      monospace = ["JetBrainsMono Nerd Font" "Noto Sans CJK JP"];
+      sansSerif = ["Adwaita" "Noto Sans CJK JP"];
+      serif = ["Noto Serif" "Noto Serif CJK JP"];
     };
   };
 
