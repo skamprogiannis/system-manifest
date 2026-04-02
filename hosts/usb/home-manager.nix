@@ -3,7 +3,13 @@
   pkgs,
   lib,
   ...
-}: {
+}: let
+  usbQuickshellEnvironment = [
+    "QS_NO_GL=1"
+    "QT_QUICK_BACKEND=software"
+    "QSG_RENDER_LOOP=basic"
+  ];
+in {
   imports = [
     ../../home.nix
   ];
@@ -20,14 +26,10 @@
     default_layout = "compact";
   };
 
-  # DMS software rendering: QS_NO_GL disables QuickShell's GL backend.
-  # QT_QUICK_BACKEND=software uses Qt's software rasterizer for QML.
-  # We do NOT set LIBGL_ALWAYS_SOFTWARE — let Hyprland use whatever GPU
-  # the host machine provides (Intel iGPU, AMD, etc.).
-  systemd.user.services.dms.Service.Environment = [
-    "QS_NO_GL=1"
-    "QT_QUICK_BACKEND=software"
-  ];
+  # Keep Quickshell on the software path on portable USB boots, and avoid the
+  # threaded render loop that can corrupt Qt Quick surfaces on some lab GPUs.
+  # We intentionally do not force LIBGL_ALWAYS_SOFTWARE for the full session.
+  systemd.user.services.dms.Service.Environment = usbQuickshellEnvironment;
 
   # Auto-detect monitor (USB is portable across machines)
   wayland.windowManager.hyprland.settings = {

@@ -2,9 +2,14 @@
   config,
   pkgs,
   inputs,
+  hostType ? null,
   ...
 }: let
-  spotifyDeviceName = "nixos-desktop";
+  spotifyDeviceName = "nixos-${
+    if hostType != null && hostType != ""
+    then hostType
+    else "desktop"
+  }";
   spotifyServiceName = "spotify-player.service";
   spotifyPlayerRawPkg = inputs.spotify-player.defaultPackage.${pkgs.stdenv.hostPlatform.system};
   spotifyConfigDir = "${config.xdg.configHome}/spotify-player";
@@ -176,8 +181,8 @@ in {
   systemd.user.services.spotify-player = {
     Unit = {
       Description = "Spotify Player Daemon";
-      After = [ "network-online.target" ];
-      Wants = [ "network-online.target" ];
+      After = ["network-online.target"];
+      Wants = ["network-online.target"];
       StartLimitIntervalSec = 300;
       StartLimitBurst = 5;
     };
@@ -190,5 +195,4 @@ in {
       TimeoutStopSec = "5s";
     };
   };
-
 }

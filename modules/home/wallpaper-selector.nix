@@ -447,6 +447,11 @@ EOF
       export PATH="$HOME/.local/bin:${selectorRuntimePath}:$PATH"
       export XDG_RUNTIME_DIR="/run/user/$(id -u)"
       export QML_XHR_ALLOW_FILE_READ=1
+      ${lib.optionalString (hostType == "usb") ''
+      export QS_NO_GL=1
+      export QT_QUICK_BACKEND=software
+      export QSG_RENDER_LOOP=basic
+      ''}
 
       selector_path="$HOME/.config/quickshell/wallpaper"
       mode="toggle"
