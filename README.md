@@ -11,7 +11,7 @@ Managed via **Nix Flakes** and **Home Manager**.
 - **USB: Dual Session** — USB host boots with GDM offering **Hyprland** as the primary portable session plus **GNOME** as a fallback. That fallback stays intentionally minimal so Hyprland launchers do not inherit the stock GNOME app bundle. Uses a **hybrid squashfs** Nix store (compressed read-only image + tmpfs overlay) for near-ISO boot performance on lab machines.
 - **Gaming Mode:** A dedicated specialisation (`gaming-box`) that boots directly into Steam Big Picture Mode with Gamescope.
 - **Media & Productivity:**
-  - **Spotify Player:** Terminal-based Spotify client (`spotify_player`) with streaming support.
+  - **Spotify Player:** Terminal-based Spotify client (`spotify_player`) with streaming support. The wrapper authenticates interactively before bootstrapping the background daemon so the login callback port is not stolen by a headless service on fresh setups.
   - **Transmission:** BitTorrent daemon with `tremc` TUI frontend.
   - **Mailspring:** Email client; credentials stored via GNOME Keyring (runs standalone, no GNOME shell required).
   - **Obsidian:** Note-taking application with Home Manager plugin management.
