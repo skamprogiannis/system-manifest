@@ -387,6 +387,7 @@ EOF
       ${weConstants}
       ${weNormalizeDir}
       ${dmsConstants}
+      USB_LIGHT_MODE_FLAG="$HOME/.config/system-manifest/usb-light-mode-enabled"
 
       usage() {
           cat >&2 <<'USAGE'
@@ -395,6 +396,39 @@ EOF
         wallpaper-apply dynamic [--hash HASH --thumb-folder PATH] <wallpaper_folder_path>
         wallpaper-apply audio mute|unmute
       USAGE
+      }
+
+      usb_light_mode_enabled() {
+          [ -f "$USB_LIGHT_MODE_FLAG" ]
+      }
+
+      current_power_profile() {
+          if ! usb_light_mode_enabled; then
+              printf 'balanced\n'
+              return 0
+          fi
+
+          local profile=""
+          profile="$(${pkgs.power-profiles-daemon}/bin/powerprofilesctl get 2>/dev/null || true)"
+          case "$profile" in
+              power-saver|balanced|performance)
+                  printf '%s\n' "$profile"
+                  ;;
+              *)
+                  printf 'balanced\n'
+                  ;;
+          esac
+      }
+
+      light_mode_active() {
+          usb_light_mode_enabled || return 1
+          [ "$(current_power_profile)" = "power-saver" ]
+      }
+
+      stop_all_we() {
+          systemctl --user stop linux-wallpaperengine-a.service 2>/dev/null || true
+          systemctl --user stop linux-wallpaperengine-b.service 2>/dev/null || true
+          rm -f "$HOME/.cache/we-active-slot"
       }
 
       we_audio() {
@@ -451,9 +485,7 @@ EOF
               exit 1
           fi
 
-          systemctl --user stop linux-wallpaperengine-a.service 2>/dev/null || true
-          systemctl --user stop linux-wallpaperengine-b.service 2>/dev/null || true
-
+          stop_all_we
           write_last_wallpaper "$wallpaper_image"
       }
 
@@ -546,11 +578,31 @@ EOF
               fi
           fi
 
+          publish_dynamic_preview() {
+              if [ -n "$thumb_path" ] && [ -f "$thumb_path" ]; then
+                  publish_dms_wallpaper "$thumb_path"
+              else
+                  local author_preview="$target_dir/preview.jpg"
+                  if [ -f "$author_preview" ]; then
+                      publish_dms_wallpaper "$author_preview"
+                  fi
+              fi
+              return 0
+          }
+
           # Set the env BEFORE starting WE so the wallpaper-hook's skip
           # check sees a matching WE_WALLPAPER_DIR and doesn't undo our swap.
           systemctl --user set-environment \
               WE_WALLPAPER_DIR="$target_dir" \
               WE_ASSETS_DIR="$we_assets"
+
+          if light_mode_active; then
+              echo "USB light mode active: keeping static preview for $target_dir"
+              publish_dynamic_preview
+              stop_all_we
+              write_last_wallpaper "$target_dir"
+              return 0
+          fi
 
           # Seamless WE transition: start new slot first (renders on top
           # of old via wlr-layer-shell stacking), then stop the old slot.
@@ -568,14 +620,7 @@ EOF
           # Publish the thumbnail to DMS AFTER WE is rendering — WE's layer
           # surface covers DMS, so the thumbnail is never visible. This
           # triggers matugen color generation and updates Settings preview.
-          if [ -n "$thumb_path" ] && [ -f "$thumb_path" ]; then
-              publish_dms_wallpaper "$thumb_path"
-          else
-              local author_preview="$target_dir/preview.jpg"
-              if [ -f "$author_preview" ]; then
-                  publish_dms_wallpaper "$author_preview"
-              fi
-          fi
+          publish_dynamic_preview
 
           # Write persistence cache pointing to the WE directory so
           # wallpaper-hook can restore it on boot.
