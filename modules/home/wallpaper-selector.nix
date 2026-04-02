@@ -58,11 +58,12 @@
       ${pkgs.gnused}/bin/sed -i \
         's|/\\.local/bin/wallpaper-playlist|/.local/bin/.wallpaper-playlist|g' \
         "$out/share/wallpaper-selector/qml/Selector.qml"
-      ${pkgs.python3}/bin/python <<'PY'
+      ${pkgs.python3}/bin/python - "$out/share/wallpaper-selector/qml/Selector.qml" <<'PY'
 from pathlib import Path
 import re
+import sys
 
-path = Path("$out/share/wallpaper-selector/qml/Selector.qml")
+path = Path(sys.argv[1])
 text = path.read_text()
 
 old_playlist = """                    command = ["bash", "-c", `pgrep -fx 'bash.*wallpaper-playlist' > /dev/null || { nohup ''${home}/.local/bin/wallpaper-playlist > /dev/null 2>&1 & disown; }`];"""
