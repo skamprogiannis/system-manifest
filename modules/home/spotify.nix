@@ -7,6 +7,8 @@
   spotifyDeviceName = "nixos-desktop";
   spotifyServiceName = "spotify-player.service";
   spotifyPlayerRawPkg = inputs.spotify-player.defaultPackage.${pkgs.stdenv.hostPlatform.system};
+  spotifyConfigDir = "${config.xdg.configHome}/spotify-player";
+  spotifyCacheDir = "${config.xdg.cacheHome}/spotify-player";
   spotifyDaemonConfigDir = "${config.xdg.configHome}/spotify-player-daemon";
   spotifyDaemonArgs = "-c ${spotifyDaemonConfigDir} --daemon";
   spotifyPlayerPkg = pkgs.writeShellScriptBin "spotify_player" ''
@@ -14,6 +16,8 @@
 
     real_player="${spotifyPlayerRawPkg}/bin/spotify_player"
     service_name="${spotifyServiceName}"
+    auth_config_dir="${spotifyConfigDir}"
+    credentials_file="${spotifyCacheDir}/credentials.json"
     initial_device_wait_attempts=20
     retry_device_wait_attempts=10
 
@@ -41,6 +45,24 @@
       done
 
       return 1
+    }
+
+    has_cached_credentials() {
+      [ -s "$credentials_file" ]
+    }
+
+    stop_service() {
+      ${pkgs.systemd}/bin/systemctl --user stop "$service_name" >/dev/null 2>&1 || true
+    }
+
+    ensure_authenticated() {
+      if has_cached_credentials; then
+        return 0
+      fi
+
+      stop_service
+      echo "spotify_player: no cached Spotify credentials; starting interactive login" >&2
+      "$real_player" -c "$auth_config_dir" authenticate
     }
 
     daemon_has_device() {
@@ -82,6 +104,16 @@
       exec_real_player "$@"
     fi
 
+    if [ "$#" -gt 0 ] && [ "$1" = "authenticate" ]; then
+      stop_service
+      exec_real_player "$@"
+    fi
+
+    if ! ensure_authenticated; then
+      echo "spotify_player: authentication failed" >&2
+      exit 1
+    fi
+
     if ! ensure_service_started; then
       echo "spotify_player: failed to start ${spotifyServiceName}; launching the client anyway" >&2
       exec_real_player "$@"
@@ -95,7 +127,7 @@
   '';
 in {
   # TUI config: no MPRIS or notifications (daemon handles those)
-  home.file."${config.xdg.configHome}/spotify-player/app.toml".text = ''
+  home.file."${spotifyConfigDir}/app.toml".text = ''
     client_port = 8081
     login_redirect_uri = "http://127.0.0.1:8989/login"
     enable_streaming = "DaemonOnly"
