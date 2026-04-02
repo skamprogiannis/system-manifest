@@ -58,6 +58,220 @@
       ${pkgs.gnused}/bin/sed -i \
         's|/\\.local/bin/wallpaper-playlist|/.local/bin/.wallpaper-playlist|g' \
         "$out/share/wallpaper-selector/qml/Selector.qml"
+      ${pkgs.python3}/bin/python - "$out/share/wallpaper-selector/qml/Selector.qml" <<'PY'
+from pathlib import Path
+import re
+import sys
+
+path = Path(sys.argv[1])
+text = path.read_text()
+
+old_playlist = """                    command = ["bash", "-c", `pgrep -fx 'bash.*wallpaper-playlist' > /dev/null || { nohup ''${home}/.local/bin/wallpaper-playlist > /dev/null 2>&1 & disown; }`];"""
+new_playlist = """                    command = ["bash", "-c", `pgrep -fx 'bash.*wallpaper-playlist' > /dev/null || { nohup ''${home}/.local/bin/.wallpaper-playlist > /dev/null 2>&1 & disown; }`];"""
+if old_playlist not in text:
+    raise SystemExit("Failed to patch wallpaper playlist daemon path in Selector.qml")
+text = text.replace(old_playlist, new_playlist, 1)
+
+new_scan = """
+            function scanWallpapers() {
+                console.log("Scanning:", baseFolder);
+
+                masterModel.clear();
+                filteredModel.clear();
+
+                function scanStaticWallpapers() {
+                    var staticFiles = Qt.createQmlObject('import Qt.labs.folderlistmodel 1.0; FolderListModel {}', window);
+                    staticFiles.folder = "file://" + staticWallpaperFolder;
+                    staticFiles.showDirs = false;
+                    staticFiles.showFiles = true;
+                    staticFiles.nameFilters = ["*.jpg", "*.png", "*.jpeg", "*.gif", "*.webp"];
+
+                    var staticProcessed = false;
+                    var staticReady = false;
+                    function processStaticFiles() {
+                        if (staticProcessed)
+                            return;
+                        if (staticFiles.status !== FolderListModel.Ready)
+                            return;
+                        if (!staticReady) {
+                            staticReady = true;
+                            if (staticFiles.count === 0)
+                                return;
+                        }
+                        staticProcessed = true;
+
+                        for (let i = 0; i < staticFiles.count; i++) {
+                            let filePath = stripFileScheme(staticFiles.get(i, "filePath")).replace(/\\/$/, "");
+
+                            queueThumbnail(filePath);
+                            let displayTitle = window.renamedTitles[filePath] || filePath.split("/").pop();
+                            masterModel.append({
+                                folder: filePath,
+                                title: displayTitle,
+                                originalTitle: filePath.split("/").pop(),
+                                isStatic: true,
+                                isFavorite: window.favorites.includes(filePath),
+                                contentrating: "Everyone",
+                                tags: "[]"
+                            });
+                        }
+
+                        function finalizeStaticScan() {
+                            Qt.callLater(() => { cleanupThumbnails(window.validThumbs); });
+                            filterWallpapers();
+                            Qt.callLater(() => { initialFadeIn.start(); window.isInitialLoad = false; });
+                        }
+
+                        var subDirs = Qt.createQmlObject('import Qt.labs.folderlistmodel 1.0; FolderListModel {}', window);
+                        subDirs.folder = "file://" + staticWallpaperFolder;
+                        subDirs.showDirs = true;
+                        subDirs.showFiles = false;
+                        subDirs.showHidden = false;
+
+                        subDirs.onStatusChanged.connect(function () {
+                            if (subDirs.status !== FolderListModel.Ready)
+                                return;
+
+                            let dirsToScan = [];
+                            for (let j = 0; j < subDirs.count; j++) {
+                                let dirPath = stripFileScheme(subDirs.get(j, "filePath")).replace(/\\/$/, "");
+                                dirsToScan.push(dirPath);
+                            }
+
+                            if (dirsToScan.length === 0) {
+                                finalizeStaticScan();
+                                return;
+                            }
+
+                            let remaining = dirsToScan.length;
+
+                            dirsToScan.forEach(function (dirPath) {
+                                let subFiles = Qt.createQmlObject('import Qt.labs.folderlistmodel 1.0; FolderListModel {}', window);
+                                subFiles.folder = "file://" + dirPath;
+                                subFiles.showDirs = false;
+                                subFiles.showFiles = true;
+                                subFiles.nameFilters = ["*.jpg", "*.png", "*.jpeg", "*.gif", "*.webp"];
+
+                                subFiles.onStatusChanged.connect(function () {
+                                    if (subFiles.status !== FolderListModel.Ready)
+                                        return;
+
+                                    for (let k = 0; k < subFiles.count; k++) {
+                                        let filePath = stripFileScheme(subFiles.get(k, "filePath")).replace(/\\/$/, "");
+                                        queueThumbnail(filePath);
+                                        let displayTitle = window.renamedTitles[filePath] || filePath.split("/").pop();
+                                        masterModel.append({
+                                            folder: filePath,
+                                            title: displayTitle,
+                                            originalTitle: filePath.split("/").pop(),
+                                            isStatic: true,
+                                            isFavorite: window.favorites.includes(filePath),
+                                            contentrating: "Everyone",
+                                            tags: "[]"
+                                        });
+                                    }
+
+                                    remaining--;
+                                    if (remaining == 0)
+                                        finalizeStaticScan();
+                                });
+                            });
+                        });
+                    }
+
+                    staticFiles.onStatusChanged.connect(function () {
+                        processStaticFiles();
+                        if (!staticProcessed && staticFiles.status !== FolderListModel.Ready) {
+                            return;
+                        }
+                        if (!staticProcessed && staticFiles.count === 0) {
+                            Qt.callLater(function () {
+                                if (!staticProcessed) {
+                                    staticProcessed = true;
+                                    filterWallpapers();
+                                    Qt.callLater(() => { initialFadeIn.start(); window.isInitialLoad = false; });
+                                }
+                            });
+                        }
+                    });
+                    staticFiles.onCountChanged.connect(processStaticFiles);
+                }
+
+                scanStaticWallpapers();
+
+                var folders = Qt.createQmlObject('import Qt.labs.folderlistmodel 1.0; FolderListModel {}', window);
+                folders.folder = "file://" + baseFolder;
+                folders.showDirs = true;
+                folders.showFiles = false;
+
+                var dynamicProcessed = false;
+                function processDynamicFolders() {
+                    if (dynamicProcessed)
+                        return;
+                    if (folders.status !== FolderListModel.Ready)
+                        return;
+
+                    dynamicProcessed = true;
+
+                    for (let i = 0; i < folders.count; i++) {
+                        let folderPath = folders.get(i, "filePath");
+                        let cleanPath = stripFileScheme(folderPath);
+
+                        masterModel.append({
+                            folder: folderPath,
+                            title: "Error! Fix project file.",
+                            originalTitle: "",
+                            preview: "",
+                            isStatic: false,
+                            isFavorite: window.favorites.includes(cleanPath),
+                            tags: "[]",
+                            hash: Qt.md5(cleanPath)
+                        });
+
+                        let index = masterModel.count - 1;
+
+                        getWallpaperInfo(folderPath, function (data) {
+                            let cleanPath = stripFileScheme(folderPath);
+                            let displayTitle = window.renamedTitles[cleanPath] || data.title;
+                            masterModel.setProperty(index, "title", displayTitle);
+                            masterModel.setProperty(index, "originalTitle", data.title);
+                            masterModel.setProperty(index, "preview", data.preview);
+                            masterModel.setProperty(index, "contentrating", data.contentrating || "Everyone");
+                            masterModel.setProperty(index, "tags", JSON.stringify(data.tags || []));
+
+                            if (data.preview && data.preview !== "") {
+                                let fullPath = stripFileScheme(folderPath) + "/" + data.preview;
+                                queueThumbnail(fullPath);
+                            }
+                        });
+                    }
+
+                    filterWallpapers();
+                }
+
+                folders.onStatusChanged.connect(processDynamicFolders);
+                folders.onCountChanged.connect(processDynamicFolders);
+            }
+"""
+text, count = re.subn(
+    r"""
+            function\ scanWallpapers\(\)\ \{
+            .*?
+            \}
+            \s*Component\.onCompleted:
+          """,
+    new_scan + """
+            Component.onCompleted:
+""",
+    text,
+    count=1,
+    flags=re.S | re.X,
+)
+if count != 1:
+    raise SystemExit("Failed to patch scanWallpapers in Selector.qml")
+
+path.write_text(text)
+PY
       cat > "$out/share/wallpaper-selector/qml/Theme.qml" <<'EOF'
       pragma Singleton
       import QtQuick
@@ -162,7 +376,7 @@
               Component.onCompleted: colorFile.reload()
           }
       }
-      EOF
+EOF
       cp qml/shell.qml "$out/share/wallpaper-selector/qml/shell.qml"
       install -m755 scripts/wallpaper-playlist.sh "$out/bin/.wallpaper-playlist"
 
@@ -393,7 +607,7 @@
               exit 1
               ;;
       esac
-      EOF
+EOF
 
       cat > "$out/bin/wallpaper-selector" <<'EOF'
       #!${pkgs.bash}/bin/bash
@@ -431,7 +645,7 @@
       fi
 
       exec ${pkgs.quickshell}/bin/quickshell -p "$selector_path"
-      EOF
+EOF
 
       chmod +x "$out/bin/"*
 
@@ -452,6 +666,7 @@ in {
 
     ${pkgs.coreutils}/bin/cp -f "${wallpaperSelectorPkg}/bin/wallpaper-apply" "$HOME/.local/bin/wallpaper-apply"
     ${pkgs.coreutils}/bin/cp -f "${wallpaperSelectorPkg}/bin/.wallpaper-playlist" "$HOME/.local/bin/.wallpaper-playlist"
+    ${pkgs.coreutils}/bin/cp -f "${wallpaperSelectorPkg}/bin/.wallpaper-playlist" "$HOME/.local/bin/wallpaper-playlist"
     ${pkgs.coreutils}/bin/cp -f "${wallpaperSelectorPkg}/bin/wallpaper-selector" "$HOME/.local/bin/wallpaper-selector"
 
     # Cleanup stale wrappers from previous iterations.
@@ -461,12 +676,12 @@ in {
       "$HOME/.local/bin/wallpaper-startup.sh" \
       "$HOME/.local/bin/wallpaper-apply.sh" \
       "$HOME/.local/bin/wallpaper-apply-static.sh" \
-      "$HOME/.local/bin/wallpaper-playlist.sh" \
-      "$HOME/.local/bin/wallpaper-playlist"
+      "$HOME/.local/bin/wallpaper-playlist.sh"
 
     ${pkgs.coreutils}/bin/chmod 755 \
       "$HOME/.local/bin/wallpaper-apply" \
       "$HOME/.local/bin/.wallpaper-playlist" \
+      "$HOME/.local/bin/wallpaper-playlist" \
       "$HOME/.local/bin/wallpaper-selector"
   '';
 
