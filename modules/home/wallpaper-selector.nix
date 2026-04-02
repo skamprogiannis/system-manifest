@@ -376,7 +376,7 @@ PY
               Component.onCompleted: colorFile.reload()
           }
       }
-      EOF
+EOF
       cp qml/shell.qml "$out/share/wallpaper-selector/qml/shell.qml"
       install -m755 scripts/wallpaper-playlist.sh "$out/bin/.wallpaper-playlist"
 
@@ -607,7 +607,7 @@ PY
               exit 1
               ;;
       esac
-      EOF
+EOF
 
       cat > "$out/bin/wallpaper-selector" <<'EOF'
       #!${pkgs.bash}/bin/bash
@@ -645,7 +645,7 @@ PY
       fi
 
       exec ${pkgs.quickshell}/bin/quickshell -p "$selector_path"
-      EOF
+EOF
 
       chmod +x "$out/bin/"*
 
