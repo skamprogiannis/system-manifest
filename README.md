@@ -63,7 +63,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 - **Screenshots:** `dms screenshot` handles region/window/full capture with image-to-clipboard. `screenshot-path-copy` wraps it to copy the file path instead (useful for sharing with AI agents). Screen recording via **Kooha** GUI.
 - **GitHub Copilot CLI:** `Ctrl+Y` opens Neovim. `gh copilot` launched from the Zellij `copilot` tab.
 - **DNS:** Quad9 (`9.9.9.9`) for privacy-focused DNS resolution.
-- **XDG directories:** Lowercase paths such as `~/downloads`, `~/pictures`, and `~/wallpapers` are canonical. Legacy uppercase XDG folders are migrated into the lowercase layout when it is safe to do so.
+- **XDG directories:** Lowercase paths such as `~/downloads`, `~/pictures`, and `~/wallpapers` are canonical. Legacy uppercase XDG folders are migrated into the lowercase layout when it is safe to do so, and Yazi assigns the expected special-folder icons to those lowercase names.
 
 ## Custom Scripts
 
