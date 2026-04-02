@@ -637,6 +637,9 @@ EOF
       CACHE_WALL="$HOME/.cache/current_wallpaper"
       FALLBACK_CACHE="$HOME/.cache/quickshell-last-wallpaper"
       WE_WORKSHOP_ROOT="$WE_WORKSHOP"
+      USB_LIGHT_MODE_FLAG="$HOME/.config/system-manifest/usb-light-mode-enabled"
+      NORMAL_POLL_INTERVAL=2
+      LIGHT_MODE_POLL_INTERVAL=8
 
       cleanup() {
         stop_all_we
@@ -652,6 +655,7 @@ EOF
       CURRENT_WALL=""
       LAST_COLORS_HASH=""
       LAST_VESKTOP_PALETTE_HASH=""
+      LAST_POWER_PROFILE=""
 
       update_themes() {
         local color_file="$HOME/.config/hypr/dms/colors.conf"
@@ -890,11 +894,100 @@ EOF
         [ "$b" = "active" ] || [ "$b" = "activating" ]
       }
 
+      usb_light_mode_enabled() {
+        [ -f "$USB_LIGHT_MODE_FLAG" ]
+      }
+
+      current_power_profile() {
+        if ! usb_light_mode_enabled; then
+          printf 'balanced\n'
+          return 0
+        fi
+
+        local profile=""
+        profile="$(${pkgs.power-profiles-daemon}/bin/powerprofilesctl get 2>/dev/null || true)"
+        case "$profile" in
+          power-saver|balanced|performance)
+            printf '%s\n' "$profile"
+            ;;
+          *)
+            printf 'balanced\n'
+            ;;
+        esac
+      }
+
+      current_poll_interval() {
+        if usb_light_mode_enabled && [ "$LAST_POWER_PROFILE" = "power-saver" ]; then
+          printf '%s\n' "$LIGHT_MODE_POLL_INTERVAL"
+        else
+          printf '%s\n' "$NORMAL_POLL_INTERVAL"
+        fi
+      }
+
+      apply_we_policy() {
+        local requested_dir="$1"
+        local normalized_dir=""
+        local current_target=""
+
+        [ -n "$requested_dir" ] || return 1
+        normalized_dir=$(normalize_dir "$requested_dir" 2>/dev/null || printf '%s\n' "$requested_dir")
+        publish_we_thumbnail "$normalized_dir" || true
+
+        if usb_light_mode_enabled && [ "$LAST_POWER_PROFILE" = "power-saver" ]; then
+          echo "USB light mode active: keeping static preview for $normalized_dir"
+          stop_all_we
+          return 0
+        fi
+
+        current_target=$(current_we_dir)
+        if [ "$current_target" = "$normalized_dir" ] && we_is_active; then
+          echo "Wallpaper Engine already running: $normalized_dir (skipped restart)"
+          return 0
+        fi
+
+        echo "Wallpaper Engine: $normalized_dir"
+        swap_we_service "$normalized_dir" "$WE_ASSETS"
+      }
+
+      handle_power_profile_change() {
+        local profile="$1"
+        local previous="$LAST_POWER_PROFILE"
+        local target_wall=""
+        local target_we_dir=""
+
+        usb_light_mode_enabled || return 0
+        [ "$profile" = "$LAST_POWER_PROFILE" ] && return 0
+        LAST_POWER_PROFILE="$profile"
+
+        echo "USB light mode profile: ${previous:-unset} -> $profile"
+
+        target_wall="$CURRENT_WALL"
+        if [ -z "$target_wall" ]; then
+          target_wall=$(dms ipc wallpaper get 2>/dev/null || true)
+        fi
+        if [ -n "$target_wall" ]; then
+          target_we_dir=$(resolve_we_dir_with_refresh "$target_wall" || true)
+        fi
+
+        if [ "$profile" = "power-saver" ]; then
+          if [ -n "$target_we_dir" ]; then
+            publish_we_thumbnail "$target_we_dir" || true
+          fi
+          stop_all_we
+          return 0
+        fi
+
+        if [ -n "$target_we_dir" ]; then
+          apply_we_policy "$target_we_dir"
+        fi
+      }
+
       # Ensure WE wallpaper map is fresh before first poll
       wallpaper-engine-sync &>/dev/null || true
 
       # Initial theme update on startup
       update_themes
+      LAST_POWER_PROFILE=$(current_power_profile)
 
       # If DMS restored a static wallpaper, stop WE immediately so Hyprland
       # does not keep probing a crashed renderer and showing ANR popups.
@@ -921,19 +1014,18 @@ EOF
       if [ -n "$boot_we_dir" ]; then
         # Boot restore: start WE on first slot and set thumbnail as DMS wallpaper
         echo "Boot restore: WE directory $boot_we_dir"
-        swap_we_service "$boot_we_dir" "$WE_ASSETS"
-        publish_we_thumbnail "$boot_we_dir"
+        apply_we_policy "$boot_we_dir"
       elif [ -n "$initial_wall" ]; then
         initial_we_dir=$(resolve_we_dir_with_refresh "$initial_wall" || true)
         if [ -n "$initial_we_dir" ]; then
-          swap_we_service "$initial_we_dir" "$WE_ASSETS"
-          publish_we_thumbnail "$initial_we_dir"
+          apply_we_policy "$initial_we_dir"
         else
           stop_all_we
         fi
       fi
 
       while true; do
+        handle_power_profile_change "$(current_power_profile)"
         NEW_WALL=$(dms ipc wallpaper get 2>/dev/null)
 
         if [ -n "$NEW_WALL" ] && [ "$NEW_WALL" != "$CURRENT_WALL" ]; then
@@ -943,21 +1035,7 @@ EOF
           WE_DIR=$(resolve_we_dir_with_refresh "$NEW_WALL" || true)
 
           if [ -n "$WE_DIR" ]; then
-            # wallpaper-apply may have already started WE with this directory;
-            # skip the restart if the service is running with the same wallpaper.
-            CURRENT_WE_DIR=$(systemctl --user show-environment 2>/dev/null \
-              | grep '^WE_WALLPAPER_DIR=' | cut -d= -f2- || true)
-            if [ -n "$CURRENT_WE_DIR" ]; then
-              CURRENT_WE_DIR=$(normalize_dir "$CURRENT_WE_DIR" 2>/dev/null || printf '%s\n' "$CURRENT_WE_DIR")
-            fi
-            WE_DIR=$(normalize_dir "$WE_DIR" 2>/dev/null || printf '%s\n' "$WE_DIR")
-
-            if [ "$CURRENT_WE_DIR" = "$WE_DIR" ] && we_is_active; then
-              echo "Wallpaper Engine already running: $WE_DIR (skipped restart)"
-            else
-              echo "Wallpaper Engine: $WE_DIR"
-              swap_we_service "$WE_DIR" "$WE_ASSETS"
-            fi
+            apply_we_policy "$WE_DIR"
           else
             # Static wallpaper — DMS renders it natively, just stop WE
             echo "Static wallpaper: $NEW_WALL"
@@ -970,7 +1048,7 @@ EOF
         # polling Matugen output independently and let the color hash gate
         # skip no-op work once the new palette lands.
         update_themes
-        sleep 2
+        sleep "$(current_poll_interval)"
       done
     '')
 
