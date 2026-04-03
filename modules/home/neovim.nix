@@ -197,16 +197,13 @@
       vim.api.nvim_set_hl(0, "LineNr", { bg = "NONE" })
       vim.api.nvim_set_hl(0, "Visual", { bg = "#3f4152", bold = true })
 
-      -- Transparent border-cell background so the dark float area
-      -- doesn't bleed outside the border line on glass terminals.
-      local fb = vim.api.nvim_get_hl(0, { name = "FloatBorder", link = false })
-      vim.api.nvim_set_hl(0, "FloatBorder", {
-        fg = fb.fg,
-        bg = "NONE",
-      })
+      -- Backgroundless floats: text + border lines float over the code.
+      -- Eliminates the dark-rectangle bleed beyond the border line that
+      -- winblend creates on glass terminals (Neovim limitation).
+      vim.api.nvim_set_hl(0, "NormalFloat", { bg = "NONE" })
+      vim.api.nvim_set_hl(0, "FloatBorder", { bg = "NONE" })
 
-      -- Consistent rounded borders on all floats via winborder (Neovim 0.11+)
-      vim.o.winblend = 12
+      vim.o.winblend = 0
       if vim.fn.exists("+winborder") == 1 then
         vim.o.winborder = "rounded"
       end
@@ -214,7 +211,6 @@
         float = {
           focusable = false,
           style = "minimal",
-          winblend = 12,
         },
       })
 
