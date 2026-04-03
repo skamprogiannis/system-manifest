@@ -176,12 +176,11 @@ EOF
       USB_LIGHT_MODE_FLAG="$HOME/.config/system-manifest/usb-light-mode-enabled"
 
       usage() {
-          cat >&2 <<'USAGE'
-      Usage:
-        wallpaper-apply static <wallpaper_image>
-        wallpaper-apply dynamic [--hash HASH --thumb-folder PATH] <wallpaper_folder_path>
-        wallpaper-apply audio mute|unmute
-      USAGE
+          printf '%s\n' \
+              'Usage:' \
+              '  wallpaper-apply static <wallpaper_image>' \
+              '  wallpaper-apply dynamic [--hash HASH --thumb-folder PATH] <wallpaper_folder_path>' \
+              '  wallpaper-apply audio mute|unmute' >&2
       }
 
       usb_light_mode_enabled() {
@@ -359,8 +358,8 @@ EOF
           local thumb_path=""
           if [ -n "$thumb_name" ]; then
               thumb_path="$thumb_dir/$thumb_name"
-              if [ ! -f "$thumb_path" ]; then
-                  wallpaper-engine-sync --regen >/dev/null 2>&1 || true
+              if [ ! -s "$thumb_path" ]; then
+                  wallpaper-engine-sync >/dev/null 2>&1 || true
               fi
           fi
 
