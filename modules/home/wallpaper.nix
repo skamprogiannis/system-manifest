@@ -49,7 +49,7 @@ in {
     _wallpaper_engine_sync_complete() {
       local cur
       cur="''${COMP_WORDS[COMP_CWORD]}"
-      COMPREPLY=($(compgen -W "--regen --list-subs --help -h" -- "$cur"))
+      COMPREPLY=($(compgen -W "--regen --list-subs --capture --capture-bad --help -h" -- "$cur"))
     }
     complete -F _wallpaper_engine_sync_complete wallpaper-engine-sync
   '';
@@ -96,13 +96,25 @@ in {
       )
       FORCE_REGEN=0
       LIST_SUBSCRIPTIONS=0
+      CAPTURE_MODE=0
+      CAPTURE_FILTER=""
+      CAPTURE_BAD_ONLY=0
 
       usage() {
         cat <<'EOF'
-Usage: wallpaper-engine-sync [--regen] [--list-subs]
+Usage: wallpaper-engine-sync [OPTIONS] [NAME]
 
-  --regen      Regenerate all dynamic thumbnails.
-  --list-subs  Print discovered subscribed Wallpaper Engine IDs and exit.
+Options:
+  --regen        Regenerate all dynamic thumbnails.
+  --list-subs    Print discovered subscribed Wallpaper Engine IDs and exit.
+  --capture      Interactive live-capture mode: cycles each WE wallpaper on
+                 your desktop, waits for Enter, then screenshots it.
+  --capture-bad  Like --capture, but only wallpapers with corrupt or missing
+                 thumbnails.
+  -h, --help     Show this help.
+
+Arguments:
+  NAME           Only process wallpapers matching this name (substring match).
 EOF
       }
 
@@ -114,23 +126,226 @@ EOF
           --list-subs)
             LIST_SUBSCRIPTIONS=1
             ;;
+          --capture)
+            CAPTURE_MODE=1
+            ;;
+          --capture-bad)
+            CAPTURE_MODE=1
+            CAPTURE_BAD_ONLY=1
+            ;;
           -h|--help)
             usage
             exit 0
             ;;
-          *)
-            echo "Unknown argument: $1" >&2
+          -*)
+            echo "Unknown option: $1" >&2
             usage >&2
             exit 2
+            ;;
+          *)
+            CAPTURE_FILTER="$1"
             ;;
         esac
         shift
       done
 
-      mkdir -p "$WALL_DIR" "$CACHE_DIR"
+      thumb_is_near_black() {
+        local thumb="$1"
+        [ -f "$thumb" ] || return 1
+        local brightness=""
+        brightness=$(${pkgs.imagemagick}/bin/magick "$thumb[0]" \
+          -colorspace Gray -resize 1x1\! -depth 8 gray:- 2>/dev/null \
+          | ${pkgs.coreutils}/bin/od -An -tu1 \
+          | ${pkgs.gawk}/bin/awk 'NF { print $1; exit }')
+        [ -n "$brightness" ] || return 1
+        [ "$brightness" -le 3 ]
+      }
+
+      thumb_is_invalid() {
+        local thumb="$1"
+        [ ! -s "$thumb" ] && return 0
+        local magic=""
+        magic=$(${pkgs.coreutils}/bin/head -c2 "$thumb" \
+          | ${pkgs.coreutils}/bin/od -A n -t x1 \
+          | ${pkgs.coreutils}/bin/tr -d ' ')
+        [ "$magic" != "ffd8" ] && return 0
+        thumb_is_near_black "$thumb" && return 0
+        return 1
+      }
+
+      thumb_is_low_quality() {
+        local thumb="$1"
+        thumb_is_invalid "$thumb" && return 0
+        local size=0
+        size=$(${pkgs.coreutils}/bin/stat -c%s "$thumb" 2>/dev/null || echo 0)
+        [ "$size" -lt 51200 ]
+      }
+
+      SELECTOR_THUMB_DIR="$CACHE_DIR/quickshell-wallpaper-thumbs"
+
+      selector_thumb_key() {
+        local dir="$1"
+        [ -f "$dir/project.json" ] || return 1
+        local rel=""
+        rel=$(${pkgs.jq}/bin/jq -r '
+          (.preview // "") as $preview
+          | (.file // "") as $file
+          | (.type // "" | ascii_downcase) as $type
+          | if $preview != "" then $preview
+            elif $type == "video" and $file != "" then $file
+            else ""
+            end
+        ' "$dir/project.json" 2>/dev/null || true)
+        if [ -n "$rel" ]; then
+          printf '%s\n' "$dir/$rel"
+        else
+          printf '%s\n' "$dir"
+        fi
+      }
+
+      selector_thumb_path_for_dir() {
+        local dir="$1"
+        local key=""
+        key=$(selector_thumb_key "$dir" || true)
+        [ -n "$key" ] || return 1
+        local hash=""
+        hash=$(printf '%s' "$key" | ${pkgs.coreutils}/bin/md5sum | ${pkgs.coreutils}/bin/cut -d' ' -f1)
+        printf '%s/%s.jpg\n' "$SELECTOR_THUMB_DIR" "$hash"
+      }
+
+      sync_selector_thumb_cache() {
+        local dir="$1" src="$2"
+        [ -f "$src" ] || return 0
+        local selector_thumb=""
+        selector_thumb=$(selector_thumb_path_for_dir "$dir" || true)
+        [ -n "$selector_thumb" ] || return 0
+        ${pkgs.coreutils}/bin/mkdir -p "$SELECTOR_THUMB_DIR"
+        ${pkgs.coreutils}/bin/cp -f "$src" "$selector_thumb"
+      }
+
+      mkdir -p "$WALL_DIR" "$CACHE_DIR" "$SELECTOR_THUMB_DIR"
       exec 8>"$LOCK_FILE"
       if ! ${pkgs.util-linux}/bin/flock -n 8; then
-        echo "wallpaper-engine-sync already running, skipping"
+        if [ "$CAPTURE_MODE" = "1" ]; then
+          echo "Another wallpaper-engine-sync is running; waiting for it to finish..."
+          ${pkgs.util-linux}/bin/flock 8
+        else
+          echo "wallpaper-engine-sync already running, skipping"
+          exit 0
+        fi
+      fi
+
+      # Interactive live-capture mode: apply each WE wallpaper, wait for
+      # Enter, then screenshot the desktop at native resolution.
+      if [ "$CAPTURE_MODE" = "1" ]; then
+
+        echo "=== Interactive WE Thumbnail Capture ==="
+        if [ -n "$CAPTURE_FILTER" ]; then
+          echo "Filter: '$CAPTURE_FILTER'"
+        elif [ "$CAPTURE_BAD_ONLY" = "1" ]; then
+          echo "Mode: bad/missing thumbnails only"
+        fi
+        echo "Each wallpaper will be applied live. Press Enter when it looks"
+        echo "good, or type 's' to skip. The screenshot replaces the thumbnail."
+        echo "After you press Enter, you get 2 seconds to switch to a clean"
+        echo "workspace or hide the terminal before the screenshot is taken."
+        echo ""
+
+        focused_monitor() {
+          hyprctl monitors -j 2>/dev/null \
+            | ${pkgs.jq}/bin/jq -r '.[] | select(.focused == true) | .name' \
+            | ${pkgs.coreutils}/bin/head -n 1
+        }
+
+        capture_count=0
+        captured=0
+        skipped=0
+        total=0
+        for dir in "$WE_WORKSHOP"/*/; do
+          [ -f "$dir/project.json" ] && total=$((total + 1))
+        done
+
+        for dir in "$WE_WORKSHOP"/*/; do
+          [ -f "$dir/project.json" ] || continue
+          capture_count=$((capture_count + 1))
+          title=$(${pkgs.jq}/bin/jq -r '.title // "unknown"' "$dir/project.json")
+          safe_title=$(echo "$title" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9._-]/-/g' | sed 's/--*/-/g' | sed 's/^-//;s/-$//')
+          thumb_name="''${safe_title}.jpg"
+          thumb_path="$WALL_DIR/$thumb_name"
+
+          # Apply name filter (case-insensitive substring match)
+          if [ -n "$CAPTURE_FILTER" ]; then
+            title_lower=$(echo "$title" | tr '[:upper:]' '[:lower:]')
+            filter_lower=$(echo "$CAPTURE_FILTER" | tr '[:upper:]' '[:lower:]')
+            if [[ "$title_lower" != *"$filter_lower"* ]] && [[ "$safe_title" != *"$filter_lower"* ]]; then
+              continue
+            fi
+          fi
+
+          # Apply bad-only filter
+          if [ "$CAPTURE_BAD_ONLY" = "1" ] && ! thumb_is_low_quality "$thumb_path"; then
+            continue
+          fi
+
+          echo "[$capture_count/$total] $title"
+          if [ -s "$thumb_path" ]; then
+            echo "    Current: $thumb_path"
+            if thumb_is_low_quality "$thumb_path"; then
+              echo "    ⚠ Bad thumbnail (corrupt or low-quality)"
+            fi
+          else
+            echo "    No thumbnail yet"
+          fi
+
+          echo "    Applying wallpaper (waiting for WE to render)..."
+          if ! wallpaper-apply dynamic "$dir" 2>&1 | sed 's/^/    /'; then
+            echo "    Failed to apply wallpaper; aborting capture mode." >&2
+            exit 1
+          fi
+
+          # Give WE a brief moment to render before prompting.
+          sleep 1
+
+          printf '    [Enter] capture  [s] skip  [q] quit: '
+          read -r response </dev/tty
+          case "$response" in
+            s|S)
+              echo "    Skipped."
+              echo ""
+              continue
+              ;;
+            q|Q)
+              echo "    Quitting."
+              break
+              ;;
+          esac
+
+          echo "    Capturing in 2 seconds; switch to a clean workspace now."
+          sleep 2
+
+          tmp_capture=$(mktemp /tmp/we-capture-XXXXXX.png)
+          monitor_name=$(focused_monitor || true)
+          if [ -n "$monitor_name" ]; then
+            ${pkgs.grim}/bin/grim -o "$monitor_name" "$tmp_capture" 2>/dev/null
+          else
+            ${pkgs.grim}/bin/grim "$tmp_capture" 2>/dev/null
+          fi
+          if [ -s "$tmp_capture" ]; then
+            ${pkgs.imagemagick}/bin/magick "$tmp_capture" \
+              -strip -colorspace sRGB -filter Lanczos \
+              -resize 1920x1080^ -gravity center -extent 1920x1080 \
+              -quality 95 "jpg:$thumb_path"
+            sync_selector_thumb_cache "$dir" "$thumb_path"
+            rm -f "$tmp_capture"
+            echo "    ✓ Saved: $thumb_path"
+            captured=$((captured + 1))
+          else
+            echo "    ✗ Screenshot failed"
+            rm -f "$tmp_capture"
+          fi
+          echo ""
+        done
+        echo "Done! Captured $captured thumbnails."
         exit 0
       fi
 
@@ -188,6 +403,11 @@ EOF
           fi
           wait "$pid" 2>/dev/null || true
           if [ -s "$dst" ]; then
+            if thumb_is_near_black "$dst"; then
+              rm -f "$dst"
+              [ "$attempt" -eq 1 ] && echo "    Screenshot attempt $attempt produced a near-black frame, retrying..."
+              continue
+            fi
             return 0
           fi
           [ "$attempt" -eq 1 ] && echo "    Screenshot attempt $attempt failed, retrying with longer delay..."
@@ -199,11 +419,10 @@ EOF
         local src="$1" dst="$2"
         local geom w h
         geom=$(${pkgs.imagemagick}/bin/magick identify -format '%wx%h' "$src[0]" 2>/dev/null) || {
-          # Can't read dimensions — fall through to basic resize.
           ${pkgs.imagemagick}/bin/magick "$src" \
             -strip -colorspace sRGB -filter Lanczos \
             -resize 1920x1080^ -gravity center -extent 1920x1080 \
-            -quality 92 "$dst" 2>/dev/null || true
+            -quality 92 "jpg:$dst" 2>/dev/null || true
           [ -s "$dst" ]
           return
         }
@@ -217,7 +436,7 @@ EOF
         if [ "$w" -lt 400 ] && [ "$h" -lt 400 ]; then
           ${pkgs.imagemagick}/bin/magick "$src" \
             -strip -colorspace sRGB \
-            -quality 92 "$dst" 2>/dev/null || true
+            -quality 92 "jpg:$dst" 2>/dev/null || true
           [ -s "$dst" ]
           return
         fi
@@ -230,12 +449,12 @@ EOF
             \( +clone -filter Gaussian -resize 1920x1080! -blur 0x20 \) \
             +swap -gravity center -filter Lanczos \
             -resize 1920x1080 -composite \
-            -quality 92 "$dst" 2>/dev/null || true
+            -quality 92 "jpg:$dst" 2>/dev/null || true
         else
           ${pkgs.imagemagick}/bin/magick "$src" \
             -strip -colorspace sRGB -filter Lanczos \
             -resize 1920x1080^ -gravity center -extent 1920x1080 \
-            -quality 92 "$dst" 2>/dev/null || true
+            -quality 92 "jpg:$dst" 2>/dev/null || true
         fi
         [ -s "$dst" ]
       }
@@ -482,7 +701,7 @@ EOF
         THUMB_PATH="$WALL_DIR/$THUMB_NAME"
         PROJECT_TYPE=$(${pkgs.jq}/bin/jq -r '.type // ""' "$dir/project.json" | tr '[:upper:]' '[:lower:]')
 
-        if [ ! -s "$THUMB_PATH" ] || [ "$FORCE_REGEN" = "1" ]; then
+        if thumb_is_invalid "$THUMB_PATH" || [ "$FORCE_REGEN" = "1" ]; then
           local render_target=""
           local render_source=""
           local preview_low_confidence=0
@@ -531,13 +750,18 @@ EOF
             echo "    -> $render_source"
           else
             rm -f "$render_target"
-            if [ -s "$THUMB_PATH" ]; then
+            if [ -s "$THUMB_PATH" ] && ! thumb_is_invalid "$THUMB_PATH"; then
               echo "    -> keeping existing thumbnail (refresh failed)"
             else
+              rm -f "$THUMB_PATH"
               echo "    -> failed to generate thumbnail" >&2
               return
             fi
           fi
+        fi
+
+        if [ -s "$THUMB_PATH" ]; then
+          sync_selector_thumb_cache "$dir" "$THUMB_PATH"
         fi
 
         if [ "$FIRST" = true ]; then
