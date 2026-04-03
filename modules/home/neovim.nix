@@ -195,14 +195,15 @@
       vim.api.nvim_set_hl(0, "NormalNC", { bg = "NONE" })
       vim.api.nvim_set_hl(0, "SignColumn", { bg = "NONE" })
       vim.api.nvim_set_hl(0, "LineNr", { bg = "NONE" })
+      vim.api.nvim_set_hl(0, "Visual", { bg = "#3f4152", bold = true })
 
+      -- Consistent rounded borders on all floats via winborder (Neovim 0.11+)
       vim.o.winblend = 12
       if vim.fn.exists("+winborder") == 1 then
         vim.o.winborder = "rounded"
       end
       vim.diagnostic.config({
         float = {
-          border = "rounded",
           focusable = false,
           style = "minimal",
           winblend = 12,
