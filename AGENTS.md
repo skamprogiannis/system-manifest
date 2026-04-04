@@ -27,7 +27,7 @@
 - **Squash Fix Chains:** If you need multiple attempts to fix something, squash them into a single commit before pushing (`git rebase -i` or `git commit --amend`). Avoid pushing fix→fix→fix chains that clutter history.
 
 - **Git Hygiene:** ALWAYS `git commit` all changes before running `nixos-rebuild switch`. This ensures that `nixos-rebuild list-generations` shows a clean configuration revision hash, making rollbacks and history tracking much more reliable.
-- **README Updates:** Update `README.md` before committing any significant change (new features, major config changes, removed features, new scripts). The README is the human-readable source-of-truth for the system state.
+- **README Updates:** Update `README.md` before committing any significant change (new features, major config changes, removed features, new scripts). The README is the human-readable source-of-truth for the system state. Keep it high-level: document durable capabilities, workflows, and entrypoints, not pane percentages, micro-keybind lists, transient UI behavior, or implementation trivia unless a user needs them to operate the system.
 - **Autonomy:** You are authorized to run `sudo nixos-rebuild switch --flake` autonomously when requested or implied by the workflow (e.g., "rebuild").
 - **Revision Tracking:** Always set `system.configurationRevision = inputs.self.rev or inputs.self.dirtyRev or null;` in `configuration.nix` so `nixos-rebuild list-generations` shows the commit hash.
 - **Dry Run:** Always use `nixos-rebuild dry-build` before asking the user to build, especially for complex derivations.
