@@ -9,6 +9,7 @@
     settings = {
       default_shell = "bash";
       escape_timeout = 0;
+      theme = "catppuccin-mocha";
     };
     extraConfig = ''
       keybinds {
@@ -306,7 +307,10 @@
         }
         
         tab name="vim" focus=true {
-            pane command="${config.home.homeDirectory}/.nix-profile/bin/nvim" focus=true
+            pane split_direction="horizontal" {
+                pane size="75%" command="${config.home.homeDirectory}/.nix-profile/bin/nvim" focus=true
+                pane size="25%" command="/run/current-system/sw/bin/bash"
+            }
         }
 
         tab name="copilot" {
