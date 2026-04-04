@@ -249,6 +249,12 @@
           echo ~/repositories/"$query"
           return 0
         fi
+
+        nested_match=$(find ~/repositories -mindepth 2 -maxdepth 2 -type d -name "$query" -print -quit 2>/dev/null)
+        if [[ -n "$nested_match" ]]; then
+          echo "$nested_match"
+          return 0
+        fi
         
         if [[ -d ~/"$query" ]]; then
           echo ~/"$query"
@@ -300,16 +306,11 @@
         }
         
         tab name="vim" focus=true {
-            pane split_direction="horizontal" {
-                pane size="80%" command="nvim" focus=true
-                pane size="20%"
-            }
+            pane command="${config.home.homeDirectory}/.nix-profile/bin/nvim" focus=true
         }
 
         tab name="copilot" {
-            pane command="gh" {
-                args "copilot";
-            }
+            pane command="${config.home.homeDirectory}/.nix-profile/bin/copilot"
         }
     }
   '';
