@@ -48,6 +48,10 @@ in {
   ];
 
   home.file.".local/share/applications/firefox.desktop".source = firefoxDesktopFile;
+  # Steam drops per-game icons into ~/.local/share/icons/hicolor; provide the
+  # theme metadata there so Qt/Quickshell launchers can resolve those icons.
+  home.file.".local/share/icons/hicolor/index.theme".source =
+    "${pkgs.hicolor-icon-theme}/share/icons/hicolor/index.theme";
 
   # GTK 4 settings are managed via dconf
   dconf.settings = {
