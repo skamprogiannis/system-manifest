@@ -9,6 +9,7 @@
     settings = {
       default_shell = "bash";
       escape_timeout = 0;
+      pane_frames = false;
       theme = "catppuccin-mocha";
     };
     extraConfig = ''
@@ -308,13 +309,13 @@
         
         tab name="vim" focus=true {
             pane split_direction="horizontal" {
-                pane size="75%" command="${config.home.homeDirectory}/.nix-profile/bin/nvim" focus=true
+                pane size="75%" command="/etc/profiles/per-user/${config.home.username}/bin/nvim" focus=true
                 pane size="25%" command="/run/current-system/sw/bin/bash"
             }
         }
 
         tab name="copilot" {
-            pane command="${config.home.homeDirectory}/.nix-profile/bin/copilot"
+            pane command="/etc/profiles/per-user/${config.home.username}/bin/copilot"
         }
     }
   '';
