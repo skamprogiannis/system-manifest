@@ -16,9 +16,9 @@ Managed via **Nix Flakes** and **Home Manager**.
   - **Mailspring:** Email client; credentials stored via GNOME Keyring (runs standalone, no GNOME shell required).
   - **Obsidian:** Note-taking application with Home Manager plugin management.
   - **PearPass:** Declarative wrapper for the PearPass P2P password manager AppImage.
-  - **Brave + Vimium C:** Declarative extension install with profile preference patching (Rewards button, right vertical tabs, `Ctrl+\` tabbar toggle, hidden close `x`, sidebar/new-tab toggles) plus Vimium C state seeding for portable keymaps/options. Vimium snapshots live in `modules/home/brave/vimium-c/{local-settings,sync-settings}` and are applied via Home Manager activation when Brave is not running.
-- **Vesktop:** Discord client with declarative `Translucence + Matugen` theming: generates a canonical `Translucence.theme.css` from DMS' cached Matugen palette, atomically replaces it to reduce live wallpaper-change flicker, uses the stock Vesktop launcher icon, removes the stock image background, and uses stronger blur/readability tuning over true desktop transparency.
-- **Dev Ready:** Pre-configured environment for Node.js, Python, Go, and Neovim (via nixvim), plus Clang build essentials (`clang` + `gnumake`). Neovim uses the Dracula colorscheme with a transparent background (matches Ghostty glass). Also registered as the default text editor via an `nvim-text` XDG desktop entry (opens in Ghostty).
+  - **Brave + Vimium C:** Declarative browser setup with preseeded extension settings and portable keymaps.
+- **Vesktop:** Discord client with declarative translucency and wallpaper-aware theming.
+- **Dev Ready:** Pre-configured environment for Node.js, Python, Go, and Neovim (via nixvim), plus Clang build essentials. Neovim is also registered as the default text editor via an `nvim-text` desktop entry.
 - **AI Integrated:** Built-in configuration for **GitHub Copilot CLI** with per-repo `AGENTS.md` instructions. Global Copilot instructions live at `~/.copilot/copilot-instructions.md`.
 - **Greeter Avatar:** AccountsService user metadata + declarative avatar asset provisioning for consistent DMS greeter profile image rendering.
 - **Modular Architecture:** Configuration split across `hosts/` (system-level) and `modules/home/` (user-level) for maintainability.
@@ -46,22 +46,17 @@ Packages tracked independently of nixpkgs for tighter version control:
 ## Workflow & UI
 
 - **Glassmorphism Aesthetics:** Ghostty uses `background-opacity = 0.40` (native RGBA) so the terminal background is near-transparent while text stays fully opaque, giving a liquid-glass terminal. GTK4 popover styling also softens the Ghostty context menu with a lighter outer border and more translucency. The hyprglass Hyprland plugin is active for blur/tint/refraction effects on transparent surfaces.
-- **Dynamic Theming:** Matugen-powered Hyprland border colours, GTK4 colours, and video wallpapers via **linux-wallpaperengine** synced via a custom `wallpaper-hook` daemon. WE live captures now drive both DMS wallpaper state and full palette refresh so Settings / shell theming stay in sync, while selector thumbnails treat tiny preview assets as low-confidence and prefer better renders when available. On the USB host, switching the power profile to `power-saver` acts as a light mode: Wallpaper Engine is kept off, the static DMS preview stays visible, and the wallpaper hook polls more slowly until you switch back to `balanced` or `performance`. GTK uses the **Dracula** theme, `Papirus-Dark` comes from the full Papirus icon theme so DMS can resolve real app icons without breaking Papirus' shared symlinks, and Ghostty uses the built-in **Dracula** colour scheme.
+- **Dynamic Theming:** Wallpaper-driven Matugen theming keeps Hyprland, GTK, and supported apps visually in sync across desktop and USB profiles.
 - **Brave transparency note:** Chromium/Brave does not support the same reliable transparent-shell/opaque-content model used by Vesktop in this setup, so Brave remains opaque for readability and stability.
 - **Cursor:** Adwaita (system default).
 - **Zellij Navigation:** `Alt`-based keybindings for all multiplexer actions; `Escape` exits any mode back to Normal and is unbound in Normal mode so it passes through to terminal apps (Vim, Copilot CLI, etc.).
 - **Keyboard Layout:** `us altgr-intl` + `gr simple`. `Super+Space` toggles layouts.
-- **Window Controls:** `Super` + left-drag moves windows, `Super` + right-drag resizes. `Super+Ctrl+H/L` resizes horizontally, `Super+Ctrl+K/J` grows or shrinks the active window in fine steps, and `Super+Ctrl+Up/Down` do the same in larger steps. `Super+Arrows` changes focus between monitors, while `Super+Shift+Arrows` moves the active window between monitors.
+- **Window Controls:** Super-based Hyprland keybindings cover moving, resizing, monitor focus, and monitor-to-monitor window moves.
 - **Hard Quit:** `Super+Shift+X` force-terminates the active app process for clients like Vesktop or ProtonVPN that minimize to tray on normal close.
-- **Launcher Shortcuts:** `Super+E` opens **Yazi** in Ghostty.
-- **DMS declarative shell settings:** Live bar layout is mirrored from saved DMS settings, display config format is set to **Model** with snap enabled, DMS widgets use the **Colorful** style, OSD/toasts/notepad are pinned to the BenQ with fallback routing, popup/notepad/system-monitor opacity is set to `0.70`, occupied-only workspaces and OSD toggles are declared in Nix, the launcher uses the larger NixOS logo with a `2px` border while hiding DMS Settings/Notepad from normal launcher results, and DMS restarts reapply the cached wallpaper to avoid falling back to the stock background.
-- **DMS updater policy on NixOS:** The built-in updater is intentionally left unmanaged declaratively because upstream updater helpers target Arch/Fedora package managers, not the NixOS rebuild workflow.
-- **Notepad shortcut:** `Super+T` toggles the DMS notepad slideout.
-- **Launcher behavior notes:** The built-in System Monitor entry stays available, Settings search stays behind the `?` trigger, and DMS Settings/Notepad stay out of the normal launcher list. `launchPrefix` (when set in DMS launcher settings) prepends a command to app launches, e.g. wrappers like `uwsm-app` or `systemd-run --user`.
-- **Wallpaper Selector Rollout:** `Super+W` toggles the flake-packaged selector open/close; `Super+Shift+W` opens the DMS wallpaper dash fallback.
-- **Wallpaper selector content policy:** Mature/Questionable items are always filtered out and the `:sus` toggle is removed.
+- **Launcher Shortcuts:** Common launch actions cover Yazi, wallpapers, screenshots, and the DMS notepad.
+- **DMS Shell:** Core shell layout, widget placement, and launcher behavior are managed declaratively in Nix.
 - **Screenshots:** `dms screenshot` handles region/window/full capture with image-to-clipboard. `screenshot-path-copy` wraps it to copy the file path instead (useful for sharing with AI agents). Screen recording via **Kooha** GUI.
-- **GitHub Copilot CLI:** `Ctrl+Y` opens Neovim. The Zellij `copilot` tab launches the wrapped `copilot` binary directly so it uses the same PAT-backed environment as the shell.
+- **GitHub Copilot CLI:** Copilot is integrated into the Neovim + terminal workflow with repository-specific instructions.
 - **DNS:** Quad9 (`9.9.9.9`) for privacy-focused DNS resolution.
 - **XDG directories:** Lowercase paths such as `~/downloads`, `~/pictures`, and `~/wallpapers` are canonical. Legacy uppercase XDG folders are migrated into the lowercase layout when it is safe to do so, and Yazi assigns the expected special-folder icons to those lowercase names.
 
@@ -69,7 +64,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 
 | Script | Description |
 |--------|-------------|
-| `zs` | Zellij sessionizer — fuzzy-find project in `~/repositories`, including one nested level, then attach or create a session with full-height Neovim and a separate Copilot tab |
+| `zs` | Zellij sessionizer — fuzzy-find a project and attach or create a dev session with Neovim, shell, and Copilot workflow tabs |
 | `screenshot-path-copy` | Wraps `dms screenshot` to copy the saved file path to clipboard (instead of image) |
 | `wallpaper-hook` | Daemon: picks wallpaper via linux-wallpaperengine, extracts palette via Matugen, reloads Hyprland border and GTK4 colours |
 | `wallpaper-selector` | Toggle wallpaper selector UI (`open` can force-open for scripts) |
@@ -82,7 +77,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 | `copilot-sessions-sync` | Syncs `~/.copilot/session-state/` between desktop and USB (`to-usb` / `from-usb`) |
 | `specify` | Spec Kit CLI wrapper — scaffolds spec-driven development for new projects |
 | `setup-persistent-usb` | Initialises a fresh LUKS-encrypted persistent NixOS USB drive |
-| `update-usb` | Updates the USB using desktop prebuild mode by default (fast local squashfs + USB sync), with `--in-place` fallback |
+| `update-usb` | Updates the USB image using prebuild mode by default, with `--in-place` as a lower-disk-space fallback |
 
 ## Usage
 
@@ -104,27 +99,19 @@ nixos-rebuild dry-build --flake .#desktop
 sudo update-usb /path/to/system-manifest/checkouts/main
 ```
 
-`update-usb` defaults to `--mode prebuild`, which bind-mounts a local staging store for `nixos-install`, builds `nix-store.squashfs` on desktop SSD (`/var/tmp`), then copies only the final squashfs to USB.
+`update-usb` defaults to `--mode prebuild`, which builds locally and syncs the final squashfs image to the USB.
 
 ```bash
 sudo update-usb --mode prebuild /path/to/system-manifest/checkouts/<worktree>
 ```
 
-For low local disk scenarios, use the old USB-heavy path explicitly:
+Use `--in-place` when local disk space is tight:
 
 ```bash
 sudo update-usb --in-place /path/to/system-manifest/checkouts/<worktree>
 ```
 
-The script performs preflight checks (root, partition labels, mountpoint safety, and required tools), auto-enters `nix-shell` when `mksquashfs` is missing, accepts an optional flake directory path, preserves the installed Nix DB, and pre-creates Home Manager's per-user state directories so first-boot activation can add its GC roots successfully. Home Manager activates automatically on first boot via its systemd service (before user login):
-
-```bash
-sudo update-usb /path/to/system-manifest/checkouts/<worktree>
-```
-
-To stop an in-progress USB update, press `Ctrl+C`. The script traps interruption signals, performs safe cleanup (unmount + LUKS close when needed), and prints a cancellation status so you can retry safely.
-
-After `nixos-install`, it compresses `/nix/store` into a squashfs image. In prebuild mode, the script skips expensive ext4 `/nix/store` wipes on USB and keeps the USB ext4 store untouched (runtime still uses squashfs overlay at boot). Home Manager activates on first boot via systemd (`Before=systemd-user-sessions.service`), so the user environment is fully configured by login time. At boot, the USB mounts the compressed image via overlayfs — reads are sequential and fast (like an ISO), while writes go to a 2 GB tmpfs (volatile, reset on reboot). The encrypted root and home directories remain persistent, so user state such as GNOME Keyring data survives reboots on the same USB. Phase timings are printed at the end to compare performance between modes.
+The script handles preflight checks, safe cleanup on `Ctrl+C`, and first-boot Home Manager activation.
 
 ### Initialize / Reformat Persistent USB
 
