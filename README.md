@@ -61,7 +61,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 - **Wallpaper Selector Rollout:** `Super+W` toggles the flake-packaged selector open/close; `Super+Shift+W` opens the DMS wallpaper dash fallback.
 - **Wallpaper selector content policy:** Mature/Questionable items are always filtered out and the `:sus` toggle is removed.
 - **Screenshots:** `dms screenshot` handles region/window/full capture with image-to-clipboard. `screenshot-path-copy` wraps it to copy the file path instead (useful for sharing with AI agents). Screen recording via **Kooha** GUI.
-- **GitHub Copilot CLI:** `Ctrl+Y` opens Neovim. `gh copilot` launched from the Zellij `copilot` tab.
+- **GitHub Copilot CLI:** `Ctrl+Y` opens Neovim. The Zellij `copilot` tab launches the wrapped `copilot` binary directly so it uses the same PAT-backed environment as the shell.
 - **DNS:** Quad9 (`9.9.9.9`) for privacy-focused DNS resolution.
 - **XDG directories:** Lowercase paths such as `~/downloads`, `~/pictures`, and `~/wallpapers` are canonical. Legacy uppercase XDG folders are migrated into the lowercase layout when it is safe to do so, and Yazi assigns the expected special-folder icons to those lowercase names.
 
@@ -69,7 +69,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 
 | Script | Description |
 |--------|-------------|
-| `zs` | Zellij sessionizer — fuzzy-find project in `~/repositories`, attach or create session with 80/20 Neovim/terminal layout |
+| `zs` | Zellij sessionizer — fuzzy-find project in `~/repositories`, including one nested level, then attach or create a session with full-height Neovim and a separate Copilot tab |
 | `screenshot-path-copy` | Wraps `dms screenshot` to copy the saved file path to clipboard (instead of image) |
 | `wallpaper-hook` | Daemon: picks wallpaper via linux-wallpaperengine, extracts palette via Matugen, reloads Hyprland border and GTK4 colours |
 | `wallpaper-selector` | Toggle wallpaper selector UI (`open` can force-open for scripts) |
