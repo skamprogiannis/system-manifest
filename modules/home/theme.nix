@@ -52,6 +52,23 @@ in {
   # theme metadata there so Qt/Quickshell launchers can resolve those icons.
   home.file.".local/share/icons/hicolor/index.theme".source =
     "${pkgs.hicolor-icon-theme}/share/icons/hicolor/index.theme";
+  # Override the system steam.desktop to suppress all jump-list actions
+  # (Big Picture, Store, Library, Community, etc.) from the app launcher.
+  # A local entry under ~/.local/share/applications takes precedence over the
+  # system one at /run/current-system/sw/share/applications per the XDG spec.
+  home.file.".local/share/applications/steam.desktop".text = ''
+    [Desktop Entry]
+    Name=Steam
+    Comment=Application for managing and playing games on Steam
+    Exec=steam %U
+    Icon=steam
+    Terminal=false
+    Type=Application
+    Categories=Network;FileTransfer;Game;
+    MimeType=x-scheme-handler/steam;x-scheme-handler/steamlink;
+    PrefersNonDefaultGPU=true
+    X-KDE-RunOnDiscreteGpu=true
+  '';
 
   # GTK 4 settings are managed via dconf
   dconf.settings = {
