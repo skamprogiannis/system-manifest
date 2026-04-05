@@ -7,7 +7,7 @@
     enable = true;
     enableBashIntegration = false;
     settings = {
-      default_shell = "${pkgs.bashInteractive}/bin/bash";
+      default_shell = "bash";
       escape_timeout = 0;
       pane_frames = false;
       theme = "catppuccin-mocha";
@@ -308,7 +308,10 @@
         }
         
         tab name="vim" focus=true {
-            pane name="nvim" command="/etc/profiles/per-user/${config.home.username}/bin/nvim" focus=true
+            pane stacked=true {
+                pane name="nvim" command="/etc/profiles/per-user/${config.home.username}/bin/nvim" focus=true
+                pane name="bash" command="/run/current-system/sw/bin/bash"
+            }
         }
 
         tab name="copilot" {
