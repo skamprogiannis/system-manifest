@@ -91,6 +91,30 @@ replacements = {
             '                comment: "Sample colors from anywhere on screen",\n                action: "ipc:color-picker",',
         ),
     ],
+    root / "Modules/DankBar/Widgets/WorkspaceSwitcher.qml": [
+        (
+            """                Rectangle {
+                    id: visualContent
+                    width: delegateRoot.visualWidth
+                    height: delegateRoot.visualHeight
+                    x: root.isVertical ? (root.widgetHeight - width) / 2 : (parent.width - width) / 2
+                    y: root.isVertical ? (parent.height - height) / 2 : (root.widgetHeight - height) / 2
+                    radius: Theme.cornerRadius
+                    color: isActive ? activeColor : isUrgent ? urgentColor : isPlaceholder ? Theme.surfaceTextLight : isHovered ? Theme.withAlpha(unfocusedColor, 0.7) : isOccupied ? occupiedColor : unfocusedColor""",
+            """                Rectangle {
+                    id: visualContent
+                    width: delegateRoot.visualWidth
+                    height: delegateRoot.visualHeight
+                    x: root.isVertical ? (root.widgetHeight - width) / 2 : (parent.width - width) / 2
+                    y: root.isVertical ? (parent.height - height) / 2 : (root.widgetHeight - height) / 2
+                    antialiasing: true
+                    Binding on radius {
+                        value: Theme.cornerRadius
+                        restoreMode: Binding.RestoreNone
+                    }
+                    color: isActive ? activeColor : isUrgent ? urgentColor : isPlaceholder ? Theme.surfaceTextLight : isHovered ? Theme.withAlpha(unfocusedColor, 0.7) : isOccupied ? occupiedColor : unfocusedColor""",
+        ),
+    ],
 }
 
 for path, edits in replacements.items():
