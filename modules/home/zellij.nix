@@ -285,7 +285,7 @@
       if [[ -z $ZELLIJ ]]; then
           cd "$selected_path" || exit 1
           if zellij list-sessions 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g' | grep -qF "$selected_name"; then
-              zellij attach -f "$selected_name"
+              zellij attach "$selected_name"
           else
               zellij attach -c "$selected_name"
           fi
@@ -315,7 +315,7 @@
         }
 
         tab name="copilot" {
-            pane command="/etc/profiles/per-user/${config.home.username}/bin/copilot"
+            pane name="copilot" command="/etc/profiles/per-user/${config.home.username}/bin/copilot"
         }
     }
   '';
