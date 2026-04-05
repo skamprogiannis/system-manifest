@@ -2,10 +2,8 @@
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 {
-  config,
   pkgs,
   inputs,
-  lib,
   ...
 }: {
   imports = [
@@ -38,7 +36,7 @@
   # Networking
   # HostName is defined in host specific config
   networking.networkmanager.enable = true;
-  networking.nameservers = [ "9.9.9.9" "149.112.112.112" ];
+  networking.nameservers = ["9.9.9.9" "149.112.112.112"];
 
   # Time & Locales
   time.timeZone = "Europe/Athens";
@@ -106,6 +104,7 @@
   # Enable CUPS to print documents
   services.printing.enable = false;
 
+  # Enable GNOME Keyring
   services.gnome.gnome-keyring.enable = true;
   security.pam.services.login.enableGnomeKeyring = true;
   security.pam.services.greetd.enableGnomeKeyring = true;
@@ -121,7 +120,11 @@
     pulse.enable = true;
   };
 
+  # Enable zRAM
   zramSwap.enable = true;
+
+  # Enable Docker
+  virtualisation.docker.enable = true;
 
   # Prevent annoying 90s hang on shutdown if a service fails to stop
   systemd.settings.Manager.DefaultTimeoutStopSec = "10s";
@@ -130,7 +133,7 @@
   users.users.stefan = {
     isNormalUser = true;
     description = "Stefan";
-    extraGroups = ["networkmanager" "wheel"];
+    extraGroups = ["networkmanager" "wheel" "docker"];
   };
 
   # Allow unfree packages
@@ -148,7 +151,6 @@
     wget
     git
     inotify-tools
-    adwaita-icon-theme
     # GStreamer plugins for video playback and subtitles
     gst_all_1.gstreamer
     gst_all_1.gst-plugins-base
