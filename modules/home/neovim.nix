@@ -12,6 +12,7 @@
     globals.mapleader = " ";
 
     opts = {
+      autoread = true;
       hlsearch = true;
       swapfile = false;
       number = true;
@@ -155,6 +156,11 @@
             callback = function()
               cached_startup_ms = compute_startup_ms()
             end,
+          })
+
+          vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter", "CursorHold", "CursorHoldI" }, {
+            pattern = "*",
+            command = "checktime",
           })
 
           local function nixvim_stats()
