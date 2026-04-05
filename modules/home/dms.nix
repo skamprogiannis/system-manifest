@@ -255,7 +255,7 @@ EOF
           visible = true;
           popupGapsAuto = true;
           popupGapsManual = 4;
-          maximizeDetection = true;
+          maximizeDetection = false;
           scrollEnabled = true;
           scrollXBehavior = "column";
           scrollYBehavior = "workspace";
@@ -358,7 +358,7 @@ EOF
           visible = true;
           popupGapsAuto = true;
           popupGapsManual = 4;
-          maximizeDetection = true;
+          maximizeDetection = false;
           scrollEnabled = true;
           scrollXBehavior = "column";
           scrollYBehavior = "workspace";
@@ -465,7 +465,7 @@ EOF
           visible = true;
           popupGapsAuto = true;
           popupGapsManual = 4;
-          maximizeDetection = true;
+          maximizeDetection = false;
           scrollEnabled = true;
           scrollXBehavior = "column";
           scrollYBehavior = "workspace";
