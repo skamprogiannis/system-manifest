@@ -16,7 +16,25 @@
         // {
           providedSessions = ["hyprland"];
         };
-      postBuild = "rm -f $out/share/wayland-sessions/hyprland-uwsm.desktop";
+      postBuild = ''
+        rm -f $out/share/wayland-sessions/hyprland-uwsm.desktop
+
+        rm -f $out/bin/start-hyprland $out/bin/Hyprland $out/bin/hyprland
+
+        cat > $out/bin/start-hyprland <<EOF
+        #!${pkgs.bash}/bin/bash
+        exec ${pkgs.systemd}/bin/systemd-cat --identifier=start-hyprland -- ${hyprlandBase}/bin/start-hyprland "\$@"
+        EOF
+        chmod +x $out/bin/start-hyprland
+
+        cat > $out/bin/Hyprland <<EOF
+        #!${pkgs.bash}/bin/bash
+        exec ${pkgs.systemd}/bin/systemd-cat --identifier=Hyprland -- ${hyprlandBase}/bin/Hyprland "\$@"
+        EOF
+        chmod +x $out/bin/Hyprland
+
+        ln -s Hyprland $out/bin/hyprland
+      '';
     };
   in
     joined
