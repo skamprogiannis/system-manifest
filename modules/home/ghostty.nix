@@ -41,6 +41,7 @@
         "ctrl+shift+j=unbind"
         "ctrl+shift+k=unbind"
         "ctrl+shift+l=unbind"
+        "ctrl+enter=unbind"
 
       ];
     };
