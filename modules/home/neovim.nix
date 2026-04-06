@@ -201,8 +201,6 @@
       vim.api.nvim_set_hl(0, "NormalNC", { bg = "NONE" })
       vim.api.nvim_set_hl(0, "SignColumn", { bg = "NONE" })
       vim.api.nvim_set_hl(0, "LineNr", { bg = "NONE" })
-      vim.api.nvim_set_hl(0, "Visual", { bg = "#3f4152", bold = true })
-
       -- Backgroundless floats: text + border lines float over the code.
       -- Eliminates the dark-rectangle bleed beyond the border line that
       -- winblend creates on glass terminals (Neovim limitation).
@@ -371,6 +369,12 @@
           animate.enabled = false;
         };
       };
+      oil = {
+        enable = true;
+        settings = {
+          default_file_explorer = true;
+        };
+      };
     };
 
     extraPlugins = with pkgs.vimPlugins; [
@@ -487,6 +491,12 @@
         key = "<leader>e";
         action = "<cmd>lua Snacks.explorer()<cr>";
         options.desc = "File explorer";
+      }
+      {
+        mode = "n";
+        key = "<leader>-";
+        action = "<cmd>Oil<cr>";
+        options.desc = "Open parent directory";
       }
       {
         mode = "n";
