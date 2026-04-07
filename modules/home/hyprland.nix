@@ -331,9 +331,9 @@ in {
           "$mod SHIFT, grave, movetoworkspace, special:music"
 
           # --- Screenshots (image to clipboard) ---
-          ", Print, exec, dms screenshot region"
-          "CONTROL, Print, exec, dms screenshot window"
-          "ALT, Print, exec, dms screenshot full"
+          ", Print, exec, dms screenshot region --dir ~/pictures/screenshots"
+          "CONTROL, Print, exec, dms screenshot window --dir ~/pictures/screenshots"
+          "ALT, Print, exec, dms screenshot full --dir ~/pictures/screenshots"
 
           # --- Screenshots (file path to clipboard) ---
           "SHIFT, Print, exec, screenshot-path-copy region"
@@ -341,7 +341,12 @@ in {
           "ALT SHIFT, Print, exec, screenshot-path-copy full"
 
           # --- Screen Recording ---
-          "$mod, r, exec, kooha"
+          "$mod, r, exec, gsr-record region"
+          "$mod SHIFT, r, exec, gsr-record region --no-audio"
+          "$mod ALT, r, exec, gsr-record fullscreen"
+          "$mod ALT SHIFT, r, exec, gsr-record fullscreen --no-audio"
+          "$mod CTRL, r, exec, gsr-record window"
+          "$mod CTRL SHIFT, r, exec, gsr-record window --no-audio"
 
           # --- DMS IPC Controls ---
           "$mod, n, exec, dms ipc call notifications toggle"

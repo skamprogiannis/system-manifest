@@ -36,7 +36,7 @@
   home.packages = with pkgs; [
     # GUI
     imv
-    kooha
+    gpu-screen-recorder
     mpv
     linux-wallpaperengine
     vesktop

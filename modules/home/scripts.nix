@@ -653,12 +653,47 @@ echo "Boot flow: LUKS unlock -> squashfs overlay on /nix/store -> fast reads"
       kill -KILL "$target_pid"
     '')
     (pkgs.writeShellScriptBin "screenshot-path-copy" ''
-      # Wraps dms screenshot to copy the FILE PATH to clipboard instead of the image
-      dest=$(dms screenshot "$@" --no-clipboard --no-notify)
+      dest=$(dms screenshot "$@" --dir ~/pictures/screenshots --no-clipboard --no-notify)
       if [ -n "$dest" ] && [ -f "$dest" ]; then
           echo -n "$dest" | ${pkgs.wl-clipboard}/bin/wl-copy
           ${pkgs.libnotify}/bin/notify-send -u low -i "$dest" "Screenshot" "Path copied: $dest"
       fi
+    '')
+    (pkgs.writeShellScriptBin "gsr-record" ''
+      MODE="''${1:-region}"
+      AUDIO=1
+      [ "''${2:-}" = "--no-audio" ] && AUDIO=0
+
+      PIDFILE="''${XDG_RUNTIME_DIR:-/tmp}/gsr-record.pid"
+      OUTDIR="$HOME/videos/screencasts"
+      mkdir -p "$OUTDIR"
+
+      if [ -f "$PIDFILE" ]; then
+        PID=$(cat "$PIDFILE")
+        if kill -0 "$PID" 2>/dev/null; then
+          kill -INT "$PID"
+          ${pkgs.libnotify}/bin/notify-send -u low "Screen Recording" "Recording stopped"
+          rm -f "$PIDFILE"
+          exit 0
+        fi
+        rm -f "$PIDFILE"
+      fi
+
+      OUTFILE="$OUTDIR/screencast_$(date +%Y-%m-%d_%H-%M-%S).mp4"
+
+      case "$MODE" in
+        region)     WINDOW=region ;;
+        fullscreen) WINDOW=$(hyprctl monitors -j | ${pkgs.jq}/bin/jq -r '.[0].name') ;;
+        window)     WINDOW=focused ;;
+        *)          WINDOW=region ;;
+      esac
+
+      AUDIO_ARGS=()
+      [ "$AUDIO" -eq 1 ] && AUDIO_ARGS=(-a default_output)
+
+      gpu-screen-recorder -w "$WINDOW" -f 60 -c mp4 "''${AUDIO_ARGS[@]}" -o "$OUTFILE" &
+      echo $! > "$PIDFILE"
+      ${pkgs.libnotify}/bin/notify-send -u low "Screen Recording" "Recording started (press again to stop)"
     '')
   ];
 }
