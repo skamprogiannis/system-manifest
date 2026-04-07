@@ -165,14 +165,15 @@ set -euo pipefail
 SCRIPT_NAME="$(basename "$0")"
 USB_ROOT_PART="/dev/disk/by-partlabel/NIXOS_USB_CRYPT"
 USB_BOOT_DEV="/dev/disk/by-label/NIXOS_BOOT"
-USB_MAPPER_NAME="NIXOS_USB_CRYPT"
+PREFERRED_USB_MAPPER_NAME="NIXOS_USB_CRYPT"
+USB_MAPPER_NAME="$PREFERRED_USB_MAPPER_NAME"
 USB_ROOT_DEV="/dev/mapper/$USB_MAPPER_NAME"
 MOUNT_POINT="/mnt"
 DEFAULT_MODE="prebuild"
 MODE="$DEFAULT_MODE"
 FLAKE_DIR="$PWD"
 NIX_SHELL_PACKAGES=(squashfsTools cryptsetup util-linux coreutils findutils gnused)
-REQUIRED_TOOLS=(nixos-install cryptsetup mount umount find rm du cut nproc mountpoint sed mktemp cp mv date chroot)
+REQUIRED_TOOLS=(nixos-install cryptsetup mount umount find rm du cut nproc mountpoint sed mktemp cp mv date chroot lsblk)
 OPENED_MAPPER=0
 MOUNTED_ROOT=0
 MOUNTED_BOOT=0
@@ -280,6 +281,18 @@ parse_args() {
 }
 
 parse_args "$@"
+
+refresh_usb_mapper() {
+  local existing_mapper=""
+  existing_mapper=$(lsblk -nrpo NAME,TYPE "$USB_ROOT_PART" 2>/dev/null | sed -n '/ crypt$/ { s/ crypt$//; p; q; }')
+  if [ -n "$existing_mapper" ]; then
+    USB_ROOT_DEV="$existing_mapper"
+    USB_MAPPER_NAME="''${existing_mapper##*/}"
+  else
+    USB_MAPPER_NAME="$PREFERRED_USB_MAPPER_NAME"
+    USB_ROOT_DEV="/dev/mapper/$USB_MAPPER_NAME"
+  fi
+}
 
 if ! command -v mksquashfs >/dev/null 2>&1; then
   if [ "''${USB_UPDATE_IN_NIX_SHELL:-0}" != "1" ] && command -v nix-shell >/dev/null 2>&1; then
@@ -411,9 +424,11 @@ print_timing_summary() {
 }
 
 phase_begin "opening-luks" "Opening LUKS"
+refresh_usb_mapper
 if [ ! -e "$USB_ROOT_DEV" ]; then
-  cryptsetup open "$USB_ROOT_PART" "$USB_MAPPER_NAME"
+  cryptsetup open "$USB_ROOT_PART" "$PREFERRED_USB_MAPPER_NAME"
   OPENED_MAPPER=1
+  refresh_usb_mapper
 fi
 phase_end
 
@@ -529,22 +544,85 @@ echo "Boot flow: LUKS unlock -> squashfs overlay on /nix/store -> fast reads"
       exec ${pkgs.uv}/bin/uvx --from git+https://github.com/github/spec-kit.git specify "$@"
     '')
     (pkgs.writeShellScriptBin "copilot-sessions-sync" ''
-      set -e
+      set -euo pipefail
       MODE="''${1:-to-usb}"
       LUKS_DEVICE="/dev/disk/by-partlabel/NIXOS_USB_CRYPT"
-      MAPPER="usb-sync-root"
+      PREFERRED_MAPPER="NIXOS_USB_CRYPT"
+      MAPPER="$PREFERRED_MAPPER"
+      MAPPER_DEV="/dev/mapper/$MAPPER"
       MOUNT="/mnt/usb-sync"
       LOCAL="$HOME/.copilot/session-state"
       REMOTE="$MOUNT/home/stefan/.copilot/session-state"
+      OPENED_MAPPER=0
+      MOUNTED=0
+
+      refresh_mapper() {
+        local existing_mapper=""
+        existing_mapper=$(${pkgs.util-linux}/bin/lsblk -nrpo NAME,TYPE "$LUKS_DEVICE" 2>/dev/null | ${pkgs.gnused}/bin/sed -n '/ crypt$/ { s/ crypt$//; p; q; }')
+        if [ -n "$existing_mapper" ]; then
+          MAPPER_DEV="$existing_mapper"
+          MAPPER="''${existing_mapper##*/}"
+        else
+          MAPPER="$PREFERRED_MAPPER"
+          MAPPER_DEV="/dev/mapper/$MAPPER"
+        fi
+      }
+
+      cleanup() {
+        local rc=$?
+        trap - EXIT INT TERM
+
+        if [ "$MOUNTED" -eq 1 ] && sudo ${pkgs.util-linux}/bin/mountpoint -q "$MOUNT"; then
+          sudo ${pkgs.util-linux}/bin/umount -R "$MOUNT" 2>/dev/null || true
+          MOUNTED=0
+        fi
+
+        if [ "$OPENED_MAPPER" -eq 1 ]; then
+          local attempt
+          sync
+          for attempt in 1 2 3; do
+            if sudo ${pkgs.cryptsetup}/bin/cryptsetup luksClose "$MAPPER" 2>/dev/null; then
+              OPENED_MAPPER=0
+              break
+            fi
+            sleep 1
+          done
+
+          if [ "$OPENED_MAPPER" -eq 1 ]; then
+            echo "Warning: failed to close $MAPPER; close it manually with: sudo cryptsetup luksClose $MAPPER" >&2
+            if [ "$rc" -eq 0 ]; then
+              rc=1
+            fi
+          fi
+        fi
+
+        exit "$rc"
+      }
+
+      trap cleanup EXIT
+      trap 'exit 130' INT
+      trap 'exit 143' TERM
 
       if [ ! -e "$LUKS_DEVICE" ]; then
         echo "USB not found. Plug in the USB drive and try again."
         exit 1
       fi
 
-      sudo ${pkgs.cryptsetup}/bin/cryptsetup luksOpen "$LUKS_DEVICE" "$MAPPER"
+      refresh_mapper
+      if [ ! -e "$MAPPER_DEV" ]; then
+        sudo ${pkgs.cryptsetup}/bin/cryptsetup luksOpen "$LUKS_DEVICE" "$PREFERRED_MAPPER"
+        OPENED_MAPPER=1
+        refresh_mapper
+      elif ! ${pkgs.util-linux}/bin/findmnt -rn -S "$MAPPER_DEV" >/dev/null 2>&1; then
+        OPENED_MAPPER=1
+      fi
+
       sudo mkdir -p "$MOUNT"
-      sudo mount "/dev/mapper/$MAPPER" "$MOUNT"
+      if sudo ${pkgs.util-linux}/bin/mountpoint -q "$MOUNT"; then
+        sudo ${pkgs.util-linux}/bin/umount -R "$MOUNT"
+      fi
+      sudo mount "$MAPPER_DEV" "$MOUNT"
+      MOUNTED=1
       sudo mkdir -p "$REMOTE"
 
       case "$MODE" in
@@ -558,14 +636,10 @@ echo "Boot flow: LUKS unlock -> squashfs overlay on /nix/store -> fast reads"
           ;;
         *)
           echo "Usage: copilot-sessions-sync [to-usb|from-usb]"
-          sudo umount "$MOUNT"
-          sudo ${pkgs.cryptsetup}/bin/cryptsetup luksClose "$MAPPER"
           exit 1
           ;;
       esac
 
-      sudo umount "$MOUNT"
-      sudo ${pkgs.cryptsetup}/bin/cryptsetup luksClose "$MAPPER"
       echo "Done."
     '')
     (pkgs.writeShellScriptBin "transmission-port-sync" ''
