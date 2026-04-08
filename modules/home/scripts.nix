@@ -546,15 +546,26 @@ echo "Boot flow: LUKS unlock -> squashfs overlay on /nix/store -> fast reads"
     (pkgs.writeShellScriptBin "copilot-sessions-sync" ''
       set -euo pipefail
       MODE="''${1:-to-usb}"
+      SYNC_USER="''${SUDO_USER:-''${USER:-$(${pkgs.coreutils}/bin/id -un)}}"
+      SYNC_GROUP="$(${pkgs.coreutils}/bin/id -gn "$SYNC_USER")"
+      USER_HOME="$(${pkgs.gawk}/bin/awk -F: -v user="$SYNC_USER" '$1 == user { print $6; exit }' /etc/passwd)"
       LUKS_DEVICE="/dev/disk/by-partlabel/NIXOS_USB_CRYPT"
       PREFERRED_MAPPER="NIXOS_USB_CRYPT"
       MAPPER="$PREFERRED_MAPPER"
       MAPPER_DEV="/dev/mapper/$MAPPER"
       MOUNT="/mnt/usb-sync"
-      LOCAL="$HOME/.copilot/session-state"
-      REMOTE="$MOUNT/home/stefan/.copilot/session-state"
+      LOCAL="$USER_HOME/.copilot/session-state"
+      REMOTE="$MOUNT$USER_HOME/.copilot/session-state"
       OPENED_MAPPER=0
       MOUNTED=0
+
+      run_root() {
+        if [ "$EUID" -eq 0 ]; then
+          "$@"
+        else
+          sudo "$@"
+        fi
+      }
 
       refresh_mapper() {
         local existing_mapper=""
@@ -572,8 +583,8 @@ echo "Boot flow: LUKS unlock -> squashfs overlay on /nix/store -> fast reads"
         local rc=$?
         trap - EXIT INT TERM
 
-        if [ "$MOUNTED" -eq 1 ] && sudo ${pkgs.util-linux}/bin/mountpoint -q "$MOUNT"; then
-          sudo ${pkgs.util-linux}/bin/umount -R "$MOUNT" 2>/dev/null || true
+        if [ "$MOUNTED" -eq 1 ] && run_root ${pkgs.util-linux}/bin/mountpoint -q "$MOUNT"; then
+          run_root ${pkgs.util-linux}/bin/umount -R "$MOUNT" 2>/dev/null || true
           MOUNTED=0
         fi
 
@@ -581,7 +592,7 @@ echo "Boot flow: LUKS unlock -> squashfs overlay on /nix/store -> fast reads"
           local attempt
           sync
           for attempt in 1 2 3; do
-            if sudo ${pkgs.cryptsetup}/bin/cryptsetup luksClose "$MAPPER" 2>/dev/null; then
+            if run_root ${pkgs.cryptsetup}/bin/cryptsetup luksClose "$MAPPER" 2>/dev/null; then
               OPENED_MAPPER=0
               break
             fi
@@ -603,6 +614,11 @@ echo "Boot flow: LUKS unlock -> squashfs overlay on /nix/store -> fast reads"
       trap 'exit 130' INT
       trap 'exit 143' TERM
 
+      if [ -z "$USER_HOME" ]; then
+        echo "Unable to resolve a home directory for $SYNC_USER."
+        exit 1
+      fi
+
       if [ ! -e "$LUKS_DEVICE" ]; then
         echo "USB not found. Plug in the USB drive and try again."
         exit 1
@@ -610,29 +626,30 @@ echo "Boot flow: LUKS unlock -> squashfs overlay on /nix/store -> fast reads"
 
       refresh_mapper
       if [ ! -e "$MAPPER_DEV" ]; then
-        sudo ${pkgs.cryptsetup}/bin/cryptsetup luksOpen "$LUKS_DEVICE" "$PREFERRED_MAPPER"
+        run_root ${pkgs.cryptsetup}/bin/cryptsetup luksOpen "$LUKS_DEVICE" "$PREFERRED_MAPPER"
         OPENED_MAPPER=1
         refresh_mapper
       elif ! ${pkgs.util-linux}/bin/findmnt -rn -S "$MAPPER_DEV" >/dev/null 2>&1; then
         OPENED_MAPPER=1
       fi
 
-      sudo mkdir -p "$MOUNT"
-      if sudo ${pkgs.util-linux}/bin/mountpoint -q "$MOUNT"; then
-        sudo ${pkgs.util-linux}/bin/umount -R "$MOUNT"
+      run_root mkdir -p "$MOUNT"
+      if run_root ${pkgs.util-linux}/bin/mountpoint -q "$MOUNT"; then
+        run_root ${pkgs.util-linux}/bin/umount -R "$MOUNT"
       fi
-      sudo mount "$MAPPER_DEV" "$MOUNT"
+      run_root mount "$MAPPER_DEV" "$MOUNT"
       MOUNTED=1
-      sudo mkdir -p "$REMOTE"
+      run_root mkdir -p "$USER_HOME/.copilot" "$LOCAL" "$MOUNT$USER_HOME/.copilot" "$REMOTE"
+      run_root chown "$SYNC_USER:$SYNC_GROUP" "$USER_HOME/.copilot" "$LOCAL" "$MOUNT$USER_HOME/.copilot" "$REMOTE"
 
       case "$MODE" in
         to-usb)
           echo "Syncing desktop → USB..."
-          sudo ${pkgs.rsync}/bin/rsync -av --update "$LOCAL/" "$REMOTE/"
+          run_root ${pkgs.rsync}/bin/rsync -av --update --chown="$SYNC_USER:$SYNC_GROUP" "$LOCAL/" "$REMOTE/"
           ;;
         from-usb)
           echo "Syncing USB → desktop..."
-          ${pkgs.rsync}/bin/rsync -av --update "$REMOTE/" "$LOCAL/"
+          run_root ${pkgs.rsync}/bin/rsync -av --update --chown="$SYNC_USER:$SYNC_GROUP" "$REMOTE/" "$LOCAL/"
           ;;
         *)
           echo "Usage: copilot-sessions-sync [to-usb|from-usb]"
