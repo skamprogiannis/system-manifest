@@ -21,7 +21,7 @@
   programs.zellij.settings = {
     pane_frames = false;
     simplified_ui = true;
-    default_layout = "compact";
+    default_layout = "dev";
   };
   # Auto-detect monitor (USB is portable across machines)
   wayland.windowManager.hyprland.settings = {
