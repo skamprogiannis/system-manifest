@@ -53,6 +53,8 @@
     fastfetch
     fd
     ffmpegthumbnailer
+    file
+    imagemagick
     gcr
     # Wrap copilot CLI so keytar.node can find libsecret at runtime
     (pkgs.symlinkJoin {

@@ -146,7 +146,7 @@ in {
     enable = true;
     package = pkgs.brave.override {
       commandLineArgs = [
-        "--disable-features=HardwareMediaKeyHandling"
+        "--disable-features=HardwareMediaKeyHandling,FullscreenAlertBubble"
         "--test-type"
         "--extensions-on-chrome-urls"
         "--ozone-platform-hint=auto"
