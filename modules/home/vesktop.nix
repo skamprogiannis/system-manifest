@@ -2,6 +2,7 @@
   pkgs,
   config,
   lib,
+  hostType ? null,
   ...
 }: let
   translucenceThemeName = "Translucence.theme.css";
@@ -332,10 +333,15 @@ EOF
     ${regenTransluenceTheme}/bin/regen-vesktop-transluence-theme
   '';
 
+  vesktopLaunchArgs = lib.optionals (hostType == "usb") [
+    "--disable-gpu-rasterization"
+    "--disable-zero-copy"
+  ];
+
   vesktopLaunchWrapper = pkgs.writeShellScript "vesktop-launch" ''
     set -euo pipefail
     ${vesktopStateSync}
-    exec ${pkgs.vesktop}/bin/vesktop "$@"
+    exec ${pkgs.vesktop}/bin/vesktop ${lib.escapeShellArgs vesktopLaunchArgs} "$@"
   '';
 in {
   home.packages = [pkgs.vesktop regenTransluenceTheme];
