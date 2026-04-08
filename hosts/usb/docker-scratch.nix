@@ -8,12 +8,17 @@
     scratch_mount=/var/lib/docker-host-scratch
     docker_root=/var/lib/docker
     mount_error=/run/docker-host-scratch.mount.err
+    scratch_meta=/run/docker-host-scratch.mode
 
     mkdir -p "$scratch_mount" "$docker_root"
-    rm -f "$mount_error"
+    rm -f "$mount_error" "$scratch_meta"
 
     if ${pkgs.util-linux}/bin/findmnt -rn -M "$docker_root" >/dev/null 2>&1; then
       exit 0
+    fi
+
+    if ${pkgs.util-linux}/bin/findmnt -rn -M "$scratch_mount" >/dev/null 2>&1; then
+      ${pkgs.util-linux}/bin/umount "$scratch_mount"
     fi
 
     find_candidates() {
@@ -59,18 +64,24 @@
     fi
 
     if [ -z "$selected_device" ]; then
-      echo "docker-host-scratch: no writable host-local partition was mountable for Docker scratch" >&2
+      echo "docker-host-scratch: no writable host-local partition was mountable; falling back to tmpfs" >&2
       if [ -s "$mount_error" ]; then
         cat "$mount_error" >&2
       fi
-      exit 1
+      ${pkgs.util-linux}/bin/mount -t tmpfs -o size=35%,mode=700 tmpfs "$scratch_mount"
+      printf '%s\n' "tmpfs" > "$scratch_meta"
+    else
+      printf '%s\n' "host:$selected_device" > "$scratch_meta"
     fi
 
     mkdir -p "$scratch_mount/.nixos-usb" "$scratch_mount/.nixos-usb/docker"
     chmod 700 "$scratch_mount/.nixos-usb" "$scratch_mount/.nixos-usb/docker"
     ${pkgs.util-linux}/bin/mount --bind "$scratch_mount/.nixos-usb/docker" "$docker_root"
-    printf '%s\n' "$selected_device" > /run/docker-host-scratch.device
-    echo "docker-host-scratch: using $selected_device for /var/lib/docker" >&2
+    if [ -n "$selected_device" ]; then
+      echo "docker-host-scratch: using $selected_device for /var/lib/docker" >&2
+    else
+      echo "docker-host-scratch: using tmpfs fallback for /var/lib/docker" >&2
+    fi
   '';
 
   dockerScratchStop = pkgs.writeShellScript "docker-host-scratch-stop" ''
@@ -87,7 +98,7 @@
       ${pkgs.util-linux}/bin/umount "$scratch_mount"
     fi
 
-    rm -f /run/docker-host-scratch.device /run/docker-host-scratch.mount.err
+    rm -f /run/docker-host-scratch.mode /run/docker-host-scratch.mount.err
   '';
 in {
   systemd.tmpfiles.rules = [

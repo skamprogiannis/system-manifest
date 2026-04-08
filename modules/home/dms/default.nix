@@ -119,6 +119,15 @@ replacements = {
             "                precision: showSeconds ? SystemClock.Seconds : SystemClock.Minutes\n",
         ),
     ],
+    # Expose a clearHistory IPC command so keybinds can wipe the History tab.
+    # The built-in clearAll IPC only calls clearAllNotifications(); this adds
+    # a sibling function that delegates to NotificationService.clearHistory().
+    root / "Modals/NotificationModal.qml": [
+        (
+            '        function clearAll(): string {\n            notificationModal.clearAll();\n            return "NOTIFICATION_MODAL_CLEAR_ALL_SUCCESS";\n        }',
+            '        function clearAll(): string {\n            notificationModal.clearAll();\n            return "NOTIFICATION_MODAL_CLEAR_ALL_SUCCESS";\n        }\n\n        function clearHistory(): string {\n            NotificationService.clearHistory();\n            return "NOTIFICATION_MODAL_CLEAR_HISTORY_SUCCESS";\n        }',
+        ),
+    ],
 }
 
 for path, edits in replacements.items():
