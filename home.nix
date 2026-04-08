@@ -13,7 +13,7 @@
     ./modules/home/ghostty.nix
     ./modules/home/neovim.nix
     ./modules/home/hyprland.nix
-    ./modules/home/dms.nix
+    ./modules/home/dms
     ./modules/home/pearpass.nix
     ./modules/home/xdg.nix
     ./modules/home/brave.nix
