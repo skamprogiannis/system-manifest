@@ -6,142 +6,127 @@
   ...
 }: let
   dmsBasePackage = inputs.dms.packages.${pkgs.stdenv.hostPlatform.system}.dms-shell;
-  dmsPatchedPackage = dmsBasePackage.overrideAttrs (old: {
-    postInstall = (old.postInstall or "") + ''
-      ${pkgs.python3}/bin/python3 - <<PY
-from pathlib import Path
-import stat
-
-root = Path("$out/share/quickshell/dms")
-settings_shell_alpha = "Math.min(1.0, Theme.popupTransparency + 0.08)"
-settings_header_alpha = "Math.min(1.0, Theme.popupTransparency + 0.10)"
-
-replacements = {
-    root / "Modals/Settings/SettingsModal.qml": [
-        ("property bool disablePopupTransparency: true", "property bool disablePopupTransparency: false"),
-        ("color: Theme.surfaceContainer", "color: Theme.withAlpha(Theme.surfaceContainer, Theme.popupTransparency)"),
-        (
-            "                    color: Theme.surfaceContainer\n                    opacity: 0.5",
-            f"                    color: Theme.withAlpha(Theme.surfaceContainer, {settings_header_alpha})\n                    opacity: 1.0",
-        ),
-        (
-            "                color: Theme.surfaceContainerHigh",
-            f"                color: Theme.withAlpha(Theme.surfaceContainerHigh, {settings_shell_alpha})",
-        ),
-    ],
-    root / "Modals/Settings/SettingsSidebar.qml": [
-        (
-            "    color: Theme.surfaceContainer",
-            f"    color: Theme.withAlpha(Theme.surfaceContainer, {settings_shell_alpha})",
-        ),
-    ],
-    root / "Modules/Settings/Widgets/SettingsCard.qml": [
-        (
-            "    color: Theme.surfaceContainerHigh",
-            f"    color: Theme.withAlpha(Theme.surfaceContainerHigh, {settings_shell_alpha})",
-        ),
-    ],
-    root / "Modules/Settings/Widgets/SettingsSliderCard.qml": [
-        (
-            "    color: Theme.surfaceContainerHigh",
-            f"    color: Theme.withAlpha(Theme.surfaceContainerHigh, {settings_shell_alpha})",
-        ),
-    ],
-    root / "Modules/Settings/Widgets/SettingsToggleCard.qml": [
-        (
-            "    color: Theme.surfaceContainerHigh",
-            f"    color: Theme.withAlpha(Theme.surfaceContainerHigh, {settings_shell_alpha})",
-        ),
-    ],
-    root / "Modules/Settings/Widgets/SystemMonitorVariantCard.qml": [
-        (
-            "    color: Theme.surfaceContainerHigh",
-            f"    color: Theme.withAlpha(Theme.surfaceContainerHigh, {settings_shell_alpha})",
-        ),
-    ],
-    root / "Widgets/DankPopout.qml": [
-        (
-            "targetColor: Theme.withAlpha(Theme.surfaceContainer, Theme.popupTransparency)",
-            'targetColor: Theme.withAlpha(Theme.surfaceContainer, root.layerNamespace === "dms:dash" ? Math.max(0.0, Theme.popupTransparency - 0.12) : Theme.popupTransparency)',
-        ),
-        (
-            "color: Theme.withAlpha(Theme.surfaceContainer, Theme.popupTransparency)",
-            'color: Theme.withAlpha(Theme.surfaceContainer, root.layerNamespace === "dms:dash" ? Math.max(0.0, Theme.popupTransparency - 0.12) : Theme.popupTransparency)',
-        ),
-    ],
-    root / "Modules/DankDash/Overview/Card.qml": [
-        (
-            "color: Theme.withAlpha(Theme.surfaceContainerHigh, Theme.popupTransparency)",
-            "color: Theme.withAlpha(Theme.surfaceContainerHigh, Math.max(0.0, Theme.popupTransparency - 0.22))",
-        ),
-    ],
-    root / "Modules/DankDash/Overview/CalendarOverviewCard.qml": [
-        (
-            "color: Theme.withAlpha(Theme.surfaceContainerHigh, Theme.popupTransparency)",
-            "color: Theme.withAlpha(Theme.surfaceContainerHigh, Math.max(0.0, Theme.popupTransparency - 0.22))",
-        ),
-    ],
-    root / "Services/AppSearchService.qml": [
-        (
-            '                comment: "DMS",\n                action: "ipc:processlist",',
-            '                comment: "Inspect processes and live system usage",\n                action: "ipc:processlist",',
-        ),
-        (
-            '                comment: "DMS",\n                action: "ipc:color-picker",',
-            '                comment: "Sample colors from anywhere on screen",\n                action: "ipc:color-picker",',
-        ),
-    ],
-    root / "Common/settings/Lists.qml": [
-        (
-            "            mediaSize: 1,\n",
-            "            mediaSize: 1,\n            showSeconds: true,\n",
-        ),
-        (
-            "            if (isObj && order[i].mediaSize !== undefined)\n                item.mediaSize = order[i].mediaSize;\n",
-            "            if (isObj && order[i].mediaSize !== undefined)\n                item.mediaSize = order[i].mediaSize;\n            if (isObj && order[i].showSeconds !== undefined)\n                item.showSeconds = order[i].showSeconds;\n",
-        ),
-    ],
-    root / "Modules/DankBar/Widgets/Clock.qml": [
-        (
-            "            readonly property bool compact: widgetData?.clockCompactMode !== undefined ? widgetData.clockCompactMode : SettingsData.clockCompactMode\n",
-            "            readonly property bool compact: widgetData?.clockCompactMode !== undefined ? widgetData.clockCompactMode : SettingsData.clockCompactMode\n            readonly property bool showSeconds: widgetData?.showSeconds !== undefined ? widgetData.showSeconds : SettingsData.showSeconds\n",
-        ),
-        (
-            "                    visible: SettingsData.showSeconds\n",
-            "                    visible: showSeconds\n",
-        ),
-        (
-            "                        visible: SettingsData.showSeconds\n",
-            "                        visible: showSeconds\n",
-        ),
-        (
-            "                precision: SettingsData.showSeconds ? SystemClock.Seconds : SystemClock.Minutes\n",
-            "                precision: showSeconds ? SystemClock.Seconds : SystemClock.Minutes\n",
-        ),
-    ],
-    # Expose a clearHistory IPC command so keybinds can wipe the History tab.
-    # The built-in clearAll IPC only calls clearAllNotifications(); this adds
-    # a sibling function that delegates to NotificationService.clearHistory().
-    root / "Modals/NotificationModal.qml": [
-        (
-            '        function clearAll(): string {\n            notificationModal.clearAll();\n            return "NOTIFICATION_MODAL_CLEAR_ALL_SUCCESS";\n        }',
-            '        function clearAll(): string {\n            notificationModal.clearAll();\n            return "NOTIFICATION_MODAL_CLEAR_ALL_SUCCESS";\n        }\n\n        function clearHistory(): string {\n            NotificationService.clearHistory();\n            return "NOTIFICATION_MODAL_CLEAR_HISTORY_SUCCESS";\n        }',
-        ),
-    ],
-}
-
-for path, edits in replacements.items():
-    path.chmod(path.stat().st_mode | stat.S_IWUSR)
-    text = path.read_text(encoding="utf-8")
-    for old, new in edits:
-        if old not in text:
-            raise SystemExit(f"Expected snippet not found in {path}: {old}")
-        text = text.replace(old, new, 1)
-    path.write_text(text, encoding="utf-8")
-    path.chmod(path.stat().st_mode & ~stat.S_IWUSR & ~stat.S_IWGRP & ~stat.S_IWOTH)
-PY
+  patchDmsPackage = import ./patch-package.nix {inherit pkgs;};
+  dmsPatchedPackage = patchDmsPackage {
+    package = dmsBasePackage;
+    pythonPrelude = ''
+      settings_shell_alpha = "Math.min(1.0, Theme.popupTransparency + 0.08)"
+      settings_header_alpha = "Math.min(1.0, Theme.popupTransparency + 0.10)"
     '';
-  });
+    replacementsPython = ''
+      root / "Modals/Settings/SettingsModal.qml": [
+          ("property bool disablePopupTransparency: true", "property bool disablePopupTransparency: false"),
+          ("color: Theme.surfaceContainer", "color: Theme.withAlpha(Theme.surfaceContainer, Theme.popupTransparency)"),
+          (
+              "                    color: Theme.surfaceContainer\n                    opacity: 0.5",
+              f"                    color: Theme.withAlpha(Theme.surfaceContainer, {settings_header_alpha})\n                    opacity: 1.0",
+          ),
+          (
+              "                color: Theme.surfaceContainerHigh",
+              f"                color: Theme.withAlpha(Theme.surfaceContainerHigh, {settings_shell_alpha})",
+          ),
+      ],
+      root / "Modals/Settings/SettingsSidebar.qml": [
+          (
+              "    color: Theme.surfaceContainer",
+              f"    color: Theme.withAlpha(Theme.surfaceContainer, {settings_shell_alpha})",
+          ),
+      ],
+      root / "Modules/Settings/Widgets/SettingsCard.qml": [
+          (
+              "    color: Theme.surfaceContainerHigh",
+              f"    color: Theme.withAlpha(Theme.surfaceContainerHigh, {settings_shell_alpha})",
+          ),
+      ],
+      root / "Modules/Settings/Widgets/SettingsSliderCard.qml": [
+          (
+              "    color: Theme.surfaceContainerHigh",
+              f"    color: Theme.withAlpha(Theme.surfaceContainerHigh, {settings_shell_alpha})",
+          ),
+      ],
+      root / "Modules/Settings/Widgets/SettingsToggleCard.qml": [
+          (
+              "    color: Theme.surfaceContainerHigh",
+              f"    color: Theme.withAlpha(Theme.surfaceContainerHigh, {settings_shell_alpha})",
+          ),
+      ],
+      root / "Modules/Settings/Widgets/SystemMonitorVariantCard.qml": [
+          (
+              "    color: Theme.surfaceContainerHigh",
+              f"    color: Theme.withAlpha(Theme.surfaceContainerHigh, {settings_shell_alpha})",
+          ),
+      ],
+      root / "Widgets/DankPopout.qml": [
+          (
+              "targetColor: Theme.withAlpha(Theme.surfaceContainer, Theme.popupTransparency)",
+              'targetColor: Theme.withAlpha(Theme.surfaceContainer, root.layerNamespace === "dms:dash" ? Math.max(0.0, Theme.popupTransparency - 0.12) : Theme.popupTransparency)',
+          ),
+          (
+              "color: Theme.withAlpha(Theme.surfaceContainer, Theme.popupTransparency)",
+              'color: Theme.withAlpha(Theme.surfaceContainer, root.layerNamespace === "dms:dash" ? Math.max(0.0, Theme.popupTransparency - 0.12) : Theme.popupTransparency)',
+          ),
+      ],
+      root / "Modules/DankDash/Overview/Card.qml": [
+          (
+              "color: Theme.withAlpha(Theme.surfaceContainerHigh, Theme.popupTransparency)",
+              "color: Theme.withAlpha(Theme.surfaceContainerHigh, Math.max(0.0, Theme.popupTransparency - 0.22))",
+          ),
+      ],
+      root / "Modules/DankDash/Overview/CalendarOverviewCard.qml": [
+          (
+              "color: Theme.withAlpha(Theme.surfaceContainerHigh, Theme.popupTransparency)",
+              "color: Theme.withAlpha(Theme.surfaceContainerHigh, Math.max(0.0, Theme.popupTransparency - 0.22))",
+          ),
+      ],
+      root / "Services/AppSearchService.qml": [
+          (
+              '                comment: "DMS",\n                action: "ipc:processlist",',
+              '                comment: "Inspect processes and live system usage",\n                action: "ipc:processlist",',
+          ),
+          (
+              '                comment: "DMS",\n                action: "ipc:color-picker",',
+              '                comment: "Sample colors from anywhere on screen",\n                action: "ipc:color-picker",',
+          ),
+      ],
+      root / "Common/settings/Lists.qml": [
+          (
+              "            mediaSize: 1,\n",
+              "            mediaSize: 1,\n            showSeconds: true,\n",
+          ),
+          (
+              "            if (isObj && order[i].mediaSize !== undefined)\n                item.mediaSize = order[i].mediaSize;\n",
+              "            if (isObj && order[i].mediaSize !== undefined)\n                item.mediaSize = order[i].mediaSize;\n            if (isObj && order[i].showSeconds !== undefined)\n                item.showSeconds = order[i].showSeconds;\n",
+          ),
+      ],
+      root / "Modules/DankBar/Widgets/Clock.qml": [
+          (
+              "            readonly property bool compact: widgetData?.clockCompactMode !== undefined ? widgetData.clockCompactMode : SettingsData.clockCompactMode\n",
+              "            readonly property bool compact: widgetData?.clockCompactMode !== undefined ? widgetData.clockCompactMode : SettingsData.clockCompactMode\n            readonly property bool showSeconds: widgetData?.showSeconds !== undefined ? widgetData.showSeconds : SettingsData.showSeconds\n",
+          ),
+          (
+              "                    visible: SettingsData.showSeconds\n",
+              "                    visible: showSeconds\n",
+          ),
+          (
+              "                        visible: SettingsData.showSeconds\n",
+              "                        visible: showSeconds\n",
+          ),
+          (
+              "                precision: SettingsData.showSeconds ? SystemClock.Seconds : SystemClock.Minutes\n",
+              "                precision: showSeconds ? SystemClock.Seconds : SystemClock.Minutes\n",
+          ),
+      ],
+      # Expose a clearHistory IPC command so keybinds can wipe the History tab.
+      # The built-in clearAll IPC only calls clearAllNotifications(); this adds
+      # a sibling function that delegates to NotificationService.clearHistory().
+      root / "Modals/NotificationModal.qml": [
+          (
+              '        function clearAll(): string {\n            notificationModal.clearAll();\n            return "NOTIFICATION_MODAL_CLEAR_ALL_SUCCESS";\n        }',
+              '        function clearAll(): string {\n            notificationModal.clearAll();\n            return "NOTIFICATION_MODAL_CLEAR_ALL_SUCCESS";\n        }\n\n        function clearHistory(): string {\n            NotificationService.clearHistory();\n            return "NOTIFICATION_MODAL_CLEAR_HISTORY_SUCCESS";\n        }',
+          ),
+      ],
+    '';
+  };
 in {
   imports = [
     inputs.dms.homeModules.dank-material-shell
@@ -150,27 +135,27 @@ in {
   xdg.configFile."DankMaterialShell/.firstlaunch".text = "";
 
   home.activation.ensureWritableDmsSession = lib.hm.dag.entryAfter ["writeBoundary"] ''
-    state_dir="$HOME/.local/state/DankMaterialShell"
-    session_file="$state_dir/session.json"
+        state_dir="$HOME/.local/state/DankMaterialShell"
+        session_file="$state_dir/session.json"
 
-    mkdir -p "$state_dir"
+        mkdir -p "$state_dir"
 
-    if [ -L "$session_file" ] || { [ -e "$session_file" ] && [ ! -w "$session_file" ]; }; then
-      tmp_file=$(mktemp)
-      if ! cat "$session_file" > "$tmp_file" 2>/dev/null; then
-        cat > "$tmp_file" <<'EOF'
-{"nightModeEnabled":false,"nightModeAutoEnabled":false,"themeModeAutoEnabled":false,"themeModeShareGammaSettings":false,"nightModeUseIPLocation":false}
-EOF
-      fi
-      rm -f "$session_file"
-      mv "$tmp_file" "$session_file"
-      chmod 600 "$session_file"
-    elif [ ! -e "$session_file" ]; then
-      cat > "$session_file" <<'EOF'
-{"nightModeEnabled":false,"nightModeAutoEnabled":false,"themeModeAutoEnabled":false,"themeModeShareGammaSettings":false,"nightModeUseIPLocation":false}
-EOF
-      chmod 600 "$session_file"
-    fi
+        if [ -L "$session_file" ] || { [ -e "$session_file" ] && [ ! -w "$session_file" ]; }; then
+          tmp_file=$(mktemp)
+          if ! cat "$session_file" > "$tmp_file" 2>/dev/null; then
+            cat > "$tmp_file" <<'EOF'
+    {"nightModeEnabled":false,"nightModeAutoEnabled":false,"themeModeAutoEnabled":false,"themeModeShareGammaSettings":false,"nightModeUseIPLocation":false}
+    EOF
+          fi
+          rm -f "$session_file"
+          mv "$tmp_file" "$session_file"
+          chmod 600 "$session_file"
+        elif [ ! -e "$session_file" ]; then
+          cat > "$session_file" <<'EOF'
+    {"nightModeEnabled":false,"nightModeAutoEnabled":false,"themeModeAutoEnabled":false,"themeModeShareGammaSettings":false,"nightModeUseIPLocation":false}
+    EOF
+          chmod 600 "$session_file"
+        fi
   '';
 
   programs.dank-material-shell = {
@@ -700,6 +685,5 @@ EOF
       matugenTemplateVscode = false;
       matugenTemplateEmacs = false;
     };
-
   };
 }

@@ -23,8 +23,8 @@
     ./modules/home/obsidian.nix
     ./modules/home/spotify.nix
     ./modules/home/zellij.nix
-    ./modules/home/scripts.nix
-    ./modules/home/wallpaper.nix
+    ./modules/home/scripts
+    ./modules/home/wallpaper
     ./modules/home/wallpaper-selector.nix
     ./modules/home/cursors.nix
     ./modules/home/vesktop.nix
@@ -212,28 +212,104 @@
         # Use path-aware glob rules for repo roots/worktrees; plain dir-name rules
         # remain for the top-level container folders.
         prepend_globs = [
-          { url = "**/repositories/*/"; text = ""; fg = "#00bcd4"; }
-          { url = "**/system-manifest/checkouts/"; text = ""; fg = "#00bcd4"; }
-          { url = "**/system-manifest/checkouts/*/"; text = ""; fg = "#00bcd4"; }
-          { url = "**/system-manifest/checkouts/*/hosts/"; text = ""; fg = "#00bcd4"; }
-          { url = "**/system-manifest/checkouts/*/modules/"; text = ""; fg = "#00bcd4"; }
+          {
+            url = "**/repositories/*/";
+            text = "";
+            fg = "#00bcd4";
+          }
+          {
+            url = "**/system-manifest/checkouts/";
+            text = "";
+            fg = "#00bcd4";
+          }
+          {
+            url = "**/system-manifest/checkouts/*/";
+            text = "";
+            fg = "#00bcd4";
+          }
+          {
+            url = "**/system-manifest/checkouts/*/hosts/";
+            text = "";
+            fg = "#00bcd4";
+          }
+          {
+            url = "**/system-manifest/checkouts/*/modules/";
+            text = "";
+            fg = "#00bcd4";
+          }
         ];
 
         prepend_dirs = [
-          { name = "desktop"; text = ""; fg = "#00bcd4"; }
-          { name = "documents"; text = ""; fg = "#00bcd4"; }
-          { name = "downloads"; text = ""; fg = "#00bcd4"; }
-          { name = "games"; text = ""; fg = "#00bcd4"; }
-          { name = "music"; text = ""; fg = "#00bcd4"; }
-          { name = "pictures"; text = ""; fg = "#00bcd4"; }
-          { name = "public"; text = ""; fg = "#00bcd4"; }
-          { name = "repositories"; text = ""; fg = "#00bcd4"; }
-          { name = "screenshots"; text = "󰄄"; fg = "#00bcd4"; }
-          { name = "system-manifest"; text = ""; fg = "#00bcd4"; }
-          { name = "tabletop-games"; text = ""; fg = "#00bcd4"; }
-          { name = "templates"; text = ""; fg = "#00bcd4"; }
-          { name = "videos"; text = ""; fg = "#00bcd4"; }
-          { name = "wallpapers"; text = ""; fg = "#00bcd4"; }
+          {
+            name = "desktop";
+            text = "";
+            fg = "#00bcd4";
+          }
+          {
+            name = "documents";
+            text = "";
+            fg = "#00bcd4";
+          }
+          {
+            name = "downloads";
+            text = "";
+            fg = "#00bcd4";
+          }
+          {
+            name = "games";
+            text = "";
+            fg = "#00bcd4";
+          }
+          {
+            name = "music";
+            text = "";
+            fg = "#00bcd4";
+          }
+          {
+            name = "pictures";
+            text = "";
+            fg = "#00bcd4";
+          }
+          {
+            name = "public";
+            text = "";
+            fg = "#00bcd4";
+          }
+          {
+            name = "repositories";
+            text = "";
+            fg = "#00bcd4";
+          }
+          {
+            name = "screenshots";
+            text = "󰄄";
+            fg = "#00bcd4";
+          }
+          {
+            name = "system-manifest";
+            text = "";
+            fg = "#00bcd4";
+          }
+          {
+            name = "tabletop-games";
+            text = "";
+            fg = "#00bcd4";
+          }
+          {
+            name = "templates";
+            text = "";
+            fg = "#00bcd4";
+          }
+          {
+            name = "videos";
+            text = "";
+            fg = "#00bcd4";
+          }
+          {
+            name = "wallpapers";
+            text = "";
+            fg = "#00bcd4";
+          }
         ];
       };
     };

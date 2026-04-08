@@ -1,4 +1,31 @@
-{ pkgs, inputs, ... }: {
+{
+  pkgs,
+  inputs,
+  ...
+}: let
+  pinchtabVersion = "0.8.6";
+  pinchtab = pkgs.stdenvNoCC.mkDerivation {
+    pname = "pinchtab";
+    version = pinchtabVersion;
+    src = pkgs.fetchurl {
+      url = "https://github.com/pinchtab/pinchtab/releases/download/v${pinchtabVersion}/pinchtab-linux-amd64";
+      sha256 = "1pmp2j8k0vzq8ml3bq0z7gfhcxx68qys5sb98d692xbn72r2c5sm";
+    };
+    dontUnpack = true;
+    installPhase = ''
+      install -Dm755 "$src" "$out/bin/pinchtab"
+    '';
+    meta = {
+      description = "Browser automation CLI for AI agents";
+      homepage = "https://github.com/pinchtab/pinchtab";
+      license = pkgs.lib.licenses.mit;
+      mainProgram = "pinchtab";
+      platforms = ["x86_64-linux"];
+    };
+  };
+in {
+  home.packages = [pinchtab];
+
   # Ensure Copilot and gh open Neovim from any launcher context (shell, zellij, etc.)
   home.sessionVariables = {
     EDITOR = "nvim";
@@ -62,7 +89,7 @@
       context7 = {
         type = "stdio";
         command = "npx";
-        args = [ "-y" "@upstash/context7-mcp" ];
+        args = ["-y" "@upstash/context7-mcp"];
       };
     };
   };
@@ -72,11 +99,11 @@
     lspServers = {
       gopls = {
         command = "gopls";
-        fileExtensions = { ".go" = "go"; };
+        fileExtensions = {".go" = "go";};
       };
       typescript-language-server = {
         command = "typescript-language-server";
-        args = [ "--stdio" ];
+        args = ["--stdio"];
         fileExtensions = {
           ".ts" = "typescript";
           ".tsx" = "typescriptreact";
@@ -86,16 +113,16 @@
       };
       pylsp = {
         command = "pylsp";
-        fileExtensions = { ".py" = "python"; };
+        fileExtensions = {".py" = "python";};
       };
       rust-analyzer = {
         command = "rust-analyzer";
-        fileExtensions = { ".rs" = "rust"; };
+        fileExtensions = {".rs" = "rust";};
       };
       omnisharp = {
         command = "OmniSharp";
-        args = [ "--languageserver" ];
-        fileExtensions = { ".cs" = "csharp"; };
+        args = ["--languageserver"];
+        fileExtensions = {".cs" = "csharp";};
       };
     };
   };
