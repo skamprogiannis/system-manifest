@@ -90,6 +90,14 @@ li[class*="messageListItem_"] div[class*="mentioned_"] {
   border-left: 2px solid var(--accent-2, #b0c6ff) !important;
 }
 
+/* Make the composer placeholder visibly muted versus real message text. */
+div[class*="channelTextArea_"] div[class*="placeholder_"],
+div[class*="slateTextArea_"] div[class*="placeholder_"],
+div[class*="textArea_"] div[class*="placeholder_"] {
+  color: var(--text-4, #949ba4) !important;
+  opacity: 0.9 !important;
+}
+
 /* Hard-override brand filled buttons that still render blurple in some views. */
 button[class*="lookFilled_"][class*="colorBrand_"] {
   background-color: var(--button-filled-brand-background, var(--accent-3, #b0c6ff)) !important;
