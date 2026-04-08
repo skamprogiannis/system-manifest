@@ -4,6 +4,9 @@
   lib,
   ...
 }: {
+  # Keep this file as thin host wiring only. Use `hostType` for lightweight
+  # shared-module branches, and dedicated `.../usb.nix` modules for heavier
+  # host-specific patching or service overrides.
   imports = [
     ../../home.nix
     ../../modules/home/dms/usb.nix

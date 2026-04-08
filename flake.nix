@@ -62,10 +62,20 @@
     nixpkgs,
     home-manager,
     ...
-  } @ inputs: {
+  } @ inputs: let
+    system = "x86_64-linux";
+    pkgs = nixpkgs.legacyPackages.${system};
+  in {
+    formatter.${system} = pkgs.alejandra;
+
+    checks.${system} = {
+      desktop = self.nixosConfigurations.desktop.config.system.build.toplevel;
+      usb = self.nixosConfigurations.usb.config.system.build.toplevel;
+    };
+
     nixosConfigurations = {
       desktop = nixpkgs.lib.nixosSystem {
-        system = "x86_64-linux";
+        inherit system;
         specialArgs = {inherit inputs;};
         modules = [
           ./hosts/desktop/default.nix
@@ -76,6 +86,8 @@
             home-manager.useUserPackages = true;
             home-manager.backupFileExtension = "backup";
             home-manager.extraSpecialArgs = {
+              # Use hostType only for lightweight shared-module branches.
+              # Keep heavier host-specific patching in dedicated host modules.
               inherit inputs;
               hostType = "desktop";
             };
@@ -92,7 +104,7 @@
       };
 
       usb = nixpkgs.lib.nixosSystem {
-        system = "x86_64-linux";
+        inherit system;
         specialArgs = {inherit inputs;};
         modules = [
           ./hosts/usb/default.nix

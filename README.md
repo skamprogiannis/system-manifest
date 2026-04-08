@@ -57,6 +57,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 - **DMS Shell:** Core shell layout, widget placement, and launcher behavior are managed declaratively in Nix.
 - **Screenshots:** `dms screenshot` handles region/window/full capture with image-to-clipboard. `screenshot-path-copy` wraps it to copy the file path instead (useful for sharing with AI agents). Screen recording via **Kooha** GUI.
 - **GitHub Copilot CLI:** Copilot is integrated into the Neovim + terminal workflow with repository-specific instructions.
+- **Browser Automation:** PinchTab is installed declaratively so the Copilot browser-automation skill has the CLI it documents.
 - **DNS:** Quad9 (`9.9.9.9`) for privacy-focused DNS resolution.
 - **XDG directories:** Lowercase paths such as `~/downloads`, `~/pictures`, and `~/wallpapers` are canonical. Legacy uppercase XDG folders are migrated into the lowercase layout when it is safe to do so, and Yazi assigns the expected special-folder icons to those lowercase names.
 
@@ -73,7 +74,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 | `wallpaper-library-sync` | Clones/fetches/resets the static wallpapers repo rooted at `~/wallpapers` and keeps generated `.wallpaper-engine/` assets ignored |
 | `hypr-nav` | Hyprland focus movement with workspace wrapping at boundaries |
 | `hypr-quit-active` | Force-quits the active app process when a client minimizes to tray instead of exiting |
-| `transmission-port-sync` | Updates transmission-daemon listening port |
+| `transmission-port-sync` | Syncs Transmission's configured peer port (for example after a VPN-forwarded port change) |
 | `copilot-sessions-sync` | Syncs `~/.copilot/session-state/` between desktop and USB (`to-usb` / `from-usb`) |
 | `specify` | Spec Kit CLI wrapper — scaffolds spec-driven development for new projects |
 | `setup-persistent-usb` | Initialises a fresh LUKS-encrypted persistent NixOS USB drive |
@@ -92,6 +93,14 @@ sudo nixos-rebuild switch --flake .#desktop
 ```bash
 nixos-rebuild dry-build --flake .#desktop
 ```
+
+### Flake Check (both host builds)
+
+```bash
+nix flake check
+```
+
+`nix flake check` now validates both `desktop` and `usb` system builds via flake `checks`. `nix fmt` uses Alejandra through the flake formatter output.
 
 ### Update USB Drive
 
