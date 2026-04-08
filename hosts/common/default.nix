@@ -149,6 +149,7 @@
 
   # List packages installed in system profile.
   environment.systemPackages = with pkgs; [
+    adwaita-icon-theme
     wget
     git
     inotify-tools
