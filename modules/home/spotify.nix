@@ -7,7 +7,85 @@
 }: let
   spotifyDeviceName = if hostType == "usb" then "nixos-usb" else "nixos-desktop";
   spotifyServiceName = "spotify-player.service";
-  spotifyPlayerRawPkg = inputs.spotify-player.defaultPackage.${pkgs.stdenv.hostPlatform.system};
+  spotifyPlayerClientPatch = pkgs.writeText "patch-spotify-player-client.py" ''
+    import re
+    from pathlib import Path
+
+    path = Path("spotify_player/src/client/mod.rs")
+    text = path.read_text()
+
+    new_popup = """        #[cfg(feature = "streaming")]
+        {
+            if state.is_streaming_enabled() {
+                let configs = config::get_config();
+                let session = self.spotify.session().await;
+                let local_device = Device {
+                    id: session.device_id().to_string(),
+                    name: configs.app_config.device.name.clone(),
+                };
+
+                // Only add if not already in the list (avoid duplicates)
+                if !devices.iter().any(|d| d.id == local_device.id) {
+                    devices.push(local_device);
+                }
+            }
+        }
+    """
+
+    new_default = """        #[cfg(feature = "streaming")]
+        {
+            if configs.app_config.enable_streaming == config::StreamingType::Always {
+                let session = self.spotify.session().await;
+                devices.push((
+                    configs.app_config.device.name.clone(),
+                    session.device_id().to_string(),
+                ));
+            }
+        }
+    """
+
+    popup_pattern = re.compile(
+        r"""^[ \t]+#\[cfg\(feature = "streaming"\)\]\n"""
+        r"""[ \t]+\{\n"""
+        r"""[ \t]+let configs = config::get_config\(\);\n"""
+        r"""[ \t]+let session = self\.spotify\.session\(\)\.await;\n"""
+        r"""[ \t]+let local_device = Device \{\n"""
+        r"""[ \t]+id: session\.device_id\(\)\.to_string\(\),\n"""
+        r"""[ \t]+name: configs\.app_config\.device\.name\.clone\(\),\n"""
+        r"""[ \t]+\};\n\n"""
+        r"""[ \t]+// Only add if not already in the list \(avoid duplicates\)\n"""
+        r"""[ \t]+if !devices\.iter\(\)\.any\(\|d\| d\.id == local_device\.id\) \{\n"""
+        r"""[ \t]+devices\.push\(local_device\);\n"""
+        r"""[ \t]+\}\n"""
+        r"""[ \t]+\}\n""",
+        re.MULTILINE,
+    )
+    default_pattern = re.compile(
+        r"""^[ \t]+#\[cfg\(feature = "streaming"\)\]\n"""
+        r"""[ \t]+\{\n"""
+        r"""[ \t]+let session = self\.spotify\.session\(\)\.await;\n"""
+        r"""[ \t]+devices\.push\(\(\n"""
+        r"""[ \t]+configs\.app_config\.device\.name\.clone\(\),\n"""
+        r"""[ \t]+session\.device_id\(\)\.to_string\(\),\n"""
+        r"""[ \t]+\)\);\n"""
+        r"""[ \t]+\}\n""",
+        re.MULTILINE,
+    )
+
+    text, popup_count = popup_pattern.subn(new_popup, text, count=1)
+    if popup_count != 1:
+        raise SystemExit("spotify-player popup device block not found")
+    text, default_count = default_pattern.subn(new_default, text, count=1)
+    if default_count != 1:
+        raise SystemExit("spotify-player default device block not found")
+    path.write_text(text)
+  '';
+  spotifyPlayerUpstreamPkg = inputs.spotify-player.defaultPackage.${pkgs.stdenv.hostPlatform.system};
+  spotifyPlayerRawPkg = spotifyPlayerUpstreamPkg.overrideAttrs (old: {
+    postPatch = (old.postPatch or "") + ''
+      ${pkgs.python3}/bin/python3 ${spotifyPlayerClientPatch}
+    '';
+  });
   spotifyConfigDir = "${config.xdg.configHome}/spotify-player";
   spotifyCacheDir = "${config.xdg.cacheHome}/spotify-player";
   spotifyDaemonConfigDir = "${config.xdg.configHome}/spotify-player-daemon";
@@ -32,7 +110,7 @@
       fi
 
       case "$1" in
-        -h|--help|-V|--version|features|generate)
+        -h|--help|-V|--version|authenticate|features|generate|help)
           return 0
           ;;
       esac
@@ -44,6 +122,30 @@
             ;;
         esac
       done
+
+      return 1
+    }
+
+    is_known_subcommand() {
+      case "$1" in
+        get|playback|connect|like|authenticate|playlist|generate|search|features|lyrics|help)
+          return 0
+          ;;
+      esac
+
+      return 1
+    }
+
+    should_bootstrap_daemon() {
+      if [ "$#" -eq 0 ]; then
+        return 0
+      fi
+
+      case "$1" in
+        get|playback|connect|like)
+          return 0
+          ;;
+      esac
 
       return 1
     }
@@ -101,12 +203,25 @@
       wait_for_device "$retry_device_wait_attempts"
     }
 
-    if should_bypass_wrapper "$@"; then
-      exec_real_player "$@"
+    if [ "$#" -gt 0 ] && [ "$1" = "auth" ]; then
+      shift
+      set -- authenticate "$@"
     fi
 
     if [ "$#" -gt 0 ] && [ "$1" = "authenticate" ]; then
       stop_service
+      exec_real_player "$@"
+    fi
+
+    if should_bypass_wrapper "$@"; then
+      exec_real_player "$@"
+    fi
+
+    if [ "$#" -gt 0 ] && ! is_known_subcommand "$1"; then
+      exec_real_player "$@"
+    fi
+
+    if ! should_bootstrap_daemon "$@"; then
       exec_real_player "$@"
     fi
 
@@ -127,12 +242,13 @@
     exec_real_player "$@"
   '';
 in {
-  # TUI config: no MPRIS or notifications (daemon handles those)
+  # TUI config: no MPRIS or notifications. The daemon owns the local Connect
+  # device so the client does not register a second same-name endpoint.
   home.file."${spotifyConfigDir}/app.toml".text = ''
     client_port = 8081
     login_redirect_uri = "http://127.0.0.1:8989/login"
     enable_streaming = "DaemonOnly"
-    playback_refresh_duration_in_ms = 2000
+    playback_refresh_duration_in_ms = 0
     enable_media_control = false
     enable_notify = false
     default_device = "${spotifyDeviceName}"
@@ -140,7 +256,7 @@ in {
     [device]
     name = "${spotifyDeviceName}"
     device_type = "computer"
-    volume = 90
+    volume = 72
     bitrate = 320
     audio_cache = true
     normalization = false
@@ -152,7 +268,7 @@ in {
     login_redirect_uri = "http://127.0.0.1:8989/login"
     enable_streaming = "DaemonOnly"
     enable_media_control = true
-    playback_refresh_duration_in_ms = 2000
+    playback_refresh_duration_in_ms = 0
     enable_notify = true
     notify_transient = true
     default_device = "${spotifyDeviceName}"
@@ -160,7 +276,7 @@ in {
     [device]
     name = "${spotifyDeviceName}"
     device_type = "computer"
-    volume = 90
+    volume = 72
     bitrate = 320
     audio_cache = true
     normalization = false
