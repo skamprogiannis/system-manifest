@@ -13,6 +13,9 @@
       settings_shell_alpha = "Math.min(1.0, Theme.popupTransparency + 0.08)"
       settings_header_alpha = "Math.min(1.0, Theme.popupTransparency + 0.10)"
     '';
+    # USB keeps the same settings-adjacent transparency patches because upstream
+    # still hardcodes those QML paths; the CachingImage tweak below is a separate
+    # render-path fix rather than a setting DMS currently exposes.
     replacementsPython = ''
       root / "Modals/Settings/SettingsModal.qml": [
           ("property bool disablePopupTransparency: true", "property bool disablePopupTransparency: false"),

@@ -2,7 +2,6 @@
   pkgs,
   weConstants,
   weNormalizeDir,
-  dmsConstants,
   ...
 }: {
   home.packages = [
@@ -15,7 +14,6 @@
 
             ${weConstants}
             ${weNormalizeDir}
-            ${dmsConstants}
             CACHE_WALL="$HOME/.cache/current_wallpaper"
             FALLBACK_CACHE="$HOME/.cache/quickshell-last-wallpaper"
             WE_WORKSHOP_ROOT="$WE_WORKSHOP"
@@ -44,7 +42,8 @@
               local palette_json="$HOME/.cache/DankMaterialShell/dms-colors.json"
 
               if [ -f "$color_file" ]; then
-                local current_hash=$(${pkgs.coreutils}/bin/md5sum "$color_file" | cut -d' ' -f1)
+                local current_hash=""
+                current_hash=$(${pkgs.coreutils}/bin/md5sum "$color_file" | cut -d' ' -f1)
                 if [ "$current_hash" != "$LAST_COLORS_HASH" ]; then
                   LAST_COLORS_HASH="$current_hash"
 
@@ -93,7 +92,8 @@
               # Keep Transluence-derived Vesktop theme synchronized with the same
               # palette artifact it actually consumes, not just colors.conf.
               if command -v regen-vesktop-transluence-theme >/dev/null 2>&1 && [ -f "$palette_json" ]; then
-                local current_palette_hash=$(${pkgs.coreutils}/bin/md5sum "$palette_json" | cut -d' ' -f1)
+                local current_palette_hash=""
+                current_palette_hash=$(${pkgs.coreutils}/bin/md5sum "$palette_json" | cut -d' ' -f1)
                 if [ "$current_palette_hash" != "$LAST_VESKTOP_PALETTE_HASH" ]; then
                   if regen-vesktop-transluence-theme; then
                     LAST_VESKTOP_PALETTE_HASH=$(${pkgs.coreutils}/bin/md5sum "$palette_json" | cut -d' ' -f1)
@@ -212,7 +212,6 @@
             # triggers full DMS theme generation.
             publish_we_thumbnail() {
               local we_dir="$1"
-              local map_file="$MAP_FILE"
               local thumb_dir="$WALL_DIR"
 
               local thumb_name=""
@@ -341,7 +340,7 @@
               [ "$profile" = "$LAST_POWER_PROFILE" ] && return 0
               LAST_POWER_PROFILE="$profile"
 
-              echo "USB light mode profile: ${previous:-unset} -> $profile"
+              echo "USB light mode profile: ''${previous:-unset} -> $profile"
 
               target_wall="$CURRENT_WALL"
               if [ -z "$target_wall" ]; then

@@ -1,17 +1,11 @@
-{
-  pkgs,
-  inputs,
-  ...
-}: let
-  dmsPackage = inputs.dms.packages.${pkgs.stdenv.hostPlatform.system}.dms-shell;
-in {
-  inherit dmsPackage;
-
+{pkgs, ...}: {
   # Shared wallpaper-engine path constants.
   weConstants = ''
     MAP_FILE="$HOME/.cache/we-wallpaper-map.json"
     WE_ASSETS="$HOME/games/SteamLibrary/steamapps/common/wallpaper_engine/assets"
+    # shellcheck disable=SC2034
     WE_WORKSHOP="$HOME/games/SteamLibrary/steamapps/workshop/content/431960"
+    # shellcheck disable=SC2034
     WE_DEFAULTS_ROOT="$HOME/games/SteamLibrary/steamapps/common/wallpaper_engine/projects/defaultprojects"
     WALL_DIR="$HOME/wallpapers/.wallpaper-engine"
   '';
@@ -20,13 +14,6 @@ in {
     normalize_dir() {
       ${pkgs.coreutils}/bin/realpath "$1" | ${pkgs.gnused}/bin/sed 's:/*$::'
     }
-  '';
-
-  # DMS paths for matugen queue and deferred capture.
-  dmsConstants = ''
-    DMS_SHELL_DIR="${dmsPackage}/share/quickshell/dms"
-    DMS_STATE_DIR="$HOME/.local/state/DankMaterialShell"
-    DMS_CONFIG_DIR="$HOME/.config/DankMaterialShell"
   '';
 
   # Shared service definition for both WE slots (a/b).

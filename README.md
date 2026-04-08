@@ -100,7 +100,9 @@ nixos-rebuild dry-build --flake .#desktop
 nix flake check
 ```
 
-`nix flake check` now validates both `desktop` and `usb` system builds via flake `checks`. `nix fmt` uses Alejandra through the flake formatter output.
+This is the standard `nix flake check` command. In this repo it runs the checks defined in `flake.nix`: both `desktop` and `usb` system builds, plus lightweight `script-smoke` coverage and a `shellcheck` pass over the generated custom shell entrypoints. GitHub Actions runs those host and script checks in separate jobs so failures stay isolated in CI. `nix fmt` uses Alejandra through the flake formatter output.
+
+Validation is automated, but deployment is still manual: `nixos-rebuild switch --flake .#desktop` applies the desktop system, while `update-usb` rebuilds and syncs the USB image.
 
 ### Update USB Drive
 
@@ -121,6 +123,8 @@ sudo update-usb --in-place /path/to/system-manifest/checkouts/<worktree>
 ```
 
 The script handles preflight checks, safe cleanup on `Ctrl+C`, and first-boot Home Manager activation.
+
+`update-usb` and `nix flake check` prove the image builds correctly, but USB-only runtime issues still require a real boot on target hardware to verify rendering, cursor, DMS, and similar session behavior.
 
 ### Initialize / Reformat Persistent USB
 
