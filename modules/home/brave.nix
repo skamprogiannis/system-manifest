@@ -1,6 +1,7 @@
 {
   pkgs,
   lib,
+  hostType ? null,
   ...
 }: let
   vimiumCExtensionId = "hfjbmagddngcpeloejdejnfgbamkjaeg";
@@ -96,6 +97,46 @@
     };
   };
 
+  braveEnabledFeatures =
+    [
+      "WebUIDarkMode"
+      "VaapiVideoDecoder"
+      "VaapiVideoEncoder"
+    ]
+    ++ lib.optionals (hostType != "usb") [
+      "Vulkan"
+      "UseSkiaRenderer"
+    ];
+
+  braveDisabledFeatures =
+    [
+      "HardwareMediaKeyHandling"
+      "FullscreenAlertBubble"
+    ]
+    ++ lib.optionals (hostType == "usb") [
+      "Vulkan"
+      "UseSkiaRenderer"
+    ];
+
+  braveCommandLineArgs =
+    [
+      "--test-type"
+      "--extensions-on-chrome-urls"
+      "--ozone-platform-hint=auto"
+      "--force-dark-mode"
+      "--disable-features=${lib.concatStringsSep "," braveDisabledFeatures}"
+      "--enable-features=${lib.concatStringsSep "," braveEnabledFeatures}"
+    ]
+    ++ lib.optionals (hostType != "usb") [
+      "--use-gl=egl"
+      "--enable-gpu-rasterization"
+      "--enable-zero-copy"
+    ]
+    ++ lib.optionals (hostType == "usb") [
+      "--disable-gpu-rasterization"
+      "--disable-zero-copy"
+    ];
+
   writeVimiumCState = pkgs.writeShellScript "brave-write-vimium-c-state" ''
     local_dir="$HOME/.config/BraveSoftware/Brave-Browser/Default/Local Extension Settings/${vimiumCExtensionId}"
     sync_dir="$HOME/.config/BraveSoftware/Brave-Browser/Default/Sync Extension Settings/${vimiumCExtensionId}"
@@ -145,18 +186,7 @@ in {
   programs.brave = {
     enable = true;
     package = pkgs.brave.override {
-      commandLineArgs = [
-        "--disable-features=HardwareMediaKeyHandling,FullscreenAlertBubble"
-        "--test-type"
-        "--extensions-on-chrome-urls"
-        "--ozone-platform-hint=auto"
-        "--force-dark-mode"
-        "--enable-features=WebUIDarkMode,VaapiVideoDecoder,VaapiVideoEncoder,Vulkan,UseSkiaRenderer"
-        "--use-gl=egl"
-        "--enable-gpu-rasterization"
-        "--enable-zero-copy"
-      ];
-
+      commandLineArgs = braveCommandLineArgs;
     };
     extensions = [
       {id = vimiumCExtensionId;}
