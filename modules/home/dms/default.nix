@@ -13,6 +13,9 @@
       settings_shell_alpha = "Math.min(1.0, Theme.popupTransparency + 0.08)"
       settings_header_alpha = "Math.min(1.0, Theme.popupTransparency + 0.10)"
     '';
+    # These patches stay even when a setting with the same name exists below.
+    # Upstream DMS still hardcodes several surfaces and does not fully thread
+    # per-widget options like showSeconds through the components we rely on.
     replacementsPython = ''
       root / "Modals/Settings/SettingsModal.qml": [
           ("property bool disablePopupTransparency: true", "property bool disablePopupTransparency: false"),

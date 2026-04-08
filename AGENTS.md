@@ -4,6 +4,7 @@
 
 - **Dry Run Build:** `nixos-rebuild dry-build --flake .#nixos` (Checks for evaluation errors without applying changes)
 - **Check Configuration:** `nixos-rebuild test --flake .#nixos` (Builds and activates, but doesn't add to bootloader - good for temporary testing)
+- **Flake Check:** `nix flake check` (This is the standard Nix flake command. In this repo it runs the checks defined in `flake.nix`: `desktop`, `usb`, `script-smoke`, and `shellcheck`.)
 - **List Generations:** `nixos-rebuild list-generations`
 - **Garbage Collect:** `nix-collect-garbage -d` (Deletes old generations)
 
@@ -47,6 +48,9 @@
 - **Subagent Rebuilds:** Use a subagent (task tool) to handle `nixos-rebuild` commands (dry-run and switch) to keep the main context clean and handle potential long output.
 - **Bug Reporting:** When a bug is reported, prioritize writing a reproduction test before attempting a fix. Use subagents to implement the fix and verify it with the passing test.
 - **Pre-Completion Dry Build:** After any config/code change and before reporting "done," run `nixos-rebuild dry-build --flake .#desktop` yourself and fix any failures before handing back to the user.
+- **CI Shape:** GitHub Actions mirrors the flake checks with separate host (`desktop`, `usb`) and script-quality (`script-smoke`, `shellcheck`) jobs so failures stay isolated.
+- **ShellCheck Scope:** ShellCheck currently lints the generated custom shell entrypoints from the Home Manager profiles, including host-variant wrappers where desktop and USB differ. If more shell logic moves into standalone `.sh` files later, extend linting to those sources too.
+- **Validation vs Deployment:** CI and `nix flake check` only validate buildability and scripted checks. Deployment is still manual: `nixos-rebuild switch --flake .#desktop` for desktop and `update-usb` for the USB image.
 
 ## Hyprland Keybind Guidance
 
@@ -93,6 +97,7 @@ Use **Spec Kit** (`specify` CLI) to scaffold spec-driven development for new pro
   6.  Builds `nix-store.squashfs` locally and syncs final image to USB (`--in-place` keeps old USB-local squash path).
   7.  Unmounts and cleans up.
 - **Note:** Script preflight checks mountpoint safety and can auto-enter `nix-shell` when `mksquashfs` is missing. Always pass a checkout path (e.g. `.../checkouts/main`).
+- **Runtime Validation:** `nix flake check` and `dry-build` do not prove USB-only runtime behavior. For cursor/rendering/DMS issues, update the stick and boot it on real target hardware before declaring the fix done.
 - **GH auth on foreign machines:** When booting the USB on a computer lab machine, gnome-keyring may not auto-unlock. Store a fine-grained PAT (with "Copilot Requests" permission) in `~/.config/github-pat` on the encrypted USB partition: `echo "ghp_..." > ~/.config/github-pat && chmod 600 ~/.config/github-pat`. The shell will auto-export it as `GH_TOKEN`. This file is protected by LUKS and never committed to git.
 
 ## Copilot Session Sync (Desktop ↔ USB)
@@ -130,9 +135,10 @@ The wallpaper stack has two independent renderers layered via `wlr-layer-shell`:
 | File | What it contains |
 |------|-----------------|
 | `modules/home/wallpaper-selector.nix` | `wallpaper-apply` unified script (static/dynamic/audio subcommands), wallpaper-selector launcher, QML Theme.qml |
-| `modules/home/wallpaper.nix` | systemd services (WE, wallpaper-hook), `wallpaper-engine-sync` thumbnail generator, `wallpaper-hook` poll daemon |
-| `modules/home/wallpaper-common.nix` | Shared path constants (`MAP_FILE`, `WE_ASSETS`, `WE_WORKSHOP`, `WE_DEFAULTS_ROOT`, `WALL_DIR`) and `normalize_dir()` |
-| `modules/home/dms.nix` | DMS configuration, matugen template toggles |
+| `modules/home/wallpaper/default.nix` | Entry point wiring the split wallpaper stack into Home Manager |
+| `modules/home/wallpaper/common.nix` | Shared path constants (`MAP_FILE`, `WE_ASSETS`, `WE_WORKSHOP`, `WE_DEFAULTS_ROOT`, `WALL_DIR`) and `normalize_dir()` |
+| `modules/home/wallpaper/services.nix` / `hook.nix` / `engine-sync.nix` | WE services, wallpaper-hook daemon, and thumbnail generation logic |
+| `modules/home/dms/default.nix` / `usb.nix` | Shared DMS configuration plus USB-specific overrides and patching |
 | Fork: `github.com/skamprogiannis/wallpaper-selector` | QML UI (`Selector.qml`), playlist daemon script |
 
 ### Scripts in PATH (4 total)

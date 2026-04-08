@@ -49,9 +49,8 @@
         fi
 
         if [ "$OPENED_MAPPER" -eq 1 ]; then
-          local attempt
           sync
-          for attempt in 1 2 3; do
+          for _ in 1 2 3; do
             if run_root ${pkgs.cryptsetup}/bin/cryptsetup luksClose "$MAPPER" 2>/dev/null; then
               OPENED_MAPPER=0
               break

@@ -6,7 +6,7 @@
   ...
 }: let
   common = import ./wallpaper/common.nix {inherit pkgs inputs;};
-  inherit (common) dmsConstants dmsPackage weConstants weNormalizeDir;
+  inherit (common) weConstants weNormalizeDir;
 
   selectorRuntimePath = lib.makeBinPath [
     pkgs.bash
@@ -153,7 +153,6 @@
 
             ${weConstants}
             ${weNormalizeDir}
-            ${dmsConstants}
             USB_LIGHT_MODE_FLAG="$HOME/.config/system-manifest/usb-light-mode-enabled"
 
             usage() {
@@ -425,7 +424,8 @@
             set -euo pipefail
 
             export PATH="$HOME/.local/bin:${selectorRuntimePath}:$PATH"
-            export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+            XDG_RUNTIME_DIR="/run/user/$(id -u)"
+            export XDG_RUNTIME_DIR
             export QML_XHR_ALLOW_FILE_READ=1
       ${lib.optionalString (hostType == "usb") ''
         export QS_NO_GL=1
@@ -462,6 +462,9 @@
             exec ${pkgs.quickshell}/bin/quickshell -p "$selector_path"
       EOF
 
+            # writeShell heredocs keep some indentation; trim the generated shebangs
+            # so ShellCheck and execve both see a canonical first line.
+            ${pkgs.gnused}/bin/sed -i '1s/^ *//' "$out/bin/wallpaper-apply" "$out/bin/wallpaper-selector"
             chmod +x "$out/bin/"*
 
             runHook postInstall

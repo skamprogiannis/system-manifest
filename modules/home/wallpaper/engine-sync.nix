@@ -77,7 +77,7 @@
               local thumb="$1"
               [ -f "$thumb" ] || return 1
               local brightness=""
-              brightness=$(${pkgs.imagemagick}/bin/magick "$thumb[0]" \
+              brightness=$(${pkgs.imagemagick}/bin/magick "''${thumb}[0]" \
                 -colorspace Gray -resize 1x1\! -depth 8 gray:- 2>/dev/null \
                 | ${pkgs.coreutils}/bin/od -An -tu1 \
                 | ${pkgs.gawk}/bin/awk 'NF { print $1; exit }')
@@ -183,7 +183,6 @@
 
               capture_count=0
               captured=0
-              skipped=0
               total=0
               for dir in "$WE_WORKSHOP"/*/; do
                 [ -f "$dir/project.json" ] && total=$((total + 1))
@@ -342,7 +341,7 @@
             normalize_thumb() {
               local src="$1" dst="$2"
               local geom w h
-              geom=$(${pkgs.imagemagick}/bin/magick identify -format '%wx%h' "$src[0]" 2>/dev/null) || {
+              geom=$(${pkgs.imagemagick}/bin/magick identify -format '%wx%h' "''${src}[0]" 2>/dev/null) || {
                 ${pkgs.imagemagick}/bin/magick "$src" \
                   -strip -colorspace sRGB -filter Lanczos \
                   -resize 1920x1080^ -gravity center -extent 1920x1080 \
@@ -435,7 +434,7 @@
 
             preview_source_geometry() {
               local src="$1"
-              ${pkgs.imagemagick}/bin/magick identify -format '%wx%h' "$src[0]" 2>/dev/null
+              ${pkgs.imagemagick}/bin/magick identify -format '%wx%h' "''${src}[0]" 2>/dev/null
             }
 
             preview_source_is_low_confidence() {
@@ -465,7 +464,7 @@
               [ -n "$nframes" ] && [ "$nframes" -gt 0 ] || return 1
 
               local mid_idx=$(( nframes / 2 ))
-              ${pkgs.imagemagick}/bin/magick "$src[$mid_idx]" \
+              ${pkgs.imagemagick}/bin/magick "''${src}[$mid_idx]" \
                 -background black -flatten \
                 -strip -colorspace sRGB \
                 -quality 95 "$dst" 2>/dev/null || return 1
