@@ -325,6 +325,16 @@ in {
           "$mod SHIFT, 8, movetoworkspace, 8"
           "$mod SHIFT, 9, movetoworkspace, 9"
           "$mod SHIFT, 0, movetoworkspace, 10"
+          "$mod CTRL, 1, movetoworkspacesilent, 1"
+          "$mod CTRL, 2, movetoworkspacesilent, 2"
+          "$mod CTRL, 3, movetoworkspacesilent, 3"
+          "$mod CTRL, 4, movetoworkspacesilent, 4"
+          "$mod CTRL, 5, movetoworkspacesilent, 5"
+          "$mod CTRL, 6, movetoworkspacesilent, 6"
+          "$mod CTRL, 7, movetoworkspacesilent, 7"
+          "$mod CTRL, 8, movetoworkspacesilent, 8"
+          "$mod CTRL, 9, movetoworkspacesilent, 9"
+          "$mod CTRL, 0, movetoworkspacesilent, 10"
 
           # --- Special Workspaces ---
           "$mod, grave, togglespecialworkspace, music"
