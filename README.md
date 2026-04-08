@@ -132,6 +132,8 @@ copilot-sessions-sync to-usb    # before leaving for a lab machine
 copilot-sessions-sync from-usb  # after returning
 ```
 
+The script syncs the invoking user's `~/.copilot/session-state/` and escalates with `sudo` only for the USB mount/unlock steps.
+
 ## License
 
 This repository is licensed under **GNU GPL v3.0**. See [LICENSE](./LICENSE).
