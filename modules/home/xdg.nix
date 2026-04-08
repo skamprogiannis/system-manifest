@@ -27,6 +27,11 @@
     };
   };
 
+  # Allow unfree packages in ad-hoc nix commands (nix run, nix shell, etc.)
+  # The NixOS-level nixpkgs.config.allowUnfree covers system and HM builds;
+  # this file covers standalone nix CLI usage.
+  xdg.configFile."nixpkgs/config.nix".text = "{ allowUnfree = true; }";
+
   # Migrate stray uppercase XDG dirs into the canonical lowercase locations
   # without overwriting any existing files in the lowercase targets.
   home.activation.cleanupLegacyUppercaseXdgDirs = lib.hm.dag.entryAfter ["writeBoundary"] ''
