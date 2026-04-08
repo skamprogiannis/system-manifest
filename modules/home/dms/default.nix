@@ -91,6 +91,34 @@ replacements = {
             '                comment: "Sample colors from anywhere on screen",\n                action: "ipc:color-picker",',
         ),
     ],
+    root / "Common/settings/Lists.qml": [
+        (
+            "            mediaSize: 1,\n",
+            "            mediaSize: 1,\n            showSeconds: true,\n",
+        ),
+        (
+            "            if (isObj && order[i].mediaSize !== undefined)\n                item.mediaSize = order[i].mediaSize;\n",
+            "            if (isObj && order[i].mediaSize !== undefined)\n                item.mediaSize = order[i].mediaSize;\n            if (isObj && order[i].showSeconds !== undefined)\n                item.showSeconds = order[i].showSeconds;\n",
+        ),
+    ],
+    root / "Modules/DankBar/Widgets/Clock.qml": [
+        (
+            "            readonly property bool compact: widgetData?.clockCompactMode !== undefined ? widgetData.clockCompactMode : SettingsData.clockCompactMode\n",
+            "            readonly property bool compact: widgetData?.clockCompactMode !== undefined ? widgetData.clockCompactMode : SettingsData.clockCompactMode\n            readonly property bool showSeconds: widgetData?.showSeconds !== undefined ? widgetData.showSeconds : SettingsData.showSeconds\n",
+        ),
+        (
+            "                    visible: SettingsData.showSeconds\n",
+            "                    visible: showSeconds\n",
+        ),
+        (
+            "                        visible: SettingsData.showSeconds\n",
+            "                        visible: showSeconds\n",
+        ),
+        (
+            "                precision: SettingsData.showSeconds ? SystemClock.Seconds : SystemClock.Minutes\n",
+            "                precision: showSeconds ? SystemClock.Seconds : SystemClock.Minutes\n",
+        ),
+    ],
 }
 
 for path, edits in replacements.items():
@@ -403,7 +431,20 @@ EOF
               enabled = true;
             }
           ];
-          centerWidgets = ["music" "clock" "weather"];
+          centerWidgets = [
+            {
+              id = "clock";
+              enabled = true;
+              clockCompactMode = true;
+              showSeconds = false;
+            }
+            {
+              id = "music";
+              enabled = true;
+              mediaSize = 0;
+            }
+            "weather"
+          ];
           rightWidgets = [
             {
               id = "cpuUsage";

@@ -2,9 +2,10 @@
   config,
   pkgs,
   inputs,
+  hostType ? null,
   ...
 }: let
-  spotifyDeviceName = "nixos-desktop";
+  spotifyDeviceName = if hostType == "usb" then "nixos-usb" else "nixos-desktop";
   spotifyServiceName = "spotify-player.service";
   spotifyPlayerRawPkg = inputs.spotify-player.defaultPackage.${pkgs.stdenv.hostPlatform.system};
   spotifyConfigDir = "${config.xdg.configHome}/spotify-player";
