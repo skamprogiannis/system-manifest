@@ -39,36 +39,41 @@
     postPatch = ''
       substituteInPlace src/Globals.hpp \
         --replace-fail '<hyprland/src/render/Framebuffer.hpp>' '<hyprland/src/render/gl/GLFramebuffer.hpp>' \
-        --replace-fail 'CFramebuffer blurTempFramebuffer;' 'CGLFramebuffer blurTempFramebuffer;'
+        --replace-fail 'CFramebuffer blurTempFramebuffer;' 'Render::GL::CGLFramebuffer blurTempFramebuffer;'
 
       substituteInPlace src/GlassDecoration.hpp \
         --replace-fail '<hyprland/src/render/Framebuffer.hpp>' '<hyprland/src/render/gl/GLFramebuffer.hpp>' \
-        --replace-fail 'CFramebuffer m_sampleFramebuffer;' 'CGLFramebuffer m_sampleFramebuffer;' \
-        --replace-fail 'void sampleBackground(CFramebuffer& sourceFramebuffer, CBox box);' 'void sampleBackground(IFramebuffer& sourceFramebuffer, CBox box);' \
-        --replace-fail 'void applyGlassEffect(CFramebuffer& sourceFramebuffer, CFramebuffer& targetFramebuffer,' 'void applyGlassEffect(CGLFramebuffer& sourceFramebuffer, IFramebuffer& targetFramebuffer,'
+        --replace-fail 'CFramebuffer m_sampleFramebuffer;' 'Render::GL::CGLFramebuffer m_sampleFramebuffer;' \
+        --replace-fail 'void sampleBackground(CFramebuffer& sourceFramebuffer, CBox box);' 'void sampleBackground(Render::IFramebuffer& sourceFramebuffer, CBox box);' \
+        --replace-fail 'void applyGlassEffect(CFramebuffer& sourceFramebuffer, CFramebuffer& targetFramebuffer,' 'void applyGlassEffect(Render::GL::CGLFramebuffer& sourceFramebuffer, Render::IFramebuffer& targetFramebuffer,'
 
       substituteInPlace src/GlassDecoration.cpp \
-        --replace-fail 'void CGlassDecoration::sampleBackground(CFramebuffer& sourceFramebuffer, CBox box) {' $'void CGlassDecoration::sampleBackground(IFramebuffer& sourceFramebuffer, CBox box) {\n    auto* srcGLFramebuffer = dynamic_cast<CGLFramebuffer*>(&sourceFramebuffer);\n    if (!srcGLFramebuffer)\n        return;' \
+        --replace-fail 'void CGlassDecoration::sampleBackground(CFramebuffer& sourceFramebuffer, CBox box) {' $'void CGlassDecoration::sampleBackground(Render::IFramebuffer& sourceFramebuffer, CBox box) {\n    auto* srcGLFramebuffer = dynamic_cast<Render::GL::CGLFramebuffer*>(&sourceFramebuffer);\n    if (!srcGLFramebuffer)\n        return;' \
         --replace-fail 'glBindFramebuffer(GL_READ_FRAMEBUFFER, sourceFramebuffer.getFBID());' 'glBindFramebuffer(GL_READ_FRAMEBUFFER, srcGLFramebuffer->getFBID());' \
-        --replace-fail 'void CGlassDecoration::applyGlassEffect(CFramebuffer& sourceFramebuffer, CFramebuffer& targetFramebuffer,' 'void CGlassDecoration::applyGlassEffect(CGLFramebuffer& sourceFramebuffer, IFramebuffer& targetFramebuffer,' \
-        --replace-fail 'glBindFramebuffer(GL_FRAMEBUFFER, targetFramebuffer.getFBID());' $'    auto* targetGLFramebuffer = dynamic_cast<CGLFramebuffer*>(&targetFramebuffer);\n    if (!targetGLFramebuffer)\n        return;\n\n    glBindFramebuffer(GL_FRAMEBUFFER, targetGLFramebuffer->getFBID());' \
-        --replace-fail 'blurBackground(blurRadius, blurIterations, source->getFBID(), viewportWidth, viewportHeight);' $'        auto* sourceGLFramebuffer = dynamic_cast<CGLFramebuffer*>(source.get());\n        if (!sourceGLFramebuffer)\n            return;\n\n        blurBackground(blurRadius, blurIterations, sourceGLFramebuffer->getFBID(), viewportWidth, viewportHeight);'
+        --replace-fail 'void CGlassDecoration::applyGlassEffect(CFramebuffer& sourceFramebuffer, CFramebuffer& targetFramebuffer,' 'void CGlassDecoration::applyGlassEffect(Render::GL::CGLFramebuffer& sourceFramebuffer, Render::IFramebuffer& targetFramebuffer,' \
+        --replace-fail 'glBindFramebuffer(GL_FRAMEBUFFER, targetFramebuffer.getFBID());' $'    auto* targetGLFramebuffer = dynamic_cast<Render::GL::CGLFramebuffer*>(&targetFramebuffer);\n    if (!targetGLFramebuffer)\n        return;\n\n    glBindFramebuffer(GL_FRAMEBUFFER, targetGLFramebuffer->getFBID());' \
+        --replace-fail 'blurBackground(blurRadius, blurIterations, source->getFBID(), viewportWidth, viewportHeight);' $'        auto* sourceGLFramebuffer = dynamic_cast<Render::GL::CGLFramebuffer*>(source.get());\n        if (!sourceGLFramebuffer)\n            return;\n\n        blurBackground(blurRadius, blurIterations, sourceGLFramebuffer->getFBID(), viewportWidth, viewportHeight);'
 
       substituteInPlace Makefile \
         --replace-fail 'SOURCES = src/main.cpp src/GlassDecoration.cpp src/GlassPassElement.cpp src/PluginConfig.cpp src/ShaderManager.cpp' 'SOURCES = src/main.cpp src/GlassDecoration.cpp src/PluginConfig.cpp src/ShaderManager.cpp'
 
-      substituteInPlace src/main.cpp \
-        --replace-fail '    g_pHyprRenderer->m_renderPass.removeAllOfType("CGlassPassElement");' ""
+      # Remove g_pConfigManager code and GlassPassElement code
+      sed -i '/Shadows must be enabled for the glass effect/,/^    }$/d' src/main.cpp
+      sed -i '/g_pHyprRenderer->m_renderPass.removeAllOfType("CGlassPassElement");/d' src/main.cpp
 
       substituteInPlace src/GlassDecoration.cpp \
         --replace-fail '#include "GlassPassElement.hpp"' "" \
         --replace-fail '    CGlassPassElement::SGlassPassData data{this, alpha};' "" \
         --replace-fail '    g_pHyprRenderer->m_renderPass.add(makeUnique<CGlassPassElement>(data));' '    renderPass(monitor, alpha);' \
         --replace-fail 'g_pHyprOpenGL->m_renderData' 'g_pHyprRenderer->m_renderData' \
+        --replace-fail 'g_pHyprOpenGL->' 'Render::GL::g_pHyprOpenGL->' \
         --replace-fail 'g_pHyprRenderer->m_renderData.monitorProjection.projectBox(rawBox, transform, rawBox.rot)' 'g_pHyprRenderer->getBoxProjection(rawBox, transform)' \
         --replace-fail 'g_pHyprRenderer->m_renderData.projection.copy().multiply(matrix)' 'g_pHyprRenderer->projectBoxToTarget(rawBox, transform)'
+
+      substituteInPlace src/ShaderManager.cpp \
+        --replace-fail 'g_pHyprOpenGL->' 'Render::GL::g_pHyprOpenGL->'
     '';
-    NIX_CFLAGS_COMPILE = "-I${hyprland-pkg.dev}/include/hyprland/protocols -I${pkgs.libdrm.dev}/include/libdrm";
+    NIX_CFLAGS_COMPILE = "-I${hyprland-pkg.dev}/include/hyprland/src -I${hyprland-pkg.dev}/include/hyprland/protocols -I${pkgs.libdrm.dev}/include/libdrm";
     buildPhase = "make all";
     installPhase = ''
       mkdir -p $out/lib

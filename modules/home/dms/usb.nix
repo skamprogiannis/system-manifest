@@ -64,10 +64,6 @@
               "targetColor: Theme.withAlpha(Theme.surfaceContainer, Theme.popupTransparency)",
               'targetColor: Theme.withAlpha(Theme.surfaceContainer, root.layerNamespace === "dms:dash" ? Math.max(0.0, Theme.popupTransparency - 0.12) : Theme.popupTransparency)',
           ),
-          (
-              "color: Theme.withAlpha(Theme.surfaceContainer, Theme.popupTransparency)",
-              'color: Theme.withAlpha(Theme.surfaceContainer, root.layerNamespace === "dms:dash" ? Math.max(0.0, Theme.popupTransparency - 0.12) : Theme.popupTransparency)',
-          ),
       ],
       root / "Modules/DankDash/Overview/Card.qml": [
           (
