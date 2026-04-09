@@ -62,7 +62,7 @@
       paths = [pkgs.github-copilot-cli];
       postBuild = ''
         rm -f $out/bin/copilot
-        cp ${pkgs.github-copilot-cli}/bin/.copilot-wrapped $out/bin/upstream-copilot
+        cp ${pkgs.github-copilot-cli}/bin/copilot $out/bin/upstream-copilot
         chmod +x $out/bin/upstream-copilot
 
         # Keep executable basename "copilot" (gh checks PATH for this name),
@@ -115,9 +115,9 @@
     jq
     libsecret
     nodejs_22
-    nodePackages.typescript-language-server
-    nodePackages.prettier
-    nodePackages.eslint
+    typescript-language-server
+    prettier
+    eslint
     omnisharp-roslyn
     pacvim
     pandoc
