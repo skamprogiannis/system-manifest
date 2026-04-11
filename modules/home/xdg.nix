@@ -9,6 +9,7 @@
   # tooling, and app config all converge on one convention.
   xdg.userDirs = {
     enable = true;
+    setSessionVariables = true;
     createDirectories = true;
     desktop = "${config.home.homeDirectory}/desktop";
     documents = "${config.home.homeDirectory}/documents";
