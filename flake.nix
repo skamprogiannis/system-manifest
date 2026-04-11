@@ -45,6 +45,11 @@
       flake = false;
     };
 
+    trailofbits-skills = {
+      url = "github:trailofbits/skills";
+      flake = false;
+    };
+
     dms = {
       url = "github:AvengeMedia/DankMaterialShell";
       inputs.nixpkgs.follows = "nixpkgs";
