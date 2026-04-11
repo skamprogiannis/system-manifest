@@ -40,6 +40,11 @@
       flake = false;
     };
 
+    caveman = {
+      url = "github:JuliusBrussee/caveman";
+      flake = false;
+    };
+
     dms = {
       url = "github:AvengeMedia/DankMaterialShell";
       inputs.nixpkgs.follows = "nixpkgs";

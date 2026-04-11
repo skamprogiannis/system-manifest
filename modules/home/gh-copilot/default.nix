@@ -68,12 +68,105 @@ in {
   # Browser Automation — PinchTab-based browser control for testing and scraping
   home.file.".copilot/skills/browser-automation/SKILL.md".source = ./skills/browser-automation/SKILL.md;
 
-  # Impeccable — frontend design skill with 20 commands (audit, polish, typeset, etc.)
-  # Deploys all skill directories from source/skills/ (frontend-design + 20 commands)
-  home.file.".copilot/skills/impeccable" = {
-    source = "${inputs.impeccable}/source/skills";
+  # Impeccable — expose sub-skills at top-level so /skills can discover them.
+  home.file.".copilot/skills/adapt" = {
+    source = "${inputs.impeccable}/source/skills/adapt";
     recursive = true;
   };
+  home.file.".copilot/skills/animate" = {
+    source = "${inputs.impeccable}/source/skills/animate";
+    recursive = true;
+  };
+  home.file.".copilot/skills/arrange" = {
+    source = "${inputs.impeccable}/source/skills/arrange";
+    recursive = true;
+  };
+  home.file.".copilot/skills/audit" = {
+    source = "${inputs.impeccable}/source/skills/audit";
+    recursive = true;
+  };
+  home.file.".copilot/skills/bolder" = {
+    source = "${inputs.impeccable}/source/skills/bolder";
+    recursive = true;
+  };
+  home.file.".copilot/skills/clarify" = {
+    source = "${inputs.impeccable}/source/skills/clarify";
+    recursive = true;
+  };
+  home.file.".copilot/skills/colorize" = {
+    source = "${inputs.impeccable}/source/skills/colorize";
+    recursive = true;
+  };
+  home.file.".copilot/skills/critique" = {
+    source = "${inputs.impeccable}/source/skills/critique";
+    recursive = true;
+  };
+  home.file.".copilot/skills/delight" = {
+    source = "${inputs.impeccable}/source/skills/delight";
+    recursive = true;
+  };
+  home.file.".copilot/skills/distill" = {
+    source = "${inputs.impeccable}/source/skills/distill";
+    recursive = true;
+  };
+  home.file.".copilot/skills/extract" = {
+    source = "${inputs.impeccable}/source/skills/extract";
+    recursive = true;
+  };
+  home.file.".copilot/skills/frontend-design" = {
+    source = "${inputs.impeccable}/source/skills/frontend-design";
+    recursive = true;
+  };
+  home.file.".copilot/skills/harden" = {
+    source = "${inputs.impeccable}/source/skills/harden";
+    recursive = true;
+  };
+  home.file.".copilot/skills/impeccable" = {
+    source = "${inputs.impeccable}/source/skills/impeccable";
+    recursive = true;
+  };
+  home.file.".copilot/skills/normalize" = {
+    source = "${inputs.impeccable}/source/skills/normalize";
+    recursive = true;
+  };
+  home.file.".copilot/skills/onboard" = {
+    source = "${inputs.impeccable}/source/skills/onboard";
+    recursive = true;
+  };
+  home.file.".copilot/skills/optimize" = {
+    source = "${inputs.impeccable}/source/skills/optimize";
+    recursive = true;
+  };
+  home.file.".copilot/skills/overdrive" = {
+    source = "${inputs.impeccable}/source/skills/overdrive";
+    recursive = true;
+  };
+  home.file.".copilot/skills/polish" = {
+    source = "${inputs.impeccable}/source/skills/polish";
+    recursive = true;
+  };
+  home.file.".copilot/skills/quieter" = {
+    source = "${inputs.impeccable}/source/skills/quieter";
+    recursive = true;
+  };
+  home.file.".copilot/skills/shape" = {
+    source = "${inputs.impeccable}/source/skills/shape";
+    recursive = true;
+  };
+  home.file.".copilot/skills/teach-impeccable" = {
+    source = "${inputs.impeccable}/source/skills/teach-impeccable";
+    recursive = true;
+  };
+  home.file.".copilot/skills/typeset" = {
+    source = "${inputs.impeccable}/source/skills/typeset";
+    recursive = true;
+  };
+
+  # Caveman — terse response mode plus focused commit/review helper skills
+  home.file.".copilot/skills/caveman/SKILL.md".source = "${inputs.caveman}/skills/caveman/SKILL.md";
+  home.file.".copilot/skills/caveman-commit/SKILL.md".source = "${inputs.caveman}/skills/caveman-commit/SKILL.md";
+  home.file.".copilot/skills/caveman-review/SKILL.md".source = "${inputs.caveman}/skills/caveman-review/SKILL.md";
+  home.file.".copilot/skills/caveman-compress/SKILL.md".source = "${inputs.caveman}/caveman-compress/SKILL.md";
 
   # --- Custom Agents ---
 
