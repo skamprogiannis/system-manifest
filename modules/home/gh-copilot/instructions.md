@@ -19,6 +19,7 @@ This machine normally uses:
 - Put repository-specific workflows, architecture notes, build commands, troubleshooting, and deployment rules in the repository's own instruction files, not here.
 - When suggesting commands, prefer Linux-friendly, Bash-compatible examples.
 - Use relevant installed skills or custom agents when they clearly match the task.
+- Do **not** add `Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>` (or any Copilot co-author trailer) to commit messages.
 
 ## Caveman Persona Rule
 
