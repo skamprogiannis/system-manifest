@@ -19,7 +19,7 @@ Managed via **Nix Flakes** and **Home Manager**.
   - **Brave + Vimium C:** Declarative browser setup with preseeded extension settings and portable keymaps.
 - **Vesktop:** Discord client with declarative translucency and wallpaper-aware theming.
 - **Dev Ready:** Pre-configured environment for Node.js, Python, Go, and Neovim (via nixvim), plus Clang build essentials. Neovim is also registered as the default text editor via an `nvim-text` desktop entry.
-- **AI Integrated:** Built-in configuration for **GitHub Copilot CLI** with per-repo `AGENTS.md` instructions. Global Copilot instructions live at `~/.copilot/copilot-instructions.md`.
+- **AI Integrated:** Built-in configuration for **GitHub Copilot CLI** with per-repo `AGENTS.md` instructions plus curated skills for visualization, browser automation, static analysis, frontend design, and concise response modes. Global Copilot instructions live at `~/.copilot/copilot-instructions.md`.
 - **Greeter Avatar:** AccountsService user metadata + declarative avatar asset provisioning for consistent DMS greeter profile image rendering.
 - **Modular Architecture:** Configuration split across `hosts/` (system-level) and `modules/home/` (user-level) for maintainability.
 - **Voiden:** Declarative AppImage wrapper for the Voiden offline-first API client.
@@ -42,6 +42,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 | `visual-explainer` | `github:nicobailon/visual-explainer` | HTML visualization generator for architecture diagrams and code explanations |
 | `impeccable` | `github:pbakaus/impeccable` | Frontend design skill with 20 commands for typography, color, layout, and motion |
 | `caveman` | `github:JuliusBrussee/caveman` | Copilot skill suite for concise low-token responses plus terse commit/review helpers |
+| `trailofbits-skills` | `github:trailofbits/skills` | Security and analysis skill marketplace used here as the upstream source for the compact `static-analysis` Copilot skill |
 | `dms` | `github:AvengeMedia/DankMaterialShell` | Fast-moving shell UI |
 
 ## Workflow & UI
@@ -59,6 +60,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 - **Screenshots:** `dms screenshot` handles region/window/full capture with image-to-clipboard. `screenshot-path-copy` wraps it to copy the file path instead (useful for sharing with AI agents). Screen recording via **Kooha** GUI.
 - **GitHub Copilot CLI:** Copilot is integrated into the Neovim + terminal workflow with repository-specific instructions.
 - **Browser Automation:** PinchTab is installed declaratively so the Copilot browser-automation skill has the CLI it documents.
+- **Static Analysis:** CodeQL, Semgrep, and SARIF tooling are installed declaratively to back the compact `static-analysis` Copilot skill.
 - **DNS:** Quad9 (`9.9.9.9`) for privacy-focused DNS resolution.
 - **XDG directories:** Lowercase paths such as `~/downloads`, `~/pictures`, and `~/wallpapers` are canonical. Legacy uppercase XDG folders are migrated into the lowercase layout when it is safe to do so, and Yazi assigns the expected special-folder icons to those lowercase names.
 

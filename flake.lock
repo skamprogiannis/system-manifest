@@ -688,6 +688,7 @@
         "nixvim": "nixvim",
         "pearpass-app-desktop": "pearpass-app-desktop",
         "spotify-player": "spotify-player",
+        "trailofbits-skills": "trailofbits-skills",
         "visual-explainer": "visual-explainer",
         "wallpaper-selector": "wallpaper-selector"
       }
@@ -771,6 +772,22 @@
       "original": {
         "owner": "nix-systems",
         "repo": "default",
+        "type": "github"
+      }
+    },
+    "trailofbits-skills": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1775055010,
+        "narHash": "sha256-GtRhjqoLa0tUKXEmJqVRk+sODEHx6FSESV9pPd0o03g=",
+        "owner": "trailofbits",
+        "repo": "skills",
+        "rev": "d7f76b532d1e4c6e7757e04d25c99ab60dd5e32c",
+        "type": "github"
+      },
+      "original": {
+        "owner": "trailofbits",
+        "repo": "skills",
         "type": "github"
       }
     },

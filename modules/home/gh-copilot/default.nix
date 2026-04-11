@@ -23,8 +23,21 @@
       platforms = ["x86_64-linux"];
     };
   };
+  staticAnalysisSkill = pkgs.runCommand "copilot-static-analysis-skill" {} ''
+    mkdir -p "$out/references"
+    cp ${./skills/static-analysis/SKILL.md} "$out/SKILL.md"
+    ln -s ${inputs.trailofbits-skills}/plugins/static-analysis/README.md "$out/references/README.md"
+    ln -s ${inputs.trailofbits-skills}/plugins/static-analysis/skills/codeql "$out/references/codeql"
+    ln -s ${inputs.trailofbits-skills}/plugins/static-analysis/skills/semgrep "$out/references/semgrep"
+    ln -s ${inputs.trailofbits-skills}/plugins/static-analysis/skills/sarif-parsing "$out/references/sarif-parsing"
+  '';
 in {
-  home.packages = [pinchtab];
+  home.packages = [
+    pkgs.codeql
+    pinchtab
+    pkgs.python3Packages."sarif-tools"
+    pkgs.semgrep
+  ];
 
   # Ensure Copilot and gh open Neovim from any launcher context (shell, zellij, etc.)
   home.sessionVariables = {
@@ -67,6 +80,12 @@ in {
 
   # Browser Automation — PinchTab-based browser control for testing and scraping
   home.file.".copilot/skills/browser-automation/SKILL.md".source = ./skills/browser-automation/SKILL.md;
+
+  # Static Analysis — compact wrapper around Trail of Bits CodeQL, Semgrep, and SARIF guidance
+  home.file.".copilot/skills/static-analysis" = {
+    source = staticAnalysisSkill;
+    recursive = true;
+  };
 
   # Impeccable — expose sub-skills at top-level so /skills can discover them.
   home.file.".copilot/skills/adapt" = {

@@ -2,81 +2,28 @@
 
 ## Context & System Architecture
 
-This is a NixOS system with declarative, reproducible configuration management. GH Copilot should understand:
+This machine normally uses:
 
-- **OS**: NixOS (immutable, reproducible, Nix-based)
-- **WM**: Hyprland (Wayland compositor with glassmorphism)
-- **Terminal**: Ghostty + Zellij (multiplexer)
-- **Editor**: Neovim (primary), Vim (GH CLI default)
-- **Shell**: Bash (vi mode enabled)
-- **Language**: Greek + US keyboard layouts (Super+Space to toggle)
+- **OS**: NixOS
+- **WM**: Hyprland
+- **Terminal**: Ghostty + Zellij
+- **Editor**: Neovim
+- **Shell**: Bash
+- **Keyboard layouts**: Greek + US
 
-**CRITICAL**: Always check the local repository for `AGENTS.md` or `copilot-instructions.md` first. Local repository instructions take precedence over general guidance.
+**CRITICAL**: Always check the local repository for `AGENTS.md` or `copilot-instructions.md` first. Local repository instructions take precedence over this file.
+
+## Global Scope
+
+- Keep this file useful across repositories.
+- Put repository-specific workflows, architecture notes, build commands, troubleshooting, and deployment rules in the repository's own instruction files, not here.
+- When suggesting commands, prefer Linux-friendly, Bash-compatible examples.
+- Use relevant installed skills or custom agents when they clearly match the task.
 
 ## Caveman Persona Rule
 
 - When responding in caveman mode, use the name **Grug**.
 - When not in caveman mode, do not use the name Grug.
-
-## Workflow for NixOS Configuration
-
-1. **Edit** `.nix` files in `modules/home/` or `hosts/`
-2. **Dry-build** FIRST: `nixos-rebuild dry-build --flake .#desktop`
-3. **Fix errors** if any (Nix is strict)
-4. **Commit**: `git commit -m "type(scope): message"` with Conventional Commits format
-5. **Push**: `git push` immediately
-6. **Apply**: `sudo nixos-rebuild switch --flake .#desktop`
-
-**Always commit before rebuilding** - this ensures clean generation tracking and rollback capability.
-
-## Code Organization Rules
-
-- **Modular**: One feature per file (e.g., `modules/home/hyprland.nix`)
-- **Always import**: Add imports to `home.nix` when creating new modules
-- **Comments**: Focus on "why" and "what", not meta-commentary
-- **No dead code**: Use git history; don't leave commented-out blocks
-
-## Common Pitfalls & Solutions
-
-| Issue | Solution |
-|-------|----------|
-| Window rules not applying | Windows must be opened AFTER the rule is added |
-| Keyboard switching broken | Ensure kb_variant is compatible with xkb option (simple vs ext) |
-| Zellij config parse error | Validate key names (no "Escape"; use specific keys) |
-| Attribute re-definition error | Can't define same key twice in Nix; merge blocks |
-| Build fails silently | Always run `dry-build` first to catch errors early |
-
-## Testing & Validation
-
-- **After window rule changes**: Close/reopen windows to see effect
-- **After config changes**: `hyprctl reload` or full restart as needed
-- **Before marking done**: Run `nixos-rebuild dry-build` to ensure no regressions
-
-## Git Commit Guidelines
-
-```
-type(scope): short description <72 chars
-
-Optional body explaining the why.
-
-Examples:
-- feat(hyprland): add Super+Space keyboard layout switching
-- fix(keyboard): revert to simple Greek variant for xkb compatibility
-- docs(AGENTS): update keybind documentation
-```
-
-**No Co-authored-by:** Never include `Co-authored-by:` trailers in commit messages.
-
-**Types**: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert  
-**Scopes**: desktop, laptop, usb, common, home, system, or module names
-
-## When Things Break
-
-1. **Check error output carefully** - Nix syntax is strict
-2. **Run dry-build in isolation** - reproduces config errors
-3. **Verify window state** - rules only apply to NEW windows
-4. **Check git history** - `git log --oneline -10` to see recent changes
-5. **Ask: Did the user rebuild?** - Configuration changes require rebuild to apply
 
 ## Greenfield Project Workflow
 
@@ -89,6 +36,7 @@ When building new projects from scratch, use the following workflow and tools:
 | `visual-explainer` | Generate HTML diagrams, diff reviews, plan reviews, architecture overviews | Ask for any diagram, visualization, or when presenting complex tables |
 | `technical-debt` | Analyze codebase health, quantify debt, generate refactoring roadmaps | Ask for debt audit, code health check, or refactoring plan |
 | `browser-automation` | Control Chrome via PinchTab for testing, scraping, form filling | Ask to test a web UI, extract page content, or automate browser tasks |
+| `static-analysis` | Run security-focused static analysis workflows around CodeQL, Semgrep, and SARIF parsing | Ask for a scanner-backed security audit, CodeQL/Semgrep scan, or help interpreting SARIF findings |
 | `impeccable` | Frontend design skill with 20 commands (`/audit`, `/polish`, `/typeset`, `/arrange`, etc.) covering typography, color, layout, motion, and anti-patterns | Any frontend/UI work — building web components, pages, or applications |
 | `caveman` | Token-compressed response style plus helpers for terse commits/reviews (`caveman-commit`, `caveman-review`) | Ask for concise, low-token output or compressed review/commit phrasing |
 
