@@ -42,7 +42,7 @@
     vesktop
     pkgs.mailspring
     obsidian
-    protonvpn-gui
+    proton-vpn
 
     # CLI / Tools
     alejandra
