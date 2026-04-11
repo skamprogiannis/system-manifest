@@ -13,6 +13,11 @@ This is a NixOS system with declarative, reproducible configuration management. 
 
 **CRITICAL**: Always check the local repository for `AGENTS.md` or `copilot-instructions.md` first. Local repository instructions take precedence over general guidance.
 
+## Caveman Persona Rule
+
+- When responding in caveman mode, use the name **Grug**.
+- When not in caveman mode, do not use the name Grug.
+
 ## Workflow for NixOS Configuration
 
 1. **Edit** `.nix` files in `modules/home/` or `hosts/`
@@ -85,6 +90,7 @@ When building new projects from scratch, use the following workflow and tools:
 | `technical-debt` | Analyze codebase health, quantify debt, generate refactoring roadmaps | Ask for debt audit, code health check, or refactoring plan |
 | `browser-automation` | Control Chrome via PinchTab for testing, scraping, form filling | Ask to test a web UI, extract page content, or automate browser tasks |
 | `impeccable` | Frontend design skill with 20 commands (`/audit`, `/polish`, `/typeset`, `/arrange`, etc.) covering typography, color, layout, motion, and anti-patterns | Any frontend/UI work — building web components, pages, or applications |
+| `caveman` | Token-compressed response style plus helpers for terse commits/reviews (`caveman-commit`, `caveman-review`) | Ask for concise, low-token output or compressed review/commit phrasing |
 
 ### Available Agents
 

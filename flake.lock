@@ -33,6 +33,22 @@
         "type": "github"
       }
     },
+    "caveman": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1775762734,
+        "narHash": "sha256-EAlKoqJuTMib+gcLscMtpS8Zzq/D/LmIRoG3g/XKThc=",
+        "owner": "JuliusBrussee",
+        "repo": "caveman",
+        "rev": "92f892f2b99744a4501f35bce9a2e384878e4877",
+        "type": "github"
+      },
+      "original": {
+        "owner": "JuliusBrussee",
+        "repo": "caveman",
+        "type": "github"
+      }
+    },
     "dms": {
       "inputs": {
         "nixpkgs": [
@@ -662,6 +678,7 @@
     },
     "root": {
       "inputs": {
+        "caveman": "caveman",
         "dms": "dms",
         "ghostty": "ghostty",
         "home-manager": "home-manager_2",
