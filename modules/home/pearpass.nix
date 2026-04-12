@@ -38,6 +38,12 @@
   '';
 
   # FHS Environment for the GUI (Modern libs)
+  # Keep OpenSSL 1.1 for AppImage compatibility, but disable its upstream test
+  # suite to avoid sporadic CI failures in legacy ssl session ticket tests.
+  pearpassOpenSSL11 = pkgs.openssl_1_1.overrideAttrs (_: {
+    doCheck = false;
+  });
+
   pearpassGUIEnv = pkgs.buildFHSEnv (pkgs.appimageTools.defaultFhsEnvArgs // {
     name = "pearpass-gui-env";
     targetPkgs = pkgs:
@@ -48,7 +54,7 @@
         libsoup_3
         libadwaita
         gnome-themes-extra
-        openssl_1_1
+        pearpassOpenSSL11
         harfbuzz
         icu
         libsecret
