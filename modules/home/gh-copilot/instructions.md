@@ -26,6 +26,11 @@ This machine normally uses:
 - When responding in caveman mode, use the name **Grug**.
 - When not in caveman mode, do not use the name Grug.
 
+## Commit Hygiene
+
+- Use atomic commits: each commit should contain one self-contained, logical change so it stays easy to review, revert, and bisect.
+- When generating commit messages, prefer the `caveman-commit` skill for terse Conventional Commit phrasing.
+
 ## Greenfield Project Workflow
 
 When building new projects from scratch, use the following workflow and tools:
@@ -66,3 +71,7 @@ When building new projects from scratch, use the following workflow and tools:
 - **Audit → Roadmap**: Run technical-debt skill, then plan refactoring sprints
 - **Test → Visualize**: Run tests, then use visual-explainer for coverage reports
 - **Design → Polish → Ship**: Use impeccable `/audit` to find design issues, `/polish` to fix them, then commit
+
+### Skill Output Paths
+
+- **Visual Explainer:** Store generated HTML artifacts under `~/.copilot/diagrams/`, not `~/.agent/diagrams/`. When invoking the skill or following its prompts, prefer `~/.copilot/diagrams/<name>.html` as the canonical output path.
