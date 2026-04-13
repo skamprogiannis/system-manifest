@@ -175,6 +175,13 @@
       bind '"\e[B": history-search-forward'
     '';
   };
+
+  programs.direnv = {
+    enable = true;
+    enableBashIntegration = true;
+    nix-direnv.enable = true;
+  };
+
   home.stateVersion = "24.11";
 
   home.sessionPath = ["$HOME/.local/bin"];
