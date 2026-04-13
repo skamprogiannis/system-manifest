@@ -31,6 +31,32 @@
     ln -s ${inputs.trailofbits-skills}/plugins/static-analysis/skills/semgrep "$out/references/semgrep"
     ln -s ${inputs.trailofbits-skills}/plugins/static-analysis/skills/sarif-parsing "$out/references/sarif-parsing"
   '';
+  visualExplainerSkill = pkgs.runCommand "copilot-visual-explainer-skill" {} ''
+    workdir="$(mktemp -d)"
+    cp -r ${inputs.visual-explainer}/plugins/visual-explainer/. "$workdir/"
+    chmod -R u+w "$workdir"
+    ${pkgs.python3}/bin/python3 - <<'PY' "$workdir"
+from pathlib import Path
+import sys
+
+root = Path(sys.argv[1])
+old = "~/.agent/diagrams"
+new = "~/.copilot/diagrams"
+
+for path in root.rglob("*"):
+    if not path.is_file():
+        continue
+    try:
+        text = path.read_text()
+    except UnicodeDecodeError:
+        continue
+    if old not in text:
+        continue
+    path.write_text(text.replace(old, new))
+PY
+    mkdir -p "$out"
+    cp -r "$workdir"/. "$out/"
+  '';
 in {
   home.packages = [
     pkgs.codeql
@@ -66,12 +92,13 @@ in {
 
   # Global instructions — deployed to the path the Copilot CLI reads automatically
   home.file.".copilot/copilot-instructions.md".text = builtins.readFile ./instructions.md;
+  home.file.".copilot/diagrams/.keep".text = "";
 
   # --- Skills ---
 
   # Visual Explainer — generates HTML diagrams, diff reviews, plan reviews
   home.file.".copilot/skills/visual-explainer" = {
-    source = "${inputs.visual-explainer}/plugins/visual-explainer";
+    source = visualExplainerSkill;
     recursive = true;
   };
 
