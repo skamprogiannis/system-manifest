@@ -128,10 +128,10 @@
 
           resize {
             bind "Esc" { SwitchToMode "Normal"; }
-            bind "h" "Left" { Resize "Increase Left"; }
-            bind "j" "Down" { Resize "Increase Down"; }
-            bind "k" "Up" { Resize "Increase Up"; }
-            bind "l" "Right" { Resize "Increase Right"; }
+            bind "h" { Resize "Increase Left"; }
+            bind "j" { Resize "Increase Down"; }
+            bind "k" { Resize "Increase Up"; }
+            bind "l" { Resize "Increase Right"; }
             bind "H" { Resize "Decrease Left"; }
             bind "J" { Resize "Decrease Down"; }
             bind "K" { Resize "Decrease Up"; }
