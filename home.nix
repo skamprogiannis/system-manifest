@@ -225,22 +225,22 @@
             fg = "#00bcd4";
           }
           {
-            url = "**/system-manifest/checkouts/";
+            url = "**/system-manifest/.bare/";
             text = "";
             fg = "#00bcd4";
           }
           {
-            url = "**/system-manifest/checkouts/*/";
+            url = "**/system-manifest/*/";
             text = "";
             fg = "#00bcd4";
           }
           {
-            url = "**/system-manifest/checkouts/*/hosts/";
+            url = "**/system-manifest/*/hosts/";
             text = "";
             fg = "#00bcd4";
           }
           {
-            url = "**/system-manifest/checkouts/*/modules/";
+            url = "**/system-manifest/*/modules/";
             text = "";
             fg = "#00bcd4";
           }
