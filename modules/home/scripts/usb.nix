@@ -157,7 +157,7 @@
       OPENED_MAPPER=0
 
       echo "USB is partitioned and formatted."
-      echo "Next step: sudo update-usb /path/to/system-manifest/checkouts/<worktree>"
+      echo "Next step: sudo update-usb /path/to/system-manifest/main"
     '')
     (pkgs.writeShellScriptBin "update-usb" ''
       set -euo pipefail
@@ -200,9 +200,9 @@
         usb boot:  $USB_BOOT_DEV
 
       Examples:
-        sudo update-usb /path/to/system-manifest/checkouts/main
-        sudo update-usb --mode prebuild /path/to/system-manifest/checkouts/main
-        sudo update-usb --in-place /path/to/system-manifest/checkouts/main
+        sudo update-usb /path/to/system-manifest/main
+        sudo update-usb --mode prebuild /path/to/system-manifest/main
+        sudo update-usb --in-place /path/to/system-manifest/main
       EOF
       }
 
@@ -305,13 +305,13 @@
         fi
         echo "Error: mksquashfs is missing and nix-shell is unavailable."
         echo "Run manually:"
-        echo "  sudo nix-shell -p ''${NIX_SHELL_PACKAGES[*]} --run '$SCRIPT_NAME /path/to/system-manifest/checkouts/<worktree>'"
+        echo "  sudo nix-shell -p ''${NIX_SHELL_PACKAGES[*]} --run '$SCRIPT_NAME /path/to/system-manifest/main'"
         exit 1
       fi
 
       if [ "$EUID" -ne 0 ]; then
         echo "Error: please run with sudo."
-        echo "Example: sudo update-usb /path/to/system-manifest/checkouts/<worktree>"
+        echo "Example: sudo update-usb /path/to/system-manifest/main"
         exit 1
       fi
 
@@ -324,6 +324,7 @@
 
       if [ ! -d "$FLAKE_DIR" ] || [ ! -f "$FLAKE_DIR/flake.nix" ]; then
         echo "Error: flake directory '$FLAKE_DIR' is invalid (missing flake.nix)."
+        echo "Pass a worktree path containing flake.nix, for example /path/to/system-manifest/main."
         exit 1
       fi
 
@@ -371,7 +372,7 @@
 
         if [ "$CANCELED" -eq 1 ]; then
           echo "Canceled during phase: $CURRENT_PHASE"
-          echo "You can safely retry: sudo update-usb /path/to/system-manifest/checkouts/<worktree>"
+          echo "You can safely retry: sudo update-usb /path/to/system-manifest/main"
         fi
       }
 

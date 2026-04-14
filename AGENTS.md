@@ -17,11 +17,12 @@
   - Scopes: `desktop`, `laptop`, `usb`, `common`, `home`, `system`, or specific module names.
   - Example: `feat(desktop): enable steam and gamemode`
   - Example: `fix(usb): correct luks mounting path`
-- **Worktree-First Git:** This repository is bare at `/home/stefan/system-manifest`; do not edit files there directly.
-  - Main checkout: `/home/stefan/system-manifest/checkouts/main`
-  - Create a feature worktree (run from bare repo root): `git worktree add checkouts/<branch> -b <branch> main`
-  - List active worktrees: `git worktree list`
-  - Remove merged worktree: `git worktree remove checkouts/<branch>` and then `git branch -d <branch>`
+- **Worktree-First Git:** `/home/stefan/system-manifest` is the repo container; the bare Git dir lives at `/home/stefan/system-manifest/.bare`. Do not edit anything inside `.bare`.
+  - Main worktree: `/home/stefan/system-manifest/main`
+  - Create a feature worktree: `git --git-dir=/home/stefan/system-manifest/.bare worktree add /home/stefan/system-manifest/<dir> -b <branch> main`
+  - Keep worktree directories as sanitized direct children (for example `usb-fix`), even when the branch name contains slashes such as `feature/usb-fix`
+  - List active worktrees: `git --git-dir=/home/stefan/system-manifest/.bare worktree list`
+  - Remove merged worktree: `git --git-dir=/home/stefan/system-manifest/.bare worktree remove /home/stefan/system-manifest/<dir>` and then `git --git-dir=/home/stefan/system-manifest/.bare branch -d <branch>`
   - Run all editing/build/git commands from the intended worktree path.
 - **System Git:** Ensure `git` is always in `environment.systemPackages` in `configuration.nix` (required for Flakes).
 - **Git Push:** Always `git push` (or force push if history was rewritten) immediately after creating a new commit.
@@ -88,7 +89,7 @@ Use **Spec Kit** (`specify` CLI) to scaffold spec-driven development for new pro
 ## USB Update Workflow
 
 - **Purpose:** Updates the bootable USB drive configuration from the `usb` flake output.
-- **Command:** `sudo update-usb /path/to/system-manifest/checkouts/<worktree>`
+- **Command:** `sudo update-usb /path/to/system-manifest/main`
 - **Steps:**
   1.  Ensures root privileges and validates required USB partition labels exist.
   2.  Unlocks the LUKS container via `/dev/disk/by-partlabel/NIXOS_USB_CRYPT`.
@@ -97,7 +98,7 @@ Use **Spec Kit** (`specify` CLI) to scaffold spec-driven development for new pro
   5.  Verifies the Home Manager systemd service is present (activation happens on first boot).
   6.  Builds `nix-store.squashfs` locally and syncs final image to USB (`--in-place` keeps old USB-local squash path).
   7.  Unmounts and cleans up.
-- **Note:** Script preflight checks mountpoint safety and can auto-enter `nix-shell` when `mksquashfs` is missing. Always pass a checkout path (e.g. `.../checkouts/main`).
+- **Note:** Script preflight checks mountpoint safety and can auto-enter `nix-shell` when `mksquashfs` is missing. Always pass a worktree path containing `flake.nix` (for example `.../main`), not the repo container root.
 - **Runtime Validation:** `nix flake check` and `dry-build` do not prove USB-only runtime behavior. For cursor/rendering/DMS issues, update the stick and boot it on real target hardware before declaring the fix done.
 - **GH auth on foreign machines:** When booting the USB on a computer lab machine, gnome-keyring may not auto-unlock. Store a fine-grained PAT (with "Copilot Requests" permission) in `~/.config/github-pat` on the encrypted USB partition: `echo "ghp_..." > ~/.config/github-pat && chmod 600 ~/.config/github-pat`. The shell will auto-export it as `GH_TOKEN`. This file is protected by LUKS and never committed to git.
 

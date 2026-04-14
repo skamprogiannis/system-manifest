@@ -110,19 +110,21 @@ Validation is automated, but deployment is still manual: `nixos-rebuild switch -
 ### Update USB Drive
 
 ```bash
-sudo update-usb /path/to/system-manifest/checkouts/main
+sudo update-usb /path/to/system-manifest/main
 ```
 
 `update-usb` defaults to `--mode prebuild`, which builds locally and syncs the final squashfs image to the USB.
 
+Always pass the worktree path that contains `flake.nix`, not the repo container root.
+
 ```bash
-sudo update-usb --mode prebuild /path/to/system-manifest/checkouts/<worktree>
+sudo update-usb --mode prebuild /path/to/system-manifest/<worktree>
 ```
 
 Use `--in-place` when local disk space is tight:
 
 ```bash
-sudo update-usb --in-place /path/to/system-manifest/checkouts/<worktree>
+sudo update-usb --in-place /path/to/system-manifest/<worktree>
 ```
 
 The script handles preflight checks, safe cleanup on `Ctrl+C`, and first-boot Home Manager activation.
