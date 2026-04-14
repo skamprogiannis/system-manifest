@@ -7,7 +7,7 @@
     enable = true;
     enableBashIntegration = false;
     settings = {
-      default_shell = "bash";
+      default_shell = "${pkgs.bashInteractive}/bin/bash";
       escape_timeout = 0;
       pane_frames = false;
       theme = "catppuccin-mocha";
@@ -268,17 +268,17 @@
 
       session_name_for_path() {
         local path="$1"
-        local top_level
         local common_dir
+        local common_base
         local repo_root
         local repo_name
         local branch_name
 
-        top_level=$(git -C "$path" rev-parse --path-format=absolute --show-toplevel 2>/dev/null) || return 1
         common_dir=$(git -C "$path" rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || return 1
+        common_base=$(basename "$common_dir")
         branch_name=$(git -C "$path" branch --show-current 2>/dev/null) || true
 
-        if [[ "$(basename "$common_dir")" == ".git" ]]; then
+        if [[ "$common_base" == .* ]]; then
           repo_root=$(dirname "$common_dir")
         else
           repo_root="$common_dir"
@@ -287,7 +287,7 @@
         repo_name=$(basename "$repo_root")
 
         if [[ -n "$branch_name" ]]; then
-          printf '%s\n' "''${repo_name}->''${branch_name}"
+          printf '%s\n' "''${repo_name}@''${branch_name}"
           return 0
         fi
 
@@ -343,10 +343,7 @@
         }
         
         tab name="vim" focus=true {
-            pane stacked=true {
-                pane name="nvim" command="/etc/profiles/per-user/${config.home.username}/bin/nvim" focus=true
-                pane name="bash" command="/run/current-system/sw/bin/bash"
-            }
+            pane name="nvim" command="/etc/profiles/per-user/${config.home.username}/bin/nvim" focus=true
         }
 
         tab name="copilot" {
