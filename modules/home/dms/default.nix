@@ -204,6 +204,11 @@ in {
               runningAppsCurrentMonitor = false;
             }
             {
+              id = "focusedWindow";
+              enabled = true;
+              focusedWindowCompactMode = true;
+            }
+            {
               id = "systemTray";
               enabled = true;
             }
@@ -346,10 +351,20 @@ in {
             {
               id = "keyboard_layout_name";
               enabled = true;
+              keyboardLayoutNameCompactMode = false;
             }
             {
               id = "focusedWindow";
               enabled = true;
+              focusedWindowCompactMode = true;
+            }
+            {
+              id = "runningApps";
+              enabled = true;
+              runningAppsCompactMode = true;
+              runningAppsGroupByApp = false;
+              runningAppsCurrentWorkspace = true;
+              runningAppsCurrentMonitor = false;
             }
             {
               id = "workspaceSwitcher";
