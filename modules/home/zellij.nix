@@ -181,21 +181,21 @@
           }
 
           scroll {
-            bind "j" "Down" { ScrollDown; }
-            bind "k" "Up" { ScrollUp; }
-            bind "Ctrl f" "PageDown" "l" "Right" { PageScrollDown; }
-            bind "Ctrl b" "PageUp" "h" "Left" { PageScrollUp; }
-            bind "Ctrl d" { HalfPageScrollDown; }
-            bind "Ctrl u" { HalfPageScrollUp; }
-            bind "s" { SwitchToMode "EnterSearch"; SearchInput 0; }
+            bind "j" { ScrollDown; }
+            bind "k" { ScrollUp; }
+            bind "f" "PageDown" { PageScrollDown; }
+            bind "b" "PageUp" { PageScrollUp; }
+            bind "d" { HalfPageScrollDown; }
+            bind "u" { HalfPageScrollUp; }
+            bind "/" { SwitchToMode "EnterSearch"; SearchInput 0; }
             bind "e" { EditScrollback; SwitchToMode "Normal"; }
           }
 
           search {
-            bind "j" "Down" { ScrollDown; }
-            bind "k" "Up" { ScrollUp; }
-            bind "Ctrl f" "PageDown" "l" "Right" { PageScrollDown; }
-            bind "Ctrl b" "PageUp" "h" "Left" { PageScrollUp; }
+            bind "j" { ScrollDown; }
+            bind "k" { ScrollUp; }
+            bind "f" "PageDown" { PageScrollDown; }
+            bind "b" "PageUp" { PageScrollUp; }
             bind "d" { HalfPageScrollDown; }
             bind "u" { HalfPageScrollUp; }
             bind "n" { Search "down"; }
@@ -266,6 +266,34 @@
         return 1
       }
 
+      session_name_for_path() {
+        local path="$1"
+        local top_level
+        local common_dir
+        local repo_root
+        local repo_name
+        local branch_name
+
+        top_level=$(git -C "$path" rev-parse --path-format=absolute --show-toplevel 2>/dev/null) || return 1
+        common_dir=$(git -C "$path" rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || return 1
+        branch_name=$(git -C "$path" branch --show-current 2>/dev/null) || true
+
+        if [[ "$(basename "$common_dir")" == ".git" ]]; then
+          repo_root=$(dirname "$common_dir")
+        else
+          repo_root="$common_dir"
+        fi
+
+        repo_name=$(basename "$repo_root")
+
+        if [[ -n "$branch_name" ]]; then
+          printf '%s\n' "''${repo_name}->''${branch_name}"
+          return 0
+        fi
+
+        return 1
+      }
+
       if [[ $# -eq 1 ]]; then
           selected_path=$(resolve_path "$1")
           if [[ -z "$selected_path" ]]; then
@@ -280,7 +308,14 @@
           exit 0
       fi
 
-      selected_name=$(basename "$selected_path" | tr . _)
+      selected_path=$(cd "$selected_path" 2>/dev/null && pwd -P)
+      if [[ -z "$selected_path" ]]; then
+          echo "Error: Could not resolve directory"
+          exit 1
+      fi
+
+      selected_name=$(session_name_for_path "$selected_path" || basename "$selected_path")
+      selected_name=$(printf '%s' "$selected_name" | sed 's/\./_/g; s#/#-#g')
 
       if [[ -z $ZELLIJ ]]; then
           cd "$selected_path" || exit 1
