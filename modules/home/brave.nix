@@ -111,7 +111,6 @@
   braveDisabledFeatures =
     [
       "HardwareMediaKeyHandling"
-      "FullscreenAlertBubble"
     ]
     ++ lib.optionals (hostType == "usb") [
       "Vulkan"
