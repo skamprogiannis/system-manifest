@@ -214,7 +214,7 @@
   };
 
   home.packages = [
-    (pkgs.writeShellScriptBin "zs" ''
+    (pkgs.writeShellScriptBin "zellij-sessionizer" ''
       resolve_path() {
         local input="$1"
         local query
@@ -353,6 +353,6 @@
   '';
 
   home.shellAliases = {
-    zellij-sessionizer = "zs ~/repositories";
+    zs = "zellij-sessionizer";
   };
 }

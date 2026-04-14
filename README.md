@@ -68,7 +68,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 
 | Script | Description |
 |--------|-------------|
-| `zs` | Zellij sessionizer — fuzzy-find a project and attach or create a dev session with Neovim, shell, and Copilot workflow tabs |
+| `zellij-sessionizer` | Zellij sessionizer — fuzzy-find a project and attach or create a dev session with Neovim and Copilot workflow tabs (`zs` is the short alias) |
 | `screenshot-path-copy` | Wraps `dms screenshot` to copy the saved file path to clipboard (instead of image) |
 | `wallpaper-hook` | Daemon: picks wallpaper via linux-wallpaperengine, extracts palette via Matugen, reloads Hyprland border and GTK4 colours |
 | `wallpaper-selector` | Toggle wallpaper selector UI (`open` can force-open for scripts) |

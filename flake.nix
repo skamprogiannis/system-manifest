@@ -97,7 +97,7 @@
         "${desktopHome}/bin/wallpaper-engine-sync"
         "${desktopHome}/bin/wallpaper-library-sync"
         "${desktopHome}/bin/wallpaper-selector"
-        "${desktopHome}/bin/zs"
+        "${desktopHome}/bin/zellij-sessionizer"
         "${usbHome}/bin/spotify_player"
         "${usbHome}/bin/wallpaper-selector"
       ];
