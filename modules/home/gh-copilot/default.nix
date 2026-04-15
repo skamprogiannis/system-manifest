@@ -263,6 +263,10 @@ in {
         args = ["--languageserver"];
         fileExtensions = {".cs" = "csharp";};
       };
+      nil = {
+        command = "nil";
+        fileExtensions = {".nix" = "nix";};
+      };
     };
   };
 }

@@ -119,6 +119,7 @@
     prettier
     eslint
     omnisharp-roslyn
+    nil
     pacvim
     pandoc
     python3
