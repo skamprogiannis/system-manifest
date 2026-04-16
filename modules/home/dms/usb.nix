@@ -64,6 +64,20 @@
               "targetColor: Theme.withAlpha(Theme.surfaceContainer, Theme.popupTransparency)",
               'targetColor: Theme.withAlpha(Theme.surfaceContainer, root.layerNamespace === "dms:dash" ? Math.max(0.0, Theme.popupTransparency - 0.12) : Theme.popupTransparency)',
           ),
+          (
+              "                border.width: BlurService.borderWidth",
+              "                border.width: BlurService.enabled ? BlurService.borderWidth : 1",
+          ),
+      ],
+      root / "Modals/DankLauncherV2/DankLauncherV2Modal.qml": [
+          (
+              "                border.color: BlurService.borderColor",
+              "                border.color: BlurService.enabled ? BlurService.borderColor : root.borderColor",
+          ),
+          (
+              "                border.width: BlurService.borderWidth",
+              "                border.width: BlurService.enabled ? BlurService.borderWidth : root.borderWidth",
+          ),
       ],
       root / "Modules/DankDash/Overview/Card.qml": [
           (
@@ -91,6 +105,56 @@
           (
               '        staticImg.source = cPath || encoded;',
               '        staticImg.source = encoded;',
+          ),
+      ],
+      root / "Modules/DankDash/WallpaperTab.qml": [
+          (
+              "import QtQuick.Effects",
+              "import QtQuick.Effects\nimport Quickshell",
+          ),
+          (
+              "                            maxCacheSize: 256\n\n                            layer.enabled: true",
+              '                            maxCacheSize: 256\n\n                            layer.enabled: Quickshell.env("QT_QUICK_BACKEND") !== "software"',
+          ),
+      ],
+      root / "Widgets/DankCircularImage.qml": [
+          (
+              "import QtQuick.Window\nimport QtQuick.Effects",
+              "import QtQuick.Window\nimport QtQuick.Effects\nimport Quickshell",
+          ),
+          (
+              "    property int imageStatus: activeImage.status",
+              '    property int imageStatus: activeImage.status\n    readonly property bool softwareQtQuick: Quickshell.env("QT_QUICK_BACKEND") === "software"',
+          ),
+          (
+              "        visible: false",
+              "        visible: root.softwareQtQuick && root.isAnimated",
+          ),
+          (
+              "        visible: false",
+              '        visible: root.softwareQtQuick && !root.isAnimated && root.imageSource !== ""',
+          ),
+          (
+              '        visible: root.activeImage.status === Image.Ready && root.imageSource !== ""',
+              '        visible: !root.softwareQtQuick && root.activeImage.status === Image.Ready && root.imageSource !== ""',
+          ),
+      ],
+      root / "Modules/DankBar/BarCanvas.qml": [
+          (
+              "import QtQuick.Shapes",
+              "import QtQuick.Shapes\nimport Quickshell",
+          ),
+          (
+              "    property real wing: gothEnabled ? barWindow._wingR : 0",
+              '    property real wing: gothEnabled ? barWindow._wingR : 0\n    readonly property int shapeRendererType: Quickshell.env("QT_QUICK_BACKEND") === "software" ? Shape.SoftwareRenderer : Shape.CurveRenderer',
+          ),
+          (
+              "            preferredRendererType: Shape.CurveRenderer",
+              "            preferredRendererType: root.shapeRendererType",
+          ),
+          (
+              "            preferredRendererType: Shape.CurveRenderer",
+              "            preferredRendererType: root.shapeRendererType",
           ),
       ],
 
