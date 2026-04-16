@@ -115,6 +115,8 @@ sudo update-usb /path/to/system-manifest/main
 
 `update-usb` defaults to `--mode prebuild`, which builds locally and syncs the final squashfs image to the USB.
 
+It now prints the source `configurationRevision`, resolves the installed `/nix/var/nix/profiles/system` target, and verifies that the final `nix-store.squashfs` on the USB actually contains that exact system path.
+
 Always pass the worktree path that contains `flake.nix`, not the repo container root.
 
 ```bash
@@ -127,7 +129,7 @@ Use `--in-place` when local disk space is tight:
 sudo update-usb --in-place /path/to/system-manifest/<worktree>
 ```
 
-The script handles preflight checks, safe cleanup on `Ctrl+C`, and first-boot Home Manager activation.
+The script handles preflight checks, safe cleanup on `Ctrl+C`, first-boot Home Manager activation, and post-install revision verification. After booting the USB, confirm the running image with `nixos-version --json` and `readlink -f /run/current-system`.
 
 `update-usb` and `nix flake check` prove the image builds correctly, but USB-only runtime issues still require a real boot on target hardware to verify rendering, cursor, DMS, and similar session behavior.
 
