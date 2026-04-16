@@ -183,6 +183,12 @@
       STAGE_DIR=""
       STAGE_STORE=""
       LOCAL_SQUASHFS=""
+      FINAL_SQUASHFS=""
+      EXPECTED_CONFIG_REVISION=""
+      TARGET_CONFIG_REVISION=""
+      TARGET_NIXOS_VERSION=""
+      TARGET_SYSTEM_TOPLEVEL=""
+      TARGET_INIT_RELATIVE=""
       PHASE_LABEL=""
       PHASE_STARTED_AT=0
       TIMINGS=()
@@ -294,7 +300,83 @@
         fi
       }
 
-      if ! command -v mksquashfs >/dev/null 2>&1; then
+      read_expected_config_revision() {
+        nix eval --raw "$FLAKE_DIR#nixosConfigurations.usb.config.system.configurationRevision" 2>/dev/null || true
+      }
+
+      version_json_field() {
+        local key="$1"
+        sed -n "s/.*\"$key\":\"\\([^\"]*\\)\".*/\\1/p" | sed -n '1p'
+      }
+
+      capture_target_system_metadata() {
+        local version_json=""
+
+        TARGET_SYSTEM_TOPLEVEL="$(readlink -f "$MOUNT_POINT/nix/var/nix/profiles/system" 2>/dev/null || true)"
+        TARGET_INIT_RELATIVE=""
+        if [ -n "$TARGET_SYSTEM_TOPLEVEL" ]; then
+          TARGET_INIT_RELATIVE="''${TARGET_SYSTEM_TOPLEVEL#/}/init"
+        fi
+
+        version_json="$(chroot "$MOUNT_POINT" /nix/var/nix/profiles/system/sw/bin/nixos-version --json 2>/dev/null || true)"
+        TARGET_CONFIG_REVISION="$(printf '%s\n' "$version_json" | version_json_field configurationRevision)"
+        TARGET_NIXOS_VERSION="$(printf '%s\n' "$version_json" | version_json_field nixosVersion)"
+      }
+
+      verify_installed_revision() {
+        capture_target_system_metadata
+
+        if [ -z "$TARGET_SYSTEM_TOPLEVEL" ]; then
+          echo "Error: could not resolve the installed USB system path."
+          exit 1
+        fi
+
+        if [ -z "$TARGET_CONFIG_REVISION" ]; then
+          echo "Error: could not read the installed USB configuration revision."
+          exit 1
+        fi
+
+        if [ -n "$EXPECTED_CONFIG_REVISION" ]; then
+          echo "expected USB revision: $EXPECTED_CONFIG_REVISION"
+        else
+          echo "expected USB revision: unavailable (flake evaluation did not return configurationRevision)"
+        fi
+        echo "installed USB revision: $TARGET_CONFIG_REVISION"
+        echo "installed USB system path: $TARGET_SYSTEM_TOPLEVEL"
+        if [ -n "$TARGET_NIXOS_VERSION" ]; then
+          echo "installed USB NixOS version: $TARGET_NIXOS_VERSION"
+        fi
+
+        if [ -n "$EXPECTED_CONFIG_REVISION" ] && [ "$TARGET_CONFIG_REVISION" != "$EXPECTED_CONFIG_REVISION" ]; then
+          echo "Error: installed USB revision does not match the expected flake revision."
+          exit 1
+        fi
+      }
+
+      verify_squashfs_contains_system() {
+        local squashfs_path="$1"
+
+        if [ -z "$TARGET_SYSTEM_TOPLEVEL" ] || [ -z "$TARGET_INIT_RELATIVE" ]; then
+          echo "Error: target system metadata was not captured before squashfs verification."
+          exit 1
+        fi
+
+        if [ ! -f "$squashfs_path" ]; then
+          echo "Error: squashfs image not found at $squashfs_path"
+          exit 1
+        fi
+
+        if ! unsquashfs -cat "$squashfs_path" "$TARGET_INIT_RELATIVE" >/dev/null 2>&1; then
+          echo "Error: $squashfs_path does not contain the installed USB system path."
+          echo "Expected to find: $TARGET_SYSTEM_TOPLEVEL"
+          exit 1
+        fi
+
+        echo "verified squashfs contains: $TARGET_SYSTEM_TOPLEVEL"
+        echo "usb squashfs timestamp: $(stat -c '%y' "$squashfs_path")"
+      }
+
+      if ! command -v mksquashfs >/dev/null 2>&1 || ! command -v unsquashfs >/dev/null 2>&1; then
         if [ "''${USB_UPDATE_IN_NIX_SHELL:-0}" != "1" ] && command -v nix-shell >/dev/null 2>&1; then
           REEXEC_ARGS=""
           for arg in "''${ORIGINAL_ARGS[@]}"; do
@@ -303,7 +385,7 @@
           echo "Entering nix-shell for required USB update tools..."
           exec nix-shell -p "''${NIX_SHELL_PACKAGES[@]}" --run "USB_UPDATE_IN_NIX_SHELL=1 bash \"$0\"''${REEXEC_ARGS}"
         fi
-        echo "Error: mksquashfs is missing and nix-shell is unavailable."
+        echo "Error: required squashfs tools are missing and nix-shell is unavailable."
         echo "Run manually:"
         echo "  sudo nix-shell -p ''${NIX_SHELL_PACKAGES[*]} --run '$SCRIPT_NAME /path/to/system-manifest/main'"
         exit 1
@@ -315,7 +397,7 @@
         exit 1
       fi
 
-      for tool in "''${REQUIRED_TOOLS[@]}"; do
+      for tool in nix "''${REQUIRED_TOOLS[@]}"; do
         if ! command -v "$tool" >/dev/null 2>&1; then
           echo "Error: required tool '$tool' is not available in PATH."
           exit 1
@@ -326,6 +408,14 @@
         echo "Error: flake directory '$FLAKE_DIR' is invalid (missing flake.nix)."
         echo "Pass a worktree path containing flake.nix, for example /path/to/system-manifest/main."
         exit 1
+      fi
+
+      EXPECTED_CONFIG_REVISION="$(read_expected_config_revision)"
+      echo "Source flake dir: $FLAKE_DIR"
+      if [ -n "$EXPECTED_CONFIG_REVISION" ]; then
+        echo "Source USB revision: $EXPECTED_CONFIG_REVISION"
+      else
+        echo "Warning: could not resolve Source USB revision from $FLAKE_DIR"
       fi
 
       if [ ! -e "$USB_ROOT_PART" ]; then
@@ -469,6 +559,10 @@
       nixos-install --flake "$FLAKE_DIR#usb" --root "$MOUNT_POINT" --no-root-passwd
       phase_end
 
+      phase_begin "verifying-installed-revision" "Verifying installed revision"
+      verify_installed_revision
+      phase_end
+
       phase_begin "verifying-home-manager" "Verifying Home Manager"
       HM_SERVICE="$MOUNT_POINT/etc/systemd/system/home-manager-stefan.service"
       if [ -f "$HM_SERVICE" ]; then
@@ -509,6 +603,7 @@
         rm -f "$MOUNT_POINT/nix-store.squashfs.tmp" "$MOUNT_POINT/nix-store.squashfs"
         cp "$LOCAL_SQUASHFS" "$MOUNT_POINT/nix-store.squashfs.tmp"
         mv "$MOUNT_POINT/nix-store.squashfs.tmp" "$MOUNT_POINT/nix-store.squashfs"
+        FINAL_SQUASHFS="$MOUNT_POINT/nix-store.squashfs"
         SQFS_SIZE="$(du -sh "$MOUNT_POINT/nix-store.squashfs" | cut -f1)"
         echo "usb squashfs image: $SQFS_SIZE"
         phase_end
@@ -520,10 +615,15 @@
           -Xcompression-level 3 \
           -b 1048576 \
           -processors "$(nproc)"
+        FINAL_SQUASHFS="$MOUNT_POINT/nix-store.squashfs"
         SQFS_SIZE="$(du -sh "$MOUNT_POINT/nix-store.squashfs" | cut -f1)"
         echo "squashfs image: $SQFS_SIZE"
         phase_end
       fi
+
+      phase_begin "verifying-squashfs" "Verifying USB squashfs"
+      verify_squashfs_contains_system "$FINAL_SQUASHFS"
+      phase_end
 
       phase_begin "cleaning-ext4-store" "Cleaning ext4 store"
       if [ "$MODE" = "in-place" ]; then
@@ -538,8 +638,18 @@
       CURRENT_PHASE="done"
       echo "=== USB Update: Done ==="
       echo "Mode used: $MODE"
+      if [ -n "$EXPECTED_CONFIG_REVISION" ]; then
+        echo "Expected revision: $EXPECTED_CONFIG_REVISION"
+      fi
+      if [ -n "$TARGET_CONFIG_REVISION" ]; then
+        echo "Written revision: $TARGET_CONFIG_REVISION"
+      fi
+      if [ -n "$TARGET_SYSTEM_TOPLEVEL" ]; then
+        echo "Written system path: $TARGET_SYSTEM_TOPLEVEL"
+      fi
       print_timing_summary
       echo "Boot flow: LUKS unlock -> squashfs overlay on /nix/store -> fast reads"
+      echo "After boot, verify with: nixos-version --json && readlink -f /run/current-system"
     '')
   ];
 }
