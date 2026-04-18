@@ -75,8 +75,8 @@ in {
       color-scheme = "prefer-dark";
       gtk-theme = "catppuccin-mocha-blue-standard";
       icon-theme = "Papirus-Dark";
-      font-name = "Adwaita 9";
-      document-font-name = "Adwaita 9";
+      font-name = "Noto Sans 9";
+      document-font-name = "Noto Sans 9";
       monospace-font-name = "JetBrainsMono Nerd Font 9";
     };
   };
@@ -85,9 +85,9 @@ in {
   fonts.fontconfig = {
     enable = true;
     defaultFonts = {
-      monospace = ["JetBrainsMono Nerd Font" "Noto Sans CJK JP"];
-      sansSerif = ["Adwaita" "Noto Sans CJK JP"];
-      serif = ["Noto Serif" "Noto Serif CJK JP"];
+      monospace = ["JetBrainsMono Nerd Font" "Noto Sans" "Noto Sans CJK JP"];
+      sansSerif = ["Noto Sans" "Adwaita" "Noto Sans CJK JP"];
+      serif = ["Noto Serif" "Noto Sans" "Noto Serif CJK JP"];
     };
   };
 
