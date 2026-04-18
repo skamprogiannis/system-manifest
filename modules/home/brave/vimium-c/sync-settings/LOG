@@ -1,3 +1,6 @@
-2026/03/23-22:51:25.102 cf27 Reusing MANIFEST /home/stefan/.config/BraveSoftware/Brave-Browser/Default/Sync Extension Settings/hfjbmagddngcpeloejdejnfgbamkjaeg/MANIFEST-000001
-2026/03/23-22:51:25.102 cf27 Recovering log #3
-2026/03/23-22:51:25.102 cf27 Reusing old log /home/stefan/.config/BraveSoftware/Brave-Browser/Default/Sync Extension Settings/hfjbmagddngcpeloejdejnfgbamkjaeg/000003.log 
+2026/04/18-11:20:25.503 3cba Reuse MANIFEST: IO error: /home/stefan/.config/BraveSoftware/Brave-Browser/Default/Sync Extension Settings/hfjbmagddngcpeloejdejnfgbamkjaeg/MANIFEST-000001: Unable to create appendable file (ChromeMethodBFE: 21::NewAppendableFile::5)
+2026/04/18-11:20:25.503 3cba Recovering log #3
+2026/04/18-11:20:25.503 3cba Level-0 table #3: started
+2026/04/18-11:20:25.508 3cba Level-0 table #3: 2174 bytes OK
+2026/04/18-11:20:25.517 3cba Delete type=3 #1
+2026/04/18-11:20:25.517 3cba Delete type=0 #3

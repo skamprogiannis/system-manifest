@@ -1,3 +1,6 @@
-2026/03/23-22:51:25.461 cf39 Reusing MANIFEST /home/stefan/.config/BraveSoftware/Brave-Browser/Default/Local Extension Settings/hfjbmagddngcpeloejdejnfgbamkjaeg/MANIFEST-000001
-2026/03/23-22:51:25.461 cf39 Recovering log #3
-2026/03/23-22:51:25.461 cf39 Reusing old log /home/stefan/.config/BraveSoftware/Brave-Browser/Default/Local Extension Settings/hfjbmagddngcpeloejdejnfgbamkjaeg/000003.log 
+2026/04/18-11:20:26.491 3cba Reuse MANIFEST: IO error: /home/stefan/.config/BraveSoftware/Brave-Browser/Default/Local Extension Settings/hfjbmagddngcpeloejdejnfgbamkjaeg/MANIFEST-000001: Unable to create appendable file (ChromeMethodBFE: 21::NewAppendableFile::5)
+2026/04/18-11:20:26.491 3cba Recovering log #3
+2026/04/18-11:20:26.491 3cba Level-0 table #3: started
+2026/04/18-11:20:26.495 3cba Level-0 table #3: 3968 bytes OK
+2026/04/18-11:20:26.504 3cba Delete type=3 #1
+2026/04/18-11:20:26.504 3cba Delete type=0 #3

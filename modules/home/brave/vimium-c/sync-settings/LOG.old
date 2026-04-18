@@ -1,2 +1,3 @@
-2026/03/23-22:09:25.882 3727 Creating DB /home/stefan/.config/BraveSoftware/Brave-Browser/Default/Sync Extension Settings/hfjbmagddngcpeloejdejnfgbamkjaeg since it was missing.
-2026/03/23-22:09:25.897 3727 Reusing MANIFEST /home/stefan/.config/BraveSoftware/Brave-Browser/Default/Sync Extension Settings/hfjbmagddngcpeloejdejnfgbamkjaeg/MANIFEST-000001
+2026/03/23-22:51:25.102 cf27 Reusing MANIFEST /home/stefan/.config/BraveSoftware/Brave-Browser/Default/Sync Extension Settings/hfjbmagddngcpeloejdejnfgbamkjaeg/MANIFEST-000001
+2026/03/23-22:51:25.102 cf27 Recovering log #3
+2026/03/23-22:51:25.102 cf27 Reusing old log /home/stefan/.config/BraveSoftware/Brave-Browser/Default/Sync Extension Settings/hfjbmagddngcpeloejdejnfgbamkjaeg/000003.log 
