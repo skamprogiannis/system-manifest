@@ -97,6 +97,7 @@
     service_name="${spotifyServiceName}"
     auth_config_dir="${spotifyConfigDir}"
     credentials_file="${spotifyCacheDir}/credentials.json"
+    user_client_token_file="${spotifyCacheDir}/user_client_token.json"
     initial_device_wait_attempts=20
     retry_device_wait_attempts=10
 
@@ -158,6 +159,18 @@
       ${pkgs.systemd}/bin/systemctl --user stop "$service_name" >/dev/null 2>&1 || true
     }
 
+    reset_failed_service() {
+      ${pkgs.systemd}/bin/systemctl --user reset-failed "$service_name" >/dev/null 2>&1 || true
+    }
+
+    service_has_failed() {
+      ${pkgs.systemd}/bin/systemctl --user is-failed --quiet "$service_name"
+    }
+
+    clear_cached_credentials() {
+      rm -f "$credentials_file" "$user_client_token_file"
+    }
+
     ensure_authenticated() {
       if has_cached_credentials; then
         return 0
@@ -166,6 +179,18 @@
       stop_service
       echo "spotify_player: no cached Spotify credentials; starting interactive login" >&2
       "$real_player" -c "$auth_config_dir" authenticate
+    }
+
+    recover_stale_auth() {
+      if ! has_cached_credentials; then
+        return 1
+      fi
+
+      stop_service
+      reset_failed_service
+      clear_cached_credentials
+      echo "spotify_player: cached Spotify tokens look stale; starting interactive login" >&2
+      ensure_authenticated
     }
 
     daemon_has_device() {
@@ -191,6 +216,7 @@
 
     ensure_service_started() {
       ${pkgs.systemd}/bin/systemctl --user is-active --quiet "$service_name" && return 0
+      reset_failed_service
       ${pkgs.systemd}/bin/systemctl --user start "$service_name"
     }
 
@@ -231,12 +257,18 @@
     fi
 
     if ! ensure_service_started; then
-      echo "spotify_player: failed to start ${spotifyServiceName}; launching the client anyway" >&2
-      exec_real_player "$@"
+      if ! service_has_failed || ! recover_stale_auth || ! ensure_service_started; then
+        echo "spotify_player: failed to start ${spotifyServiceName}; launching the client anyway" >&2
+        exec_real_player "$@"
+      fi
     fi
 
     if ! ensure_device_ready; then
-      echo "spotify_player: ${spotifyDeviceName} did not become ready; launching the client anyway" >&2
+      if service_has_failed && recover_stale_auth && ensure_service_started && ensure_device_ready; then
+        :
+      else
+        echo "spotify_player: ${spotifyDeviceName} did not become ready; launching the client anyway" >&2
+      fi
     fi
 
     exec_real_player "$@"
