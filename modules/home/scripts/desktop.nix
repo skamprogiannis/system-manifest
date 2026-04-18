@@ -132,39 +132,175 @@
       fi
     '')
     (pkgs.writeShellScriptBin "gsr-record" ''
+      set -euo pipefail
+
+      usage() {
+        cat <<'EOF'
+      Usage: gsr-record [region|fullscreen|window] [--no-audio]
+
+      Toggles screen recording with gpu-screen-recorder.
+        region      interactively select an area to record
+        fullscreen  record the focused monitor
+        window      record the active window bounds
+      EOF
+      }
+
+      focused_monitor() {
+        hyprctl monitors -j | ${pkgs.jq}/bin/jq -r '
+          (first(.[] | select(.focused == true)).name) // .[0].name // empty
+        '
+      }
+
+      region_from_active_window() {
+        hyprctl activewindow -j | ${pkgs.jq}/bin/jq -r '
+          .at as $at
+          | .size as $size
+          | if ($at | length) >= 2 and ($size | length) >= 2 then
+              "\($size[0])x\($size[1])+\($at[0])+\($at[1])"
+            else
+              empty
+            end
+        '
+      }
+
+      summarize_log() {
+        [ -s "$LOGFILE" ] || return 0
+        ${pkgs.gnused}/bin/sed -n '1,3p' "$LOGFILE" \
+          | ${pkgs.coreutils}/bin/tr '\n' ' ' \
+          | ${pkgs.gnused}/bin/sed 's/[[:space:]]\+/ /g; s/[[:space:]]*$//'
+      }
+
       MODE="''${1:-region}"
       AUDIO=1
+      if [ "$MODE" = "--help" ] || [ "$MODE" = "-h" ]; then
+        usage
+        exit 0
+      fi
       [ "''${2:-}" = "--no-audio" ] && AUDIO=0
 
-      PIDFILE="''${XDG_RUNTIME_DIR:-/tmp}/gsr-record.pid"
+      case "$MODE" in
+        region|fullscreen|window) ;;
+        *)
+          echo "Error: unknown mode '$MODE'." >&2
+          usage >&2
+          exit 1
+          ;;
+      esac
+
+      if [ "''${2:-}" != "" ] && [ "''${2:-}" != "--no-audio" ]; then
+        echo "Error: unknown option ''${2}." >&2
+        usage >&2
+        exit 1
+      fi
+
+      STATE_DIR="''${XDG_RUNTIME_DIR:-/tmp}/gsr-record"
+      PIDFILE="$STATE_DIR/pid"
+      OUTFILE_STATE="$STATE_DIR/outfile"
+      LOGFILE="$STATE_DIR/log"
       OUTDIR="$HOME/videos/screencasts"
+      mkdir -p "$STATE_DIR"
       mkdir -p "$OUTDIR"
 
       if [ -f "$PIDFILE" ]; then
         PID=$(cat "$PIDFILE")
-        if kill -0 "$PID" 2>/dev/null; then
+        if [[ "$PID" =~ ^[0-9]+$ ]] && kill -0 "$PID" 2>/dev/null; then
           kill -INT "$PID"
-          ${pkgs.libnotify}/bin/notify-send -u low "Screen Recording" "Recording stopped"
-          rm -f "$PIDFILE"
+
+          for _ in $(${pkgs.coreutils}/bin/seq 1 100); do
+            if ! kill -0 "$PID" 2>/dev/null; then
+              break
+            fi
+            ${pkgs.coreutils}/bin/sleep 0.1
+          done
+
+          if kill -0 "$PID" 2>/dev/null; then
+            ${pkgs.libnotify}/bin/notify-send -u normal "Screen Recording" "Stop requested, but gpu-screen-recorder is still shutting down."
+            exit 1
+          fi
+
+          if [ -f "$OUTFILE_STATE" ]; then
+            OUTFILE=$(cat "$OUTFILE_STATE")
+            if [ -s "$OUTFILE" ]; then
+              ${pkgs.libnotify}/bin/notify-send -u low "Screen Recording" "Saved: $OUTFILE"
+            else
+              DETAIL=$(summarize_log || true)
+              if [ -n "$DETAIL" ]; then
+                ${pkgs.libnotify}/bin/notify-send -u normal "Screen Recording" "Recorder stopped, but no file was saved. $DETAIL"
+              else
+                ${pkgs.libnotify}/bin/notify-send -u normal "Screen Recording" "Recorder stopped, but no file was saved."
+              fi
+            fi
+          else
+            ${pkgs.libnotify}/bin/notify-send -u normal "Screen Recording" "Recorder stopped, but the output path was unknown."
+          fi
+
+          rm -f "$PIDFILE" "$OUTFILE_STATE"
           exit 0
         fi
-        rm -f "$PIDFILE"
+        rm -f "$PIDFILE" "$OUTFILE_STATE"
       fi
 
       OUTFILE="$OUTDIR/screencast_$(date +%Y-%m-%d_%H-%M-%S).mp4"
 
       case "$MODE" in
-        region)     WINDOW=region ;;
-        fullscreen) WINDOW=$(hyprctl monitors -j | ${pkgs.jq}/bin/jq -r '.[0].name') ;;
-        window)     WINDOW=focused ;;
-        *)          WINDOW=region ;;
+        region)
+          REGION=$(${pkgs.slurp}/bin/slurp -f '%wx%h+%x+%y' 2>/dev/null || true)
+          if [ -z "$REGION" ]; then
+            ${pkgs.libnotify}/bin/notify-send -u low "Screen Recording" "Recording cancelled."
+            exit 1
+          fi
+          WINDOW=region
+          TARGET_ARGS=(-region "$REGION")
+          ;;
+        fullscreen)
+          WINDOW=$(focused_monitor)
+          if [ -z "$WINDOW" ]; then
+            ${pkgs.libnotify}/bin/notify-send -u normal "Screen Recording" "No monitor found to record."
+            exit 1
+          fi
+          TARGET_ARGS=()
+          ;;
+        window)
+          REGION=$(region_from_active_window)
+          if [ -z "$REGION" ]; then
+            ${pkgs.libnotify}/bin/notify-send -u normal "Screen Recording" "No active window found to record."
+            exit 1
+          fi
+          WINDOW=region
+          TARGET_ARGS=(-region "$REGION")
+          ;;
       esac
 
       AUDIO_ARGS=()
       [ "$AUDIO" -eq 1 ] && AUDIO_ARGS=(-a default_output)
 
-      gpu-screen-recorder -w "$WINDOW" -f 60 -c mp4 "''${AUDIO_ARGS[@]}" -o "$OUTFILE" &
-      echo $! > "$PIDFILE"
+      printf '%s\n' "$OUTFILE" > "$OUTFILE_STATE"
+      : > "$LOGFILE"
+
+      gpu-screen-recorder \
+        -w "$WINDOW" \
+        "''${TARGET_ARGS[@]}" \
+        -f 60 \
+        -c mp4 \
+        "''${AUDIO_ARGS[@]}" \
+        -o "$OUTFILE" \
+        >"$LOGFILE" 2>&1 &
+
+      PID=$!
+      echo "$PID" > "$PIDFILE"
+      ${pkgs.coreutils}/bin/sleep 1
+
+      if ! kill -0 "$PID" 2>/dev/null; then
+        DETAIL=$(summarize_log || true)
+        rm -f "$PIDFILE" "$OUTFILE_STATE"
+        if [ -n "$DETAIL" ]; then
+          ${pkgs.libnotify}/bin/notify-send -u normal "Screen Recording" "Failed to start: $DETAIL"
+        else
+          ${pkgs.libnotify}/bin/notify-send -u normal "Screen Recording" "Failed to start recording."
+        fi
+        exit 1
+      fi
+
       ${pkgs.libnotify}/bin/notify-send -u low "Screen Recording" "Recording started (press again to stop)"
     '')
   ];

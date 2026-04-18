@@ -161,6 +161,12 @@
         run_expect 1 wallpaper-apply-usage "$desktop_home/bin/wallpaper-apply"
         assert_log_contains "Usage:"
 
+        run_expect 0 gsr-record-help "$desktop_home/bin/gsr-record" --help
+        assert_log_contains "Usage: gsr-record"
+
+        run_expect 1 gsr-record-invalid-mode "$desktop_home/bin/gsr-record" nope
+        assert_log_contains "Error: unknown mode 'nope'."
+
         run_expect 1 transmission-port-sync-invalid-port "$desktop_home/bin/transmission-port-sync" 0
         assert_log_contains "Error: port must be an integer between 1 and 65535."
 

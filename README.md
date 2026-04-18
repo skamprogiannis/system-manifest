@@ -57,7 +57,8 @@ Packages tracked independently of nixpkgs for tighter version control:
 - **Hard Quit:** `Super+Shift+X` force-terminates the active app process for clients like Vesktop or ProtonVPN that minimize to tray on normal close.
 - **Launcher Shortcuts:** Common launch actions cover Yazi, wallpapers, screenshots, and the DMS notepad.
 - **DMS Shell:** Core shell layout, widget placement, and launcher behavior are managed declaratively in Nix.
-- **Screenshots:** `dms screenshot` handles region/window/full capture with image-to-clipboard. `screenshot-path-copy` wraps it to copy the file path instead (useful for sharing with AI agents). Screen recording via **Kooha** GUI.
+- **Screenshots:** `dms screenshot` handles region/window/full capture with image-to-clipboard. `screenshot-path-copy` wraps it to copy the file path instead (useful for sharing with AI agents).
+- **Screen Recording:** `gsr-record` wraps GPU Screen Recorder for region, active-window, and focused-monitor capture, saving clips to `~/videos/screencasts`.
 - **GitHub Copilot CLI:** Copilot is integrated into the Neovim + terminal workflow with repository-specific instructions.
 - **Browser Automation:** PinchTab is installed declaratively so the Copilot browser-automation skill has the CLI it documents.
 - **Static Analysis:** CodeQL, Semgrep, and SARIF tooling are installed declaratively to back the compact `static-analysis` Copilot skill.
@@ -77,6 +78,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 | `wallpaper-library-sync` | Clones/fetches/resets the static wallpapers repo rooted at `~/wallpapers` and keeps generated `.wallpaper-engine/` assets ignored |
 | `hypr-nav` | Hyprland focus movement with workspace wrapping at boundaries |
 | `hypr-quit-active` | Force-quits the active app process when a client minimizes to tray instead of exiting |
+| `gsr-record` | Toggles GPU Screen Recorder for region, focused monitor, or active-window capture and saves clips under `~/videos/screencasts` |
 | `transmission-port-sync` | Syncs Transmission's configured peer port (for example after a VPN-forwarded port change) |
 | `copilot-sessions-sync` | Syncs `~/.copilot/session-state/` between desktop and USB (`to-usb` / `from-usb`) |
 | `specify` | Spec Kit CLI wrapper — scaffolds spec-driven development for new projects |
