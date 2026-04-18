@@ -53,10 +53,7 @@ in {
   # theme metadata there so Qt/Quickshell launchers can resolve those icons.
   home.file.".local/share/icons/hicolor/index.theme".source =
     "${pkgs.hicolor-icon-theme}/share/icons/hicolor/index.theme";
-  # Override the system steam.desktop to suppress all jump-list actions
-  # (Big Picture, Store, Library, Community, etc.) from the app launcher.
-  # A local entry under ~/.local/share/applications takes precedence over the
-  # system one at /run/current-system/sw/share/applications per the XDG spec.
+  # Override steam.desktop locally so launchers hide Steam's jump-list actions.
   home.file.".local/share/applications/steam.desktop".text = ''
     [Desktop Entry]
     Name=Steam

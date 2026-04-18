@@ -29,8 +29,8 @@
 - **Copilot Instruction Source:** Repository-wide Copilot defaults are edited in `modules/home/gh-copilot/instructions.md`, which is synced to `~/.copilot/copilot-instructions.md` via Home Manager when you run `nixos-rebuild switch`.
 - **Squash Fix Chains:** If you need multiple attempts to fix something, squash them into a single commit before pushing (`git rebase -i` or `git commit --amend`). Avoid pushing fix→fix→fix chains that clutter history.
 
-- **Git Hygiene:** ALWAYS `git commit` all changes before running `nixos-rebuild switch`. This ensures that `nixos-rebuild list-generations` shows a clean configuration revision hash, making rollbacks and history tracking much more reliable.
-- **README Updates:** Update `README.md` before committing any significant change (new features, major config changes, removed features, new scripts). The README is the human-readable source-of-truth for the system state. Keep it high-level: document durable capabilities, workflows, and entrypoints, not pane percentages, micro-keybind lists, transient UI behavior, or implementation trivia unless a user needs them to operate the system.
+- **Git Hygiene:** Always commit before `nixos-rebuild switch` so `nixos-rebuild list-generations` records a clean configuration revision for rollback and history tracking.
+- **README Updates:** Update `README.md` with significant durable changes. Keep it high-level: document capabilities, workflows, and entrypoints, not transient UI behavior or implementation trivia.
 - **Autonomy:** You are authorized to run `sudo nixos-rebuild switch --flake` autonomously when requested or implied by the workflow (e.g., "rebuild").
 - **Revision Tracking:** Always set `system.configurationRevision = inputs.self.rev or inputs.self.dirtyRev or null;` in `configuration.nix` so `nixos-rebuild list-generations` shows the commit hash.
 - **Dry Run:** Always use `nixos-rebuild dry-build` before asking the user to build, especially for complex derivations.
@@ -90,14 +90,7 @@ Use **Spec Kit** (`specify` CLI) to scaffold spec-driven development for new pro
 
 - **Purpose:** Updates the bootable USB drive configuration from the `usb` flake output.
 - **Command:** `sudo update-usb /path/to/system-manifest/main`
-- **Steps:**
-  1.  Ensures root privileges and validates required USB partition labels exist.
-  2.  Unlocks the LUKS container via `/dev/disk/by-partlabel/NIXOS_USB_CRYPT`.
-  3.  Mounts root and boot partitions to `/mnt`.
-  4.  By default (`--mode prebuild`), bind-mounts a local staging store and runs `nixos-install` against USB root while store writes stay local.
-  5.  Verifies the Home Manager systemd service is present (activation happens on first boot).
-  6.  Builds `nix-store.squashfs` locally and syncs final image to USB (`--in-place` keeps old USB-local squash path).
-  7.  Unmounts and cleans up.
+- **Flow:** Validates the labeled partitions, unlocks the LUKS root, mounts root and boot, runs `nixos-install` in prebuild mode by default, verifies Home Manager activation, syncs the final `nix-store.squashfs`, then unmounts and cleans up.
 - **Note:** Script preflight checks mountpoint safety and can auto-enter `nix-shell` when `mksquashfs` is missing. Always pass a worktree path containing `flake.nix` (for example `.../main`), not the repo container root.
 - **Runtime Validation:** `nix flake check` and `dry-build` do not prove USB-only runtime behavior. For cursor/rendering/DMS issues, update the stick and boot it on real target hardware before declaring the fix done.
 - **GH auth on foreign machines:** When booting the USB on a computer lab machine, gnome-keyring may not auto-unlock. Store a fine-grained PAT (with "Copilot Requests" permission) in `~/.config/github-pat` on the encrypted USB partition: `echo "ghp_..." > ~/.config/github-pat && chmod 600 ~/.config/github-pat`. The shell will auto-export it as `GH_TOKEN`. This file is protected by LUKS and never committed to git.

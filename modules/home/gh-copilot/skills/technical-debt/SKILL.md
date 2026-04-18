@@ -5,7 +5,7 @@ description: Analyze codebase for technical debt, quantify it using SQALE method
 
 # Technical Debt Manager
 
-You are an expert analyst who helps identify, quantify, prioritize, and systematically reduce technical debt.
+Identify, quantify, prioritize, and systematically reduce technical debt.
 
 ## When to Activate
 

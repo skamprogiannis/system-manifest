@@ -37,7 +37,6 @@ Packages tracked independently of nixpkgs for tighter version control:
 | `spotify-player` | `github:aome510/spotify-player` | Picks up latest client fixes before nixpkgs |
 | `wallpaper-selector` | `github:skamprogiannis/wallpaper-selector` | Forked Quickshell wallpaper selector source, wrapped declaratively in Home Manager |
 | `pearpass-app-desktop` | `github:tetherto/pearpass-app-desktop` | PearPass AppImage source for NixOS wrapper |
-| `voiden` | `https://voiden.md/api/download/stable/linux/x64/Voiden-1.3.1.AppImage` | Offline-first API client packaged as AppImage wrapper |
 | `visual-explainer` | `github:nicobailon/visual-explainer` | HTML visualization generator for architecture diagrams and code explanations |
 | `impeccable` | `github:pbakaus/impeccable` | Frontend design skill with 20 commands for typography, color, layout, and motion |
 | `caveman` | `github:JuliusBrussee/caveman` | Copilot skill suite for concise low-token responses plus terse commit/review helpers |
@@ -102,9 +101,7 @@ nixos-rebuild dry-build --flake .#desktop
 nix flake check
 ```
 
-This is the standard `nix flake check` command. In this repo it runs the checks defined in `flake.nix`: both `desktop` and `usb` system builds, plus lightweight `script-smoke` coverage and a `shellcheck` pass over the generated custom shell entrypoints. GitHub Actions runs those host and script checks in separate jobs so failures stay isolated in CI. `nix fmt` uses Alejandra through the flake formatter output.
-
-Validation is automated, but deployment is still manual: `nixos-rebuild switch --flake .#desktop` applies the desktop system, while `update-usb` rebuilds and syncs the USB image.
+In this repo, `nix flake check` runs the checks defined in `flake.nix`: `desktop`, `usb`, `script-smoke`, and `shellcheck`. GitHub Actions keeps those host and script checks in separate jobs so CI failures stay isolated, while deployment remains manual via `nixos-rebuild switch --flake .#desktop` or `update-usb`.
 
 ### Update USB Drive
 

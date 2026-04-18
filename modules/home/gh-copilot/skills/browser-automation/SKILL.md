@@ -5,7 +5,7 @@ description: Control a Chrome browser for testing, scraping, form filling, and w
 
 # Browser Automation (PinchTab)
 
-Control Chrome programmatically for testing, data extraction, and web interaction. PinchTab uses ~800 tokens/page (5-13x cheaper than screenshot-based approaches) via accessibility-tree-based element references.
+Control Chrome for testing, data extraction, and web interaction. PinchTab uses accessibility-tree element references, which stay far cheaper than screenshot-heavy workflows.
 
 ## Quick Reference
 
