@@ -2,9 +2,12 @@
   config,
   pkgs,
   inputs,
-  hostType ? null,
+  lib,
+  hostType ? "desktop",
   ...
-}: let
+}:
+assert lib.assertMsg (builtins.elem hostType ["desktop" "usb"]) "hostType must be \"desktop\" or \"usb\".";
+let
   spotifyDeviceName = if hostType == "usb" then "nixos-usb" else "nixos-desktop";
   spotifyServiceName = "spotify-player.service";
   spotifyPlayerClientPatch = pkgs.writeText "patch-spotify-player-client.py" ''
@@ -91,7 +94,7 @@
   spotifyDaemonConfigDir = "${config.xdg.configHome}/spotify-player-daemon";
   spotifyDaemonArgs = "-c ${spotifyDaemonConfigDir} --daemon";
   spotifyPlayerPkg = pkgs.writeShellScriptBin "spotify_player" ''
-    set -eu
+    set -euo pipefail
 
     real_player="${spotifyPlayerRawPkg}/bin/spotify_player"
     service_name="${spotifyServiceName}"
@@ -155,12 +158,33 @@
       [ -s "$credentials_file" ]
     }
 
+    log_systemctl_warning() {
+      local action="$1"
+      local output="$2"
+
+      case "$output" in
+        *"not loaded"*|*"not found"*)
+          return 0
+          ;;
+      esac
+
+      if [ -n "$output" ]; then
+        echo "spotify_player: warning: systemctl $action $service_name failed: $output" >&2
+      fi
+    }
+
     stop_service() {
-      ${pkgs.systemd}/bin/systemctl --user stop "$service_name" >/dev/null 2>&1 || true
+      local output=""
+      if ! output=$(${pkgs.systemd}/bin/systemctl --user stop "$service_name" 2>&1); then
+        log_systemctl_warning "stop" "$output"
+      fi
     }
 
     reset_failed_service() {
-      ${pkgs.systemd}/bin/systemctl --user reset-failed "$service_name" >/dev/null 2>&1 || true
+      local output=""
+      if ! output=$(${pkgs.systemd}/bin/systemctl --user reset-failed "$service_name" 2>&1); then
+        log_systemctl_warning "reset-failed" "$output"
+      fi
     }
 
     service_has_failed() {
@@ -257,17 +281,17 @@
     fi
 
     if ! ensure_service_started; then
-      if ! service_has_failed || ! recover_stale_auth || ! ensure_service_started; then
-        echo "spotify_player: failed to start ${spotifyServiceName}; launching the client anyway" >&2
+      if service_has_failed && recover_stale_auth && ensure_service_started; then
+        :
+      else
+        echo "spotify_player: warning: ${spotifyServiceName} failed to start; using the client directly" >&2
         exec_real_player "$@"
       fi
     fi
 
     if ! ensure_device_ready; then
-      if service_has_failed && recover_stale_auth && ensure_service_started && ensure_device_ready; then
-        :
-      else
-        echo "spotify_player: ${spotifyDeviceName} did not become ready; launching the client anyway" >&2
+      if ! (service_has_failed && recover_stale_auth && ensure_service_started && ensure_device_ready); then
+        echo "spotify_player: warning: ${spotifyDeviceName} did not become ready; continuing without daemon-backed device sync" >&2
       fi
     fi
 
