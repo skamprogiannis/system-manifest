@@ -3,7 +3,9 @@
   lib,
   modulesPath,
   ...
-}: {
+}: let
+  usb = import ../../modules/shared/usb-constants.nix;
+in {
   imports = [
     (modulesPath + "/installer/scan/not-detected.nix")
   ];
@@ -24,19 +26,19 @@
 
   # Enable LUKS support
   boot.initrd.luks.devices."root" = {
-    device = "/dev/disk/by-partlabel/NIXOS_USB_CRYPT";
+    device = usb.rootPartByLabel;
     preLVM = true;
   };
 
   # File Systems
   fileSystems."/" = {
-    device = "/dev/disk/by-label/NIXOS_USB_ROOT";
+    device = usb.rootFsByLabel;
     fsType = "ext4";
     options = ["noatime" "nodiratime"];
   };
 
   fileSystems."/boot" = {
-    device = "/dev/disk/by-label/NIXOS_BOOT";
+    device = usb.bootByLabel;
     fsType = "vfat";
   };
 

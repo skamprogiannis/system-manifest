@@ -1,10 +1,12 @@
-{pkgs, ...}: {
+{pkgs, ...}: let
+  usb = import ../../shared/usb-constants.nix;
+in {
   home.packages = [
     (pkgs.writeShellScriptBin "setup-persistent-usb" ''
       set -euo pipefail
 
       SCRIPT_NAME="$(basename "$0")"
-      USB_MAPPER_NAME="NIXOS_USB_CRYPT"
+      USB_MAPPER_NAME="${usb.mapperName}"
       USB_ROOT_DEV="/dev/mapper/$USB_MAPPER_NAME"
       NIX_SHELL_PACKAGES=(gptfdisk parted cryptsetup dosfstools e2fsprogs util-linux)
       REQUIRED_TOOLS=(lsblk wipefs sgdisk partprobe udevadm mkfs.vfat cryptsetup mkfs.ext4)
@@ -18,15 +20,17 @@
 
       Creates a fresh persistent NixOS USB with:
         - GPT partition table
-        - 1 GiB EFI partition (label: NIXOS_BOOT)
-        - LUKS2 root partition (partlabel: NIXOS_USB_CRYPT)
-        - ext4 filesystem inside LUKS (label: NIXOS_USB_ROOT)
+        - 1 GiB EFI partition (label: ${usb.bootLabel})
+        - LUKS2 root partition (partlabel: ${usb.rootPartLabel})
+        - ext4 filesystem inside LUKS (label: ${usb.rootFsLabel})
       EOF
       }
 
       cleanup() {
         if [ "$OPENED_MAPPER" -eq 1 ]; then
-          cryptsetup close "$USB_MAPPER_NAME" 2>/dev/null || true
+          if ! cryptsetup close "$USB_MAPPER_NAME" 2>/dev/null; then
+            echo "Warning: failed to close $USB_MAPPER_NAME during cleanup; you may need to close it manually." >&2
+          fi
         fi
       }
       trap cleanup EXIT
@@ -122,8 +126,8 @@
       sgdisk --zap-all "$USB_DEV"
 
       echo "Creating new partitions..."
-      sgdisk -n 1:0:+1G -t 1:ef00 -c 1:NIXOS_BOOT "$USB_DEV"
-      sgdisk -n 2:0:0 -t 2:8309 -c 2:NIXOS_USB_CRYPT "$USB_DEV"
+      sgdisk -n 1:0:+1G -t 1:ef00 -c 1:${usb.bootLabel} "$USB_DEV"
+      sgdisk -n 2:0:0 -t 2:8309 -c 2:${usb.rootPartLabel} "$USB_DEV"
 
       partprobe "$USB_DEV"
       udevadm settle
@@ -142,7 +146,7 @@
       done
 
       echo "Formatting boot partition ($USB_BOOT_PART)..."
-      mkfs.vfat -F 32 -n NIXOS_BOOT "$USB_BOOT_PART"
+      mkfs.vfat -F 32 -n ${usb.bootLabel} "$USB_BOOT_PART"
 
       echo "Formatting root partition ($USB_CRYPT_PART) with LUKS..."
       echo "Please enter a passphrase for USB encryption when prompted."
@@ -152,7 +156,7 @@
       OPENED_MAPPER=1
 
       echo "Formatting internal ext4 filesystem..."
-      mkfs.ext4 -L NIXOS_USB_ROOT "$USB_ROOT_DEV"
+      mkfs.ext4 -L ${usb.rootFsLabel} "$USB_ROOT_DEV"
       cryptsetup close "$USB_MAPPER_NAME"
       OPENED_MAPPER=0
 
@@ -163,9 +167,9 @@
       set -euo pipefail
 
       SCRIPT_NAME="$(basename "$0")"
-      USB_ROOT_PART="/dev/disk/by-partlabel/NIXOS_USB_CRYPT"
-      USB_BOOT_DEV="/dev/disk/by-label/NIXOS_BOOT"
-      PREFERRED_USB_MAPPER_NAME="NIXOS_USB_CRYPT"
+      USB_ROOT_PART="${usb.rootPartByLabel}"
+      USB_BOOT_DEV="${usb.bootByLabel}"
+      PREFERRED_USB_MAPPER_NAME="${usb.mapperName}"
       USB_MAPPER_NAME="$PREFERRED_USB_MAPPER_NAME"
       USB_ROOT_DEV="/dev/mapper/$USB_MAPPER_NAME"
       MOUNT_POINT="/mnt"
@@ -288,6 +292,23 @@
 
       parse_args "$@"
 
+      cleanup_warn() {
+        echo "Cleanup warning: $1" >&2
+      }
+
+      run_cleanup_step() {
+        local description="$1"
+        shift
+        local output=""
+
+        if ! output=$("$@" 2>&1); then
+          cleanup_warn "$description"
+          if [ -n "$output" ]; then
+            printf '%s\n' "$output" >&2
+          fi
+        fi
+      }
+
       refresh_usb_mapper() {
         local existing_mapper=""
         existing_mapper=$(lsblk -nrpo NAME,TYPE "$USB_ROOT_PART" 2>/dev/null | sed -n '/ crypt$/ { s/ crypt$//; p; q; }')
@@ -301,16 +322,38 @@
       }
 
       read_expected_config_revision() {
-        nix eval --raw "$FLAKE_DIR#nixosConfigurations.usb.config.system.configurationRevision" 2>/dev/null || true
+        local error_log=""
+        local result=""
+
+        error_log=$(mktemp)
+        if ! result=$(nix eval --raw "$FLAKE_DIR#nixosConfigurations.usb.config.system.configurationRevision" 2>"$error_log"); then
+          echo "Warning: failed to evaluate USB configurationRevision from $FLAKE_DIR" >&2
+          if [ -s "$error_log" ]; then
+            cat "$error_log" >&2
+          fi
+          rm -f "$error_log"
+          return 1
+        fi
+
+        rm -f "$error_log"
+        printf '%s' "$result"
       }
 
       version_json_field() {
         local key="$1"
-        sed -n "s/.*\"$key\":\"\\([^\"]*\\)\".*/\\1/p" | sed -n '1p'
+        local value=""
+
+        if ! value=$(${pkgs.jq}/bin/jq -r --arg key "$key" '.[$key] // empty' 2>/dev/null); then
+          echo "Warning: failed to parse nixos-version JSON for key '$key'" >&2
+          return 1
+        fi
+
+        printf '%s\n' "$value"
       }
 
       capture_target_system_metadata() {
         local version_json=""
+        local version_error_log=""
 
         TARGET_SYSTEM_TOPLEVEL="$(readlink -f "$MOUNT_POINT/nix/var/nix/profiles/system" 2>/dev/null || true)"
         TARGET_INIT_RELATIVE=""
@@ -318,9 +361,22 @@
           TARGET_INIT_RELATIVE="''${TARGET_SYSTEM_TOPLEVEL#/}/init"
         fi
 
-        version_json="$(chroot "$MOUNT_POINT" /nix/var/nix/profiles/system/sw/bin/nixos-version --json 2>/dev/null || true)"
-        TARGET_CONFIG_REVISION="$(printf '%s\n' "$version_json" | version_json_field configurationRevision)"
-        TARGET_NIXOS_VERSION="$(printf '%s\n' "$version_json" | version_json_field nixosVersion)"
+        version_error_log=$(mktemp)
+        if ! version_json="$(chroot "$MOUNT_POINT" /nix/var/nix/profiles/system/sw/bin/nixos-version --json 2>"$version_error_log")"; then
+          echo "Warning: failed to read installed USB system metadata via nixos-version --json" >&2
+          if [ -s "$version_error_log" ]; then
+            cat "$version_error_log" >&2
+          fi
+          version_json=""
+        fi
+        rm -f "$version_error_log"
+
+        TARGET_CONFIG_REVISION=""
+        TARGET_NIXOS_VERSION=""
+        if [ -n "$version_json" ]; then
+          TARGET_CONFIG_REVISION="$(printf '%s\n' "$version_json" | version_json_field configurationRevision || true)"
+          TARGET_NIXOS_VERSION="$(printf '%s\n' "$version_json" | version_json_field nixosVersion || true)"
+        fi
       }
 
       verify_installed_revision() {
@@ -410,7 +466,7 @@
         exit 1
       fi
 
-      EXPECTED_CONFIG_REVISION="$(read_expected_config_revision)"
+      EXPECTED_CONFIG_REVISION="$(read_expected_config_revision || true)"
       echo "Source flake dir: $FLAKE_DIR"
       if [ -n "$EXPECTED_CONFIG_REVISION" ]; then
         echo "Source USB revision: $EXPECTED_CONFIG_REVISION"
@@ -444,20 +500,20 @@
         fi
 
         if [ "$MOUNTED_STAGE_STORE" -eq 1 ]; then
-          umount "$MOUNT_POINT/nix/store" 2>/dev/null || true
+          run_cleanup_step "failed to unmount $MOUNT_POINT/nix/store" umount "$MOUNT_POINT/nix/store"
         fi
         if [ "$MOUNTED_BOOT" -eq 1 ]; then
-          umount "$MOUNT_POINT/boot" 2>/dev/null || true
+          run_cleanup_step "failed to unmount $MOUNT_POINT/boot" umount "$MOUNT_POINT/boot"
         fi
         if [ "$MOUNTED_ROOT" -eq 1 ]; then
-          umount "$MOUNT_POINT" 2>/dev/null || true
+          run_cleanup_step "failed to unmount $MOUNT_POINT" umount "$MOUNT_POINT"
         fi
         if [ "$OPENED_MAPPER" -eq 1 ]; then
-          cryptsetup close "$USB_MAPPER_NAME" 2>/dev/null || true
+          run_cleanup_step "failed to close mapper $USB_MAPPER_NAME" cryptsetup close "$USB_MAPPER_NAME"
         fi
 
         if [ -n "$STAGE_DIR" ] && [ -d "$STAGE_DIR" ]; then
-          rm -rf "$STAGE_DIR" 2>/dev/null || true
+          run_cleanup_step "failed to remove temporary stage directory $STAGE_DIR" rm -rf "$STAGE_DIR"
         fi
 
         if [ "$CANCELED" -eq 1 ]; then

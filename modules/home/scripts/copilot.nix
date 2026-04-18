@@ -1,4 +1,6 @@
-{pkgs, ...}: {
+{pkgs, ...}: let
+  usb = import ../../shared/usb-constants.nix;
+in {
   home.packages = [
     (pkgs.writeShellScriptBin "specify" ''
       exec ${pkgs.uv}/bin/uvx --from git+https://github.com/github/spec-kit.git specify "$@"
@@ -9,8 +11,8 @@
       SYNC_USER="''${SUDO_USER:-''${USER:-$(${pkgs.coreutils}/bin/id -un)}}"
       SYNC_GROUP="$(${pkgs.coreutils}/bin/id -gn "$SYNC_USER")"
       USER_HOME="$(${pkgs.gawk}/bin/awk -F: -v user="$SYNC_USER" '$1 == user { print $6; exit }' /etc/passwd)"
-      LUKS_DEVICE="/dev/disk/by-partlabel/NIXOS_USB_CRYPT"
-      PREFERRED_MAPPER="NIXOS_USB_CRYPT"
+      LUKS_DEVICE="${usb.rootPartByLabel}"
+      PREFERRED_MAPPER="${usb.mapperName}"
       MAPPER="$PREFERRED_MAPPER"
       MAPPER_DEV="/dev/mapper/$MAPPER"
       MOUNT="/mnt/usb-sync"
