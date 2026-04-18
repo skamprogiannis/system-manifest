@@ -80,7 +80,45 @@
       cp hyprglass.so $out/lib/hyprglass.so
     '';
   };
-  useHyprNav = config.system_manifest.navigation.wrapWorkspaces;
+
+  useHyprNav = config.system_manifest.navigation.wrapWorkspaces or false;
+  dmsBlurNamespaces = lib.concatStringsSep "|" [
+    "spotlight"
+    "app-launcher"
+    "notification-popup"
+    "toast"
+    "osd"
+    "control-center"
+    "notification-center-popout"
+    "notification-center-modal"
+    "clipboard-popout"
+    "clipboard-context-menu"
+    "dash"
+    "process-list-popout"
+    "workspace-overview"
+    "niri-overview-spotlight"
+    "power-menu"
+    "wifi-qrcode"
+    "color-picker"
+    "layout"
+    "system-update"
+    "battery"
+    "vpn"
+    "bluetooth-pairing"
+    "input-modal"
+    "confirm-modal"
+    "mux"
+    "filebrowser"
+    "network-info"
+    "keybinds"
+    "dock-context-menu"
+    "tray-overflow-menu"
+    "tray-menu-window"
+    "notepad-context-menu"
+    "modal"
+    "slideout"
+  ];
+
   navL =
     if useHyprNav
     then "exec, hypr-nav l"
@@ -422,10 +460,10 @@ in {
           light:adaptive_dim = 0.0
         }
 
-        # Give DMS overlays/popouts compositor blur without increasing the
-        # global blur strength for every window.
-        layerrule = match:namespace ^dms:(notification-popup|toast|osd|control-center|notification-center-popout|clipboard-popout|dash|process-list-popout|modal|slideout)$, blur on
-        layerrule = match:namespace ^dms:(notification-popup|toast|osd|control-center|notification-center-popout|clipboard-popout|dash|process-list-popout|modal|slideout)$, ignore_alpha 0.2
+        # Give DMS overlays/popouts compositor blur, including the spotlight
+        # launcher, without increasing the global blur strength for every window.
+        layerrule = match:namespace ^dms:(${dmsBlurNamespaces})$, blur on
+        layerrule = match:namespace ^dms:(${dmsBlurNamespaces})$, ignore_alpha 0.2
 
       '';
     };
