@@ -2,11 +2,25 @@
   pkgs,
   config,
   lib,
-  hostType ? null,
+  hostType ? "desktop",
   ...
-}: let
+}:
+assert lib.assertMsg (builtins.elem hostType ["desktop" "usb"]) "hostType must be \"desktop\" or \"usb\".";
+let
   translucenceThemeName = "Translucence.theme.css";
   legacyGeneratedThemeName = "transluence-matugen.theme.css";
+  vesktopEnabledThemes = [translucenceThemeName "skwd-matugen.css"];
+  vesktopEnabledThemesJson = builtins.toJSON vesktopEnabledThemes;
+  vesktopThemeEnforcementJson = builtins.toJSON {
+    plugins = {
+      ClientTheme = {
+        enabled = true;
+      };
+    };
+    enabledThemes = vesktopEnabledThemes;
+    useQuickCss = true;
+    transparent = true;
+  };
   vesktopLauncherIcon = "${pkgs.vesktop}/share/icons/hicolor/256x256/apps/vesktop.png";
 
   regenTransluenceTheme = pkgs.writeShellScriptBin "regen-vesktop-transluence-theme" ''
@@ -33,8 +47,12 @@
 import json
 import sys
 
-data = json.load(open(sys.argv[1], encoding="utf-8"))
-dark = data["colors"]["dark"]
+with open(sys.argv[1], encoding="utf-8") as fh:
+    data = json.load(fh)
+colors = data.get("colors")
+dark = colors.get("dark") if isinstance(colors, dict) else None
+if not isinstance(dark, dict):
+    raise SystemExit(1)
 required = (
     "error",
     "inverse_primary",
@@ -61,7 +79,10 @@ PY
       fi
     done
 
-    [ -n "$stable_hash" ] || exit 0
+    if [ -z "$stable_hash" ]; then
+      echo "regen-vesktop-transluence-theme: skipped because dms-colors.json never reached the expected schema" >&2
+      exit 0
+    fi
 
     accent_hue="220"
     accent_saturation="82%"
@@ -71,9 +92,16 @@ PY
 import json
 import sys
 
-data = json.load(open(sys.argv[1], encoding="utf-8"))
-dark = data["colors"]["dark"]
-print((dark.get("primary") or dark.get("primary_fixed_dim") or "").lstrip("#"))
+with open(sys.argv[1], encoding="utf-8") as fh:
+    data = json.load(fh)
+colors = data.get("colors")
+dark = colors.get("dark") if isinstance(colors, dict) else None
+if not isinstance(dark, dict):
+    raise SystemExit(1)
+primary = dark.get("primary") or dark.get("primary_fixed_dim") or ""
+if not isinstance(primary, str):
+    raise SystemExit(1)
+print(primary.lstrip("#"))
 PY
     )
 
@@ -100,8 +128,12 @@ PY
 import json
 import sys
 
-data = json.load(open(sys.argv[1], encoding="utf-8"))
-dark = data["colors"]["dark"]
+with open(sys.argv[1], encoding="utf-8") as fh:
+    data = json.load(fh)
+colors = data.get("colors")
+dark = colors.get("dark") if isinstance(colors, dict) else None
+if not isinstance(dark, dict):
+    raise SystemExit("Invalid DMS colors JSON schema")
 
 mapping = [
     ("--online-indicator", dark["inverse_primary"]),
@@ -238,7 +270,7 @@ EOF
       local dst="$2"
       if [ -f "$dst" ] && ${pkgs.diffutils}/bin/cmp -s "$src" "$dst"; then
         rm -f "$src"
-        return 1
+        return 0
       fi
       mv "$src" "$dst"
       return 0
@@ -249,7 +281,7 @@ EOF
       local dst="$2"
       if [ -f "$dst" ] && ${pkgs.diffutils}/bin/cmp -s "$src" "$dst"; then
         rm -f "$src"
-        return 1
+        return 0
       fi
       ${pkgs.coreutils}/bin/mkdir -p "$(${pkgs.coreutils}/bin/dirname "$dst")"
       ${pkgs.coreutils}/bin/cat "$src" > "$dst"
@@ -257,8 +289,8 @@ EOF
       return 0
     }
 
-    write_if_changed "$theme_tmp" "$OUT" || true
-    write_in_place_if_changed "$quickcss_tmp" "$QUICKCSS_OUT" || true
+    write_if_changed "$theme_tmp" "$OUT"
+    write_in_place_if_changed "$quickcss_tmp" "$QUICKCSS_OUT"
     cleanup_legacy_files
   '';
 
@@ -277,7 +309,7 @@ EOF
     disableAutostart = false;
     transparent = true;
     useQuickCss = true;
-    enabledThemes = [translucenceThemeName];
+    enabledThemes = vesktopEnabledThemes;
   };
 
   vesktopStateSync = pkgs.writeShellScript "vesktop-state-sync" ''
@@ -313,13 +345,13 @@ EOF
       if [ -s "$target" ] && ${pkgs.jq}/bin/jq empty "$target" >/dev/null 2>&1; then
         ${pkgs.jq}/bin/jq \
           '.plugins = ((.plugins // {}) + {"ClientTheme": ((.plugins.ClientTheme // {}) + {"enabled": true})})
-          | del(.plugins.ClientTheme.color)
-          | .enabledThemes = ["${translucenceThemeName}"]
-          | .useQuickCss = true
-          | .transparent = true' \
+           | del(.plugins.ClientTheme.color)
+           | .enabledThemes = ${vesktopEnabledThemesJson}
+           | .useQuickCss = true
+           | .transparent = true' \
           "$target" > "$tmp"
       else
-        printf '%s\n' '{"plugins":{"ClientTheme":{"enabled":true}},"enabledThemes":["${translucenceThemeName}"],"useQuickCss":true,"transparent":true}' > "$tmp"
+        printf '%s\n' '${vesktopThemeEnforcementJson}' > "$tmp"
       fi
 
       mv "$tmp" "$target"
