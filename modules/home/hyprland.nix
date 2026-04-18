@@ -80,7 +80,7 @@
       cp hyprglass.so $out/lib/hyprglass.so
     '';
   };
-  useHyprNav = config.system_manifest.navigation.wrapWorkspaces or false;
+  useHyprNav = config.system_manifest.navigation.wrapWorkspaces;
   navL =
     if useHyprNav
     then "exec, hypr-nav l"
@@ -116,7 +116,6 @@ in {
       hyprpolkitagent
       qt5.qtwayland
       qt6.qtwayland
-      swaybg
     ];
 
     wayland.windowManager.hyprland = {
@@ -158,7 +157,6 @@ in {
           ''sh -c 'wall=$(${pkgs.jq}/bin/jq -r ".wallpaperPath // empty" ~/.local/state/DankMaterialShell/session.json 2>/dev/null); [ -f "$wall" ] && swaybg -i "$wall" -m fill & BGPID=$!; sleep 8; kill $BGPID 2>/dev/null' ''
           "hyprctl setcursor ${config.home.pointerCursor.name} ${toString config.home.pointerCursor.size}"
           "${pkgs.hyprpolkitagent}/bin/hyprpolkitagent"
-          "systemctl --user start wallpaper-hook.service"
           "systemctl --user start transmission-daemon.service"
         ];
 

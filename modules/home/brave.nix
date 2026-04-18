@@ -1,9 +1,11 @@
 {
   pkgs,
   lib,
-  hostType ? null,
+  hostType ? "desktop",
   ...
-}: let
+}:
+assert lib.assertMsg (builtins.elem hostType ["desktop" "usb"]) "hostType must be \"desktop\" or \"usb\".";
+let
   vimiumCExtensionId = "hfjbmagddngcpeloejdejnfgbamkjaeg";
   vimiumCSeedLocalDir = ./brave/vimium-c/local-settings;
   vimiumCSeedSyncDir = ./brave/vimium-c/sync-settings;

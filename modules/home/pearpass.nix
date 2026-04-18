@@ -7,8 +7,16 @@
 }: let
   pearpassExtensionId = "pdeffakfmcdnjjafophphgmddmigpejh";
   pearpassNativeHostName = "com.pears.pass";
-
-  pearpassVersion = (builtins.fromJSON (builtins.readFile "${inputs.pearpass-app-desktop}/package.json")).version;
+  pearpassPackageJson = builtins.fromJSON (builtins.readFile "${inputs.pearpass-app-desktop}/package.json");
+  pearpassVersion =
+    let
+      version =
+        pearpassPackageJson.version
+        or (throw "pearpass-app-desktop/package.json is missing the version field");
+    in
+      if builtins.isString version
+      then version
+      else throw "pearpass-app-desktop/package.json version must be a string";
 
   pearpassSource = pkgs.fetchurl {
     url = "https://github.com/tetherto/pearpass-app-desktop/releases/download/v${pearpassVersion}/PearPass-Desktop-Linux-x64-v${pearpassVersion}.AppImage";
@@ -77,13 +85,13 @@
 
   # Launcher for the GUI App (Uses Clean Env)
   pearpassLauncher = pkgs.writeShellScriptBin "pearpass-gui" ''
-    # Restore our NixOS-compatible native messaging manifests before launch
+    # PearPass rewrites browser manifests, so restore the Nix-managed ones before launch.
     ${writeManifests}
 
-    # Launch PearPass (it may overwrite manifests during startup)
+    # PearPass may overwrite the manifests again while it runs.
     ${pearpassGUIEnv}/bin/pearpass-gui-env "$@"
 
-    # Restore manifests again after PearPass exits
+    # Restore the Nix-managed manifests after exit as well.
     ${writeManifests}
   '';
 
