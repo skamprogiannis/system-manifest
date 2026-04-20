@@ -20,9 +20,8 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    wallpaper-selector = {
-      url = "github:skamprogiannis/wallpaper-selector";
-      flake = false;
+    skwd-wall = {
+      url = "github:liixini/skwd-wall";
     };
 
     pearpass-app-desktop = {
@@ -82,9 +81,7 @@
       desktopHome = self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.path;
       usbHome = self.nixosConfigurations.usb.config.home-manager.users.stefan.home.path;
       shellcheckScripts = [
-        "${desktopHome}/bin/.wallpaper-hook"
         "${desktopHome}/bin/copilot-sessions-sync"
-        "${desktopHome}/bin/dms-restore-wallpaper"
         "${desktopHome}/bin/gsr-record"
         "${desktopHome}/bin/hypr-nav"
         "${desktopHome}/bin/hypr-quit-active"
@@ -93,13 +90,8 @@
         "${desktopHome}/bin/spotify_player"
         "${desktopHome}/bin/transmission-port-sync"
         "${desktopHome}/bin/update-usb"
-        "${desktopHome}/bin/wallpaper-apply"
-        "${desktopHome}/bin/wallpaper-engine-sync"
-        "${desktopHome}/bin/wallpaper-library-sync"
-        "${desktopHome}/bin/wallpaper-selector"
         "${desktopHome}/bin/zellij-sessionizer"
         "${usbHome}/bin/spotify_player"
-        "${usbHome}/bin/wallpaper-selector"
       ];
     in {
       desktop = self.nixosConfigurations.desktop.config.system.build.toplevel;
@@ -151,15 +143,6 @@
 
         run_expect 1 update-usb-invalid-mode "$desktop_home/bin/update-usb" --mode nope
         assert_log_contains "Error: invalid mode 'nope'."
-
-        run_expect 2 wallpaper-engine-sync-invalid-option "$desktop_home/bin/wallpaper-engine-sync" --bogus
-        assert_log_contains "Unknown option: --bogus"
-
-        run_expect 1 wallpaper-library-sync-no-repo "$desktop_home/bin/wallpaper-library-sync"
-        assert_log_contains "No git repo found"
-
-        run_expect 1 wallpaper-apply-usage "$desktop_home/bin/wallpaper-apply"
-        assert_log_contains "Usage:"
 
         run_expect 0 gsr-record-help "$desktop_home/bin/gsr-record" --help
         assert_log_contains "Usage: gsr-record"

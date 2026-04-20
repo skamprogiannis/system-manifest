@@ -191,8 +191,6 @@ in {
         ];
 
         exec-once = [
-          # Instant static wallpaper while DMS loads; killed after 8s
-          ''sh -c 'wall=$(${pkgs.jq}/bin/jq -r ".wallpaperPath // empty" ~/.local/state/DankMaterialShell/session.json 2>/dev/null); [ -f "$wall" ] && swaybg -i "$wall" -m fill & BGPID=$!; sleep 8; kill $BGPID 2>/dev/null' ''
           "hyprctl setcursor ${config.home.pointerCursor.name} ${toString config.home.pointerCursor.size}"
           "${pkgs.hyprpolkitagent}/bin/hyprpolkitagent"
           "systemctl --user start transmission-daemon.service"
@@ -407,7 +405,7 @@ in {
           "$mod, Escape, exec, dms ipc call lock lock"
           "$mod, s, exec, dms ipc call settings toggle"
           "$mod, q, exec, dms ipc call powermenu toggle"
-          "$mod, w, exec, wallpaper-selector"
+          "$mod, w, exec, skwd wall toggle"
           "$mod SHIFT, w, exec, dms ipc call dash toggle wallpaper"
           "$mod SHIFT, o, exec, dms ipc call dash toggle overview"
           "$mod SHIFT, m, exec, dms ipc call dash toggle media"
@@ -424,8 +422,6 @@ in {
           "float 1, match:class ^(pinentry|pinentry-gtk-2|pinentry-gnome3|ssh-askpass|git-askpass)$"
           "center 1, match:class ^(pinentry|pinentry-gtk-2|pinentry-gnome3|ssh-askpass|git-askpass)$"
           "size 400 200, match:class ^(pinentry|pinentry-gtk-2|pinentry-gnome3|ssh-askpass|git-askpass)$"
-          # Hide WE screenshot windows (wallpaper-engine-sync offscreen rendering)
-          "workspace special:wesync silent, match:title ^(wallpaperengine)$"
         ];
 
         bindm = [

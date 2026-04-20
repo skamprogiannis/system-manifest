@@ -151,6 +151,9 @@ in {
 
   # Allow user-triggered greeter sync helpers to access greeter-managed assets.
   users.users.${greeterUser}.extraGroups = lib.mkAfter ["greeter"];
+  systemd.tmpfiles.rules = [
+    "d /var/cache/dms-greeter 2775 root greeter - -"
+  ];
 
   # Keep avatar files and AccountsService profile in sync for the greeter.
   system.activationScripts.accountsServiceAvatar = lib.stringAfter ["users"] ''

@@ -24,8 +24,7 @@
     ./modules/home/spotify.nix
     ./modules/home/zellij.nix
     ./modules/home/scripts
-    ./modules/home/wallpaper
-    ./modules/home/wallpaper-selector.nix
+    ./modules/home/skwd-wall.nix
     ./modules/home/cursors.nix
     ./modules/home/vesktop.nix
     ./modules/home/keyring.nix

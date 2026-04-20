@@ -118,65 +118,41 @@ At the lab: `copilot --resume` to pick up synced sessions.
 
 ## Wallpaper System Architecture
 
-The wallpaper stack has two independent renderers layered via `wlr-layer-shell`:
+Wallpaper selection and theming are handled by [skwd-wall](https://github.com/liixini/skwd-wall), a Quickshell-based selector with a Rust daemon backend.
 
-1. **linux-wallpaperengine (WE)** — renders live/animated wallpapers as a Wayland layer-shell surface at `Background` level. Managed by `linux-wallpaperengine.service`. Configured via environment variables `WE_WALLPAPER_DIR` and `WE_ASSETS_DIR`.
-2. **DMS wallpaper** — renders static images as a Quickshell `PanelWindow` at `WlrLayer.Background`. Also triggers **matugen** color generation when set via `dms ipc wallpaper set`.
+### Key components
 
-**Z-order:** WE's layer surface is created *after* DMS, so WE paints ON TOP of DMS. When WE is running, the DMS wallpaper is invisible behind it.
+| Component | Purpose |
+|-----------|---------|
+| `skwd-wall` | GUI selector (Quickshell) with slice/grid/hex display modes |
+| `skwd-daemon` | Systemd user service — wallpaper lifecycle, boot restore, matugen |
+| `skwd` | CLI interface to the daemon |
+| `awww` | Static wallpaper renderer (wlr-layer-shell) |
+| `mpvpaper` | Video wallpaper renderer |
+| `linux-wallpaperengine` | Wallpaper Engine scene renderer |
 
-### Key files
+### Config
 
-| File | What it contains |
-|------|-----------------|
-| `modules/home/wallpaper-selector.nix` | `wallpaper-apply` unified script (static/dynamic/audio subcommands), wallpaper-selector launcher, QML Theme.qml |
-| `modules/home/wallpaper/default.nix` | Entry point wiring the split wallpaper stack into Home Manager |
-| `modules/home/wallpaper/common.nix` | Shared path constants (`MAP_FILE`, `WE_ASSETS`, `WE_WORKSHOP`, `WE_DEFAULTS_ROOT`, `WALL_DIR`) and `normalize_dir()` |
-| `modules/home/wallpaper/services.nix` / `hook.nix` / `engine-sync.nix` | WE services, wallpaper-hook daemon, and thumbnail generation logic |
-| `modules/home/dms/default.nix` / `usb.nix` | Shared DMS configuration plus USB-specific overrides and patching |
-| Fork: `github.com/skamprogiannis/wallpaper-selector` | QML UI (`Selector.qml`), playlist daemon script |
+Declared in `modules/home/skwd-wall.nix`. Config is generated at `~/.config/skwd-wall/config.json` via Home Manager. Custom matugen templates are merged with bundled ones into a Nix store path.
 
-### Scripts in PATH (4 total)
+### Matugen integrations
 
-| Script | Purpose |
-|--------|---------|
-| `wallpaper-apply` | Unified entry point: `wallpaper-apply static <image>`, `wallpaper-apply dynamic <dir>`, `wallpaper-apply audio mute\|unmute` |
-| `wallpaper-selector` | Launches the Quickshell wallpaper picker UI |
-| `wallpaper-playlist` | Background daemon for timed wallpaper rotation |
-| `wallpaper-engine-sync` | Generates thumbnails from WE workshop folders (multi-strategy: offscreen GL → middle-frame extraction → author preview.jpg) |
+| Integration | Template | Output |
+|-------------|----------|--------|
+| `skwd-wall` | `quickshell-colors.json` | Shell UI colors |
+| `hyprland-dms` | `hyprland-dms-colors.conf` | `~/.config/hypr/dms/colors.conf` (DMS + Hyprland borders) |
+| `zathura` | `zathura-colors` | `~/.config/zathura/skwd-colors` (included from zathurarc) |
+| `vesktop` | `vesktop.css` | `~/.config/vesktop/themes/skwd-matugen.css` |
 
-### Transition ordering (critical)
+### DMS interaction
 
-When switching wallpapers, always **set DMS before restarting/stopping WE**:
-
-- **Dynamic→Dynamic:** Set new DMS thumbnail first (invisible behind running WE), then `systemctl restart` WE. The brief restart gap shows the correct new thumbnail.
-- **Dynamic→Static:** Set new static wallpaper in DMS first (invisible behind WE), then stop WE. DMS reveals the correct wallpaper.
-- **Static→Dynamic:** Set DMS thumbnail, then start WE. WE eventually paints over DMS.
-
-The DMS thumbnail MUST always be set because that's the only way to trigger **matugen** color generation.
-
-### wallpaper-hook daemon
-
-Runs as a systemd user service, polls `dms ipc wallpaper get` every 2s. Responsibilities:
-- Boot restore: detects last wallpaper from DMS, starts WE if dynamic
-- Wallpaper change detection: restarts WE when DMS wallpaper changes (skip if WE already running with same dir)
-- Theme sync: monitors `~/.config/hypr/dms/colors.conf` and regenerates Zathura, Vesktop, and other app themes
-
-### Thumbnail generation (`wallpaper-engine-sync`)
-
-Multi-strategy fallback for each workshop wallpaper:
-1. **Video type:** Extract middle frame via `ffmpegthumbnailer` → author `preview.jpg` → offscreen GL render
-2. **Scene type:** Offscreen GL render (5s delay, retry at 8s) → author `preview.jpg`
-
-`normalize_thumb()` scales to 1920×1080. For small sources (<640px wide) or non-16:9 aspect ratios, it letterboxes on a blurred background instead of aggressive crop+zoom.
-
-Thumbnails are stored in `~/wallpapers/.wallpaper-engine/` with a JSON map at `~/.cache/we-wallpaper-map.json`.
+- `awww` renders wallpapers via wlr-layer-shell at Background level, painting on top of DMS's PanelWindow
+- Matugen generates `colors.conf` → DMS sources it for Hyprland color variables
+- `Super+Shift+W` (`dms ipc call dash toggle wallpaper`) still toggles the DMS wallpaper dashboard widget
 
 ### DMS IPC reference
 
 ```bash
-dms ipc wallpaper set <path>      # Set wallpaper + trigger matugen
-dms ipc wallpaper get              # Get current wallpaper path
 dms ipc call dash toggle <tab>     # Toggle dash widget (wallpaper|overview|media|weather)
 dms ipc call spotlight toggle      # App launcher
 dms ipc call clipboard toggle      # Clipboard manager
@@ -188,15 +164,3 @@ dms ipc call hypr toggleOverview   # Workspace overview
 dms ipc call mpris playPause       # Media control
 dms ipc call notifications clearAll  # Clear all notifications
 ```
-
-### Wallpaper-selector QML (fork)
-
-Custom features on top of upstream (`Aino-Chan/wallpaper-selector`):
-- Vim keybinds (hjkl navigation)
-- Monitor scoping (multi-monitor via Hyprland.focusedMonitor)
-- DMS theme tracking (reads `colors.conf` instead of pywal `colors.json`)
-- Content filtering (mature content toggle)
-- Configurable card dimensions (`:width`, `:height`, `:spacing`, `:scale` commands)
-- Hover tracking with `hoveredIndex` state management
-
-The QML calls `wallpaper-apply` directly with mode argument (no `.sh` shim wrappers).

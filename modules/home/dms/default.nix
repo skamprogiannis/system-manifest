@@ -439,6 +439,9 @@ in {
       matugenScheme = "scheme-fidelity";
       matugenPaletteFidelity = 1;
       widgetColorMode = "colorful";
+      blurEnabled = true;
+      blurBorderColor = "primary";
+      blurBorderOpacity = 0.60;
       popupTransparency = 0.60;
       notepadTransparencyOverride = 0.70;
       systemMonitorTransparency = 0.70;

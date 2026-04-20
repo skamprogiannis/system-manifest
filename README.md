@@ -35,7 +35,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 | `home-manager` | `github:nix-community/home-manager` | Tracks nixpkgs-unstable |
 | `nixvim` | `github:nix-community/nixvim` | Full Neovim config in Nix |
 | `spotify-player` | `github:aome510/spotify-player` | Picks up latest client fixes before nixpkgs |
-| `wallpaper-selector` | `github:skamprogiannis/wallpaper-selector` | Forked Quickshell wallpaper selector source, wrapped declaratively in Home Manager |
+| `skwd-wall` | `github:liixini/skwd-wall` | Quickshell wallpaper selector with built-in matugen, Wallhaven, Steam Workshop, and color sorting |
 | `pearpass-app-desktop` | `github:tetherto/pearpass-app-desktop` | PearPass AppImage source for NixOS wrapper |
 | `visual-explainer` | `github:nicobailon/visual-explainer` | HTML visualization generator for architecture diagrams and code explanations |
 | `impeccable` | `github:pbakaus/impeccable` | Frontend design skill with 20 commands for typography, color, layout, and motion |
@@ -46,7 +46,8 @@ Packages tracked independently of nixpkgs for tighter version control:
 ## Workflow & UI
 
 - **Glassmorphism Aesthetics:** Ghostty uses `background-opacity = 0.40` (native RGBA) so the terminal background is near-transparent while text stays fully opaque, giving a liquid-glass terminal. GTK4 popover styling also softens the Ghostty context menu with a lighter outer border and more translucency. The hyprglass Hyprland plugin is active for blur/tint/refraction effects on transparent surfaces.
-- **Dynamic Theming:** Wallpaper-driven Matugen theming keeps Hyprland, GTK, and supported apps visually in sync across desktop and USB profiles.
+- **Dynamic Theming:** Wallpaper-driven Matugen theming via [skwd-wall](https://github.com/liixini/skwd-wall) keeps Hyprland, Zathura, Vesktop, and DMS visually in sync. skwd-wall's built-in matugen generates Material Design 3 color tokens on each wallpaper change, and the current wallpaper cache is reused to keep DMS and the greeter aligned during switches.
+- **skwd-wall State:** `skwd-wall` UI settings write to `~/.config/skwd-wall/config.json`, but each Home Manager activation resets that file back to the declarative defaults from Nix. Local API keys can live outside git in `~/.config/skwd-wall/secrets.env`.
 - **Zellij Navigation:** `Alt`-based keybindings for all multiplexer actions; `Escape` exits any mode back to Normal and is unbound in Normal mode so it passes through to terminal apps (Vim, Copilot CLI, etc.).
 - **Keyboard Layout:** `us altgr-intl` + `gr simple`. `Super+Space` toggles layouts.
 - **Window Controls:** Super-based Hyprland keybindings cover moving, resizing, monitor focus, and monitor-to-monitor window moves.
@@ -67,11 +68,6 @@ Packages tracked independently of nixpkgs for tighter version control:
 |--------|-------------|
 | `zellij-sessionizer` | Zellij sessionizer — fuzzy-find a project and attach or create a dev session with Neovim and Copilot workflow tabs (`zs` is the short alias) |
 | `screenshot-path-copy` | Wraps `dms screenshot` to copy the saved file path to clipboard (instead of image) |
-| `wallpaper-hook` | Daemon: picks wallpaper via linux-wallpaperengine, extracts palette via Matugen, reloads Hyprland border and GTK4 colours |
-| `wallpaper-selector` | Toggle wallpaper selector UI (`open` can force-open for scripts) |
-| `wallpaper-apply` | Internal apply entrypoint used by selector/playlist scripts (`static` or `dynamic`) |
-| `wallpaper-engine-sync` | Syncs Wallpaper Engine wallpapers into `~/wallpapers/wallpaper-engine` and updates selector assets |
-| `wallpaper-library-sync` | Clones/fetches/resets the static wallpapers repo rooted at `~/wallpapers` and keeps generated `.wallpaper-engine/` assets ignored |
 | `hypr-nav` | Hyprland focus movement with workspace wrapping at boundaries |
 | `hypr-quit-active` | Force-quits the active app process when a client minimizes to tray instead of exiting |
 | `gsr-record` | Toggles GPU Screen Recorder for region, focused monitor, or active-window capture and saves clips under `~/videos/screencasts` |

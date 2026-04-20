@@ -147,6 +147,46 @@ let
         'targetColor: Theme.withAlpha(Theme.surfaceContainer, root.layerNamespace === "dms:dash" ? Math.max(0.0, Theme.popupTransparency - 0.12) : Theme.popupTransparency)',
     ),
   '';
+
+  popoutBorderFallback = ''
+    (
+        "                border.width: BlurService.borderWidth",
+        "                border.width: BlurService.enabled ? BlurService.borderWidth : 1",
+    ),
+  '';
+
+  modalBorderFallback = ''
+    (
+        "                        border.color: BlurService.borderColor",
+        "                        border.color: BlurService.enabled ? BlurService.borderColor : Theme.outlineMedium",
+    ),
+    (
+        "                        border.width: BlurService.borderWidth",
+        "                        border.width: BlurService.enabled ? BlurService.borderWidth : 1",
+    ),
+  '';
+
+  launcherBorderFallback = ''
+    (
+        "                border.color: BlurService.borderColor",
+        "                border.color: BlurService.enabled ? BlurService.borderColor : root.borderColor",
+    ),
+    (
+        "                border.width: BlurService.borderWidth",
+        "                border.width: BlurService.enabled ? BlurService.borderWidth : root.borderWidth",
+    ),
+  '';
+
+  notificationPopupBorderFallback = ''
+    (
+        "            border.color: BlurService.borderColor",
+        '            border.color: BlurService.enabled ? BlurService.borderColor : Qt.rgba(Theme.outline.r, Theme.outline.g, Theme.outline.b, 0.12)',
+    ),
+    (
+        "            border.width: BlurService.borderWidth",
+        "            border.width: BlurService.enabled ? BlurService.borderWidth : 1",
+    ),
+  '';
 in {
   pythonPrelude = ''
     settings_shell_alpha = "Math.min(1.0, Theme.popupTransparency + 0.08)"
@@ -165,6 +205,16 @@ in {
     ${systemMonitorVariantCard}
     root / "Widgets/DankPopout.qml": [
       ${dankPopoutBase}
+      ${popoutBorderFallback}
+    ],
+    root / "Modals/Common/DankModal.qml": [
+      ${modalBorderFallback}
+    ],
+    root / "Modals/DankLauncherV2/DankLauncherV2Modal.qml": [
+      ${launcherBorderFallback}
+    ],
+    root / "Modules/Notifications/Popup/NotificationPopup.qml": [
+      ${notificationPopupBorderFallback}
     ],
     ${overviewCard}
     ${calendarOverviewCard}
@@ -189,20 +239,16 @@ in {
     ${systemMonitorVariantCard}
     root / "Widgets/DankPopout.qml": [
       ${dankPopoutBase}
-        (
-            "                border.width: BlurService.borderWidth",
-            "                border.width: BlurService.enabled ? BlurService.borderWidth : 1",
-        ),
+      ${popoutBorderFallback}
+    ],
+    root / "Modals/Common/DankModal.qml": [
+      ${modalBorderFallback}
     ],
     root / "Modals/DankLauncherV2/DankLauncherV2Modal.qml": [
-        (
-            "                border.color: BlurService.borderColor",
-            "                border.color: BlurService.enabled ? BlurService.borderColor : root.borderColor",
-        ),
-        (
-            "                border.width: BlurService.borderWidth",
-            "                border.width: BlurService.enabled ? BlurService.borderWidth : root.borderWidth",
-        ),
+      ${launcherBorderFallback}
+    ],
+    root / "Modules/Notifications/Popup/NotificationPopup.qml": [
+      ${notificationPopupBorderFallback}
     ],
     ${overviewCard}
     ${calendarOverviewCard}

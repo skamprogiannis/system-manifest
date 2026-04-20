@@ -9,7 +9,7 @@ assert lib.assertMsg (builtins.elem hostType ["desktop" "usb"]) "hostType must b
 let
   translucenceThemeName = "Translucence.theme.css";
   legacyGeneratedThemeName = "transluence-matugen.theme.css";
-  vesktopEnabledThemes = [translucenceThemeName "skwd-matugen.css"];
+  vesktopEnabledThemes = [translucenceThemeName];
   vesktopEnabledThemesJson = builtins.toJSON vesktopEnabledThemes;
   vesktopThemeEnforcementJson = builtins.toJSON {
     plugins = {
@@ -30,7 +30,7 @@ let
     SETTINGS_DIR="$HOME/.config/vesktop/settings"
     OUT="$THEME_DIR/${translucenceThemeName}"
     QUICKCSS_OUT="$SETTINGS_DIR/quickCss.css"
-    SRC_JSON="$HOME/.cache/DankMaterialShell/dms-colors.json"
+    SRC_JSON="$HOME/.cache/skwd-wall/colors.json"
     OVERLAY_STORE="${./vesktop/transluence-matugen.overlay.css}"
 
     mkdir -p "$THEME_DIR" "$SETTINGS_DIR"
@@ -49,28 +49,22 @@ import sys
 
 with open(sys.argv[1], encoding="utf-8") as fh:
     data = json.load(fh)
-colors = data.get("colors")
-dark = colors.get("dark") if isinstance(colors, dict) else None
-if not isinstance(dark, dict):
-    raise SystemExit(1)
 required = (
     "error",
-    "inverse_primary",
-    "on_primary",
-    "on_surface",
-    "on_surface_variant",
+    "inversePrimary",
+    "onPrimary",
     "outline",
     "primary",
-    "primary_fixed_dim",
+    "primaryContainer",
+    "surfaceText",
+    "surfaceVariantText",
     "surface",
-    "surface_bright",
-    "surface_container_high",
-    "surface_container_low",
-    "surface_variant",
+    "surfaceContainer",
+    "surfaceVariant",
     "tertiary",
-    "tertiary_container",
+    "tertiaryContainer",
 )
-missing = [key for key in required if key not in dark]
+missing = [key for key in required if key not in data]
 raise SystemExit(0 if not missing else 1)
 PY
       then
@@ -80,7 +74,7 @@ PY
     done
 
     if [ -z "$stable_hash" ]; then
-      echo "regen-vesktop-transluence-theme: skipped because dms-colors.json never reached the expected schema" >&2
+      echo "regen-vesktop-transluence-theme: skipped because skwd-wall colors.json never reached the expected schema" >&2
       exit 0
     fi
 
@@ -94,11 +88,7 @@ import sys
 
 with open(sys.argv[1], encoding="utf-8") as fh:
     data = json.load(fh)
-colors = data.get("colors")
-dark = colors.get("dark") if isinstance(colors, dict) else None
-if not isinstance(dark, dict):
-    raise SystemExit(1)
-primary = dark.get("primary") or dark.get("primary_fixed_dim") or ""
+primary = data.get("primary") or data.get("primaryContainer") or ""
 if not isinstance(primary, str):
     raise SystemExit(1)
 print(primary.lstrip("#"))
@@ -130,36 +120,51 @@ import sys
 
 with open(sys.argv[1], encoding="utf-8") as fh:
     data = json.load(fh)
-colors = data.get("colors")
-dark = colors.get("dark") if isinstance(colors, dict) else None
-if not isinstance(dark, dict):
-    raise SystemExit("Invalid DMS colors JSON schema")
+required = (
+    "background",
+    "error",
+    "inversePrimary",
+    "onPrimary",
+    "outline",
+    "primary",
+    "primaryContainer",
+    "surface",
+    "surfaceContainer",
+    "surfaceText",
+    "surfaceVariant",
+    "surfaceVariantText",
+    "tertiary",
+    "tertiaryContainer",
+)
+missing = [key for key in required if key not in data]
+if missing:
+    raise SystemExit("Invalid skwd-wall colors JSON schema")
 
 mapping = [
-    ("--online-indicator", dark["inverse_primary"]),
-    ("--dnd-indicator", dark["error"]),
-    ("--idle-indicator", dark["tertiary_container"]),
-    ("--streaming-indicator", dark["on_primary"]),
-    ("--accent-1", dark["tertiary"]),
-    ("--accent-2", dark["primary"]),
-    ("--accent-3", dark["primary"]),
-    ("--accent-4", dark["surface_bright"]),
-    ("--accent-5", dark["primary_fixed_dim"]),
-    ("--mention", dark["surface"]),
-    ("--mention-hover", dark["surface_bright"]),
-    ("--text-0", dark["surface"]),
-    ("--text-1", dark["on_surface"]),
-    ("--text-2", dark["on_surface"]),
-    ("--text-3", dark["on_surface_variant"]),
-    ("--text-4", dark["on_surface_variant"]),
-    ("--text-5", dark["outline"]),
-    ("--bg-1", dark["surface_variant"]),
-    ("--bg-2", dark["surface_container_high"]),
-    ("--bg-3", dark["surface_container_low"]),
-    ("--bg-4", dark["surface"]),
-    ("--hover", dark["surface_bright"]),
-    ("--active", dark["surface_bright"]),
-    ("--message-hover", dark["surface_bright"]),
+    ("--online-indicator", data["inversePrimary"]),
+    ("--dnd-indicator", data["error"]),
+    ("--idle-indicator", data["tertiaryContainer"]),
+    ("--streaming-indicator", data["onPrimary"]),
+    ("--accent-1", data["tertiary"]),
+    ("--accent-2", data["primary"]),
+    ("--accent-3", data["primary"]),
+    ("--accent-4", data["surfaceContainer"]),
+    ("--accent-5", data["primaryContainer"]),
+    ("--mention", data["surface"]),
+    ("--mention-hover", data["surfaceContainer"]),
+    ("--text-0", data["surface"]),
+    ("--text-1", data["surfaceText"]),
+    ("--text-2", data["surfaceText"]),
+    ("--text-3", data["surfaceVariantText"]),
+    ("--text-4", data["surfaceVariantText"]),
+    ("--text-5", data["outline"]),
+    ("--bg-1", data["surfaceVariant"]),
+    ("--bg-2", data["surfaceContainer"]),
+    ("--bg-3", data["surface"]),
+    ("--bg-4", data["background"]),
+    ("--hover", data["surfaceContainer"]),
+    ("--active", data["surfaceContainer"]),
+    ("--message-hover", data["surfaceContainer"]),
 ]
 
 for name, value in mapping:
@@ -234,7 +239,7 @@ EOF
     cat "$OVERLAY_STORE" >> "$theme_tmp"
 
     cat > "$quickcss_tmp" <<EOF
-/* Source hash: $src_hash (dms-colors.json, DMS Vesktop token mapping) */
+/* Source hash: $src_hash (~/.cache/skwd-wall/colors.json, skwd-wall Vesktop token mapping) */
 
 /* ----- QuickCSS source vars for the static Translucence bridge ----- */
 :root {
@@ -261,6 +266,7 @@ EOF
         "$THEME_DIR/.transluence-matugen.palette.css" \
         "$THEME_DIR/.transluence-matugen.overlay.css" \
         "$THEME_DIR/dank-discord.css" \
+        "$THEME_DIR/skwd-matugen.css" \
         "$THEME_DIR/${legacyGeneratedThemeName}" \
         "$THEME_DIR/${legacyGeneratedThemeName}.backup"
     }
@@ -292,6 +298,11 @@ EOF
     write_if_changed "$theme_tmp" "$OUT"
     write_in_place_if_changed "$quickcss_tmp" "$QUICKCSS_OUT"
     cleanup_legacy_files
+  '';
+
+  vesktopReloadHook = pkgs.writeShellScript "reload-vesktop.sh" ''
+    set -euo pipefail
+    ${regenTransluenceTheme}/bin/regen-vesktop-transluence-theme
   '';
 
   vesktopSettingsPatch = builtins.toJSON {
@@ -381,6 +392,8 @@ in {
   home.activation.syncVesktopThemeState = lib.hm.dag.entryAfter ["writeBoundary"] ''
     ${vesktopStateSync}
   '';
+
+  xdg.configFile."skwd-wall/scripts/reload-vesktop.sh".source = vesktopReloadHook;
 
   xdg.desktopEntries.vesktop = {
     name = "Vesktop";

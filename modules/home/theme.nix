@@ -105,7 +105,12 @@ in {
     };
     yazi = {
       name = "Yazi";
-      noDisplay = true;
+      genericName = "Terminal File Manager";
+      comment = "Browse files in Yazi using Ghostty";
+      exec = "ghostty -e yazi";
+      icon = "system-file-manager";
+      terminal = false;
+      categories = ["System" "Utility" "FileManager"];
     };
     khal = {
       name = "ikhal";
