@@ -91,6 +91,17 @@
     ACTION=="add", SUBSYSTEM=="usb", ATTR{product}=="*Mouse*", ATTR{power/wakeup}="disabled"
   '';
 
+  # Ollama (local LLMs on the RTX 3080)
+  services.ollama = {
+    enable = true;
+    package = pkgs.ollama-cuda;
+    loadModels = [
+      "qwen2.5-coder:14b"
+      "llama3.2-vision"
+      "gemma3:4b"
+    ];
+  };
+
   # Enable Steam & Gamemode
   programs.steam = {
     enable = true;

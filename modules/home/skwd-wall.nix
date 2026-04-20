@@ -1251,7 +1251,7 @@ PY
     };
     features = {
       matugen = true;
-      ollama = false;
+      ollama = true;
       steam = true;
       wallhaven = true;
     };
