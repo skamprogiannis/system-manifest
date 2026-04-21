@@ -569,7 +569,38 @@ selector_service_text = replace_all(
     var targetScreens = (screens && screens.length > 0)
       ? screens
       : Quickshell.screens.map(function(s) { return s.name })
-    DaemonClient.applyWE(id, targetScreens)
+    _pendingWeId = id
+    _pendingWeScreens = targetScreens
+    _preApplyWE.command = ["sh", "-c",
+      "SKWD_SYNC_FORCE_WE_ID=" + JSON.stringify(id) +
+      " SKWD_SYNC_SKIP_GREETER=1 " +
+      JSON.stringify(scriptsDir + "/sync-dms-wallpaper.sh")]
+    _preApplyWE.running = true
+  }""",
+)
+selector_service_text = replace_all(
+    selector_service_text,
+    """  function applyVideo(path, outputs) {
+    DaemonClient.applyVideo(path, outputs)
+  }""",
+    """  function applyVideo(path, outputs) {
+    DaemonClient.applyVideo(path, outputs)
+  }
+
+  property string _pendingWeId: ""
+  property var _pendingWeScreens: []
+  property var _preApplyWE: Process {
+    id: preApplyWE
+    command: ["bash", "-c", "true"]
+    onExited: {
+      if (!service._pendingWeId)
+        return
+      var pendingId = service._pendingWeId
+      var pendingScreens = service._pendingWeScreens
+      service._pendingWeId = ""
+      service._pendingWeScreens = []
+      DaemonClient.applyWE(pendingId, pendingScreens)
+    }
   }""",
 )
 selector_service_text = replace_all(
@@ -1085,6 +1116,26 @@ apply_text = replace_all(
 )
 apply_text = replace_all(
     apply_text,
+    '            screenArgs += " --screen-root " + mons[i] + " --scaling fill"',
+    '            screenArgs += " --screen-root " + mons[i]',
+)
+apply_text = replace_all(
+    apply_text,
+    '        var audioFlag = service.wallpaperMute ? "--silent" : ""',
+    '        var audioFlag = service.wallpaperMute ? " --silent" : ""',
+)
+apply_text = replace_all(
+    apply_text,
+    '            " --no-fullscreen-pause --noautomute" + screenArgs +',
+    '            screenArgs +',
+)
+apply_text = replace_all(
+    apply_text,
+    '            " --clamp border" +',
+    "",
+)
+apply_text = replace_all(
+    apply_text,
     '"cp " + JSON.stringify(path) + " " + JSON.stringify(cacheDir + "/wallpaper/current.jpg") + " 2>/dev/null; " +',
     '"${pkgs.imagemagick}/bin/magick " + JSON.stringify(path) + " -auto-orient -strip -background black -alpha remove -alpha off -quality 92 " + JSON.stringify("jpg:" + cacheDir + "/wallpaper/current.jpg.tmp") + " 2>/dev/null && mv -f " + JSON.stringify(cacheDir + "/wallpaper/current.jpg.tmp") + " " + JSON.stringify(cacheDir + "/wallpaper/current.jpg") + "; " +',
 )
@@ -1351,6 +1402,171 @@ PY
       chmod 600 "$secrets_file"
     fi
   '';
+  skwdWeCaptureStill = pkgs.writeShellScriptBin "skwd-we-capture-still" ''
+    set -euo pipefail
+
+    assets_dir="${steamWeAssetsDir}"
+    workshop_dir="${steamWorkshopDir}"
+    cache_dir="$HOME/.cache/skwd-wall/wallpaper/we-captures"
+    state_file="$HOME/.cache/skwd-wall/last-wallpaper.json"
+
+    usage() {
+      cat <<'EOF'
+Usage: skwd-we-capture-still [--current] [--current-live] <we-id>
+
+Capture a 1920x1080 still image for a Wallpaper Engine item and store it at:
+  ~/.cache/skwd-wall/wallpaper/we-captures/<we-id>.jpg
+
+Options:
+  --current       Capture by the currently selected WE wallpaper ID using offscreen render
+  --current-live  Capture the currently visible monitor output with grim after a short delay
+EOF
+    }
+
+    thumb_is_near_black() {
+      local thumb="$1"
+      [ -f "$thumb" ] || return 1
+      local brightness=""
+      brightness=$(${pkgs.imagemagick}/bin/magick "''${thumb}[0]" \
+        -colorspace Gray -resize 1x1\! -depth 8 gray:- 2>/dev/null \
+        | ${pkgs.coreutils}/bin/od -An -tu1 \
+        | ${pkgs.gawk}/bin/awk 'NF { print $1; exit }')
+      [ -n "$brightness" ] || return 1
+      [ "$brightness" -le 3 ]
+    }
+
+    resolve_current_we_id() {
+      ${pkgs.python3}/bin/python3 <<'PY'
+from pathlib import Path
+import json
+state = Path.home() / ".cache" / "skwd-wall" / "last-wallpaper.json"
+if not state.exists():
+    raise SystemExit(1)
+data = json.loads(state.read_text())
+wid = data.get("we_id")
+if isinstance(wid, str) and wid.isdigit():
+    print(wid)
+    raise SystemExit(0)
+raise SystemExit(1)
+PY
+    }
+
+    we_id=""
+    capture_mode="offscreen"
+    case "''${1:-}" in
+      --current)
+        we_id="$(resolve_current_we_id)"
+        ;;
+      --current-live)
+        we_id="$(resolve_current_we_id)"
+        capture_mode="live"
+        ;;
+      -h|--help|"")
+        usage
+        [ "$#" -gt 0 ] || exit 1
+        exit 0
+        ;;
+      *)
+        we_id="$1"
+        ;;
+    esac
+
+    if ! [[ "$we_id" =~ ^[0-9]+$ ]]; then
+      echo "skwd-we-capture-still: invalid we-id: $we_id" >&2
+      exit 2
+    fi
+
+    we_dir="$workshop_dir/$we_id"
+    if [ ! -d "$we_dir" ]; then
+      echo "skwd-we-capture-still: missing workshop dir: $we_dir" >&2
+      exit 1
+    fi
+
+    mkdir -p "$cache_dir"
+    dst="$cache_dir/$we_id.jpg"
+    tmp_png=$(mktemp /tmp/skwd-we-capture-XXXXXX.png)
+    tmp_jpg=$(mktemp /tmp/skwd-we-capture-XXXXXX.jpg)
+    trap 'rm -f "$tmp_png" "$tmp_jpg"' EXIT
+
+    capture_live_monitor() {
+      local monitor_name=""
+      monitor_name=$(hyprctl monitors -j 2>/dev/null \
+        | ${pkgs.jq}/bin/jq -r '.[] | select(.focused == true) | .name' \
+        | ${pkgs.coreutils}/bin/head -n 1)
+      echo "Capturing live monitor in 2 seconds..." >&2
+      sleep 2
+      if [ -n "$monitor_name" ]; then
+        ${pkgs.grim}/bin/grim -o "$monitor_name" "$tmp_png" 2>/dev/null
+      else
+        ${pkgs.grim}/bin/grim "$tmp_png" 2>/dev/null
+      fi
+      [ -s "$tmp_png" ] || return 1
+      thumb_is_near_black "$tmp_png" && return 1
+      return 0
+    }
+
+    capture_attempt() {
+      local delay="$1"
+      rm -f "$tmp_png"
+      ${pkgs.linux-wallpaperengine}/bin/linux-wallpaperengine \
+        --assets-dir "$assets_dir" \
+        --window 0x0x1920x1080 \
+        --screenshot "$tmp_png" \
+        --screenshot-delay "$delay" \
+        --fps 1 \
+        --silent \
+        --disable-mouse \
+        "$we_dir" >/dev/null 2>&1 &
+      local pid=$!
+      local waited=0
+      local max_wait=$(( (delay + 7) * 5 ))
+      while [ ! -s "$tmp_png" ] && kill -0 "$pid" 2>/dev/null && [ "$waited" -lt "$max_wait" ]; do
+        sleep 0.2
+        waited=$((waited + 1))
+      done
+      if kill -0 "$pid" 2>/dev/null; then
+        kill "$pid" 2>/dev/null || true
+        local kill_wait=0
+        while kill -0 "$pid" 2>/dev/null && [ "$kill_wait" -lt 10 ]; do
+          sleep 0.2
+          kill_wait=$((kill_wait + 1))
+        done
+        if kill -0 "$pid" 2>/dev/null; then
+          kill -9 "$pid" 2>/dev/null || true
+        fi
+      fi
+      wait "$pid" 2>/dev/null || true
+      [ -s "$tmp_png" ] || return 1
+      thumb_is_near_black "$tmp_png" && return 1
+      return 0
+    }
+
+    captured=0
+    if [ "$capture_mode" = "live" ]; then
+      if capture_live_monitor; then
+        captured=1
+      fi
+    else
+      for delay in 5 8; do
+        if capture_attempt "$delay"; then
+          captured=1
+          break
+        fi
+      done
+    fi
+
+    if [ "$captured" -ne 1 ]; then
+      echo "skwd-we-capture-still: failed to render still for $we_id" >&2
+      exit 1
+    fi
+
+    ${pkgs.imagemagick}/bin/magick "$tmp_png" \
+      -strip -colorspace sRGB -filter Lanczos \
+      -resize 1920x1080^ -gravity center -extent 1920x1080 \
+      -quality 95 "jpg:$tmp_jpg"
+    install -m 644 "$tmp_jpg" "$dst"
+    echo "$dst"
+  '';
   skwdDmsSyncHook = pkgs.writeShellScript "sync-dms-wallpaper.sh" ''
     set -euo pipefail
 
@@ -1361,8 +1577,10 @@ PY
     greeter_cache_dir="/var/cache/dms-greeter"
     greeter_override="$greeter_cache_dir/greeter_wallpaper_override.jpg"
     greeter_settings="$greeter_cache_dir/settings.json"
+    force_we_id="''${SKWD_SYNC_FORCE_WE_ID:-}"
+    skip_greeter="''${SKWD_SYNC_SKIP_GREETER:-0}"
 
-    if [ ! -f "$current_wallpaper" ] && [ ! -f "$last_wallpaper_state" ]; then
+    if [ -z "$force_we_id" ] && [ ! -f "$current_wallpaper" ] && [ ! -f "$last_wallpaper_state" ]; then
       echo "sync-dms-wallpaper: missing both $current_wallpaper and $last_wallpaper_state" >&2
       exit 0
     fi
@@ -1373,12 +1591,15 @@ PY
     export LAST_WALLPAPER_STATE="$last_wallpaper_state"
     export SKWD_BIN="${skwdWallPkg}/bin/skwd"
     export MAGICK_BIN="${pkgs.imagemagick}/bin/magick"
+    export SKWD_FORCE_WE_ID="$force_we_id"
+    export SKWD_CAPTURE_STILL_BIN="${skwdWeCaptureStill}/bin/skwd-we-capture-still"
 
     live_wallpaper="$(${pkgs.python3}/bin/python3 <<'PY'
 from pathlib import Path
 import json
 import mimetypes
 import os
+import shutil
 import subprocess
 import sys
 
@@ -1386,18 +1607,46 @@ current = Path(os.environ["CURRENT_WALLPAPER_PATH"]).expanduser()
 state = Path(os.environ["LAST_WALLPAPER_STATE"]).expanduser()
 skwd = os.environ["SKWD_BIN"]
 magick = os.environ["MAGICK_BIN"]
+config = Path(os.path.expanduser("~/.config/skwd-wall/config.json"))
+forced_we_id = os.environ.get("SKWD_FORCE_WE_ID", "").strip()
+capture_bin = os.environ.get("SKWD_CAPTURE_STILL_BIN", "").strip()
+_config_cache = None
+_wall_list_cache = None
 
-def load_state():
-    if not state.exists():
+def load_json(path, *, log_errors=False):
+    if not path.exists():
         return {}
     try:
-        data = json.loads(state.read_text())
+        data = json.loads(path.read_text())
     except json.JSONDecodeError as exc:
-        print(f"sync-dms-wallpaper: failed to parse {state}: {exc}", file=sys.stderr)
+        if log_errors:
+            print(f"sync-dms-wallpaper: failed to parse {path}: {exc}", file=sys.stderr)
         return {}
     return data if isinstance(data, dict) else {}
 
-def resolve_we_id(candidate):
+def load_state():
+    return load_json(state, log_errors=True)
+
+def load_config():
+    global _config_cache
+    if _config_cache is None:
+        _config_cache = load_json(config)
+    return _config_cache
+
+def resolve_workshop_root():
+    paths = load_config().get("paths")
+    if isinstance(paths, dict):
+        workshop = paths.get("steamWorkshop")
+        if isinstance(workshop, str) and workshop:
+            return Path(workshop).expanduser()
+        steam_root = paths.get("steam")
+        if isinstance(steam_root, str) and steam_root:
+            return Path(steam_root).expanduser() / "steamapps" / "workshop" / "content" / "431960"
+    return Path("~/.local/share/Steam/steamapps/workshop/content/431960").expanduser()
+
+def resolve_we_id(candidate, state_we_id=""):
+    if isinstance(state_we_id, str) and state_we_id.isdigit():
+        return state_we_id
     probes = [candidate, candidate.parent]
     for probe in probes:
         name = probe.name
@@ -1405,22 +1654,25 @@ def resolve_we_id(candidate):
             return name
     return ""
 
-def resolve_thumb(candidate):
-    we_id = resolve_we_id(candidate)
-    if not we_id:
-        return None
+def load_wall_list():
+    global _wall_list_cache
+    if _wall_list_cache is not None:
+        return _wall_list_cache
     try:
         output = subprocess.check_output([skwd, "wall", "list", "{}"], text=True)
         payload = json.loads(output)
     except Exception as exc:
-        print(f"sync-dms-wallpaper: failed to list wallpapers while resolving {we_id}: {exc}", file=sys.stderr)
-        return None
-
+        print(f"sync-dms-wallpaper: failed to list wallpapers: {exc}", file=sys.stderr)
+        _wall_list_cache = []
+        return _wall_list_cache
     walls = payload.get("wallpapers") if isinstance(payload, dict) else None
-    if not isinstance(walls, list):
-        return None
+    _wall_list_cache = walls if isinstance(walls, list) else []
+    return _wall_list_cache
 
-    for wall in walls:
+def resolve_cached_thumb(we_id):
+    if not we_id:
+        return None
+    for wall in load_wall_list():
         if not isinstance(wall, dict):
             continue
         if wall.get("we_id") != we_id and wall.get("key") != we_id:
@@ -1433,9 +1685,116 @@ def resolve_thumb(candidate):
                     return thumb_path
     return None
 
+def resolve_preview_source(we_id, candidate):
+    workshop_root = resolve_workshop_root()
+    probes = []
+    if candidate is not None:
+        probes.extend([candidate, candidate.parent])
+    if we_id:
+        probes.append(workshop_root / we_id)
+
+    seen = set()
+    for probe in probes:
+        if probe is None:
+            continue
+        directory = probe if probe.is_dir() else probe.parent
+        if not directory.exists():
+            continue
+        key = str(directory.resolve())
+        if key in seen:
+            continue
+        seen.add(key)
+
+        project = directory / "project.json"
+        project_data = load_json(project)
+        declared = project_data.get("preview")
+        if isinstance(declared, str) and declared:
+            declared_path = (directory / declared).expanduser()
+            if declared_path.is_file():
+                return declared_path
+
+        for name in (
+            "preview.jpg",
+            "preview.png",
+            "preview.webp",
+            "preview.bmp",
+            "preview.gif",
+            "thumbnail.jpg",
+            "thumbnail.png",
+            "thumbnail.webp",
+        ):
+            preview = directory / name
+            if preview.is_file():
+                return preview
+    return None
+
+def image_geometry(path):
+    try:
+        output = subprocess.check_output(
+            [magick, "identify", "-format", "%w %h", f"{path}[0]"],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+        width, height = output.split()
+        return int(width), int(height)
+    except Exception:
+        return None
+
+def preview_is_low_confidence(path):
+    geometry = image_geometry(path)
+    if geometry is None:
+        return False
+    width, height = geometry
+    if height <= 0:
+        return False
+    ratio = width * 100 // height
+    return width < 640 or height < 360 or ratio < 120 or ratio > 230
+
+def resolve_capture(we_id):
+    if not we_id:
+        return None
+    capture = current.parent / "we-captures" / f"{we_id}.jpg"
+    return capture if capture.is_file() else None
+
+def maybe_generate_capture(we_id, preview, force=False):
+    if not we_id or not capture_bin:
+        return None
+    should_capture = force or preview is None or preview_is_low_confidence(preview)
+    if not should_capture:
+        return None
+    try:
+        subprocess.run(
+            [capture_bin, we_id],
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        message = exc.stderr.strip() or str(exc)
+        print(f"sync-dms-wallpaper: failed to generate WE capture for {we_id}: {message}", file=sys.stderr)
+        return None
+    return resolve_capture(we_id)
+
+def resolve_we_source(we_id, candidate):
+    capture = resolve_capture(we_id)
+    if capture is not None:
+        return capture
+    thumb = resolve_cached_thumb(we_id)
+    preview = resolve_preview_source(we_id, candidate)
+    capture = maybe_generate_capture(we_id, preview, force=(forced_we_id == we_id))
+    if capture is not None:
+        return capture
+    if thumb is not None and preview is not None:
+        return thumb if preview_is_low_confidence(preview) else preview
+    return thumb or preview
+
 data = load_state()
 candidate_raw = data.get("path")
 candidate = Path(candidate_raw).expanduser() if isinstance(candidate_raw, str) and candidate_raw else None
+state_we_id = forced_we_id if forced_we_id.isdigit() else (data.get("we_id") if isinstance(data.get("we_id"), str) else "")
+if forced_we_id.isdigit():
+    candidate = None
 live = current if current.is_file() else None
 source = None
 uses_original_live_path = False
@@ -1447,7 +1806,10 @@ if candidate is not None:
         live = candidate
         uses_original_live_path = True
     else:
-        source = resolve_thumb(candidate)
+        source = resolve_we_source(resolve_we_id(candidate, state_we_id), candidate)
+
+if source is None and state_we_id:
+    source = resolve_we_source(state_we_id, candidate)
 
 if source is None and current.is_file():
     source = current
@@ -1456,7 +1818,23 @@ if source is not None:
     tmp = current.with_name(current.name + ".tmp")
     try:
         subprocess.run(
-            [magick, f"{source}[0]", "-strip", "-colorspace", "sRGB", "-quality", "95", f"jpg:{tmp}"],
+            [
+                magick,
+                f"{source}[0]",
+                "-auto-orient",
+                "-strip",
+                "-background",
+                "black",
+                "-alpha",
+                "remove",
+                "-alpha",
+                "off",
+                "-colorspace",
+                "sRGB",
+                "-quality",
+                "95",
+                f"jpg:{tmp}",
+            ],
             check=True,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.PIPE,
@@ -1470,7 +1848,21 @@ if source is not None:
     else:
         os.replace(tmp, current)
         current.chmod(0o644)
-        if not uses_original_live_path:
+        if state_we_id and not uses_original_live_path:
+            live_target = current.with_name(f"we-live-{state_we_id}.jpg")
+            tmp_live = live_target.with_name(live_target.name + ".tmp")
+            try:
+                shutil.copyfile(current, tmp_live)
+            except OSError as exc:
+                print(f"sync-dms-wallpaper: failed to write live WE wallpaper {live_target}: {exc}", file=sys.stderr)
+                if tmp_live.exists():
+                    tmp_live.unlink()
+                live = current
+            else:
+                os.replace(tmp_live, live_target)
+                live_target.chmod(0o644)
+                live = live_target
+        elif not uses_original_live_path:
             live = current
 
 print(str(live) if live and live.exists() else "")
@@ -1530,6 +1922,16 @@ PY
       fi
     fi
 
+    if [ -n "$force_we_id" ] && command -v dms >/dev/null 2>&1; then
+      if ! dms ipc wallpaper set "$live_wallpaper"; then
+        echo "sync-dms-wallpaper: failed to pre-publish forced WE wallpaper" >&2
+      fi
+    fi
+
+    if [ "$skip_greeter" = "1" ]; then
+      exit 0
+    fi
+
     if [ ! -f "$current_wallpaper" ]; then
       echo "sync-dms-wallpaper: missing normalized current wallpaper preview" >&2
     elif [ -d "$greeter_cache_dir" ] && [ -w "$greeter_cache_dir" ]; then
@@ -1570,7 +1972,7 @@ PY
     fi
   '';
 in {
-  home.packages = [skwdWallPkg];
+  home.packages = [skwdWallPkg skwdWeCaptureStill];
 
   xdg.configFile."skwd-wall/scripts/sync-dms-wallpaper.sh".source = skwdDmsSyncHook;
 
