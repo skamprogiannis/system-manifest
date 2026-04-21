@@ -4,7 +4,29 @@
   inputs,
   lib,
   ...
-}: {
+}: let
+  githubCopilotCliVersion = "1.0.34";
+  githubCopilotCli = pkgs.stdenvNoCC.mkDerivation {
+    pname = "github-copilot-cli";
+    version = githubCopilotCliVersion;
+    src = pkgs.fetchzip {
+      url = "https://github.com/github/copilot-cli/releases/download/v${githubCopilotCliVersion}/copilot-linux-x64.tar.gz";
+      hash = "sha256-SfSIhF0o1cF2EHS2PtMk90SY/xQY5uq6quhK3Qb3EmM=";
+      stripRoot = false;
+    };
+    installPhase = ''
+      install -Dm755 "$src/copilot" "$out/bin/copilot"
+    '';
+    meta = with lib; {
+      description = "GitHub Copilot CLI";
+      homepage = "https://github.com/github/copilot-cli";
+      license = licenses.unfree;
+      mainProgram = "copilot";
+      platforms = ["x86_64-linux"];
+      sourceProvenance = with sourceTypes; [binaryNativeCode];
+    };
+  };
+in {
   home.username = "stefan";
   home.homeDirectory = "/home/stefan";
 
@@ -58,10 +80,10 @@
     # Wrap copilot CLI so keytar.node can find libsecret at runtime
     (pkgs.symlinkJoin {
       name = "github-copilot-cli-wrapped";
-      paths = [pkgs.github-copilot-cli];
+      paths = [githubCopilotCli];
       postBuild = ''
         rm -f $out/bin/copilot
-        cp ${pkgs.github-copilot-cli}/bin/copilot $out/bin/upstream-copilot
+        cp ${githubCopilotCli}/bin/copilot $out/bin/upstream-copilot
         chmod +x $out/bin/upstream-copilot
 
         # Keep executable basename "copilot" (gh checks PATH for this name),
