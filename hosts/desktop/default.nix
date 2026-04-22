@@ -15,37 +15,10 @@
   networking.hostName = "desktop";
 
   # Bootloader
-  boot.loader.grub = {
+  boot.loader.systemd-boot = {
     enable = true;
-    efiSupport = true;
-    device = "nodev";
-    gfxmodeEfi = "1920x1080";
     configurationLimit = 20;
-    theme = pkgs.stdenv.mkDerivation {
-      pname = "hollow-knight-grub-theme";
-      version = "1.0";
-      src = pkgs.fetchFromGitHub {
-        owner = "sergoncano";
-        repo = "hollow-knight-grub-theme";
-        rev = "9515f805f72dc214e3da59967f0b678d9910adf1";
-        sha256 = "sha256-0hn3MFC+OtfwtA//pwjnWz7Oz0Cos3YzbgUlxKszhyA=";
-      };
-      installPhase = ''
-        mkdir -p $out
-        cp -r hollow-grub/* $out
-        # Center the keybinds description and move it below options
-        sed -i '/#Keybinds/,/}/ s/left = 10%/left = 0\n\twidth = 100%/' $out/theme.txt
-        sed -i '/#Keybinds/,/}/ s/top = 82%/top = 85%/' $out/theme.txt
-
-        # Center the logo (Nudged further left to fix bias)
-        sed -i '/#Title/,/}/ s/left = 20%/left = 2%/' $out/theme.txt
-
-        # Center the boot menu (Reverted to the 'mostly centered' 25%)
-        sed -i '/#Boot menu/,/}/ s/left = 35%/left = 25%/' $out/theme.txt
-      '';
-    };
   };
-  boot.loader.systemd-boot.enable = false;
   boot.loader.efi.canTouchEfiVariables = true;
 
   # Disk Encryption (Additional drives)
