@@ -421,6 +421,7 @@ in {
       displayProfileAutoSelect = false;
       showDock = false;
       screenPreferences = {
+        wallpaper = [];
         notifications = ["BenQ XL2411Z"];
         osd = ["BenQ XL2411Z"];
         toast = ["BenQ XL2411Z"];

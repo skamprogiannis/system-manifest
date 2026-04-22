@@ -111,7 +111,87 @@ if [ "$rewrote_background" -eq 1 ] && [ "$has_assets_dir" -eq 0 ] && [ -d "$asse
   args=(--assets-dir "$assets_dir" "''${args[@]}")
 fi
 
-exec "$real_engine" "''${args[@]}"
+screen_roots=()
+screen_scalings=()
+common_args=()
+current_root_index=-1
+arg_count="''${#args[@]}"
+i=0
+while [ "$i" -lt "$arg_count" ]; do
+  arg="''${args[$i]}"
+  case "$arg" in
+    --screen-root)
+      i=$((i + 1))
+      if [ "$i" -ge "$arg_count" ]; then
+        echo "linux-wallpaperengine wrapper: missing value for --screen-root" >&2
+        exit 1
+      fi
+      screen_roots+=("''${args[$i]}")
+      screen_scalings+=("")
+      current_root_index=$((''${#screen_roots[@]} - 1))
+      ;;
+    --scaling)
+      i=$((i + 1))
+      if [ "$i" -ge "$arg_count" ]; then
+        echo "linux-wallpaperengine wrapper: missing value for --scaling" >&2
+        exit 1
+      fi
+      if [ "$current_root_index" -ge 0 ]; then
+        screen_scalings[$current_root_index]="''${args[$i]}"
+      else
+        common_args+=("$arg" "''${args[$i]}")
+      fi
+      ;;
+    *)
+      common_args+=("$arg")
+      ;;
+  esac
+  i=$((i + 1))
+done
+
+if [ "''${#screen_roots[@]}" -le 1 ]; then
+  exec "$real_engine" "''${args[@]}"
+fi
+
+background_arg=""
+common_prefix=("''${common_args[@]}")
+if [ "''${#common_args[@]}" -gt 0 ]; then
+  last_index=$((''${#common_args[@]} - 1))
+  background_arg="''${common_args[$last_index]}"
+  common_prefix=("''${common_args[@]:0:$last_index}")
+fi
+
+pids=()
+cleanup_children() {
+  for pid in "''${pids[@]:-}"; do
+    if [ -n "$pid" ]; then
+      kill "$pid" 2>/dev/null || true
+    fi
+  done
+}
+
+trap cleanup_children INT TERM
+
+status=0
+for idx in "''${!screen_roots[@]}"; do
+  child_args=("''${common_prefix[@]}" --screen-root "''${screen_roots[$idx]}")
+  if [ -n "''${screen_scalings[$idx]}" ]; then
+    child_args+=(--scaling "''${screen_scalings[$idx]}")
+  fi
+  if [ -n "$background_arg" ]; then
+    child_args+=("$background_arg")
+  fi
+  "$real_engine" "''${child_args[@]}" &
+  pids+=("$!")
+done
+
+for pid in "''${pids[@]}"; do
+  if ! wait "$pid"; then
+    status=1
+  fi
+done
+
+exit "$status"
 EOF
     chmod +x $out/libexec/skwd-wall/linux-wallpaperengine
 
@@ -569,13 +649,7 @@ selector_service_text = replace_all(
     var targetScreens = (screens && screens.length > 0)
       ? screens
       : Quickshell.screens.map(function(s) { return s.name })
-    _pendingWeId = id
-    _pendingWeScreens = targetScreens
-    _preApplyWE.command = ["sh", "-c",
-      "SKWD_SYNC_FORCE_WE_ID=" + JSON.stringify(id) +
-      " SKWD_SYNC_SKIP_GREETER=1 " +
-      JSON.stringify(scriptsDir + "/sync-dms-wallpaper.sh")]
-    _preApplyWE.running = true
+    DaemonClient.applyWE(id, targetScreens)
   }""",
 )
 selector_service_text = replace_all(
@@ -585,22 +659,6 @@ selector_service_text = replace_all(
   }""",
     """  function applyVideo(path, outputs) {
     DaemonClient.applyVideo(path, outputs)
-  }
-
-  property string _pendingWeId: ""
-  property var _pendingWeScreens: []
-  property var _preApplyWE: Process {
-    id: preApplyWE
-    command: ["bash", "-c", "true"]
-    onExited: {
-      if (!service._pendingWeId)
-        return
-      var pendingId = service._pendingWeId
-      var pendingScreens = service._pendingWeScreens
-      service._pendingWeId = ""
-      service._pendingWeScreens = []
-      DaemonClient.applyWE(pendingId, pendingScreens)
-    }
   }""",
 )
 selector_service_text = replace_all(
@@ -1033,7 +1091,7 @@ apply_text = replace_all(
 apply_text = replace_all(
     apply_text,
     '                "awww img " + JSON.stringify(path) +\n                " --transition-type wipe --transition-angle 45 --transition-duration 0.5"]',
-    '                "awww img" + ((outputs && outputs.length > 0) ? (" -o " + JSON.stringify(outputs.join(","))) : "") + " " + JSON.stringify(path) +\n                " --transition-type wipe --transition-angle 45 --transition-duration 0.5"]',
+    '                ${builtins.toJSON "${skwdApplyStaticWallpaper}"} + " " + JSON.stringify(path) +\n                ((outputs && outputs.length > 0) ? (" " + JSON.stringify(outputs.join(","))) : "")]',
 )
 apply_text = replace_all(
     apply_text,
@@ -1081,6 +1139,33 @@ apply_text = replace_all(
         return cmd
     }
 
+    function _showWEStill(weId) {
+        if (Config.isKDE)
+            return
+        awwwProcess.command = ["sh", "-c",
+            ${builtins.toJSON "${skwdApplyWeStill}"} + " " + JSON.stringify(weId) +
+            ((service._pendingWeOutputs && service._pendingWeOutputs.length > 0)
+                ? (" " + JSON.stringify(service._pendingWeOutputs.join(",")))
+                : "")]
+        awwwProcess.running = true
+    }
+
+    function _weLaunchCmd(weId) {
+        var targets = (service._pendingWeOutputs && service._pendingWeOutputs.length > 0)
+            ? service._pendingWeOutputs
+            : Quickshell.screens.map(function(s) { return s.name })
+        var cmd = ""
+        for (var i = 0; i < targets.length; i++) {
+            cmd += "nohup setsid linux-wallpaperengine" +
+                (service.wallpaperMute ? " --silent" : "") +
+                " --screen-root " + JSON.stringify(targets[i]) +
+                (service.weAssetsDir ? " --assets-dir " + JSON.stringify(service.weAssetsDir) : "") +
+                " " + JSON.stringify(service.weDir + "/" + weId) +
+                " </dev/null >/dev/null 2>&1 & "
+        }
+        return cmd
+    }
+
     function _applyKdeVideo(path) {""",
 )
 apply_text = replace_all(
@@ -1092,6 +1177,20 @@ apply_text = replace_all(
         _saveState("we", "", weId)
         _pendingWeOutputs = outputs || []
         _reclaimOllamaVram()""",
+)
+apply_text = replace_all(
+    apply_text,
+    """        _pendingAction = function() {
+            _launchWE(weId)
+            _extractWEThumb(weId)
+            wallpaperApplied("we", weId, weDir + "/" + weId)
+        }""",
+    """        _pendingAction = function() {
+            _showWEStill(weId)
+            _launchWE(weId)
+            _extractWEThumb(weId)
+            wallpaperApplied("we", weId, weDir + "/" + weId)
+        }""",
 )
 apply_text = replace_all(
     apply_text,
@@ -1133,6 +1232,33 @@ apply_text = replace_all(
     apply_text,
     '            " --clamp border" +',
     "",
+)
+apply_text = replace_all(
+    apply_text,
+    """    function _launchWEScene(weId) {
+        var mons = (service._pendingWeOutputs && service._pendingWeOutputs.length > 0)
+            ? service._pendingWeOutputs
+            : Quickshell.screens.map(function(s) { return s.name })
+        var screenArgs = ""
+        for (var i = 0; i < mons.length; i++)
+            screenArgs += " --screen-root " + mons[i]
+        var audioFlag = service.wallpaperMute ? " --silent" : ""
+        var assetsArg = service.weAssetsDir ? " --assets-dir " + JSON.stringify(service.weAssetsDir) : ""
+        var cmd = "nohup setsid linux-wallpaperengine " + audioFlag +
+            screenArgs +
+
+            assetsArg + " " + JSON.stringify(service.weDir + "/" + weId) +
+            " </dev/null >/dev/null 2>&1 &"
+        console.log("WallpaperApplyService: launching WE scene:", cmd)
+        weProcess.command = ["sh", "-c", cmd]
+        weProcess.running = true
+    }""",
+    """    function _launchWEScene(weId) {
+        var cmd = service._weLaunchCmd(weId)
+        console.log("WallpaperApplyService: launching WE scene:", cmd)
+        weProcess.command = ["sh", "-c", cmd]
+        weProcess.running = true
+    }""",
 )
 apply_text = replace_all(
     apply_text,
@@ -1402,6 +1528,100 @@ PY
       chmod 600 "$secrets_file"
     fi
   '';
+  skwdApplyStaticWallpaper = pkgs.writeShellScript "apply-static-wallpaper.sh" ''
+    set -euo pipefail
+
+    wallpaper_path="$1"
+    outputs_csv="''${2:-}"
+    session_file="$HOME/.local/state/DankMaterialShell/session.json"
+    transition="wipe"
+    transition_type="wipe"
+    transition_duration="1"
+
+    if [ -f "$session_file" ]; then
+      transition="$(${pkgs.jq}/bin/jq -r '.wallpaperTransition // "wipe"' "$session_file" 2>/dev/null || printf 'wipe\n')"
+    fi
+
+    case "$transition" in
+      none)
+        transition_type="simple"
+        transition_duration="0"
+        ;;
+      fade)
+        transition_type="fade"
+        ;;
+      wipe)
+        transition_type="wipe"
+        ;;
+      disc|portal|"iris bloom")
+        transition_type="center"
+        ;;
+      stripes)
+        transition_type="outer"
+        ;;
+      pixelate)
+        transition_type="any"
+        ;;
+      random)
+        transition_type="random"
+        ;;
+      *)
+        transition_type="fade"
+        ;;
+    esac
+
+    cmd=(${pkgs.awww}/bin/awww img)
+    if [ -n "$outputs_csv" ]; then
+      cmd+=(-o "$outputs_csv")
+    fi
+    cmd+=("$wallpaper_path" --transition-type "$transition_type" --transition-duration "$transition_duration")
+    if [ "$transition_type" = "wipe" ]; then
+      cmd+=(--transition-angle 45)
+    fi
+
+    exec "''${cmd[@]}"
+  '';
+  skwdApplyWeStill = pkgs.writeShellScript "apply-we-still.sh" ''
+    set -euo pipefail
+
+    we_id="$1"
+    outputs_csv="''${2:-}"
+    cache_dir="$HOME/.cache/skwd-wall/wallpaper"
+    capture_path="$cache_dir/we-captures/$we_id.jpg"
+    live_path="$cache_dir/we-live-$we_id.jpg"
+    workshop_dir="${steamWorkshopDir}"
+    still_path=""
+
+    if [ -f "$capture_path" ]; then
+      still_path="$capture_path"
+    elif [ -f "$live_path" ]; then
+      still_path="$live_path"
+    else
+      for preview_path in \
+        "$workshop_dir/$we_id/preview.jpg" \
+        "$workshop_dir/$we_id/preview.png" \
+        "$workshop_dir/$we_id/preview.webp" \
+        "$workshop_dir/$we_id/preview.bmp" \
+        "$workshop_dir/$we_id/preview.gif"; do
+        if [ -f "$preview_path" ]; then
+          still_path="$preview_path"
+          break
+        fi
+      done
+    fi
+
+    [ -n "$still_path" ] || exit 0
+
+    if ! pgrep -x awww-daemon >/dev/null; then
+      setsid ${pkgs.awww}/bin/awww-daemon >/dev/null 2>&1 &
+      for _ in 1 2 3 4 5; do
+        sleep 0.3
+        pgrep -x awww-daemon >/dev/null && break
+      done
+    fi
+
+    exec ${skwdApplyStaticWallpaper} "$still_path" "$outputs_csv"
+  '';
   skwdWeCaptureStill = pkgs.writeShellScriptBin "skwd-we-capture-still" ''
     set -euo pipefail
 
@@ -1577,10 +1797,8 @@ PY
     greeter_cache_dir="/var/cache/dms-greeter"
     greeter_override="$greeter_cache_dir/greeter_wallpaper_override.jpg"
     greeter_settings="$greeter_cache_dir/settings.json"
-    force_we_id="''${SKWD_SYNC_FORCE_WE_ID:-}"
-    skip_greeter="''${SKWD_SYNC_SKIP_GREETER:-0}"
 
-    if [ -z "$force_we_id" ] && [ ! -f "$current_wallpaper" ] && [ ! -f "$last_wallpaper_state" ]; then
+    if [ ! -f "$current_wallpaper" ] && [ ! -f "$last_wallpaper_state" ]; then
       echo "sync-dms-wallpaper: missing both $current_wallpaper and $last_wallpaper_state" >&2
       exit 0
     fi
@@ -1591,7 +1809,6 @@ PY
     export LAST_WALLPAPER_STATE="$last_wallpaper_state"
     export SKWD_BIN="${skwdWallPkg}/bin/skwd"
     export MAGICK_BIN="${pkgs.imagemagick}/bin/magick"
-    export SKWD_FORCE_WE_ID="$force_we_id"
     export SKWD_CAPTURE_STILL_BIN="${skwdWeCaptureStill}/bin/skwd-we-capture-still"
 
     live_wallpaper="$(${pkgs.python3}/bin/python3 <<'PY'
@@ -1608,7 +1825,6 @@ state = Path(os.environ["LAST_WALLPAPER_STATE"]).expanduser()
 skwd = os.environ["SKWD_BIN"]
 magick = os.environ["MAGICK_BIN"]
 config = Path(os.path.expanduser("~/.config/skwd-wall/config.json"))
-forced_we_id = os.environ.get("SKWD_FORCE_WE_ID", "").strip()
 capture_bin = os.environ.get("SKWD_CAPTURE_STILL_BIN", "").strip()
 _config_cache = None
 _wall_list_cache = None
@@ -1756,10 +1972,10 @@ def resolve_capture(we_id):
     capture = current.parent / "we-captures" / f"{we_id}.jpg"
     return capture if capture.is_file() else None
 
-def maybe_generate_capture(we_id, preview, force=False):
+def maybe_generate_capture(we_id, preview):
     if not we_id or not capture_bin:
         return None
-    should_capture = force or preview is None or preview_is_low_confidence(preview)
+    should_capture = preview is None or preview_is_low_confidence(preview)
     if not should_capture:
         return None
     try:
@@ -1782,7 +1998,7 @@ def resolve_we_source(we_id, candidate):
         return capture
     thumb = resolve_cached_thumb(we_id)
     preview = resolve_preview_source(we_id, candidate)
-    capture = maybe_generate_capture(we_id, preview, force=(forced_we_id == we_id))
+    capture = maybe_generate_capture(we_id, preview)
     if capture is not None:
         return capture
     if thumb is not None and preview is not None:
@@ -1792,9 +2008,7 @@ def resolve_we_source(we_id, candidate):
 data = load_state()
 candidate_raw = data.get("path")
 candidate = Path(candidate_raw).expanduser() if isinstance(candidate_raw, str) and candidate_raw else None
-state_we_id = forced_we_id if forced_we_id.isdigit() else (data.get("we_id") if isinstance(data.get("we_id"), str) else "")
-if forced_we_id.isdigit():
-    candidate = None
+state_we_id = data.get("we_id") if isinstance(data.get("we_id"), str) else ""
 live = current if current.is_file() else None
 source = None
 uses_original_live_path = False
@@ -1893,15 +2107,17 @@ else:
     data = {}
 
 wallpaper_path = str(wallpaper)
+data["perModeWallpaper"] = False
+data["perMonitorWallpaper"] = False
+data["wallpaperCyclingEnabled"] = False
 for key in ("wallpaperPath", "wallpaperPathLight", "wallpaperPathDark"):
     data[key] = wallpaper_path
 
 for key in ("monitorWallpapers", "monitorWallpapersLight", "monitorWallpapersDark"):
-    value = data.get(key)
-    if isinstance(value, dict):
-        data[key] = {monitor: wallpaper_path for monitor in value}
-    else:
-        data[key] = {}
+    data[key] = {}
+
+if "monitorCyclingSettings" in data:
+    data["monitorCyclingSettings"] = {}
 
 payload = json.dumps(data, separators=(",", ":")) + "\n"
 current_payload = session_file.read_text() if session_file.exists() else ""
@@ -1915,22 +2131,6 @@ else:
     print("unchanged")
 PY
     )"
-
-    if [ "$session_changed" = "unchanged" ] && command -v dms >/dev/null 2>&1; then
-      if ! dms ipc wallpaper set "$live_wallpaper"; then
-        echo "sync-dms-wallpaper: failed to notify DMS wallpaper IPC fallback" >&2
-      fi
-    fi
-
-    if [ -n "$force_we_id" ] && command -v dms >/dev/null 2>&1; then
-      if ! dms ipc wallpaper set "$live_wallpaper"; then
-        echo "sync-dms-wallpaper: failed to pre-publish forced WE wallpaper" >&2
-      fi
-    fi
-
-    if [ "$skip_greeter" = "1" ]; then
-      exit 0
-    fi
 
     if [ ! -f "$current_wallpaper" ]; then
       echo "sync-dms-wallpaper: missing normalized current wallpaper preview" >&2

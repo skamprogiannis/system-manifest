@@ -261,12 +261,58 @@ in {
     ],
     root / "Modules/DankDash/WallpaperTab.qml": [
         (
+            "            SessionData.setMonitorWallpaper(targetScreenName, path);",
+            '            Quickshell.execDetached(["skwd-wall"]);',
+        ),
+        (
+            "            SessionData.setWallpaper(path);",
+            '            Quickshell.execDetached(["skwd-wall"]);',
+        ),
+        (
             "import QtQuick.Effects",
             "import QtQuick.Effects\nimport Quickshell",
         ),
         (
             "                            maxCacheSize: 256\n\n                            layer.enabled: true",
             '                            maxCacheSize: 256\n\n                            layer.enabled: Quickshell.env("QT_QUICK_BACKEND") !== "software"',
+        ),
+    ],
+    root / "Modules/Settings/WallpaperTab.qml": [
+        (
+            "    Component.onCompleted: {",
+            """    function launchSkwdWall() {
+        Quickshell.execDetached(["skwd-wall"]);
+    }
+
+    Component.onCompleted: {""",
+        ),
+        (
+            "        mainWallpaperBrowserLoader.active = true;",
+            "        launchSkwdWall();\n        return;",
+        ),
+        (
+            "        lightWallpaperBrowserLoader.active = true;",
+            "        launchSkwdWall();\n        return;",
+        ),
+        (
+            "        darkWallpaperBrowserLoader.active = true;",
+            "        launchSkwdWall();\n        return;",
+        ),
+        (
+            "                                                    SessionData.setMonitorWallpaper(selectedMonitorName, selectedColor);",
+            "                                                    root.launchSkwdWall();\n                                                    return;",
+        ),
+        (
+            "                                                    SessionData.setWallpaperColor(selectedColor);",
+            "                                                    root.launchSkwdWall();\n                                                    return;",
+        ),
+        (
+            "                                                SessionData.setMonitorWallpaper(selectedMonitorName, \"\");",
+            "                                                root.launchSkwdWall();\n                                                return;",
+        ),
+        (
+            "                                                SessionData.clearWallpaper();",
+            "                                                root.launchSkwdWall();\n                                                return;",
         ),
     ],
     root / "Widgets/DankCircularImage.qml": [
