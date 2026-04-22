@@ -358,7 +358,7 @@ in {
         TARGET_SYSTEM_TOPLEVEL="$(readlink -f "$MOUNT_POINT/nix/var/nix/profiles/system" 2>/dev/null || true)"
         TARGET_INIT_RELATIVE=""
         if [ -n "$TARGET_SYSTEM_TOPLEVEL" ]; then
-          TARGET_INIT_RELATIVE="''${TARGET_SYSTEM_TOPLEVEL#/}/init"
+          TARGET_INIT_RELATIVE="''${TARGET_SYSTEM_TOPLEVEL#/nix/}/init"
         fi
 
         version_error_log=$(mktemp)
