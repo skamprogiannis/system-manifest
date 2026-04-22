@@ -195,6 +195,68 @@ exit "$status"
 EOF
     chmod +x $out/libexec/skwd-wall/linux-wallpaperengine
 
+    cat > $out/libexec/skwd-wall/awww <<'EOF'
+#!${pkgs.bash}/bin/bash
+set -euo pipefail
+
+real_awww="${pkgs.awww}/bin/awww"
+apply_static="${skwdApplyStaticWallpaper}"
+
+if [ "''${1:-}" != "img" ]; then
+  exec "$real_awww" "$@"
+fi
+shift
+
+orig=("''${@}")
+outputs_csv=""
+image=""
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -o|--outputs)
+      if [ "$#" -lt 2 ]; then
+        exec "$real_awww" img "''${orig[@]}"
+      fi
+      outputs_csv="$2"
+      shift 2
+      ;;
+    --outputs=*)
+      outputs_csv="''${1#*=}"
+      shift
+      ;;
+    --transition-type|--transition-step|--transition-duration|--transition-fps|--transition-angle|--transition-pos|--transition-bezier|--transition-wave)
+      if [ "$#" -lt 2 ]; then
+        exec "$real_awww" img "''${orig[@]}"
+      fi
+      shift 2
+      ;;
+    --invert-y|-a|--all|--no-resize)
+      exec "$real_awww" img "''${orig[@]}"
+      ;;
+    -*)
+      exec "$real_awww" img "''${orig[@]}"
+      ;;
+    *)
+      if [ -n "$image" ]; then
+        exec "$real_awww" img "''${orig[@]}"
+      fi
+      image="$1"
+      shift
+      ;;
+  esac
+done
+
+if [ -z "$image" ]; then
+  exec "$real_awww" img "''${orig[@]}"
+fi
+
+if [ -n "$outputs_csv" ]; then
+  exec "$apply_static" "$image" "$outputs_csv"
+fi
+exec "$apply_static" "$image"
+EOF
+    chmod +x $out/libexec/skwd-wall/awww
+
     export OUT_PATH="$out"
     export BASE_PATH="${skwdWallBase}"
     export HELPER_DIR="$out/libexec/skwd-wall"
@@ -1377,6 +1439,118 @@ PY
     }
   '';
 
+  dmsDynamicColorsTemplate = pkgs.writeText "dms-colors.json" ''
+    {
+      "dank16": {},
+      "colors": {
+        "dark": {
+          "background": "{{colors.background.dark.hex}}",
+          "error": "{{colors.error.dark.hex}}",
+          "error_container": "{{colors.error_container.dark.hex}}",
+          "inverse_on_surface": "{{colors.inverse_on_surface.dark.hex}}",
+          "inverse_primary": "{{colors.inverse_primary.dark.hex}}",
+          "inverse_surface": "{{colors.inverse_surface.dark.hex}}",
+          "on_background": "{{colors.on_background.dark.hex}}",
+          "on_error": "{{colors.on_error.dark.hex}}",
+          "on_error_container": "{{colors.on_error_container.dark.hex}}",
+          "on_primary": "{{colors.on_primary.dark.hex}}",
+          "on_primary_container": "{{colors.on_primary_container.dark.hex}}",
+          "on_primary_fixed": "{{colors.on_primary_fixed.dark.hex}}",
+          "on_primary_fixed_variant": "{{colors.on_primary_fixed_variant.dark.hex}}",
+          "on_secondary": "{{colors.on_secondary.dark.hex}}",
+          "on_secondary_container": "{{colors.on_secondary_container.dark.hex}}",
+          "on_secondary_fixed": "{{colors.on_secondary_fixed.dark.hex}}",
+          "on_secondary_fixed_variant": "{{colors.on_secondary_fixed_variant.dark.hex}}",
+          "on_surface": "{{colors.on_surface.dark.hex}}",
+          "on_surface_variant": "{{colors.on_surface_variant.dark.hex}}",
+          "on_tertiary": "{{colors.on_tertiary.dark.hex}}",
+          "on_tertiary_container": "{{colors.on_tertiary_container.dark.hex}}",
+          "on_tertiary_fixed": "{{colors.on_tertiary_fixed.dark.hex}}",
+          "on_tertiary_fixed_variant": "{{colors.on_tertiary_fixed_variant.dark.hex}}",
+          "outline": "{{colors.outline.dark.hex}}",
+          "outline_variant": "{{colors.outline_variant.dark.hex}}",
+          "primary": "{{colors.primary.dark.hex}}",
+          "primary_container": "{{colors.primary_container.dark.hex}}",
+          "primary_fixed": "{{colors.primary_fixed.dark.hex}}",
+          "primary_fixed_dim": "{{colors.primary_fixed_dim.dark.hex}}",
+          "scrim": "{{colors.scrim.dark.hex}}",
+          "secondary": "{{colors.secondary.dark.hex}}",
+          "secondary_container": "{{colors.secondary_container.dark.hex}}",
+          "secondary_fixed": "{{colors.secondary_fixed.dark.hex}}",
+          "secondary_fixed_dim": "{{colors.secondary_fixed_dim.dark.hex}}",
+          "shadow": "{{colors.shadow.dark.hex}}",
+          "source_color": "{{colors.source_color.dark.hex}}",
+          "surface": "{{colors.surface.dark.hex}}",
+          "surface_bright": "{{colors.surface_bright.dark.hex}}",
+          "surface_container": "{{colors.surface_container.dark.hex}}",
+          "surface_container_high": "{{colors.surface_container_high.dark.hex}}",
+          "surface_container_highest": "{{colors.surface_container_highest.dark.hex}}",
+          "surface_container_low": "{{colors.surface_container_low.dark.hex}}",
+          "surface_container_lowest": "{{colors.surface_container_lowest.dark.hex}}",
+          "surface_dim": "{{colors.surface_dim.dark.hex}}",
+          "surface_tint": "{{colors.surface_tint.dark.hex}}",
+          "surface_variant": "{{colors.surface_variant.dark.hex}}",
+          "tertiary": "{{colors.tertiary.dark.hex}}",
+          "tertiary_container": "{{colors.tertiary_container.dark.hex}}",
+          "tertiary_fixed": "{{colors.tertiary_fixed.dark.hex}}",
+          "tertiary_fixed_dim": "{{colors.tertiary_fixed_dim.dark.hex}}"
+        },
+        "light": {
+          "background": "{{colors.background.light.hex}}",
+          "error": "{{colors.error.light.hex}}",
+          "error_container": "{{colors.error_container.light.hex}}",
+          "inverse_on_surface": "{{colors.inverse_on_surface.light.hex}}",
+          "inverse_primary": "{{colors.inverse_primary.light.hex}}",
+          "inverse_surface": "{{colors.inverse_surface.light.hex}}",
+          "on_background": "{{colors.on_background.light.hex}}",
+          "on_error": "{{colors.on_error.light.hex}}",
+          "on_error_container": "{{colors.on_error_container.light.hex}}",
+          "on_primary": "{{colors.on_primary.light.hex}}",
+          "on_primary_container": "{{colors.on_primary_container.light.hex}}",
+          "on_primary_fixed": "{{colors.on_primary_fixed.light.hex}}",
+          "on_primary_fixed_variant": "{{colors.on_primary_fixed_variant.light.hex}}",
+          "on_secondary": "{{colors.on_secondary.light.hex}}",
+          "on_secondary_container": "{{colors.on_secondary_container.light.hex}}",
+          "on_secondary_fixed": "{{colors.on_secondary_fixed.light.hex}}",
+          "on_secondary_fixed_variant": "{{colors.on_secondary_fixed_variant.light.hex}}",
+          "on_surface": "{{colors.on_surface.light.hex}}",
+          "on_surface_variant": "{{colors.on_surface_variant.light.hex}}",
+          "on_tertiary": "{{colors.on_tertiary.light.hex}}",
+          "on_tertiary_container": "{{colors.on_tertiary_container.light.hex}}",
+          "on_tertiary_fixed": "{{colors.on_tertiary_fixed.light.hex}}",
+          "on_tertiary_fixed_variant": "{{colors.on_tertiary_fixed_variant.light.hex}}",
+          "outline": "{{colors.outline.light.hex}}",
+          "outline_variant": "{{colors.outline_variant.light.hex}}",
+          "primary": "{{colors.primary.light.hex}}",
+          "primary_container": "{{colors.primary_container.light.hex}}",
+          "primary_fixed": "{{colors.primary_fixed.light.hex}}",
+          "primary_fixed_dim": "{{colors.primary_fixed_dim.light.hex}}",
+          "scrim": "{{colors.scrim.light.hex}}",
+          "secondary": "{{colors.secondary.light.hex}}",
+          "secondary_container": "{{colors.secondary_container.light.hex}}",
+          "secondary_fixed": "{{colors.secondary_fixed.light.hex}}",
+          "secondary_fixed_dim": "{{colors.secondary_fixed_dim.light.hex}}",
+          "shadow": "{{colors.shadow.light.hex}}",
+          "source_color": "{{colors.source_color.light.hex}}",
+          "surface": "{{colors.surface.light.hex}}",
+          "surface_bright": "{{colors.surface_bright.light.hex}}",
+          "surface_container": "{{colors.surface_container.light.hex}}",
+          "surface_container_high": "{{colors.surface_container_high.light.hex}}",
+          "surface_container_highest": "{{colors.surface_container_highest.light.hex}}",
+          "surface_container_low": "{{colors.surface_container_low.light.hex}}",
+          "surface_container_lowest": "{{colors.surface_container_lowest.light.hex}}",
+          "surface_dim": "{{colors.surface_dim.light.hex}}",
+          "surface_tint": "{{colors.surface_tint.light.hex}}",
+          "surface_variant": "{{colors.surface_variant.light.hex}}",
+          "tertiary": "{{colors.tertiary.light.hex}}",
+          "tertiary_container": "{{colors.tertiary_container.light.hex}}",
+          "tertiary_fixed": "{{colors.tertiary_fixed.light.hex}}",
+          "tertiary_fixed_dim": "{{colors.tertiary_fixed_dim.light.hex}}"
+        }
+      }
+    }
+  '';
+
   # Zathura color theme
   zathuraTemplate = pkgs.writeText "zathura-colors" ''
     set recolor "true"
@@ -1404,6 +1578,7 @@ PY
   skwdTemplatesDir = pkgs.runCommand "skwd-wall-templates" {} ''
     mkdir -p $out
     cp ${skwdWallPkg}/share/skwd-wall/data/matugen/templates/* $out/
+    cp ${dmsDynamicColorsTemplate} $out/dms-colors.json
     cp ${hyprlandDmsTemplate} $out/hyprland-dms-colors.conf
     cp ${zathuraTemplate} $out/zathura-colors
   '';
@@ -1454,6 +1629,11 @@ PY
         name = "skwd-wall";
         template = "quickshell-colors.json";
         output = "colors.json";
+      }
+      {
+        name = "dms-shell";
+        template = "dms-colors.json";
+        output = "~/.cache/DankMaterialShell/dms-colors.json";
       }
       {
         name = "hyprland-dms";
@@ -1534,9 +1714,17 @@ PY
     wallpaper_path="$1"
     outputs_csv="''${2:-}"
     session_file="$HOME/.local/state/DankMaterialShell/session.json"
+    cache_dir="$HOME/.cache/skwd-wall/wallpaper"
+    display_path="$cache_dir/static-live.jpg"
+    display_tmp="$display_path.tmp"
+    apply_path="$wallpaper_path"
     transition="wipe"
     transition_type="wipe"
-    transition_duration="1"
+    transition_duration="0.7"
+    transition_step=""
+    transition_fps=""
+    transition_pos=""
+    transition_bezier=""
 
     if [ -f "$session_file" ]; then
       transition="$(${pkgs.jq}/bin/jq -r '.wallpaperTransition // "wipe"' "$session_file" 2>/dev/null || printf 'wipe\n')"
@@ -1546,35 +1734,93 @@ PY
       none)
         transition_type="simple"
         transition_duration="0"
+        transition_step="255"
         ;;
       fade)
         transition_type="fade"
+        transition_duration="0.5"
+        transition_step="20"
+        transition_fps="60"
+        transition_bezier=".42,0,.58,1"
         ;;
       wipe)
         transition_type="wipe"
+        transition_duration="0.6"
+        transition_step="24"
+        transition_fps="60"
         ;;
       disc|portal|"iris bloom")
         transition_type="center"
+        transition_duration="0.45"
+        transition_step="72"
+        transition_fps="60"
+        transition_pos="center"
         ;;
       stripes)
         transition_type="outer"
+        transition_duration="0.6"
+        transition_step="20"
+        transition_fps="60"
+        transition_pos="center"
         ;;
       pixelate)
         transition_type="any"
+        transition_duration="0.55"
+        transition_step="22"
+        transition_fps="60"
         ;;
       random)
         transition_type="random"
+        transition_duration="0.6"
+        transition_step="18"
+        transition_fps="60"
         ;;
       *)
         transition_type="fade"
+        transition_duration="0.5"
+        transition_step="20"
+        transition_fps="60"
+        transition_bezier=".42,0,.58,1"
         ;;
     esac
+
+    mkdir -p "$cache_dir"
+    if ${pkgs.imagemagick}/bin/magick "''${wallpaper_path}[0]" \
+      -auto-orient \
+      -strip \
+      -background black \
+      -alpha remove \
+      -alpha off \
+      -colorspace sRGB \
+      -filter Lanczos \
+      -resize 1920x1080^ \
+      -gravity center \
+      -extent 1920x1080 \
+      -quality 95 \
+      "jpg:$display_tmp" 2>/dev/null; then
+      mv -f "$display_tmp" "$display_path"
+      apply_path="$display_path"
+    else
+      rm -f "$display_tmp"
+    fi
 
     cmd=(${pkgs.awww}/bin/awww img)
     if [ -n "$outputs_csv" ]; then
       cmd+=(-o "$outputs_csv")
     fi
-    cmd+=("$wallpaper_path" --transition-type "$transition_type" --transition-duration "$transition_duration")
+    cmd+=("$apply_path" --transition-type "$transition_type" --transition-duration "$transition_duration")
+    if [ -n "$transition_step" ]; then
+      cmd+=(--transition-step "$transition_step")
+    fi
+    if [ -n "$transition_fps" ]; then
+      cmd+=(--transition-fps "$transition_fps")
+    fi
+    if [ -n "$transition_pos" ]; then
+      cmd+=(--transition-pos "$transition_pos")
+    fi
+    if [ -n "$transition_bezier" ]; then
+      cmd+=(--transition-bezier "$transition_bezier")
+    fi
     if [ "$transition_type" = "wipe" ]; then
       cmd+=(--transition-angle 45)
     fi
