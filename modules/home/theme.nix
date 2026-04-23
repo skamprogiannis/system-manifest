@@ -120,10 +120,6 @@ in {
       name = "tremc";
       noDisplay = true;
     };
-    "ibus-setup" = {
-      name = "IBus Preferences";
-      noDisplay = true;
-    };
     # Hide individual Zathura plugin desktop entries — only the main one should appear
     "org.pwmt.zathura-djvu" = { name = "Zathura"; exec = "zathura %U"; noDisplay = true; settings.Hidden = "true"; };
     "org.pwmt.zathura-pdf-mupdf" = { name = "Zathura"; exec = "zathura %U"; noDisplay = true; settings.Hidden = "true"; };
