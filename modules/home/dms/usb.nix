@@ -23,6 +23,7 @@ in {
   programs.dank-material-shell = {
     package = lib.mkForce usbDmsPackage;
     settings = {
+      displayProfileAutoSelect = lib.mkForce true;
       screenPreferences = lib.mkForce {
         notifications = [];
         osd = [];
