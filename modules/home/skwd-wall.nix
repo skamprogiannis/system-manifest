@@ -62,6 +62,8 @@ set -euo pipefail
 real_engine="${pkgs.linux-wallpaperengine}/bin/linux-wallpaperengine"
 workshop_dir="${steamWorkshopDir}"
 assets_dir="${steamWeAssetsDir}"
+state_dir="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/skwd"
+pid_file="$state_dir/linux-wallpaperengine-render.pids"
 
 args=()
 rewrote_background=0
@@ -100,6 +102,37 @@ for arg in "$@"; do
       ;;
   esac
 done
+
+kill_recorded_renderers() {
+  [ -f "$pid_file" ] || return 0
+
+  while IFS= read -r pid; do
+    [[ "$pid" =~ ^[0-9]+$ ]] || continue
+    kill "$pid" 2>/dev/null || true
+  done < "$pid_file"
+
+  for _ in $(seq 1 20); do
+    active=0
+    while IFS= read -r pid; do
+      [[ "$pid" =~ ^[0-9]+$ ]] || continue
+      if kill -0 "$pid" 2>/dev/null; then
+        active=1
+        break
+      fi
+    done < "$pid_file"
+    [ "$active" -eq 0 ] && break
+    sleep 0.1
+  done
+
+  while IFS= read -r pid; do
+    [[ "$pid" =~ ^[0-9]+$ ]] || continue
+    if kill -0 "$pid" 2>/dev/null; then
+      kill -9 "$pid" 2>/dev/null || true
+    fi
+  done < "$pid_file"
+
+  rm -f "$pid_file"
+}
 
 if [ "''${#args[@]}" -gt 0 ]; then
   last_index=$((''${#args[@]} - 1))
@@ -149,8 +182,45 @@ while [ "$i" -lt "$arg_count" ]; do
   i=$((i + 1))
 done
 
-if [ "''${#screen_roots[@]}" -le 1 ]; then
+if [ "''${#screen_roots[@]}" -eq 0 ]; then
   exec "$real_engine" "''${args[@]}"
+fi
+
+mkdir -p "$state_dir"
+kill_recorded_renderers
+
+pids=()
+pid_snapshot=""
+cleanup_children() {
+  for pid in "''${pids[@]:-}"; do
+    if [ -n "$pid" ]; then
+      kill "$pid" 2>/dev/null || true
+    fi
+  done
+}
+
+cleanup_pid_file() {
+  [ -n "$pid_snapshot" ] || return 0
+  if [ -f "$pid_file" ] && [ "$(${pkgs.coreutils}/bin/cat "$pid_file" 2>/dev/null)" = "$pid_snapshot" ]; then
+    rm -f "$pid_file"
+  fi
+}
+
+trap 'cleanup_children' INT TERM
+trap 'cleanup_pid_file' EXIT
+
+if [ "''${#screen_roots[@]}" -eq 1 ]; then
+  "$real_engine" "''${args[@]}" &
+  pids=("$!")
+  pid_snapshot=$(IFS=:; printf '%s' "''${pids[*]}")
+  printf '%s' "$pid_snapshot" > "$pid_file"
+  status=0
+  for pid in "''${pids[@]}"; do
+    if ! wait "$pid"; then
+      status=1
+    fi
+  done
+  exit "$status"
 fi
 
 background_arg=""
@@ -160,17 +230,6 @@ if [ "''${#common_args[@]}" -gt 0 ]; then
   background_arg="''${common_args[$last_index]}"
   common_prefix=("''${common_args[@]:0:$last_index}")
 fi
-
-pids=()
-cleanup_children() {
-  for pid in "''${pids[@]:-}"; do
-    if [ -n "$pid" ]; then
-      kill "$pid" 2>/dev/null || true
-    fi
-  done
-}
-
-trap cleanup_children INT TERM
 
 status=0
 for idx in "''${!screen_roots[@]}"; do
@@ -184,6 +243,9 @@ for idx in "''${!screen_roots[@]}"; do
   "$real_engine" "''${child_args[@]}" &
   pids+=("$!")
 done
+
+pid_snapshot=$(IFS=:; printf '%s' "''${pids[*]}")
+printf '%s' "$pid_snapshot" > "$pid_file"
 
 for pid in "''${pids[@]}"; do
   if ! wait "$pid"; then
@@ -1714,10 +1776,6 @@ PY
     wallpaper_path="$1"
     outputs_csv="''${2:-}"
     session_file="$HOME/.local/state/DankMaterialShell/session.json"
-    cache_dir="$HOME/.cache/skwd-wall/wallpaper"
-    display_path="$cache_dir/static-live.jpg"
-    display_tmp="$display_path.tmp"
-    apply_path="$wallpaper_path"
     transition="wipe"
     transition_type="wipe"
     transition_duration="0.7"
@@ -1784,31 +1842,19 @@ PY
         ;;
     esac
 
-    mkdir -p "$cache_dir"
-    if ${pkgs.imagemagick}/bin/magick "''${wallpaper_path}[0]" \
-      -auto-orient \
-      -strip \
-      -background black \
-      -alpha remove \
-      -alpha off \
-      -colorspace sRGB \
-      -filter Lanczos \
-      -resize 1920x1080^ \
-      -gravity center \
-      -extent 1920x1080 \
-      -quality 95 \
-      "jpg:$display_tmp" 2>/dev/null; then
-      mv -f "$display_tmp" "$display_path"
-      apply_path="$display_path"
-    else
-      rm -f "$display_tmp"
+    if ! pgrep -x awww-daemon >/dev/null; then
+      setsid ${pkgs.awww}/bin/awww-daemon >/dev/null 2>&1 &
+      for _ in 1 2 3 4 5; do
+        sleep 0.3
+        pgrep -x awww-daemon >/dev/null && break
+      done
     fi
 
     cmd=(${pkgs.awww}/bin/awww img)
     if [ -n "$outputs_csv" ]; then
       cmd+=(-o "$outputs_csv")
     fi
-    cmd+=("$apply_path" --transition-type "$transition_type" --transition-duration "$transition_duration")
+    cmd+=("$wallpaper_path" --transition-type "$transition_type" --transition-duration "$transition_duration")
     if [ -n "$transition_step" ]; then
       cmd+=(--transition-step "$transition_step")
     fi
