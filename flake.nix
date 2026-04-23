@@ -205,6 +205,7 @@
         specialArgs = {inherit inputs;};
         modules = [
           ./hosts/usb/default.nix
+          inputs.dms.nixosModules.greeter
           home-manager.nixosModules.home-manager
           {
             home-manager.useGlobalPkgs = true;

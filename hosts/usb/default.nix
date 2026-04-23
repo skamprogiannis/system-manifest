@@ -8,7 +8,7 @@
     ../common/default.nix
     ./docker-scratch.nix
     ../../modules/desktop-enviroments/hyprland.nix
-    ../../modules/desktop-enviroments/gnome.nix
+    ../desktop/dms-greeter.nix
     ./hardware-configuration.nix
   ];
 
