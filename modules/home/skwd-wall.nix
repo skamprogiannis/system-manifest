@@ -403,9 +403,20 @@ selector_text = replace_all(
     _setSortMode(service.sortMode === "date" ? "color" : "date")
   }
 
+  function _focusSettingsPanel() {
+    if (!settingsLoader.item)
+      return
+    if (settingsLoader.item.focusPreferredControl)
+      settingsLoader.item.focusPreferredControl()
+    else if (settingsLoader.item.forceActiveFocus)
+      settingsLoader.item.forceActiveFocus()
+  }
+
   function _toggleSettings() {
     settingsOpen = !settingsOpen
-    if (!settingsOpen)
+    if (settingsOpen)
+      Qt.callLater(function() { _focusSettingsPanel() })
+    else
       _focusActiveList()
   }
 
@@ -666,6 +677,10 @@ selector_text = replace_all(
     """      Keys.onPressed: function(event) {
          if (wallpaperSelector._handleFilterKey(event))
            return
+         if (wallpaperSelector.settingsOpen) {
+           event.accepted = true
+           return
+         }
          if (wallpaperSelector._handleItemKey(event))
            return
 
@@ -677,6 +692,10 @@ selector_text = replace_all(
     """      Keys.onPressed: function(event) {
          if (wallpaperSelector._handleFilterKey(event))
            return
+         if (wallpaperSelector.settingsOpen) {
+           event.accepted = true
+           return
+         }
          if (wallpaperSelector._handleItemKey(event))
            return
          if (event.modifiers & Qt.ShiftModifier) {
@@ -756,9 +775,18 @@ selector_text = replace_all(
     """      Keys.onPressed: function(event) {
          if (wallpaperSelector._handleFilterKey(event))
            return
+         if (wallpaperSelector.settingsOpen) {
+           event.accepted = true
+           return
+         }
          if (wallpaperSelector._handleItemKey(event))
            return
          if (event.modifiers & Qt.ShiftModifier) {""",
+)
+selector_text = replace_all(
+    selector_text,
+    '      onSettingsToggled: { wallpaperSelector.settingsOpen = !wallpaperSelector.settingsOpen; if (!wallpaperSelector.settingsOpen) wallpaperSelector._focusActiveList() }',
+    '      onSettingsToggled: wallpaperSelector._toggleSettings()',
 )
 wallpaper_selector.write_text(selector_text)
 
@@ -1140,6 +1168,124 @@ settings_text = replace_all(
 )
 settings_text = replace_all(
     settings_text,
+    """  signal closeRequested()
+
+  Keys.onEscapePressed: closeRequested()
+  focus: settingsOpen
+
+  MouseArea {""",
+    """  signal closeRequested()
+
+  function _focusFirstControl(rootItem) {
+    if (!rootItem || rootItem.visible === false || rootItem.enabled === false)
+      return false
+    if (rootItem !== settingsPanel && rootItem.activeFocusOnTab && rootItem.forceActiveFocus) {
+      rootItem.forceActiveFocus()
+      return true
+    }
+    if (!rootItem.children)
+      return false
+    for (var i = 0; i < rootItem.children.length; i++) {
+      if (_focusFirstControl(rootItem.children[i]))
+        return true
+    }
+    return false
+  }
+
+  function _focusCurrentTabButton() {
+    if (!tabRepeater || tabRepeater.count === 0)
+      return false
+    for (var i = 0; i < tabRepeater.count; i++) {
+      var button = tabRepeater.itemAt(i)
+      if (button && button.isActive) {
+        button.forceActiveFocus()
+        return true
+      }
+    }
+    var firstButton = tabRepeater.itemAt(0)
+    if (!firstButton)
+      return false
+    firstButton.forceActiveFocus()
+    return true
+  }
+
+  function _focusTabOffset(tabIndex, offset) {
+    if (!tabRepeater || tabRepeater.count === 0)
+      return false
+    var nextIndex = (tabIndex + offset + tabRepeater.count) % tabRepeater.count
+    var button = tabRepeater.itemAt(nextIndex)
+    if (!button)
+      return false
+    activeTab = button.tabKey
+    button.forceActiveFocus()
+    return true
+  }
+
+  function focusPreferredControl() {
+    if (_focusFirstControl(contentLoader))
+      return true
+    return _focusCurrentTabButton()
+  }
+
+  onSettingsOpenChanged: {
+    if (settingsOpen)
+      Qt.callLater(function() { focusPreferredControl() })
+  }
+
+  Keys.onEscapePressed: closeRequested()
+  Keys.onPressed: function(event) {
+    if (event.modifiers === Qt.NoModifier && (event.key === Qt.Key_O || event.text === "o")) {
+      closeRequested()
+      event.accepted = true
+    }
+  }
+  focus: settingsOpen
+
+  MouseArea {""",
+)
+settings_text = replace_all(
+    settings_text,
+    """    Repeater {
+      model: {""",
+    """    Repeater {
+      id: tabRepeater
+      model: {""",
+)
+settings_text = replace_all(
+    settings_text,
+    """      FilterButton {
+        colors: settingsPanel.colors
+        label: modelData.label
+        skew: settingsPanel._tabSkew
+        height: 28
+        isActive: settingsPanel.activeTab === modelData.key
+        onClicked: settingsPanel.activeTab = modelData.key
+      }""",
+    """      FilterButton {
+        property string tabKey: modelData.key
+        property int tabIndex: index
+        colors: settingsPanel.colors
+        label: modelData.label
+        skew: settingsPanel._tabSkew
+        height: 28
+        isActive: settingsPanel.activeTab === modelData.key
+        onClicked: settingsPanel.activeTab = modelData.key
+        Keys.onPressed: function(event) {
+          if (event.key === Qt.Key_Left || event.key === Qt.Key_H || event.text === "h") {
+            settingsPanel._focusTabOffset(tabIndex, -1)
+            event.accepted = true
+          } else if (event.key === Qt.Key_Right || event.key === Qt.Key_L || event.text === "l") {
+            settingsPanel._focusTabOffset(tabIndex, 1)
+            event.accepted = true
+          } else if (event.key === Qt.Key_Down || event.key === Qt.Key_J || event.text === "j") {
+            if (settingsPanel._focusFirstControl(contentLoader))
+              event.accepted = true
+          }
+        }
+      }""",
+)
+settings_text = replace_all(
+    settings_text,
     '          text: "WIP — Video and WE support coming."',
     '          text: "Choose target outputs before applying a wallpaper."',
 )
@@ -1189,7 +1335,7 @@ settings_text = replace_all(
             { key: "Shift + F",                   action: "Toggle favourites filter" },
             { key: "Shift + L",                   action: "Toggle weather-tag filter" },
             { key: "n / c / s",                   action: "Newest / colour / toggle sort" },
-            { key: "o",                           action: "Open settings" },
+            { key: "o",                           action: "Toggle settings" },
             { key: "Space",                       action: "Flip current item / close details" },
             { key: "f",                           action: "Toggle favourite for current item" },
             { key: "a",                           action: "Focus add-tag input for current item" },
