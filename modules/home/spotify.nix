@@ -10,6 +10,7 @@ assert lib.assertMsg (builtins.elem hostType ["desktop" "usb"]) "hostType must b
 let
   spotifyDeviceName = if hostType == "usb" then "nixos-usb" else "nixos-desktop";
   spotifyServiceName = "spotify-player.service";
+  spotifyUserClientId = "65b708073fc0480ea92a077233ca87bd";
   spotifyPlayerClientPatch = pkgs.writeText "patch-spotify-player-client.py" ''
     import re
     from pathlib import Path
@@ -191,8 +192,43 @@ let
       ${pkgs.systemd}/bin/systemctl --user is-failed --quiet "$service_name"
     }
 
-    clear_cached_credentials() {
+    clear_web_api_token() {
+      rm -f "$user_client_token_file"
+    }
+
+    clear_auth_cache() {
       rm -f "$credentials_file" "$user_client_token_file"
+    }
+
+    bootstrap_web_api_token() {
+      local output=""
+
+      if output=$("$real_player" -c "$auth_config_dir" get key devices 2>&1); then
+        return 0
+      fi
+
+      case "$output" in
+        *"400 Bad Request"*)
+          clear_web_api_token
+          if output=$("$real_player" -c "$auth_config_dir" get key devices 2>&1); then
+            return 0
+          fi
+          ;;
+      esac
+
+      if [ -n "$output" ]; then
+        printf '%s\n' "$output" >&2
+      fi
+      return 1
+    }
+
+    run_full_auth_flow() {
+      stop_service
+      reset_failed_service
+      clear_auth_cache
+      echo "spotify_player: starting interactive Spotify login" >&2
+      "$real_player" -c "$auth_config_dir" authenticate
+      bootstrap_web_api_token
     }
 
     ensure_authenticated() {
@@ -200,9 +236,8 @@ let
         return 0
       fi
 
-      stop_service
       echo "spotify_player: no cached Spotify credentials; starting interactive login" >&2
-      "$real_player" -c "$auth_config_dir" authenticate
+      run_full_auth_flow
     }
 
     recover_stale_auth() {
@@ -212,9 +247,9 @@ let
 
       stop_service
       reset_failed_service
-      clear_cached_credentials
+      clear_auth_cache
       echo "spotify_player: cached Spotify tokens look stale; starting interactive login" >&2
-      ensure_authenticated
+      run_full_auth_flow
     }
 
     daemon_has_device() {
@@ -259,8 +294,11 @@ let
     fi
 
     if [ "$#" -gt 0 ] && [ "$1" = "authenticate" ]; then
-      stop_service
-      exec_real_player "$@"
+      if ! run_full_auth_flow; then
+        echo "spotify_player: authentication failed" >&2
+        exit 1
+      fi
+      exit 0
     fi
 
     if should_bypass_wrapper "$@"; then
@@ -303,6 +341,7 @@ in {
   home.file."${spotifyConfigDir}/app.toml".text = ''
     client_port = 8081
     login_redirect_uri = "http://127.0.0.1:8989/login"
+    client_id = "${spotifyUserClientId}"
     enable_streaming = "DaemonOnly"
     playback_refresh_duration_in_ms = 0
     enable_media_control = false
@@ -322,6 +361,7 @@ in {
   home.file."${config.xdg.configHome}/spotify-player-daemon/app.toml".text = ''
     client_port = 8081
     login_redirect_uri = "http://127.0.0.1:8989/login"
+    client_id = "${spotifyUserClientId}"
     enable_streaming = "DaemonOnly"
     enable_media_control = true
     playback_refresh_duration_in_ms = 0
@@ -363,5 +403,4 @@ in {
       TimeoutStopSec = "5s";
     };
   };
-
 }
