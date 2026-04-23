@@ -108,6 +108,26 @@ in {
           export GH_TOKEN="$(<"$HOME/.config/github-pat")"
         fi
 
+        # Drop any inherited direnv/flake environment before starting Copilot.
+        # Copilot can still access repo-local tools explicitly via `nix develop -c`
+        # or `direnv exec`, but it should not inherit an already-active dev shell.
+        if [[ -n "''${DIRENV_DIFF:-}" || -n "''${DIRENV_DIR:-}" ]]; then
+          original_pwd="$PWD"
+          if ! cd "$HOME"; then
+            echo "failed to switch to \$HOME while unloading direnv state" >&2
+            exit 1
+          fi
+          if ! direnv_exports="$(${pkgs.direnv}/bin/direnv export bash 2>/dev/null)"; then
+            echo "failed to unload inherited direnv state before starting copilot" >&2
+            exit 1
+          fi
+          eval "$direnv_exports"
+          if ! cd "$original_pwd"; then
+            echo "failed to restore working directory after unloading direnv state" >&2
+            exit 1
+          fi
+        fi
+
         args=()
         for arg in "$@"; do
           if [[ "$arg" == "--no-warnings" ]]; then
