@@ -228,6 +228,8 @@ in {
         # Force software cursors so Hyprland/DMS cursor-hide works consistently.
         cursor = {
           no_hardware_cursors = true;
+          hide_on_key_press = true;
+          inactive_timeout = 5;
         };
 
         general = {
