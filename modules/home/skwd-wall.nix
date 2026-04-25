@@ -1619,6 +1619,20 @@ selector_text = replace_all(
     'onClicked: { if (!hexBackOverlay.overlayData) return; var p = hexBackOverlay.overlayData.path; Qt.openUrlExternally(ImageService.fileUrl(p.substring(0, p.lastIndexOf("/")))); hexBackOverlay.hide() }',
     'onClicked: { if (!hexBackOverlay.overlayData) return; Qt.openUrlExternally(ImageService.fileUrl(hexBackOverlay.overlayData.path)); hexBackOverlay.hide() }',
 )
+selector_text = replace_all(
+    selector_text,
+    """      anchors.horizontalCenter: cardContainer.horizontalCenter
+      z: 5
+      sourceComponent: Component {
+        TagCloud {
+          parentWidth: cardContainer.width""",
+    """      anchors.left: selectorPanel.left
+      anchors.right: selectorPanel.right
+      z: 5
+      sourceComponent: Component {
+        TagCloud {
+          parentWidth: selectorPanel.width""",
+)
 wallpaper_selector.write_text(selector_text)
 
 filter_button_text = filter_button_qml.read_text()

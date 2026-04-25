@@ -355,5 +355,15 @@ in {
             "            preferredRendererType: root.shapeRendererType",
         ),
     ],
+    root / "Common/SessionData.qml": [
+        (
+            "    Process {\n        id: sessionWritableCheckProcess",
+            "    Process {\n        id: _skwdWallApplyProcess\n        running: false\n    }\n    Process {\n        id: sessionWritableCheckProcess",
+        ),
+        (
+            "        saveSettings();\n\n        if (typeof Theme !== \"undefined\") {\n            Theme.generateSystemThemesFromCurrentTheme();\n        }\n    }\n\n    function setWallpaperColor",
+            "        saveSettings();\n        if (typeof imagePath === \"string\" && imagePath.length > 0 && imagePath[0] !== \"#\") {\n            _skwdWallApplyProcess.running = false;\n            _skwdWallApplyProcess.command = [\"skwd\", \"wall\", \"apply\", imagePath];\n            _skwdWallApplyProcess.running = true;\n        }\n\n        if (typeof Theme !== \"undefined\") {\n            Theme.generateSystemThemesFromCurrentTheme();\n        }\n    }\n\n    function setWallpaperColor",
+        ),
+    ],
   '';
 }
