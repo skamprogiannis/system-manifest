@@ -30,6 +30,7 @@
     selectorServiceQml=$out/share/skwd-wall/qml/wallpaper/WallpaperSelectorService.qml
     sliceDelegateQml=$out/share/skwd-wall/qml/wallpaper/SliceDelegate.qml
     hexDelegateQml=$out/share/skwd-wall/qml/wallpaper/HexDelegate.qml
+    tagCloudQml=$out/share/skwd-wall/qml/wallpaper/TagCloud.qml
     desktopFile=$out/share/applications/skwd-wall.desktop
 
     # --- vim-style hjkl aliases for arrow keys ---
@@ -338,6 +339,7 @@ EOF
     export SELECTOR_SERVICE_QML="$selectorServiceQml"
     export SLICE_DELEGATE_QML="$sliceDelegateQml"
     export HEX_DELEGATE_QML="$hexDelegateQml"
+    export TAG_CLOUD_QML="$tagCloudQml"
     export SECRETS_FILE_PATH="${skwdSecretsFile}"
     ${pkgs.python3}/bin/python3 <<'PY'
 from pathlib import Path
@@ -362,6 +364,7 @@ apply_qml = Path(os.environ["APPLY_QML"])
 selector_service_qml = Path(os.environ["SELECTOR_SERVICE_QML"])
 slice_delegate_qml = Path(os.environ["SLICE_DELEGATE_QML"])
 hex_delegate_qml = Path(os.environ["HEX_DELEGATE_QML"])
+tag_cloud_qml = Path(os.environ["TAG_CLOUD_QML"])
 secrets_file = os.environ["SECRETS_FILE_PATH"]
 
 selector_text = wallpaper_selector.read_text()
@@ -406,6 +409,20 @@ selector_text = replace_all(
 
   function _toggleSortMode() {
     _setSortMode(service.sortMode === "date" ? "color" : "date")
+  }
+
+  function _clearColorFilter() {
+    if (service.selectedColorFilter === -1)
+      return false
+    service.selectedColorFilter = -1
+    return true
+  }
+
+  function _toggleTagCloud() {
+    tagCloudVisible = !tagCloudVisible
+    if (!tagCloudVisible)
+      _setSelectedTags([])
+    return true
   }
 
   function _setDisplayMode(mode) {
@@ -580,10 +597,18 @@ selector_text = replace_all(
       return true
     }
 
-    if ((event.modifiers & Qt.ShiftModifier) && (event.key === Qt.Key_F || event.text === "F")) {
-      service.favouriteFilterActive = !service.favouriteFilterActive
-      event.accepted = true
-      return true
+    if ((event.modifiers & Qt.ShiftModifier) && !(event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))) {
+      if (event.key === Qt.Key_F || event.text === "F") {
+        service.favouriteFilterActive = !service.favouriteFilterActive
+        event.accepted = true
+        return true
+      }
+      if (event.key === Qt.Key_C || event.text === "C") {
+        if (!_clearColorFilter())
+          return false
+        event.accepted = true
+        return true
+      }
     }
 
     if (event.modifiers !== Qt.NoModifier)
@@ -605,6 +630,8 @@ selector_text = replace_all(
       _setSortMode("color")
     } else if (event.key === Qt.Key_S || event.text === "s") {
       _toggleSortMode()
+    } else if (event.key === Qt.Key_T || event.text === "t") {
+      _toggleTagCloud()
     } else if (event.key === Qt.Key_O || event.text === "o") {
       _toggleSettings()
     } else {
@@ -730,16 +757,14 @@ selector_text = replace_all(
            event.accepted = true
            return
          }
-         if (wallpaperSelector._handleItemKey(event))
-           return
-         if (event.modifiers & Qt.ShiftModifier) {
-           if (event.key === Qt.Key_J || event.text === "J") {
-             wallpaperSelector.tagCloudVisible = !wallpaperSelector.tagCloudVisible
-             if (!wallpaperSelector.tagCloudVisible)
-               wallpaperSelector._setSelectedTags([])
-             event.accepted = true
-             return
-           }
+          if (wallpaperSelector._handleItemKey(event))
+            return
+          if (event.modifiers & Qt.ShiftModifier) {
+            if (event.key === Qt.Key_J || event.text === "J") {
+              wallpaperSelector._toggleTagCloud()
+              event.accepted = true
+              return
+            }
            if (event.key === Qt.Key_Left) {
              if (service.selectedColorFilter === -1) service.selectedColorFilter = 99
              else if (service.selectedColorFilter === 99) service.selectedColorFilter = 11
@@ -821,6 +846,15 @@ selector_text = replace_all(
     selector_text,
     '      onSettingsToggled: { wallpaperSelector.settingsOpen = !wallpaperSelector.settingsOpen; if (!wallpaperSelector.settingsOpen) wallpaperSelector._focusActiveList() }',
     '      onSettingsToggled: wallpaperSelector._toggleSettings()',
+)
+selector_text = replace_all(
+    selector_text,
+    """      onTagCloudToggled: {
+        wallpaperSelector.tagCloudVisible = !wallpaperSelector.tagCloudVisible
+        if (!wallpaperSelector.tagCloudVisible)
+          wallpaperSelector._setSelectedTags([])
+      }""",
+    '      onTagCloudToggled: wallpaperSelector._toggleTagCloud()',
 )
 wallpaper_selector.write_text(selector_text)
 
@@ -1072,6 +1106,295 @@ filter_bar_text = replace_all(
         }""",
 )
 filter_bar_qml.write_text(filter_bar_text)
+tag_cloud_text = tag_cloud_qml.read_text()
+tag_cloud_text = replace_all(
+    tag_cloud_text,
+    """    readonly property bool searchFocused: tagSearchInput.activeFocus
+
+    signal escapePressed()
+    signal closeRequested()
+
+    function reset() {
+        tagSearchInput.text = ""
+        _tagSearchQuery = ""
+        if (service) {
+            service.selectedTags = []
+            service.updateFilteredModel(true)
+        }
+        _recomputeTags()
+    }""",
+    """    readonly property bool searchFocused: tagSearchInput.activeFocus
+    readonly property bool chipFocusActive: chipFocusScope.activeFocus
+
+    signal escapePressed()
+    signal closeRequested()
+
+    function reset() {
+        _focusedChipIndex = -1
+        tagSearchInput.text = ""
+        _tagSearchQuery = ""
+        if (service) {
+            service.selectedTags = []
+            service.updateFilteredModel(true)
+        }
+        _recomputeTags()
+    }
+
+    function focusSearchField() {
+        _focusedChipIndex = -1
+        Qt.callLater(function() { tagSearchInput.forceActiveFocus() })
+    }
+
+    function focusChipRow(fromEnd) {
+        if (_visibleTagsCache.length === 0)
+            return false
+        if (_focusedChipIndex < 0 || _focusedChipIndex >= _visibleTagsCache.length)
+            _focusedChipIndex = fromEnd ? _visibleTagsCache.length - 1 : 0
+        Qt.callLater(function() { chipFocusScope.forceActiveFocus() })
+        return true
+    }
+
+    function moveChipFocus(step) {
+        if (_visibleTagsCache.length === 0)
+            return false
+        if (_focusedChipIndex < 0 || _focusedChipIndex >= _visibleTagsCache.length)
+            _focusedChipIndex = step < 0 ? _visibleTagsCache.length - 1 : 0
+        else
+            _focusedChipIndex = (_focusedChipIndex + step + _visibleTagsCache.length) % _visibleTagsCache.length
+        Qt.callLater(function() { chipFocusScope.forceActiveFocus() })
+        return true
+    }
+
+    function _toggleTag(tag, preferChipFocus) {
+        var svc = service
+        if (!svc)
+            return
+        var tags = svc.selectedTags.slice()
+        var idx = tags.indexOf(tag)
+        var removing = idx !== -1
+        if (removing)
+            tags.splice(idx, 1)
+        else
+            tags.push(tag)
+        svc.selectedTags = tags
+        svc.updateFilteredModel(true)
+
+        _syncingText = true
+        if (removing) {
+            var re = new RegExp('\\\\b' + tag + '\\\\b\\\\s*', 'i')
+            tagSearchInput.text = tagSearchInput.text.replace(re, "").replace(/^\\s+/, "")
+        } else {
+            var cur = tagSearchInput.text
+            var suffix = (cur.length > 0 && cur[cur.length - 1] !== " ") ? " " : ""
+            tagSearchInput.text = cur + suffix + tag + ' '
+        }
+        _syncingText = false
+        _recomputeTags()
+
+        Qt.callLater(function() {
+            if (preferChipFocus && tagCloud._visibleTagsCache.length > 0) {
+                if (tagCloud._focusedChipIndex < 0)
+                    tagCloud._focusedChipIndex = 0
+                else if (tagCloud._focusedChipIndex >= tagCloud._visibleTagsCache.length)
+                    tagCloud._focusedChipIndex = tagCloud._visibleTagsCache.length - 1
+                chipFocusScope.forceActiveFocus()
+            } else {
+                tagSearchInput.forceActiveFocus()
+            }
+        })
+    }
+
+    function toggleFocusedTag() {
+        if (_focusedChipIndex < 0 || _focusedChipIndex >= _visibleTagsCache.length)
+            return false
+        _toggleTag(_visibleTagsCache[_focusedChipIndex].tag, true)
+        return true
+    }""",
+)
+tag_cloud_text = replace_all(
+    tag_cloud_text,
+    """    onTagCloudVisibleChanged: {
+        console.log("[TagCloud] tagCloudVisible=" + tagCloudVisible + " service=" + (service ? "yes" : "null") + " popularTags=" + (service ? service.popularTags.length : "n/a"))
+        if (tagCloudVisible) {
+            tagCloudFlow._settled = false
+            _entranceActive = true
+            _recomputeTags()
+            _entranceTimer.start()
+            _focusTimer.start()
+        } else {
+            _entranceActive = false
+        }
+    }
+
+    Timer { id: _focusTimer; interval: 0; onTriggered: tagSearchInput.forceActiveFocus() }""",
+    """    onTagCloudVisibleChanged: {
+        console.log("[TagCloud] tagCloudVisible=" + tagCloudVisible + " service=" + (service ? "yes" : "null") + " popularTags=" + (service ? service.popularTags.length : "n/a"))
+        if (tagCloudVisible) {
+            _focusedChipIndex = -1
+            tagCloudFlow._settled = false
+            _entranceActive = true
+            _recomputeTags()
+            _entranceTimer.start()
+            _focusTimer.start()
+        } else {
+            _focusedChipIndex = -1
+            _entranceActive = false
+        }
+    }
+
+    Timer { id: _focusTimer; interval: 0; onTriggered: tagCloud.focusSearchField() }""",
+)
+tag_cloud_text = replace_all(
+    tag_cloud_text,
+    """    property string _tagSearchQuery: ""
+    property string _autoSuggestion: ""
+    property var _visibleTagsCache: []
+    property bool _syncingText: false
+    property bool _tagsDirty: true
+    property bool _entranceActive: false
+    property var _pendingTagsCache: null
+
+    Timer {""",
+    """    property string _tagSearchQuery: ""
+    property string _autoSuggestion: ""
+    property var _visibleTagsCache: []
+    property bool _syncingText: false
+    property bool _tagsDirty: true
+    property bool _entranceActive: false
+    property var _pendingTagsCache: null
+    property int _focusedChipIndex: -1
+
+    Item {
+        id: chipFocusScope
+        width: 1
+        height: 1
+        opacity: 0
+        activeFocusOnTab: true
+        Keys.onPressed: function(event) {
+            if (event.key === Qt.Key_Left) {
+                if (!tagCloud.moveChipFocus(-1))
+                    return
+            } else if (event.key === Qt.Key_Right) {
+                if (!tagCloud.moveChipFocus(1))
+                    return
+            } else if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab || event.key === Qt.Key_Up || event.key === Qt.Key_Down) {
+                tagCloud.focusSearchField()
+            } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
+                if (!tagCloud.toggleFocusedTag())
+                    return
+            } else if (event.key === Qt.Key_Escape) {
+                tagCloud.closeRequested()
+            } else {
+                return
+            }
+            event.accepted = true
+        }
+    }
+
+    Timer {""",
+)
+tag_cloud_text = replace_all(
+    tag_cloud_text,
+    """                Keys.onDownPressed: function(event) {
+                    if (event.modifiers & Qt.ShiftModifier) {
+                        tagCloud.closeRequested()
+                        event.accepted = true
+                    } else {
+                        event.accepted = false
+                    }
+                }
+                Keys.onUpPressed: function(event) { event.accepted = false }
+                Keys.onLeftPressed: function(event) {
+                    if (event.modifiers & Qt.ShiftModifier) { event.accepted = false }
+                }
+                Keys.onRightPressed: function(event) {
+                    if (event.modifiers & Qt.ShiftModifier) { event.accepted = false }
+                }
+                Keys.onTabPressed: function(event) {
+                    event.accepted = true
+                    var suggest = tagCloud._autoSuggestion
+                    if (!suggest) return
+                    var partial = tagCloud._tagSearchQuery
+                    var raw = text.toLowerCase()
+                    var lastIdx = raw.lastIndexOf(partial)
+                    if (lastIdx !== -1)
+                        tagSearchInput.text = text.substring(0, lastIdx) + suggest + " "
+                }""",
+    """                Keys.onDownPressed: function(event) {
+                    if (event.modifiers & Qt.ShiftModifier) {
+                        tagCloud.closeRequested()
+                        event.accepted = true
+                    } else {
+                        event.accepted = tagCloud.focusChipRow(false)
+                    }
+                }
+                Keys.onUpPressed: function(event) { event.accepted = tagCloud.focusChipRow(true) }
+                Keys.onLeftPressed: function(event) {
+                    if (event.modifiers & Qt.ShiftModifier) { event.accepted = false }
+                }
+                Keys.onRightPressed: function(event) {
+                    if (event.modifiers & Qt.ShiftModifier) { event.accepted = false }
+                }
+                Keys.onTabPressed: function(event) {
+                    event.accepted = tagCloud.focusChipRow(false)
+                }
+                Keys.onBacktabPressed: function(event) {
+                    event.accepted = tagCloud.focusChipRow(true)
+                }""",
+)
+tag_cloud_text = replace_all(
+    tag_cloud_text,
+    """                Item {
+                    id: tagParaChip
+                    property bool isSelected: modelData.selected
+                    property bool isHovered: tagParaMouse.containsMouse
+                    property int skew: 10
+                    width: tagParaText.implicitWidth + 24 + skew
+                    height: 24
+                    z: isSelected ? 10 : (isHovered ? 5 : 1)""",
+    """                Item {
+                    id: tagParaChip
+                    property bool isSelected: modelData.selected
+                    property bool isHovered: tagParaMouse.containsMouse
+                    property bool isKeyboardFocused: tagCloud._focusedChipIndex === index && chipFocusScope.activeFocus
+                    property int skew: 10
+                    width: tagParaText.implicitWidth + 24 + skew
+                    height: 24
+                    z: isSelected ? 10 : ((isKeyboardFocused || isHovered) ? 5 : 1)
+                    scale: isSelected ? 1.15 : (isKeyboardFocused ? 1.08 : 1.0)""",
+)
+tag_cloud_text = replace_all(
+    tag_cloud_text,
+    """                        property color strokeColor: tagParaChip.isSelected
+                            ? Qt.rgba(tagParaChip._resolvedActiveColor.r, tagParaChip._resolvedActiveColor.g, tagParaChip._resolvedActiveColor.b, 0.6)
+                            : (tagCloud.colors ? Qt.rgba(tagCloud.colors.primary.r, tagCloud.colors.primary.g, tagCloud.colors.primary.b, 0.15) : Qt.rgba(1, 1, 1, 0.08))""",
+    """                        property color strokeColor: tagParaChip.isKeyboardFocused
+                            ? (tagCloud.colors ? Qt.rgba(tagCloud.colors.primary.r, tagCloud.colors.primary.g, tagCloud.colors.primary.b, 0.85) : Qt.rgba(1, 1, 1, 0.45))
+                            : (tagParaChip.isSelected
+                                ? Qt.rgba(tagParaChip._resolvedActiveColor.r, tagParaChip._resolvedActiveColor.g, tagParaChip._resolvedActiveColor.b, 0.6)
+                                : (tagCloud.colors ? Qt.rgba(tagCloud.colors.primary.r, tagCloud.colors.primary.g, tagCloud.colors.primary.b, 0.15) : Qt.rgba(1, 1, 1, 0.08)))""",
+)
+import re as _re
+_ma_orig = tag_cloud_text
+_ma_pat = _re.compile(
+    r'(                    MouseArea \{\n                        id: tagParaMouse\n'
+    r'                        anchors\.fill: parent\n'
+    r'                        hoverEnabled: true\n'
+    r'                        cursorShape: Qt\.PointingHandCursor\n)'
+    r'                        onClicked: \{.*?'
+    r'(\n                    \})',
+    _re.DOTALL
+)
+tag_cloud_text = _ma_pat.sub(
+    r'\g<1>'
+    r'                        onClicked: tagCloud._toggleTag(modelData.tag, false)'
+    r'\g<2>',
+    tag_cloud_text,
+    count=1
+)
+if tag_cloud_text == _ma_orig:
+    raise SystemExit('pattern not found: tagParaMouse onClicked handler')
+tag_cloud_qml.write_text(tag_cloud_text)
 selector_service_qml.write_text(selector_service_text)
 
 slice_delegate_text = slice_delegate_qml.read_text()
@@ -1603,14 +1926,18 @@ settings_text = replace_all(
             { key: "w",                           action: "Toggle weather-tag filter" },
             { key: "Ctrl + s / h / w",            action: "Switch slices / hex / wall mode" },
             { key: "Shift + F",                   action: "Toggle favourites filter" },
+            { key: "Shift + C",                   action: "Clear colour filter" },
             { key: "n / c / s",                   action: "Newest / colour / toggle sort" },
+            { key: "t",                           action: "Toggle tag cloud" },
             { key: "o",                           action: "Toggle settings" },
             { key: "Space / Alt",                 action: "Toggle current item / close details" },
             { key: "f",                           action: "Toggle favourite for current item" },
             { key: "a",                           action: "Focus add-tag input (details open)" },
             { key: "Shift + ← / →",               action: "Cycle colour filters" },
             { key: "Shift + j / ↓",               action: "Toggle tag cloud" },
-            { key: "Tag input: Tab",              action: "Auto-complete tag" },
+            { key: "Tag cloud: Tab / Shift + Tab", action: "Move between search and tags" },
+            { key: "Tag cloud: ← / →",            action: "Move focused tag" },
+            { key: "Tag cloud: Enter / Space",    action: "Toggle focused tag" },
             { key: "Enter",                       action: "Apply current item / add tag in input" },
             { key: "Escape",                      action: "Clear search / close" },
             { key: "Settings: Tab / Shift + Tab", action: "Move between settings controls" },
@@ -2829,6 +3156,7 @@ wallpaper_path = str(wallpaper)
 data["perModeWallpaper"] = False
 data["perMonitorWallpaper"] = False
 data["wallpaperCyclingEnabled"] = False
+data["isLightMode"] = False
 for key in ("wallpaperPath", "wallpaperPathLight", "wallpaperPathDark"):
     data[key] = wallpaper_path
 
@@ -2837,6 +3165,19 @@ for key in ("monitorWallpapers", "monitorWallpapersLight", "monitorWallpapersDar
 
 if "monitorCyclingSettings" in data:
     data["monitorCyclingSettings"] = {}
+config_file = Path(os.path.expanduser("~/.config/skwd-wall/config.json"))
+if config_file.exists():
+    try:
+        config = json.loads(config_file.read_text())
+        mode = config.get("matugen", {}).get("mode")
+        data["isLightMode"] = mode == "light"
+    except json.JSONDecodeError as exc:
+        print(f"sync-dms-wallpaper: failed to parse {config_file}: {exc}", file=sys.stderr)
+allowed_transitions = {"none", "fade", "wipe", "disc", "stripes", "iris bloom", "pixelate", "portal", "random"}
+if data.get("wallpaperTransition") not in allowed_transitions:
+    data["wallpaperTransition"] = "fade"
+if not isinstance(data.get("includedTransitions"), list) or not data["includedTransitions"]:
+    data["includedTransitions"] = ["fade", "wipe", "disc", "stripes", "iris bloom", "pixelate", "portal"]
 
 payload = json.dumps(data, separators=(",", ":")) + "\n"
 current_payload = session_file.read_text() if session_file.exists() else ""
