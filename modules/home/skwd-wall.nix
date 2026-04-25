@@ -53,6 +53,11 @@
       substituteInPlace $desktopFile \
         --replace-fail 'GenericName=Skwd-wall' 'GenericName=skwd-wall'
     fi
+    if grep -q '^Icon=' "$desktopFile"; then
+      ${pkgs.gnused}/bin/sed -i 's/^Icon=.*/Icon=preferences-desktop-wallpaper/' "$desktopFile"
+    else
+      printf 'Icon=preferences-desktop-wallpaper\n' >> "$desktopFile"
+    fi
 
     mkdir -p $out/libexec/skwd-wall
     cat > $out/libexec/skwd-wall/linux-wallpaperengine <<'EOF'
@@ -403,6 +408,23 @@ selector_text = replace_all(
     _setSortMode(service.sortMode === "date" ? "color" : "date")
   }
 
+  function _setDisplayMode(mode) {
+    if (Config.displayMode === mode)
+      return false
+    if (gridBackOverlay.overlayOpen)
+      gridBackOverlay.hide()
+    if (hexBackOverlay.overlayOpen)
+      hexBackOverlay.hide()
+    if (tagCloudVisible) {
+      tagCloudVisible = false
+      _setSelectedTags([])
+    }
+    Config.saveKey("components.wallpaperSelector.displayMode", mode)
+    Config._configFile.reload()
+    Qt.callLater(function() { _focusActiveList() })
+    return true
+  }
+
   function _focusSettingsPanel() {
     if (!settingsLoader.item)
       return
@@ -534,13 +556,13 @@ selector_text = replace_all(
 
   function _focusCurrentTagEditor() {
     if (isGridMode) {
-      if (!gridBackOverlay.overlayOpen && !_showGridDetails(_currentGridData()))
+      if (!gridBackOverlay.overlayOpen)
         return false
       Qt.callLater(function() { gridTagField.forceActiveFocus() })
       return true
     }
     if (isHexMode) {
-      if (!hexBackOverlay.overlayOpen && !_showHexDetails(_currentHexData()))
+      if (!hexBackOverlay.overlayOpen)
         return false
       Qt.callLater(function() { overlayTagField.forceActiveFocus() })
       return true
@@ -548,8 +570,7 @@ selector_text = replace_all(
     var item = _currentSliceItem()
     if (!item || !item.focusTagInput)
       return false
-    item.focusTagInput()
-    return true
+    return item.focusTagInput()
   }
 
   function _handleFilterKey(event) {
@@ -559,20 +580,8 @@ selector_text = replace_all(
       return true
     }
 
-    if ((event.modifiers & Qt.ShiftModifier) && (event.key === Qt.Key_L || event.text === "L") && Config.locale !== "" && service.weatherMetadataAvailable) {
-      service.weatherFilterActive = !service.weatherFilterActive
-      event.accepted = true
-      return true
-    }
-
     if ((event.modifiers & Qt.ShiftModifier) && (event.key === Qt.Key_F || event.text === "F")) {
       service.favouriteFilterActive = !service.favouriteFilterActive
-      event.accepted = true
-      return true
-    }
-
-    if (event.key === Qt.Key_W || event.text === "w" || event.text === "W" || event.key === Qt.Key_4) {
-      _setTypeFilter("we")
       event.accepted = true
       return true
     }
@@ -586,6 +595,10 @@ selector_text = replace_all(
       _setTypeFilter("static")
     } else if (event.key === Qt.Key_3) {
       _setTypeFilter("video")
+    } else if (event.key === Qt.Key_4 || event.key === Qt.Key_E || event.text === "e" || event.text === "E") {
+      _setTypeFilter("we")
+    } else if ((event.key === Qt.Key_W || event.text === "w" || event.text === "W") && Config.locale !== "" && service.weatherMetadataAvailable) {
+      service.weatherFilterActive = !service.weatherFilterActive
     } else if (event.key === Qt.Key_N || event.text === "n") {
       _setSortMode("date")
     } else if (event.key === Qt.Key_C || event.text === "c") {
@@ -603,6 +616,27 @@ selector_text = replace_all(
   }
 
   function _handleItemKey(event) {
+    if ((event.modifiers & Qt.ControlModifier) && !(event.modifiers & (Qt.AltModifier | Qt.ShiftModifier | Qt.MetaModifier))) {
+      var modeHandled = false
+      if (event.key === Qt.Key_S) {
+        modeHandled = _setDisplayMode("slices")
+      } else if (event.key === Qt.Key_H) {
+        modeHandled = _setDisplayMode("hex")
+      } else if (event.key === Qt.Key_W) {
+        modeHandled = _setDisplayMode("wall")
+      }
+      if (!modeHandled)
+        return false
+      event.accepted = true
+      return true
+    }
+    if (event.key === Qt.Key_Alt && !(event.modifiers & (Qt.ControlModifier | Qt.ShiftModifier | Qt.MetaModifier))) {
+      var altHandled = _toggleCurrentDetails()
+      if (!altHandled)
+        return false
+      event.accepted = true
+      return true
+    }
     if (event.modifiers !== Qt.NoModifier)
       return false
 
@@ -815,6 +849,117 @@ selector_service_text = replace_all(
 )
 selector_service_text = replace_all(
     selector_service_text,
+    """        items.push({
+          name: name, type: type, thumb: thumb,
+          path: type === "static" ? service.wallpaperDir + "/" + name
+              : (type === "video" ? (videoFile || service.videoDir + "/" + name) : ""),
+          weId: weId, videoFile: videoFile,
+          mtime: mtime, hue: hue, saturation: sat,
+          placeholder: false
+        })""",
+    """        items.push({
+          name: name, type: type, thumb: thumb,
+          path: type === "static" ? service.wallpaperDir + "/" + name
+              : (type === "video" ? (videoFile || service.videoDir + "/" + name) : ""),
+          weId: weId, videoFile: videoFile,
+          mtime: mtime, hue: hue, saturation: sat,
+          favourite: r.favourite === 1,
+          placeholder: false
+        })""",
+)
+selector_service_text = replace_all(
+    selector_service_text,
+    """      var item = {
+        name: name, type: type, thumb: thumb,
+        path: type === "static" ? service.wallpaperDir + "/" + name
+            : (type === "video" ? service.videoDir + "/" + name : ""),
+        weId: weId, videoFile: videoFile,
+        mtime: mtime, hue: hue, saturation: sat,
+        placeholder: false
+      }""",
+    """      var item = {
+        name: name, type: type, thumb: thumb,
+        path: type === "static" ? service.wallpaperDir + "/" + name
+            : (type === "video" ? service.videoDir + "/" + name : ""),
+        weId: weId, videoFile: videoFile,
+        mtime: mtime, hue: hue, saturation: sat,
+        favourite: isFavourite(name, weId),
+        placeholder: false
+      }""",
+)
+selector_service_text = replace_all(
+    selector_service_text,
+    """  function isFavourite(name, weId) {
+    var key = weId ? weId : name
+    return !!favouritesDb[key]
+  }""",
+    """  function _setFavouriteState(name, weId, favourite) {
+    var key = weId ? weId : name
+    for (var i = 0; i < _wallpaperData.length; i++) {
+      var itemKey = _wallpaperData[i].weId ? _wallpaperData[i].weId : _wallpaperData[i].name
+      if (itemKey === key) {
+        _wallpaperData[i].favourite = favourite
+        break
+      }
+    }
+    for (var j = 0; j < filteredModel.count; j++) {
+      var filteredKey = filteredModel.get(j).weId ? filteredModel.get(j).weId : filteredModel.get(j).name
+      if (filteredKey === key)
+        filteredModel.setProperty(j, "favourite", favourite)
+    }
+  }
+
+  function isFavourite(name, weId) {
+    var key = weId ? weId : name
+    return !!favouritesDb[key]
+  }""",
+)
+selector_service_text = replace_all(
+    selector_service_text,
+    """  function toggleFavourite(name, weId) {
+    var key = weId ? weId : name
+    var db = JSON.parse(JSON.stringify(favouritesDb))
+    if (db[key]) {
+      delete db[key]
+    } else {
+      db[key] = true
+    }
+    favouritesDb = db
+    DaemonClient.setFavourite(key, !!db[key])
+    if (favouriteFilterActive) updateFilteredModel()
+  }""",
+    """  function toggleFavourite(name, weId) {
+    var key = weId ? weId : name
+    var db = JSON.parse(JSON.stringify(favouritesDb))
+    if (db[key]) {
+      delete db[key]
+    } else {
+      db[key] = true
+    }
+    favouritesDb = db
+    _setFavouriteState(name, weId, !!db[key])
+    DaemonClient.setFavourite(key, !!db[key])
+    if (favouriteFilterActive) updateFilteredModel()
+  }""",
+)
+selector_service_text = replace_all(
+    selector_service_text,
+    """      items.push({
+        name: item.name, type: item.type, thumb: item.thumb, path: item.path,
+        weId: item.weId, videoFile: item.videoFile, mtime: item.mtime,
+        hue: hue, saturation: saturation,
+        placeholder: !!item.placeholder
+      })""",
+    """      items.push({
+        name: item.name, type: item.type, thumb: item.thumb, path: item.path,
+        weId: item.weId, videoFile: item.videoFile, mtime: item.mtime,
+        hue: hue, saturation: saturation,
+        favourite: !!item.favourite,
+        placeholder: !!item.placeholder
+      })""",
+)
+selector_service_text = replace_all(
+    selector_service_text,
     """  property var tagsDb: ({})
   property var colorsDb: ({})
   property var weatherDb: ({})
@@ -951,12 +1096,57 @@ slice_delegate_text = replace_all(
         delegateItem.service.toggleFavourite(delegateItem.model.name, delegateItem.model.weId || "")
     }
 
-    function focusTagInput() {
-        if (!delegateItem.flipped)
-            delegateItem.toggleDetails()
-        Qt.callLater(function() { addTagField.forceActiveFocus() })
+     function focusTagInput() {
+         if (!delegateItem.flipped)
+             return false
+         Qt.callLater(function() { addTagField.forceActiveFocus() })
+         return true
+     }
+     """,
+)
+slice_delegate_text = replace_all(
+    slice_delegate_text,
+    """        Text {
+            anchors.centerIn: parent
+            anchors.horizontalCenterOffset: 1
+            text: "▶"
+            font.pixelSize: 9
+            color: delegateItem.videoActive
+                ? (delegateItem.colors ? delegateItem.colors.primaryText : "#000")
+                : (delegateItem.colors ? delegateItem.colors.primary : Style.fallbackAccent)
+        }
     }
-    """,
+
+    Item {
+        id: typeBadge""",
+    """        Text {
+            anchors.centerIn: parent
+            anchors.horizontalCenterOffset: 1
+            text: "▶"
+            font.pixelSize: 9
+            color: delegateItem.videoActive
+                ? (delegateItem.colors ? delegateItem.colors.primaryText : "#000")
+                : (delegateItem.colors ? delegateItem.colors.primary : Style.fallbackAccent)
+        }
+    }
+
+    Text {
+        id: favouriteBadge
+        y: 8
+        x: delegateItem.skewOffset >= 0 ? delegateItem._topLeft + 12 : parent.width - delegateItem._skAbs - width - 12
+        visible: delegateItem.model.favourite === true
+        z: 10
+        text: "♥"
+        font.family: Style.fontFamily
+        font.pixelSize: 18
+        font.weight: Font.DemiBold
+        color: delegateItem.colors ? delegateItem.colors.primary : "#ff6b81"
+        style: Text.Outline
+        styleColor: Qt.rgba(0, 0, 0, 0.45)
+    }
+
+    Item {
+        id: typeBadge""",
 )
 slice_delegate_text = replace_all(
     slice_delegate_text,
@@ -999,6 +1189,48 @@ hex_delegate_text = replace_all(
 )
 hex_delegate_text = replace_all(
     hex_delegate_text,
+    """        Text {
+            anchors.centerIn: parent; anchors.horizontalCenterOffset: 1
+            text: "▶"; font.pixelSize: 8
+            color: hexItem.videoActive
+                ? (hexItem.colors ? hexItem.colors.primaryText : "#000")
+                : (hexItem.colors ? hexItem.colors.primary : Style.fallbackAccent)
+        }
+    }
+
+    MouseArea {""",
+    """        Text {
+            anchors.centerIn: parent; anchors.horizontalCenterOffset: 1
+            text: "▶"; font.pixelSize: 8
+            color: hexItem.videoActive
+                ? (hexItem.colors ? hexItem.colors.primaryText : "#000")
+                : (hexItem.colors ? hexItem.colors.primary : Style.fallbackAccent)
+        }
+    }
+
+    Rectangle {
+        x: hexItem._cx - hexItem._r * hexItem._sin30 + 4
+        y: hexItem._cy - hexItem._r * hexItem._cos30 + 8
+        width: 20; height: 20; radius: 10
+        color: Qt.rgba(0, 0, 0, 0.7)
+        border.width: 1
+        border.color: hexItem.colors ? Qt.rgba(hexItem.colors.primary.r, hexItem.colors.primary.g, hexItem.colors.primary.b, 0.6) : Qt.rgba(1,1,1,0.4)
+        visible: hexItem.itemData && hexItem.itemData.favourite === true
+        z: 5
+
+        Text {
+            anchors.centerIn: parent
+            text: "♥"
+            font.family: Style.fontFamily; font.pixelSize: 13
+            color: hexItem.colors ? hexItem.colors.primary : "#ff6b81"
+            style: Text.Outline; styleColor: Qt.rgba(0,0,0,0.45)
+        }
+    }
+
+    MouseArea {""",
+)
+hex_delegate_text = replace_all(
+    hex_delegate_text,
     """                if (hexItem.itemData.type === "we") {
                     hexItem.service.applyWE(hexItem.itemData.weId)
                 } else if (hexItem.itemData.type === "video") {
@@ -1016,8 +1248,44 @@ hex_delegate_text = replace_all(
                     hexItem.service.applyStatic(hexItem.itemData.path)
                 }""",
 )
+hex_delegate_text = replace_all(
+    hex_delegate_text,
+    '            opacity: (thumbImage.status === Image.Ready && thumbImage.source != "") ? 0 : 0.08',
+    '            opacity: (!hexItem.itemData || hexItem.itemData.placeholder) ? 0 : (thumbImage.status === Image.Ready && thumbImage.source != "") ? 0 : 0.08',
+)
+hex_delegate_text = replace_all(
+    hex_delegate_text,
+    """            strokeColor: hexItem.isSelected
+                ? (hexItem.colors ? hexItem.colors.primary : Style.fallbackAccent)
+                : Qt.rgba(0, 0, 0, 0.5)""",
+    """            strokeColor: (!hexItem.itemData || hexItem.itemData.placeholder)
+                ? "transparent"
+                : hexItem.isSelected
+                    ? (hexItem.colors ? hexItem.colors.primary : Style.fallbackAccent)
+                    : Qt.rgba(0, 0, 0, 0.5)""",
+)
 hex_delegate_qml.write_text(hex_delegate_text)
 
+selector_text = replace_all(
+    selector_text,
+    """          Text {
+            anchors.top: parent.top; anchors.right: parent.right
+            anchors.margins: 4
+            text: "\\u{f0134}"
+            font.family: Style.fontFamilyNerdIcons; font.pixelSize: 14
+            color: wallpaperSelector.colors ? wallpaperSelector.colors.primary : "#ff8800"
+            visible: gridThumbDelegate.model.favourite === true
+          }""",
+    """          Text {
+            anchors.top: parent.top; anchors.right: parent.right
+            anchors.margins: 4
+            text: "\\u2665"
+            font.family: Style.fontFamily; font.pixelSize: 14
+            color: wallpaperSelector.colors ? wallpaperSelector.colors.primary : "#ff6b81"
+            style: Text.Outline; styleColor: Qt.rgba(0,0,0,0.45)
+            visible: gridThumbDelegate.model.favourite === true
+          }""",
+)
 selector_text = replace_all(
     selector_text,
     'onClicked: { if (!gridBackOverlay.overlayData) return; var p = gridBackOverlay.overlayData.path; Qt.openUrlExternally(ImageService.fileUrl(p.substring(0, p.lastIndexOf("/")))); gridBackOverlay.hide() }',
@@ -1329,16 +1597,16 @@ settings_text = replace_all(
             { key: "Escape",         action: "Clear search / close" }
           ]""",
     """          model: [
-            { key: "1 / 2 / 3 / 4",               action: "Set ALL / PIC / VID / WE" },
+            { key: "1 / 2 / 3 / 4 / e",          action: "Set ALL / PIC / VID / WE" },
             { key: "Tab / Shift + Tab",           action: "Cycle type filters" },
-            { key: "W",                           action: "Set Wallpaper Engine filter" },
+            { key: "w",                           action: "Toggle weather-tag filter" },
+            { key: "Ctrl + s / h / w",            action: "Switch slices / hex / wall mode" },
             { key: "Shift + F",                   action: "Toggle favourites filter" },
-            { key: "Shift + L",                   action: "Toggle weather-tag filter" },
             { key: "n / c / s",                   action: "Newest / colour / toggle sort" },
             { key: "o",                           action: "Toggle settings" },
-            { key: "Space",                       action: "Flip current item / close details" },
+            { key: "Space / Alt",                 action: "Toggle current item / close details" },
             { key: "f",                           action: "Toggle favourite for current item" },
-            { key: "a",                           action: "Focus add-tag input for current item" },
+            { key: "a",                           action: "Focus add-tag input (details open)" },
             { key: "Shift + ← / →",               action: "Cycle colour filters" },
             { key: "Shift + j / ↓",               action: "Toggle tag cloud" },
             { key: "Tag input: Tab",              action: "Auto-complete tag" },
