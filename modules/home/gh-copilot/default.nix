@@ -159,10 +159,6 @@ in {
     source = "${inputs.impeccable}/source/skills/extract";
     recursive = true;
   };
-  home.file.".copilot/skills/frontend-design" = {
-    source = "${inputs.impeccable}/source/skills/frontend-design";
-    recursive = true;
-  };
   home.file.".copilot/skills/harden" = {
     source = "${inputs.impeccable}/source/skills/harden";
     recursive = true;
@@ -197,10 +193,6 @@ in {
   };
   home.file.".copilot/skills/shape" = {
     source = "${inputs.impeccable}/source/skills/shape";
-    recursive = true;
-  };
-  home.file.".copilot/skills/teach-impeccable" = {
-    source = "${inputs.impeccable}/source/skills/teach-impeccable";
     recursive = true;
   };
   home.file.".copilot/skills/typeset" = {
