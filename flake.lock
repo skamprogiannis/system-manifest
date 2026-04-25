@@ -600,6 +600,22 @@
         "type": "github"
       }
     },
+    "mattpocock-skills": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1777058810,
+        "narHash": "sha256-WOmQW6hlUsqCzabk2+EkyTlitHTLxmILPnatOoBFZhQ=",
+        "owner": "mattpocock",
+        "repo": "skills",
+        "rev": "60aa99c0230fbac087514ba5fca2ae6e519965fe",
+        "type": "github"
+      },
+      "original": {
+        "owner": "mattpocock",
+        "repo": "skills",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1770537093,
@@ -801,6 +817,7 @@
         "home-manager": "home-manager_2",
         "hyprland": "hyprland",
         "impeccable": "impeccable",
+        "mattpocock-skills": "mattpocock-skills",
         "nixpkgs": "nixpkgs_2",
         "nixvim": "nixvim",
         "pearpass-app-desktop": "pearpass-app-desktop",

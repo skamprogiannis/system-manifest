@@ -214,6 +214,28 @@ in {
   home.file.".copilot/skills/caveman-review/SKILL.md".source = "${inputs.caveman}/skills/caveman-review/SKILL.md";
   home.file.".copilot/skills/caveman-compress/SKILL.md".source = "${inputs.caveman}/caveman-compress/SKILL.md";
 
+  # Matt Pocock skills — architecture, TDD, triage, and design helpers
+  home.file.".copilot/skills/design-an-interface" = {
+    source = "${inputs.mattpocock-skills}/design-an-interface";
+    recursive = true;
+  };
+  home.file.".copilot/skills/improve-codebase-architecture" = {
+    source = "${inputs.mattpocock-skills}/improve-codebase-architecture";
+    recursive = true;
+  };
+  home.file.".copilot/skills/tdd" = {
+    source = "${inputs.mattpocock-skills}/tdd";
+    recursive = true;
+  };
+  home.file.".copilot/skills/triage-issue" = {
+    source = "${inputs.mattpocock-skills}/triage-issue";
+    recursive = true;
+  };
+  home.file.".copilot/skills/zoom-out" = {
+    source = "${inputs.mattpocock-skills}/zoom-out";
+    recursive = true;
+  };
+
   # --- Custom Agents ---
 
   # Plan Reviewer — structured 4-section plan review before implementation

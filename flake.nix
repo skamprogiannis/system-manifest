@@ -44,6 +44,11 @@
       flake = false;
     };
 
+    mattpocock-skills = {
+      url = "github:mattpocock/skills";
+      flake = false;
+    };
+
     trailofbits-skills = {
       url = "github:trailofbits/skills";
       flake = false;
