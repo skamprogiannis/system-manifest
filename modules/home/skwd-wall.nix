@@ -591,9 +591,9 @@ selector_text = replace_all(
 
     if (event.key === Qt.Key_1) {
       _setTypeFilter("")
-    } else if (event.key === Qt.Key_2) {
+    } else if (event.key === Qt.Key_2 || event.key === Qt.Key_P || event.text === "p" || event.text === "P") {
       _setTypeFilter("static")
-    } else if (event.key === Qt.Key_3) {
+    } else if (event.key === Qt.Key_3 || event.key === Qt.Key_V || event.text === "v" || event.text === "V") {
       _setTypeFilter("video")
     } else if (event.key === Qt.Key_4 || event.key === Qt.Key_E || event.text === "e" || event.text === "E") {
       _setTypeFilter("we")
@@ -1598,6 +1598,7 @@ settings_text = replace_all(
           ]""",
     """          model: [
             { key: "1 / 2 / 3 / 4 / e",          action: "Set ALL / PIC / VID / WE" },
+            { key: "p / v",                       action: "Set PIC / VID filter" },
             { key: "Tab / Shift + Tab",           action: "Cycle type filters" },
             { key: "w",                           action: "Toggle weather-tag filter" },
             { key: "Ctrl + s / h / w",            action: "Switch slices / hex / wall mode" },
@@ -2170,6 +2171,11 @@ PY
 
     mkdir -p "$config_dir"
 
+    saved_locale=""
+    if [ -f "$config_file" ]; then
+      saved_locale="$(${pkgs.jq}/bin/jq -r '.general.locale // ""' "$config_file" 2>/dev/null || echo "")"
+    fi
+
     tmp_file=$(mktemp)
     cp "$defaults_file" "$tmp_file"
 
@@ -2178,6 +2184,13 @@ PY
     fi
     mv "$tmp_file" "$config_file"
     chmod 600 "$config_file"
+
+    if [ -n "$saved_locale" ]; then
+      tmp_patch=$(mktemp)
+      ${pkgs.jq}/bin/jq --arg loc "$saved_locale" '.general.locale = $loc' "$config_file" > "$tmp_patch"
+      mv "$tmp_patch" "$config_file"
+      chmod 600 "$config_file"
+    fi
 
     if [ ! -e "$secrets_file" ]; then
       cp "$secrets_template" "$secrets_file"
