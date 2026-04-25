@@ -2203,16 +2203,16 @@ PY
     wallpaper_path="$1"
     outputs_csv="''${2:-}"
     session_file="$HOME/.local/state/DankMaterialShell/session.json"
-    transition="wipe"
-    transition_type="wipe"
-    transition_duration="0.7"
+    transition="fade"
+    transition_type="fade"
+    transition_duration="0.5"
     transition_step=""
     transition_fps=""
     transition_pos=""
     transition_bezier=""
 
     if [ -f "$session_file" ]; then
-      transition="$(${pkgs.jq}/bin/jq -r '.wallpaperTransition // "wipe"' "$session_file" 2>/dev/null || printf 'wipe\n')"
+      transition="$(${pkgs.jq}/bin/jq -r '.wallpaperTransition // "fade"' "$session_file" 2>/dev/null || printf 'fade\n')"
     fi
 
     case "$transition" in

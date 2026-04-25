@@ -21,7 +21,8 @@
       # Cursor and shell settings
       # Keep translucent glyph edges stable on the glass background.
       alpha-blending = "linear-corrected";
-      minimum-contrast = 1.0;
+      # Boost contrast ratio threshold so text stays readable on bright wallpapers.
+      minimum-contrast = 1.1;
       cursor-style = "block";
       cursor-style-blink = false;
       shell-integration-features = "no-cursor";
