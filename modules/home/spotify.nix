@@ -266,6 +266,11 @@ let
           return 0
         fi
 
+        # Short-circuit if the service has already crashed
+        if service_has_failed; then
+          return 1
+        fi
+
         attempt=$((attempt + 1))
         ${pkgs.coreutils}/bin/sleep 0.5
       done
@@ -279,9 +284,30 @@ let
       ${pkgs.systemd}/bin/systemctl --user start "$service_name"
     }
 
+    detect_auth_failure() {
+      if ! service_has_failed; then
+        return 1
+      fi
+      local output
+      if output=$("$real_player" -c "${spotifyDaemonConfigDir}" get key devices 2>&1); then
+        return 1
+      fi
+      case "$output" in
+        *"400 Bad Request"*|*"Unauthorized"*|*"refresh auth token"*|*"initialize new Spotify session"*)
+          return 0
+          ;;
+      esac
+      return 1
+    }
+
     ensure_device_ready() {
       if wait_for_device "$initial_device_wait_attempts"; then
         return 0
+      fi
+
+      # Skip restart if auth failure — caller will handle re-auth instead
+      if detect_auth_failure; then
+        return 1
       fi
 
       ${pkgs.systemd}/bin/systemctl --user restart "$service_name"
@@ -328,7 +354,13 @@ let
     fi
 
     if ! ensure_device_ready; then
-      if ! (service_has_failed && recover_stale_auth && ensure_service_started && ensure_device_ready); then
+      if detect_auth_failure; then
+        echo "spotify_player: Spotify login has expired — re-authenticating..." >&2
+        if ! (recover_stale_auth && ensure_service_started && ensure_device_ready); then
+          echo "spotify_player: re-authentication failed; run 'spotify_player authenticate' to log in again" >&2
+          exit 1
+        fi
+      elif ! (service_has_failed && recover_stale_auth && ensure_service_started && ensure_device_ready); then
         echo "spotify_player: warning: ${spotifyDeviceName} did not become ready; continuing without daemon-backed device sync" >&2
       fi
     fi
