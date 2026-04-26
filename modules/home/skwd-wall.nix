@@ -418,11 +418,29 @@ selector_text = replace_all(
     return true
   }
 
-  function _toggleTagCloud() {
-    tagCloudVisible = !tagCloudVisible
+  function _closeTagCloud() {
     if (!tagCloudVisible)
-      _setSelectedTags([])
+      return false
+    tagCloudVisible = false
+    _setSelectedTags([])
+    Qt.callLater(function() { focusTimer.restart() })
     return true
+  }
+
+  function _openTagCloud() {
+    if (tagCloudVisible)
+      return false
+    settingsOpen = false
+    wallhavenBrowserOpen = false
+    steamWorkshopBrowserOpen = false
+    tagCloudVisible = true
+    return true
+  }
+
+  function _toggleTagCloud() {
+    if (tagCloudVisible)
+      return _closeTagCloud()
+    return _openTagCloud()
   }
 
   function _setDisplayMode(mode) {
@@ -990,6 +1008,30 @@ selector_service_text = replace_all(
   }""",
     """  function applyVideo(path, outputs) {
     DaemonClient.applyVideo(path, outputs)
+  }
+
+  property var _pendingRename: null
+  property var _renameCallback: null
+  property var _renameProcess: Process {
+    id: renameProcess
+    command: ["bash", "-c", "true"]
+    onExited: function(code) {
+      var pending = service._pendingRename
+      var callback = service._renameCallback
+      service._pendingRename = null
+      service._renameCallback = null
+      if (!pending)
+        return
+      if (code !== 0) {
+        if (callback) callback(false, "Rename failed")
+        return
+      }
+      if (!service._applyLocalRename(pending.oldName, pending.newName, pending.newPath)) {
+        if (callback) callback(false, "Rename succeeded but refresh failed")
+        return
+      }
+      if (callback) callback(true, pending.newName)
+    }
   }""",
 )
 selector_service_text = replace_all(
@@ -1184,6 +1226,251 @@ selector_service_text = replace_all(
       service._analysisItemsDirty = true
     }""",
 )
+selector_service_text = replace_all(
+    selector_service_text,
+    """    function onFileRenamed(oldName, newName) {
+      console.log("[WSS] onFileRenamed: " + oldName + " -> " + newName)
+
+      for (var i = 0; i < service.filteredModel.count; i++) {
+        if (service.filteredModel.get(i).name === oldName) {
+          service.filteredModel.setProperty(i, "name", newName)
+          service.filteredModel.setProperty(i, "path", service.wallpaperDir + "/" + newName)
+          break
+        }
+      }
+
+      for (var j = 0; j < _wallpaperData.length; j++) {
+        if (_wallpaperData[j].name === oldName) {
+          _wallpaperData[j].name = newName
+          _wallpaperData[j].path = service.wallpaperDir + "/" + newName
+          break
+        }
+      }
+
+      delete _wallpaperDataKeys[oldName]
+      _wallpaperDataKeys[newName] = true
+    }""",
+    """    function onFileRenamed(oldName, newName) {
+      console.log("[WSS] onFileRenamed: " + oldName + " -> " + newName)
+      service._applyLocalRename(oldName, newName)
+    }""",
+)
+selector_service_text = replace_all(
+    selector_service_text,
+    """  function deleteWallpaperItem(type, name, weId) {
+    for (var i = filteredModel.count - 1; i >= 0; i--) {
+      var fi = filteredModel.get(i)
+      if (fi.name === name && (fi.weId || "") === (weId || "")) {
+        filteredModel.remove(i)
+        break
+      }
+    }
+
+    for (var j = _wallpaperData.length - 1; j >= 0; j--) {
+      var wi = _wallpaperData[j]
+      if (wi.name === name && (wi.weId || "") === (weId || "")) {
+        _wallpaperData.splice(j, 1)
+        _wallpaperData = _wallpaperData
+        break
+      }
+    }
+
+    DaemonClient.deleteItem(name, type, weId || "")
+  }""",
+    """  function _fileExtension(name) {
+    var dotIndex = name.lastIndexOf(".")
+    return dotIndex === -1 ? "" : name.substring(dotIndex)
+  }
+
+  function _fileStem(name) {
+    return name.replace(/\\.[^.]+$/, "")
+  }
+
+  function _findWallpaperDataIndex(name, weId) {
+    for (var i = 0; i < _wallpaperData.length; i++) {
+      var item = _wallpaperData[i]
+      if (item.name === name && (item.weId || "") === (weId || ""))
+        return i
+    }
+    return -1
+  }
+
+  function _itemPathFor(type, name, videoFile) {
+    if (type === "video")
+      return (videoFile && videoFile.length > 0) ? videoFile : (videoDir + "/" + name)
+    return wallpaperDir + "/" + name
+  }
+
+  function _cloneValue(value) {
+    return JSON.parse(JSON.stringify(value))
+  }
+
+  function _uniqueKeys(keys) {
+    var seen = {}
+    var out = []
+    for (var i = 0; i < keys.length; i++) {
+      var key = keys[i]
+      if (!key || seen[key])
+        continue
+      seen[key] = true
+      out.push(key)
+    }
+    return out
+  }
+
+  function _localLookupKeys(name, thumb) {
+    return _uniqueKeys([
+      name,
+      _fileStem(name),
+      ImageService.thumbKey(thumb, name)
+    ])
+  }
+
+  function _firstDefinedValue(db, keys) {
+    for (var i = 0; i < keys.length; i++) {
+      var key = keys[i]
+      if (key && db[key] !== undefined)
+        return db[key]
+    }
+    return undefined
+  }
+
+  function _assignAliases(db, keys, value) {
+    var next = JSON.parse(JSON.stringify(db))
+    for (var i = 0; i < keys.length; i++) {
+      var key = keys[i]
+      if (key)
+        next[key] = _cloneValue(value)
+    }
+    return next
+  }
+
+  function _syncRenamedItemState(item, newName) {
+    var oldKeys = _localLookupKeys(item.name, item.thumb)
+    var newKeys = _localLookupKeys(newName, item.thumb)
+
+    var tags = _firstDefinedValue(tagsDb, oldKeys)
+    if (tags !== undefined) {
+      tagsDb = _assignAliases(tagsDb, newKeys, tags)
+      _rebuildPopularTags()
+    }
+
+    var colors = _firstDefinedValue(colorsDb, oldKeys)
+    if (colors !== undefined)
+      colorsDb = _assignAliases(colorsDb, newKeys, colors)
+
+    var weather = _firstDefinedValue(weatherDb, oldKeys)
+    if (weather !== undefined) {
+      weatherDb = _assignAliases(weatherDb, newKeys, weather)
+      _syncWeatherMetadataState()
+    }
+
+    var favourite = favouritesDb[item.name]
+    if (favourite !== undefined) {
+      var nextFavs = JSON.parse(JSON.stringify(favouritesDb))
+      nextFavs[newName] = favourite
+      favouritesDb = nextFavs
+      DaemonClient.setFavourite(newName, !!favourite)
+      DaemonClient.setFavourite(item.name, false)
+    }
+
+    if (tags !== undefined || colors !== undefined)
+      DaemonClient.updateAnalysis(_fileStem(newName), tags !== undefined ? tags : null, colors !== undefined ? colors : null, null, item.hue, item.saturation)
+  }
+
+  function _applyLocalRename(oldName, newName, forcedPath) {
+    var itemIndex = _findWallpaperDataIndex(oldName, "")
+    if (itemIndex === -1)
+      return false
+
+    var item = _wallpaperData[itemIndex]
+    var newPath = forcedPath || _itemPathFor(item.type, newName, item.type === "video" ? item.path.replace(item.name, newName) : "")
+
+    _syncRenamedItemState(item, newName)
+
+    item.name = newName
+    item.path = newPath
+    if (item.type === "video")
+      item.videoFile = newPath
+    _wallpaperData = _wallpaperData
+
+    for (var i = 0; i < filteredModel.count; i++) {
+      var filtered = filteredModel.get(i)
+      if (filtered.name === oldName && (filtered.weId || "") === "") {
+        filteredModel.setProperty(i, "name", newName)
+        filteredModel.setProperty(i, "path", newPath)
+        if (item.type === "video")
+          filteredModel.setProperty(i, "videoFile", newPath)
+      }
+    }
+
+    delete _wallpaperDataKeys[oldName]
+    _wallpaperDataKeys[newName] = true
+    return true
+  }
+
+  function renameWallpaperItem(item, requestedBaseName, callback) {
+    if (!item || item.type === "we") {
+      if (callback) callback(false, "Only local pics and vids can be renamed")
+      return
+    }
+    if (_pendingRename) {
+      if (callback) callback(false, "Another rename is already running")
+      return
+    }
+
+    var trimmed = requestedBaseName.replace(/^\\s+|\\s+$/g, "")
+    if (!trimmed) {
+      if (callback) callback(false, "Enter a new name")
+      return
+    }
+    if (trimmed === "." || trimmed === ".." || /[\/\0]/.test(trimmed)) {
+      if (callback) callback(false, "Name contains invalid characters")
+      return
+    }
+
+    var newName = trimmed + _fileExtension(item.name)
+    if (newName === item.name) {
+      if (callback) callback(true, newName)
+      return
+    }
+    if (_findWallpaperDataIndex(newName, "") !== -1) {
+      if (callback) callback(false, "A wallpaper with that name already exists")
+      return
+    }
+
+    var newPath = _itemPathFor(item.type, newName, item.type === "video" ? item.path.replace(item.name, newName) : "")
+    _pendingRename = {
+      oldName: item.name,
+      newName: newName,
+      newPath: newPath
+    }
+    _renameCallback = callback || null
+    _renameProcess.command = ["mv", "--", item.path, newPath]
+    _renameProcess.running = true
+  }
+
+  function deleteWallpaperItem(type, name, weId) {
+    for (var i = filteredModel.count - 1; i >= 0; i--) {
+      var fi = filteredModel.get(i)
+      if (fi.name === name && (fi.weId || "") === (weId || "")) {
+        filteredModel.remove(i)
+        break
+      }
+    }
+
+    for (var j = _wallpaperData.length - 1; j >= 0; j--) {
+      var wi = _wallpaperData[j]
+      if (wi.name === name && (wi.weId || "") === (weId || "")) {
+        _wallpaperData.splice(j, 1)
+        _wallpaperData = _wallpaperData
+        break
+      }
+    }
+
+    DaemonClient.deleteItem(name, type, weId || "")
+  }""",
+)
 filter_bar_text = filter_bar_qml.read_text()
 filter_bar_text = replace_all(
     filter_bar_text,
@@ -1285,27 +1572,105 @@ tag_cloud_text = replace_all(
         _recomputeTags()
     }
 
+    function _chipItems() {
+        var items = []
+        if (!tagCloudFlow || !tagCloudFlow.children)
+            return items
+        for (var i = 0; i < tagCloudFlow.children.length; i++) {
+            var child = tagCloudFlow.children[i]
+            if (child && child._isTagChip === true)
+                items.push(child)
+        }
+        return items
+    }
+
+    function _chipItemAt(targetIndex) {
+        var items = _chipItems()
+        for (var i = 0; i < items.length; i++) {
+            if (items[i].chipIndex === targetIndex)
+                return items[i]
+        }
+        return null
+    }
+
     function focusSearchField() {
         _focusedChipIndex = -1
         Qt.callLater(function() { tagSearchInput.forceActiveFocus() })
     }
 
     function focusChipRow(fromEnd) {
-        if (_visibleTagsCache.length === 0)
+        var items = _chipItems()
+        if (items.length === 0)
             return false
-        if (_focusedChipIndex < 0 || _focusedChipIndex >= _visibleTagsCache.length)
-            _focusedChipIndex = fromEnd ? _visibleTagsCache.length - 1 : 0
+        if (_focusedChipIndex < 0 || !_chipItemAt(_focusedChipIndex))
+            _focusedChipIndex = fromEnd ? items[items.length - 1].chipIndex : items[0].chipIndex
         Qt.callLater(function() { chipFocusScope.forceActiveFocus() })
         return true
     }
 
     function moveChipFocus(step) {
-        if (_visibleTagsCache.length === 0)
+        var items = _chipItems()
+        if (items.length === 0)
             return false
-        if (_focusedChipIndex < 0 || _focusedChipIndex >= _visibleTagsCache.length)
-            _focusedChipIndex = step < 0 ? _visibleTagsCache.length - 1 : 0
-        else
-            _focusedChipIndex = (_focusedChipIndex + step + _visibleTagsCache.length) % _visibleTagsCache.length
+        var currentPos = -1
+        for (var i = 0; i < items.length; i++) {
+            if (items[i].chipIndex === _focusedChipIndex) {
+                currentPos = i
+                break
+            }
+        }
+        if (currentPos === -1)
+            currentPos = step < 0 ? items.length : -1
+        var nextPos = (currentPos + step + items.length) % items.length
+        _focusedChipIndex = items[nextPos].chipIndex
+        Qt.callLater(function() { chipFocusScope.forceActiveFocus() })
+        return true
+    }
+
+    function moveChipFocusVertical(direction) {
+        var currentItem = _chipItemAt(_focusedChipIndex)
+        if (!currentItem)
+            return focusChipRow(direction < 0)
+
+        var currentRowY = currentItem.y
+        var currentCenterX = currentItem.x + currentItem.width / 2
+        var bestItem = null
+        var bestRowDelta = 0
+        var bestDistance = 0
+        var items = _chipItems()
+
+        for (var i = 0; i < items.length; i++) {
+            var candidate = items[i]
+            if (!candidate || candidate === currentItem)
+                continue
+
+            var rowDelta = candidate.y - currentRowY
+            if (direction < 0) {
+                if (rowDelta >= -1)
+                    continue
+            } else {
+                if (rowDelta <= 1)
+                    continue
+            }
+
+            rowDelta = Math.abs(rowDelta)
+            var distance = Math.abs((candidate.x + candidate.width / 2) - currentCenterX)
+            if (!bestItem || rowDelta < bestRowDelta - 1 || (Math.abs(rowDelta - bestRowDelta) <= 1 && distance < bestDistance)) {
+                bestItem = candidate
+                bestRowDelta = rowDelta
+                bestDistance = distance
+            }
+        }
+
+        if (!bestItem) {
+            if (direction < 0) {
+                focusSearchField()
+                return true
+            }
+            return false
+        }
+
+        _focusedChipIndex = bestItem.chipIndex
         Qt.callLater(function() { chipFocusScope.forceActiveFocus() })
         return true
     }
@@ -1416,13 +1781,19 @@ tag_cloud_text = replace_all(
         opacity: 0
         activeFocusOnTab: true
         Keys.onPressed: function(event) {
-            if (event.key === Qt.Key_Left) {
+            if (event.key === Qt.Key_Left || event.key === Qt.Key_H || event.text === "h" || event.text === "H") {
                 if (!tagCloud.moveChipFocus(-1))
                     return
-            } else if (event.key === Qt.Key_Right) {
+            } else if (event.key === Qt.Key_Right || event.key === Qt.Key_L || event.text === "l" || event.text === "L") {
                 if (!tagCloud.moveChipFocus(1))
                     return
-            } else if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab || event.key === Qt.Key_Up || event.key === Qt.Key_Down) {
+            } else if (event.key === Qt.Key_Up || event.key === Qt.Key_K || event.text === "k" || event.text === "K") {
+                if (!tagCloud.moveChipFocusVertical(-1))
+                    return
+            } else if (event.key === Qt.Key_Down || event.key === Qt.Key_J || event.text === "j" || event.text === "J") {
+                if (!tagCloud.moveChipFocusVertical(1))
+                    return
+            } else if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
                 tagCloud.focusSearchField()
             } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
                 if (!tagCloud.toggleFocusedTag())
@@ -1502,6 +1873,8 @@ tag_cloud_text = replace_all(
                     property bool isSelected: modelData.selected
                     property bool isHovered: tagParaMouse.containsMouse
                     property bool isKeyboardFocused: tagCloud._focusedChipIndex === index && chipFocusScope.activeFocus
+                    property bool _isTagChip: true
+                    property int chipIndex: index
                     property int skew: 10
                     width: tagParaText.implicitWidth + 24 + skew
                     height: 24
@@ -1564,11 +1937,51 @@ slice_delegate_text = replace_all(
         delegateItem.service.toggleFavourite(delegateItem.model.name, delegateItem.model.weId || "")
     }
 
+    property bool renameBusy: false
+    property bool renameFailed: false
+    property string renameNotice: ""
+
+    function _currentRenameStem() {
+        return delegateItem.model.name.replace(/\\.[^/.]+$/, "")
+    }
+
+    function _resetRenameInput() {
+        renameBusy = false
+        renameFailed = false
+        renameNotice = ""
+        renameField.text = _currentRenameStem()
+    }
+
+    function submitRename() {
+        if (!delegateItem.service || delegateItem.model.type === "we")
+            return false
+        renameBusy = true
+        renameFailed = false
+        renameNotice = ""
+        delegateItem.service.renameWallpaperItem(delegateItem.model, renameField.text, function(ok, detail) {
+            renameBusy = false
+            renameFailed = !ok
+            renameNotice = ok ? "RENAMED" : detail
+            renameNoticeTimer.restart()
+            if (ok) {
+                renameField.text = delegateItem._currentRenameStem()
+                if (delegateItem._listView)
+                    delegateItem._listView.forceActiveFocus()
+            } else {
+                Qt.callLater(function() {
+                    renameField.selectAll()
+                    renameField.forceActiveFocus()
+                })
+            }
+        })
+        return true
+    }
+
      function focusTagInput() {
-         if (!delegateItem.flipped)
-             return false
-         Qt.callLater(function() { addTagField.forceActiveFocus() })
-         return true
+          if (!delegateItem.flipped)
+              return false
+          Qt.callLater(function() { addTagField.forceActiveFocus() })
+          return true
      }
      """,
 )
@@ -1646,6 +2059,161 @@ slice_delegate_text = replace_all(
                             Qt.openUrlExternally(ImageService.fileUrl(delegateItem.model.path))
                             delegateItem.flipped = false
                         }""",
+)
+slice_delegate_text = replace_all(
+    slice_delegate_text,
+    """    onFlippedChanged: {
+        if (flipped && delegateItem.model.type !== "we") {
+            var key = ImageService.thumbKey(delegateItem.model.thumb, delegateItem.model.name)
+            _backMeta = FileMetadataService.getMetadata(key)
+            if (!_backMeta)
+                FileMetadataService.probeIfNeeded(key, delegateItem.model.path, delegateItem.model.type === "video" ? "video" : "image")
+        }
+        if (!flipped) {
+            addTagField._syncing = true; addTagField.text = ""; addTagField._sessionTags = []; addTagField._syncing = false
+        }
+    }""",
+    """    onFlippedChanged: {
+        if (flipped && delegateItem.model.type !== "we") {
+            var key = ImageService.thumbKey(delegateItem.model.thumb, delegateItem.model.name)
+            _backMeta = FileMetadataService.getMetadata(key)
+            if (!_backMeta)
+                FileMetadataService.probeIfNeeded(key, delegateItem.model.path, delegateItem.model.type === "video" ? "video" : "image")
+        }
+        delegateItem._resetRenameInput()
+        if (!flipped) {
+            addTagField._syncing = true; addTagField.text = ""; addTagField._sessionTags = []; addTagField._syncing = false
+        }
+    }""",
+)
+slice_delegate_text = replace_all(
+    slice_delegate_text,
+    """    Timer {
+        id: videoDelayTimer
+        interval: 300
+        onTriggered: delegateItem.videoActive = true
+    }""",
+    """    Timer {
+        id: videoDelayTimer
+        interval: 300
+        onTriggered: delegateItem.videoActive = true
+    }
+
+    Timer {
+        id: renameNoticeTimer
+        interval: 2200
+        onTriggered: {
+            delegateItem.renameNotice = ""
+            delegateItem.renameFailed = false
+        }
+    }""",
+)
+slice_delegate_text = replace_all(
+    slice_delegate_text,
+    """                Item {
+                    id: backTagsSection
+                    width: parent.width
+                    height: parent.height - y - backActionRow.height - parent.spacing
+                    clip: true""",
+    """                Item {
+                    id: backRenameRow
+                    width: parent.width
+                    height: delegateItem.model.type === "we" ? 0 : 22
+                    visible: delegateItem.model.type !== "we"
+
+                    Rectangle {
+                        anchors.fill: parent
+                        color: (renameField.activeFocus || delegateItem.renameBusy)
+                            ? (delegateItem.colors ? Qt.rgba(delegateItem.colors.surface.r, delegateItem.colors.surface.g, delegateItem.colors.surface.b, 0.5) : Qt.rgba(0, 0, 0, 0.3))
+                            : "transparent"
+                        border.width: 1
+                        border.color: delegateItem.renameFailed
+                            ? Qt.rgba(1, 0.4, 0.4, 0.85)
+                            : ((renameField.activeFocus || delegateItem.renameBusy)
+                                ? (delegateItem.colors ? Qt.rgba(delegateItem.colors.primary.r, delegateItem.colors.primary.g, delegateItem.colors.primary.b, 0.5) : Qt.rgba(1, 1, 1, 0.3))
+                                : (delegateItem.colors ? Qt.rgba(delegateItem.colors.outline.r, delegateItem.colors.outline.g, delegateItem.colors.outline.b, 0.2) : Qt.rgba(1, 1, 1, 0.1)))
+                        Behavior on color { ColorAnimation { duration: Style.animVeryFast } }
+                        Behavior on border.color { ColorAnimation { duration: Style.animVeryFast } }
+                    }
+
+                    TextInput {
+                        id: renameField
+                        anchors.fill: parent; anchors.leftMargin: 8; anchors.rightMargin: 42
+                        verticalAlignment: TextInput.AlignVCenter
+                        font.family: Style.fontFamily; font.pixelSize: 10; font.letterSpacing: 0.3
+                        color: delegateItem.colors ? delegateItem.colors.surfaceText : "#fff"
+                        clip: true
+                        selectByMouse: true
+                        text: delegateItem._currentRenameStem()
+                        onActiveFocusChanged: {
+                            if (activeFocus)
+                                selectAll()
+                        }
+                        Keys.onPressed: function(event) {
+                            if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                                event.accepted = delegateItem.submitRename()
+                            } else if (event.key === Qt.Key_Escape) {
+                                delegateItem._resetRenameInput()
+                                if (delegateItem._listView)
+                                    delegateItem._listView.forceActiveFocus()
+                                event.accepted = true
+                            }
+                        }
+
+                        Text {
+                            anchors.fill: parent; verticalAlignment: Text.AlignVCenter
+                            text: "RENAME FILE"
+                            font.family: Style.fontFamily; font.pixelSize: 10; font.letterSpacing: 1
+                            color: delegateItem.colors ? Qt.rgba(delegateItem.colors.surfaceText.r, delegateItem.colors.surfaceText.g, delegateItem.colors.surfaceText.b, 0.25) : Qt.rgba(1, 1, 1, 0.2)
+                            visible: !parent.text && !parent.activeFocus
+                        }
+                    }
+
+                    Text {
+                        anchors.right: parent.right
+                        anchors.rightMargin: 8
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: delegateItem.renameBusy ? "…" : "SAVE"
+                        color: delegateItem.renameBusy
+                            ? (delegateItem.colors ? delegateItem.colors.primary : Style.fallbackAccent)
+                            : (delegateItem.colors ? Qt.rgba(delegateItem.colors.tertiary.r, delegateItem.colors.tertiary.g, delegateItem.colors.tertiary.b, 0.7) : Qt.rgba(1, 1, 1, 0.45))
+                        font.family: Style.fontFamily
+                        font.pixelSize: 9
+                        font.weight: Font.DemiBold
+                        font.letterSpacing: 0.6
+                    }
+
+                    MouseArea {
+                        anchors.top: parent.top
+                        anchors.bottom: parent.bottom
+                        anchors.right: parent.right
+                        width: 38
+                        cursorShape: delegateItem.renameBusy ? Qt.ArrowCursor : Qt.PointingHandCursor
+                        enabled: !delegateItem.renameBusy
+                        onClicked: delegateItem.submitRename()
+                    }
+                }
+
+                Text {
+                    width: parent.width
+                    height: visible ? implicitHeight : 0
+                    visible: delegateItem.model.type !== "we" && delegateItem.renameNotice.length > 0
+                    text: delegateItem.renameNotice
+                    color: delegateItem.renameFailed
+                        ? Qt.rgba(1, 0.45, 0.45, 0.95)
+                        : (delegateItem.colors ? delegateItem.colors.primary : Style.fallbackAccent)
+                    font.family: Style.fontFamily
+                    font.pixelSize: 9
+                    font.weight: Font.Medium
+                    font.letterSpacing: 0.6
+                    horizontalAlignment: Text.AlignHCenter
+                }
+
+                Item {
+                    id: backTagsSection
+                    width: parent.width
+                    height: parent.height - y - backActionRow.height - parent.spacing
+                    clip: true""",
 )
 slice_delegate_qml.write_text(slice_delegate_text)
 
@@ -1772,6 +2340,29 @@ selector_text = replace_all(
       sourceComponent: Component {
         TagCloud {
           parentWidth: selectorPanel.width""",
+)
+selector_text = replace_all(
+    selector_text,
+    """        TagCloud {
+          parentWidth: selectorPanel.width
+          colors: wallpaperSelector.colors
+          service: wallpaperSelector.selectorService
+          tagCloudVisible: true
+          onEscapePressed: wallpaperSelector._focusActiveList()
+          onCloseRequested: {
+            wallpaperSelector.tagCloudVisible = false
+            wallpaperSelector._setSelectedTags([])
+            wallpaperSelector._focusActiveList()
+          }
+        }""",
+    """        TagCloud {
+          parentWidth: selectorPanel.width
+          colors: wallpaperSelector.colors
+          service: wallpaperSelector.selectorService
+          tagCloudVisible: true
+          onEscapePressed: wallpaperSelector._closeTagCloud()
+          onCloseRequested: wallpaperSelector._closeTagCloud()
+        }""",
 )
 wallpaper_selector.write_text(selector_text)
 
