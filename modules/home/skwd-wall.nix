@@ -459,6 +459,32 @@ selector_text = replace_all(
       _focusActiveList()
   }
 
+  function _toggleWallhavenBrowser() {
+    settingsOpen = false
+    steamWorkshopBrowserOpen = false
+    wallhavenBrowserOpen = !wallhavenBrowserOpen
+    if (!wallhavenBrowserOpen)
+      _focusActiveList()
+    return true
+  }
+
+  function _toggleSteamWorkshopBrowser() {
+    settingsOpen = false
+    wallhavenBrowserOpen = false
+    steamWorkshopBrowserOpen = !steamWorkshopBrowserOpen
+    if (!steamWorkshopBrowserOpen)
+      _focusActiveList()
+    return true
+  }
+
+  function _setThemeMode(mode) {
+    if (Config.matugenMode === mode)
+      return false
+    Config.saveKey("matugen.mode", mode)
+    DaemonClient.retheme(Config.matugenScheme, mode)
+    return true
+  }
+
   function _findChildByProp(rootItem, propName, propValue) {
     if (!rootItem || !rootItem.children)
       return null
@@ -592,9 +618,18 @@ selector_text = replace_all(
 
   function _handleFilterKey(event) {
     if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
-      _cycleTypeFilter((event.key === Qt.Key_Backtab || (event.modifiers & Qt.ShiftModifier)) ? -1 : 1)
-      event.accepted = true
-      return true
+      wallpaperSelector._pendingBrowserKey = ""
+      browserKeyTimer.stop()
+      if (filterBarBg && ((event.key === Qt.Key_Backtab || (event.modifiers & Qt.ShiftModifier)) ? filterBarBg.focusLastButton() : filterBarBg.focusFirstButton())) {
+        event.accepted = true
+        return true
+      }
+      return false
+    }
+
+    if (wallpaperSelector._pendingBrowserKey !== "" && event.modifiers !== Qt.NoModifier) {
+      wallpaperSelector._pendingBrowserKey = ""
+      browserKeyTimer.stop()
     }
 
     if ((event.modifiers & Qt.ShiftModifier) && !(event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))) {
@@ -609,12 +644,44 @@ selector_text = replace_all(
         event.accepted = true
         return true
       }
+      if (event.key === Qt.Key_L || event.text === "L") {
+        if (!_setThemeMode("light"))
+          return false
+        event.accepted = true
+        return true
+      }
+      if (event.key === Qt.Key_D || event.text === "D") {
+        if (!_setThemeMode("dark"))
+          return false
+        event.accepted = true
+        return true
+      }
     }
 
     if (event.modifiers !== Qt.NoModifier)
       return false
 
-    if (event.key === Qt.Key_1) {
+    if (wallpaperSelector._pendingBrowserKey === "b") {
+      wallpaperSelector._pendingBrowserKey = ""
+      browserKeyTimer.stop()
+      if ((event.key === Qt.Key_W || event.text === "w" || event.text === "W") && Config.wallhavenEnabled) {
+        _toggleWallhavenBrowser()
+        event.accepted = true
+        return true
+      }
+      if ((event.key === Qt.Key_S || event.text === "s" || event.text === "S") && Config.steamEnabled) {
+        _toggleSteamWorkshopBrowser()
+        event.accepted = true
+        return true
+      }
+    }
+
+    if (event.key === Qt.Key_B || event.text === "b" || event.text === "B") {
+      wallpaperSelector._pendingBrowserKey = "b"
+      browserKeyTimer.restart()
+      event.accepted = true
+      return true
+    } else if (event.key === Qt.Key_Minus || event.text === "-" || event.key === Qt.Key_1) {
       _setTypeFilter("")
     } else if (event.key === Qt.Key_2 || event.key === Qt.Key_P || event.text === "p" || event.text === "P") {
       _setTypeFilter("static")
@@ -629,11 +696,9 @@ selector_text = replace_all(
     } else if (event.key === Qt.Key_C || event.text === "c") {
       _setSortMode("color")
     } else if (event.key === Qt.Key_S || event.text === "s") {
-      _toggleSortMode()
+      _toggleSettings()
     } else if (event.key === Qt.Key_T || event.text === "t") {
       _toggleTagCloud()
-    } else if (event.key === Qt.Key_O || event.text === "o") {
-      _toggleSettings()
     } else {
       return false
     }
@@ -714,6 +779,52 @@ selector_text = replace_all(
             applyItem: function(item) { wallpaperSelector._applyItem(item) }
 
             onFlipRequested: function(data, gx, gy, sourceItem) {""",
+)
+selector_text = replace_all(
+    selector_text,
+    """  property bool tagCloudVisible: false
+  property bool wallhavenBrowserOpen: false
+  property bool steamWorkshopBrowserOpen: false
+  property bool anyBrowserOpen: wallhavenBrowserOpen || steamWorkshopBrowserOpen""",
+    """  property bool tagCloudVisible: false
+  property bool wallhavenBrowserOpen: false
+  property bool steamWorkshopBrowserOpen: false
+  property bool anyBrowserOpen: wallhavenBrowserOpen || steamWorkshopBrowserOpen
+  property string _pendingBrowserKey: ""
+
+  Timer {
+    id: browserKeyTimer
+    interval: 700
+    repeat: false
+    onTriggered: wallpaperSelector._pendingBrowserKey = ""
+  }""",
+)
+selector_text = replace_all(
+    selector_text,
+    """      onWallhavenToggled: { wallpaperSelector.settingsOpen = false; wallpaperSelector.steamWorkshopBrowserOpen = false; wallpaperSelector.wallhavenBrowserOpen = !wallpaperSelector.wallhavenBrowserOpen }
+      onSteamWorkshopToggled: { wallpaperSelector.settingsOpen = false; wallpaperSelector.wallhavenBrowserOpen = false; wallpaperSelector.steamWorkshopBrowserOpen = !wallpaperSelector.steamWorkshopBrowserOpen }
+      onTagCloudToggled: {
+        wallpaperSelector.tagCloudVisible = !wallpaperSelector.tagCloudVisible
+        if (!wallpaperSelector.tagCloudVisible)
+          wallpaperSelector._setSelectedTags([])
+      }
+      onModeToggled: function(mode) {
+        Config.saveKey("matugen.mode", mode)
+        DaemonClient.retheme(Config.matugenScheme, mode)
+      }""",
+    """      onWallhavenToggled: wallpaperSelector._toggleWallhavenBrowser()
+      onSteamWorkshopToggled: wallpaperSelector._toggleSteamWorkshopBrowser()
+      onTagCloudToggled: {
+        wallpaperSelector.tagCloudVisible = !wallpaperSelector.tagCloudVisible
+        if (!wallpaperSelector.tagCloudVisible)
+          wallpaperSelector._setSelectedTags([])
+      }
+      onModeToggled: function(mode) { wallpaperSelector._setThemeMode(mode) }""",
+)
+selector_text = replace_all(
+    selector_text,
+    '      property real _yOffset: Math.max(0, (height - _gridContentH) / 2)\n',
+    '      property real _arcHeadroom: Config.hexArc ? (Config.hexArcIntensity * _r) : 0\n      property real _yOffset: Math.max(_arcHeadroom, (height - _gridContentH) / 2)\n',
 )
 selector_text = replace_all(
     selector_text,
@@ -1074,6 +1185,40 @@ selector_service_text = replace_all(
     }""",
 )
 filter_bar_text = filter_bar_qml.read_text()
+filter_bar_text = replace_all(
+    filter_bar_text,
+    """    property bool tagCloudOpen: false
+    property bool weatherFilterActive: false
+
+    signal settingsToggled()""",
+    """    property bool tagCloudOpen: false
+    property bool weatherFilterActive: false
+
+    function _collectFocusableButtons(rootItem, out) {
+        if (!rootItem || rootItem.visible === false || rootItem.enabled === false)
+            return
+        if (rootItem !== filterBar && rootItem.activeFocusOnTab && rootItem.forceActiveFocus)
+            out.push(rootItem)
+        if (!rootItem.children)
+            return
+        for (var i = 0; i < rootItem.children.length; i++)
+            _collectFocusableButtons(rootItem.children[i], out)
+    }
+
+    function _focusButtonEdge(last) {
+        var buttons = []
+        _collectFocusableButtons(filterRow, buttons)
+        if (buttons.length === 0)
+            return false
+        buttons[last ? buttons.length - 1 : 0].forceActiveFocus()
+        return true
+    }
+
+    function focusFirstButton() { return _focusButtonEdge(false) }
+    function focusLastButton() { return _focusButtonEdge(true) }
+
+    signal settingsToggled()""",
+)
 filter_bar_text = replace_all(
     filter_bar_text,
     """        FilterButton {
@@ -1531,23 +1676,18 @@ hex_delegate_text = replace_all(
         }
     }
 
-    Rectangle {
-        x: hexItem._cx - hexItem._r * hexItem._sin30 + 4
-        y: hexItem._cy - hexItem._r * hexItem._cos30 + 8
-        width: 20; height: 20; radius: 10
-        color: Qt.rgba(0, 0, 0, 0.7)
-        border.width: 1
-        border.color: hexItem.colors ? Qt.rgba(hexItem.colors.primary.r, hexItem.colors.primary.g, hexItem.colors.primary.b, 0.6) : Qt.rgba(1,1,1,0.4)
+    Text {
+        x: hexItem._cx - hexItem._r * hexItem._sin30 + 6
+        y: hexItem._cy - hexItem._r * hexItem._cos30 + 7
         visible: hexItem.itemData && hexItem.itemData.favourite === true
         z: 5
-
-        Text {
-            anchors.centerIn: parent
-            text: "♥"
-            font.family: Style.fontFamily; font.pixelSize: 13
-            color: hexItem.colors ? hexItem.colors.primary : "#ff6b81"
-            style: Text.Outline; styleColor: Qt.rgba(0,0,0,0.45)
-        }
+        text: "♥"
+        font.family: Style.fontFamily
+        font.pixelSize: 17
+        font.weight: Font.DemiBold
+        color: hexItem.colors ? hexItem.colors.primary : "#ff6b81"
+        style: Text.Outline
+        styleColor: Qt.rgba(0,0,0,0.45)
     }
 
     MouseArea {""",
@@ -1773,6 +1913,26 @@ settings_text = replace_all(
 )
 settings_text = replace_all(
     settings_text,
+    """              MouseArea {
+                anchors.fill: parent; acceptedButtons: Qt.RightButton
+                cursorShape: Qt.PointingHandCursor
+                onClicked: settingsPanel._saveCustomPreset(modelData)
+              }""",
+    """              MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.RightButton
+                preventStealing: true
+                cursorShape: Qt.PointingHandCursor
+                onPressed: function(mouse) {
+                  if (mouse.button !== Qt.RightButton)
+                    return
+                  settingsPanel._saveCustomPreset(modelData)
+                  mouse.accepted = true
+                }
+              }""",
+)
+settings_text = replace_all(
+    settings_text,
     """  signal closeRequested()
 
   Keys.onEscapePressed: closeRequested()
@@ -1839,7 +1999,7 @@ settings_text = replace_all(
 
   Keys.onEscapePressed: closeRequested()
   Keys.onPressed: function(event) {
-    if (event.modifiers === Qt.NoModifier && (event.key === Qt.Key_O || event.text === "o")) {
+    if (event.modifiers === Qt.NoModifier && (event.key === Qt.Key_S || event.text === "s")) {
       closeRequested()
       event.accepted = true
     }
@@ -1906,6 +2066,11 @@ settings_text = replace_all(
 )
 settings_text = replace_all(
     settings_text,
+    '        text: "Shell commands to run after every wallpaper change. Use %type% (static/video/we), %name%, and %path% as placeholders."',
+    '        text: "Built-in actions already run on every wallpaper change: apply the wallpaper, sync DMS state, and refresh matugen outputs. Add extra shell commands here if you want more hooks. Use %type% (static/video/we), %name%, and %path% as placeholders."',
+)
+settings_text = replace_all(
+    settings_text,
     '{ key: "← / →",         action: "Navigate items" },',
     '{ key: "h / l / ← / →", action: "Navigate items" },',
 )
@@ -1934,16 +2099,20 @@ settings_text = replace_all(
             { key: "Escape",         action: "Clear search / close" }
           ]""",
     """          model: [
-            { key: "1 / 2 / 3 / 4 / e",          action: "Set ALL / PIC / VID / WE" },
-            { key: "p / v",                       action: "Set PIC / VID filter" },
-            { key: "Tab / Shift + Tab",           action: "Cycle type filters" },
+            { key: "- / 1",                       action: "Set ALL filter" },
+            { key: "p / 2",                       action: "Set PIC filter" },
+            { key: "v / 3",                       action: "Set VID filter" },
+            { key: "e / 4",                       action: "Set WE filter" },
+            { key: "Tab / Shift + Tab",           action: "Focus the filter bar" },
             { key: "w",                           action: "Toggle weather-tag filter" },
+            { key: "b then w / s",                action: "Open Wallhaven / Steam browser" },
             { key: "Ctrl + s / h / w",            action: "Switch slices / hex / wall mode" },
             { key: "Shift + F",                   action: "Toggle favourites filter" },
             { key: "Shift + C",                   action: "Clear colour filter" },
-            { key: "n / c / s",                   action: "Newest / colour / toggle sort" },
+            { key: "Shift + L / D",               action: "Set light / dark mode" },
+            { key: "n / c",                       action: "Newest / colour sort" },
             { key: "t",                           action: "Toggle tag cloud" },
-            { key: "o",                           action: "Toggle settings" },
+            { key: "s",                           action: "Toggle settings" },
             { key: "Space / Alt",                 action: "Toggle current item / close details" },
             { key: "f",                           action: "Toggle favourite for current item" },
             { key: "a",                           action: "Focus add-tag input (details open)" },
