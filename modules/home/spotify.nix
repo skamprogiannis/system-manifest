@@ -208,13 +208,19 @@ let
       "$real_player" -c "$auth_config_dir" authenticate
     }
 
+    just_authenticated=0
+
     ensure_authenticated() {
       if has_cached_credentials; then
         return 0
       fi
 
       echo "spotify_player: no cached Spotify credentials; starting interactive login" >&2
-      run_full_auth_flow
+      if run_full_auth_flow; then
+        just_authenticated=1
+        return 0
+      fi
+      return 1
     }
 
     recover_stale_auth() {
@@ -226,12 +232,15 @@ let
       reset_failed_service
       clear_auth_cache
       echo "spotify_player: cached Spotify tokens look stale; starting interactive login" >&2
-      run_full_auth_flow
+      if run_full_auth_flow; then
+        just_authenticated=1
+        return 0
+      fi
+      return 1
     }
 
-    daemon_has_device() {
-      devices="$("$real_player" -c ${spotifyDaemonConfigDir} get key devices 2>/dev/null || true)"
-      printf '%s' "$devices" | ${pkgs.gnugrep}/bin/grep -Fq -- "${spotifyDeviceName}"
+    daemon_socket_ready() {
+      ${pkgs.iproute2}/bin/ss -tln 'sport = :8081' 2>/dev/null | ${pkgs.gnugrep}/bin/grep -q LISTEN
     }
 
     wait_for_device() {
@@ -239,7 +248,7 @@ let
       local attempt=0
 
       while [ "$attempt" -lt "$attempts" ]; do
-        if daemon_has_device; then
+        if daemon_socket_ready; then
           return 0
         fi
 
@@ -261,20 +270,12 @@ let
       ${pkgs.systemd}/bin/systemctl --user start "$service_name"
     }
 
-    detect_auth_failure() {
-      if ! service_has_failed; then
-        return 1
-      fi
-      local output
-      if output=$("$real_player" -c "${spotifyDaemonConfigDir}" get key devices 2>&1); then
-        return 1
-      fi
-      case "$output" in
-        *"400 Bad Request"*|*"Unauthorized"*|*"refresh auth token"*|*"initialize new Spotify session"*)
-          return 0
-          ;;
-      esac
-      return 1
+    # Safe heuristic: a freshly-failed service with credentials present is most
+    # likely an auth issue (Spotify rejected the refresh token). We never call
+    # the binary here — `get key devices` would itself trigger an OAuth browser
+    # tab when the web-API token is missing, causing a spurious second login.
+    looks_like_auth_failure() {
+      service_has_failed && has_cached_credentials
     }
 
     ensure_device_ready() {
@@ -282,8 +283,8 @@ let
         return 0
       fi
 
-      # Skip restart if auth failure — caller will handle re-auth instead
-      if detect_auth_failure; then
+      # Don't restart if it looks like an auth failure — the caller will re-auth.
+      if looks_like_auth_failure; then
         return 1
       fi
 
@@ -322,7 +323,7 @@ let
     fi
 
     if ! ensure_service_started; then
-      if service_has_failed && recover_stale_auth && ensure_service_started; then
+      if [ "$just_authenticated" -eq 0 ] && service_has_failed && recover_stale_auth && ensure_service_started; then
         :
       else
         echo "spotify_player: warning: ${spotifyServiceName} failed to start; using the client directly" >&2
@@ -331,14 +332,16 @@ let
     fi
 
     if ! ensure_device_ready; then
-      if detect_auth_failure; then
+      if [ "$just_authenticated" -eq 0 ] && looks_like_auth_failure; then
         echo "spotify_player: Spotify login has expired — re-authenticating..." >&2
         if ! (recover_stale_auth && ensure_service_started && ensure_device_ready); then
           echo "spotify_player: re-authentication failed; run 'spotify_player authenticate' to log in again" >&2
           exit 1
         fi
-      elif ! (service_has_failed && recover_stale_auth && ensure_service_started && ensure_device_ready); then
+      elif [ "$just_authenticated" -eq 0 ]; then
         echo "spotify_player: warning: ${spotifyDeviceName} did not become ready; continuing without daemon-backed device sync" >&2
+      else
+        echo "spotify_player: warning: ${spotifyDeviceName} did not become ready after fresh login; continuing anyway" >&2
       fi
     fi
 
