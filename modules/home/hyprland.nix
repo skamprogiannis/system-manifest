@@ -462,6 +462,8 @@ in {
         # launcher, without increasing the global blur strength for every window.
         layerrule = match:namespace ^dms:(${dmsBlurNamespaces})$, blur on
         layerrule = match:namespace ^dms:(${dmsBlurNamespaces})$, ignore_alpha 0.2
+        layerrule = match:namespace ^wallpaper-selector-parallel$, blur on
+        layerrule = match:namespace ^wallpaper-selector-parallel$, ignore_alpha 0.2
 
       '';
     };
