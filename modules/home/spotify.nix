@@ -192,34 +192,8 @@ let
       ${pkgs.systemd}/bin/systemctl --user is-failed --quiet "$service_name"
     }
 
-    clear_web_api_token() {
-      rm -f "$user_client_token_file"
-    }
-
     clear_auth_cache() {
       rm -f "$credentials_file" "$user_client_token_file"
-    }
-
-    bootstrap_web_api_token() {
-      local output=""
-
-      if output=$("$real_player" -c "$auth_config_dir" get key devices 2>&1); then
-        return 0
-      fi
-
-      case "$output" in
-        *"400 Bad Request"*)
-          clear_web_api_token
-          if output=$("$real_player" -c "$auth_config_dir" get key devices 2>&1); then
-            return 0
-          fi
-          ;;
-      esac
-
-      if [ -n "$output" ]; then
-        printf '%s\n' "$output" >&2
-      fi
-      return 1
     }
 
     run_full_auth_flow() {
@@ -227,8 +201,11 @@ let
       reset_failed_service
       clear_auth_cache
       echo "spotify_player: starting interactive Spotify login" >&2
+      # bootstrap_web_api_token is not needed here: clear_auth_cache already
+      # removed the stale web API token, so the daemon will fetch a fresh one
+      # on startup. Calling get-key-devices with no running daemon would trigger
+      # a spurious second browser auth flow.
       "$real_player" -c "$auth_config_dir" authenticate
-      bootstrap_web_api_token
     }
 
     ensure_authenticated() {
