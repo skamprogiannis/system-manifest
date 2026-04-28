@@ -54,11 +54,21 @@
       substituteInPlace $desktopFile \
         --replace-fail 'GenericName=Skwd-wall' 'GenericName=skwd-wall'
     fi
-    if grep -q '^Icon=' "$desktopFile"; then
-      ${pkgs.gnused}/bin/sed -i 's/^Icon=.*/Icon=preferences-desktop-wallpaper/' "$desktopFile"
-    else
-      printf 'Icon=preferences-desktop-wallpaper\n' >> "$desktopFile"
-    fi
+    desktopTmp="$desktopFile.tmp"
+    : > "$desktopTmp"
+    while IFS= read -r line || [ -n "$line" ]; do
+      case "$line" in
+        Icon=*)
+          continue
+          ;;
+        *Icon=*)
+          line="''${line%%Icon=*}"
+          ;;
+      esac
+      printf '%s\n' "$line" >> "$desktopTmp"
+    done < "$desktopFile"
+    printf 'Icon=preferences-desktop-wallpaper\n' >> "$desktopTmp"
+    mv "$desktopTmp" "$desktopFile"
 
     mkdir -p $out/libexec/skwd-wall
     cat > $out/libexec/skwd-wall/linux-wallpaperengine <<'EOF'
@@ -801,10 +811,16 @@ selector_text = replace_all(
 selector_text = replace_all(
     selector_text,
     """  property bool tagCloudVisible: false
+  property bool _filterBarManuallyShown: Config.filterBarAlwaysVisible
+  property bool _filterBarHoverRevealed: false
+  readonly property bool _filterBarShown: _filterBarManuallyShown || _filterBarHoverRevealed
   property bool wallhavenBrowserOpen: false
   property bool steamWorkshopBrowserOpen: false
   property bool anyBrowserOpen: wallhavenBrowserOpen || steamWorkshopBrowserOpen""",
     """  property bool tagCloudVisible: false
+  property bool _filterBarManuallyShown: Config.filterBarAlwaysVisible
+  property bool _filterBarHoverRevealed: false
+  readonly property bool _filterBarShown: _filterBarManuallyShown || _filterBarHoverRevealed
   property bool wallhavenBrowserOpen: false
   property bool steamWorkshopBrowserOpen: false
   property bool anyBrowserOpen: wallhavenBrowserOpen || steamWorkshopBrowserOpen
@@ -837,6 +853,7 @@ selector_text = replace_all(
         if (!wallpaperSelector.tagCloudVisible)
           wallpaperSelector._setSelectedTags([])
       }
+      onFocusListRequested: wallpaperSelector._focusActiveList()
       onModeToggled: function(mode) { wallpaperSelector._setThemeMode(mode) }""",
 )
 selector_text = replace_all(
@@ -1504,7 +1521,58 @@ filter_bar_text = replace_all(
     function focusFirstButton() { return _focusButtonEdge(false) }
     function focusLastButton() { return _focusButtonEdge(true) }
 
+    function _restoreListFocusIfNeeded(focused) {
+        if (!focused)
+            return
+        Qt.callLater(function() { filterBar.focusListRequested() })
+    }
+
+    signal focusListRequested()
     signal settingsToggled()""",
+)
+filter_bar_text = replace_all(
+    filter_bar_text,
+    """                onClicked: {
+                    if (isActive) filterBar.service.selectedTypeFilter = ""
+                    else filterBar.service.selectedTypeFilter = modelData.type
+                }""",
+    """                onClicked: {
+                    if (isActive) filterBar.service.selectedTypeFilter = ""
+                    else filterBar.service.selectedTypeFilter = modelData.type
+                    filterBar._restoreListFocusIfNeeded(activeFocus)
+                }""",
+)
+filter_bar_text = replace_all(
+    filter_bar_text,
+    """                onClicked: {
+                    filterBar.service.sortMode = modelData.mode
+                    filterBar.service.updateFilteredModel()
+                }""",
+    """                onClicked: {
+                    filterBar.service.sortMode = modelData.mode
+                    filterBar.service.updateFilteredModel()
+                    filterBar._restoreListFocusIfNeeded(activeFocus)
+                }""",
+)
+filter_bar_text = replace_all(
+    filter_bar_text,
+    """        FilterButton {
+            colors: filterBar.colors
+            icon: "\\u{f02d1}"
+            tooltip: "Favourites"
+            isActive: filterBar.service ? filterBar.service.favouriteFilterActive : false
+            onClicked: filterBar.service.favouriteFilterActive = !filterBar.service.favouriteFilterActive
+        }""",
+    """        FilterButton {
+            colors: filterBar.colors
+            icon: "\\u{f02d1}"
+            tooltip: "Favourites"
+            isActive: filterBar.service ? filterBar.service.favouriteFilterActive : false
+            onClicked: {
+                filterBar.service.favouriteFilterActive = !filterBar.service.favouriteFilterActive
+                filterBar._restoreListFocusIfNeeded(activeFocus)
+            }
+        }""",
 )
 filter_bar_text = replace_all(
     filter_bar_text,
@@ -1534,6 +1602,47 @@ filter_bar_text = replace_all(
                 filterBar.weatherFilterActive = !filterBar.weatherFilterActive
                 if (filterBar.service)
                     filterBar.service.weatherFilterActive = filterBar.weatherFilterActive
+                filterBar._restoreListFocusIfNeeded(activeFocus)
+            }
+        }""",
+)
+filter_bar_text = replace_all(
+    filter_bar_text,
+    """        FilterButton {
+            colors: filterBar.colors
+            icon: "\\u{f0599}"
+            tooltip: "Light mode"
+            isActive: Config.matugenMode === "light"
+            onClicked: filterBar.modeToggled("light")
+        }""",
+    """        FilterButton {
+            colors: filterBar.colors
+            icon: "\\u{f0599}"
+            tooltip: "Light mode"
+            isActive: Config.matugenMode === "light"
+            onClicked: {
+                filterBar.modeToggled("light")
+                filterBar._restoreListFocusIfNeeded(activeFocus)
+            }
+        }""",
+)
+filter_bar_text = replace_all(
+    filter_bar_text,
+    """        FilterButton {
+            colors: filterBar.colors
+            icon: "\\u{f0594}"
+            tooltip: "Dark mode"
+            isActive: Config.matugenMode === "dark"
+            onClicked: filterBar.modeToggled("dark")
+        }""",
+    """        FilterButton {
+            colors: filterBar.colors
+            icon: "\\u{f0594}"
+            tooltip: "Dark mode"
+            isActive: Config.matugenMode === "dark"
+            onClicked: {
+                filterBar.modeToggled("dark")
+                filterBar._restoreListFocusIfNeeded(activeFocus)
             }
         }""",
 )
@@ -1864,9 +1973,9 @@ tag_cloud_text = replace_all(
                     id: tagParaChip
                     property bool isSelected: modelData.selected
                     property bool isHovered: tagParaMouse.containsMouse
-                    property int skew: 10
-                    width: tagParaText.implicitWidth + 24 + skew
-                    height: 24
+                    property int skew: 10 * Config.uiScale
+                    width: tagParaText.implicitWidth + 24 * Config.uiScale + skew
+                    height: 24 * Config.uiScale
                     z: isSelected ? 10 : (isHovered ? 5 : 1)""",
     """                Item {
                     id: tagParaChip
@@ -1875,9 +1984,9 @@ tag_cloud_text = replace_all(
                     property bool isKeyboardFocused: tagCloud._focusedChipIndex === index && chipFocusScope.activeFocus
                     property bool _isTagChip: true
                     property int chipIndex: index
-                    property int skew: 10
-                    width: tagParaText.implicitWidth + 24 + skew
-                    height: 24
+                    property int skew: 10 * Config.uiScale
+                    width: tagParaText.implicitWidth + 24 * Config.uiScale + skew
+                    height: 24 * Config.uiScale
                     z: isSelected ? 10 : ((isKeyboardFocused || isHovered) ? 5 : 1)
                     scale: isSelected ? 1.15 : (isKeyboardFocused ? 1.08 : 1.0)""",
 )
@@ -1965,8 +2074,13 @@ slice_delegate_text = replace_all(
             renameNoticeTimer.restart()
             if (ok) {
                 renameField.text = delegateItem._currentRenameStem()
-                if (delegateItem._listView)
-                    delegateItem._listView.forceActiveFocus()
+                delegateItem.flipped = false
+                Qt.callLater(function() {
+                    if (delegateItem._listView) {
+                        delegateItem._listView.currentIndex = index
+                        delegateItem._listView.forceActiveFocus()
+                    }
+                })
             } else {
                 Qt.callLater(function() {
                     renameField.selectAll()
@@ -2369,8 +2483,8 @@ wallpaper_selector.write_text(selector_text)
 filter_button_text = filter_button_qml.read_text()
 filter_button_text = replace_all(
     filter_button_text,
-    '    width: _label.implicitWidth + 24 + skew\n    height: 24\n    z: isActive ? 10 : (isHovered ? 5 : 1)\n',
-    '    width: _label.implicitWidth + 24 + skew\n    height: 24\n    activeFocusOnTab: true\n    z: isActive ? 10 : ((isHovered || activeFocus) ? 5 : 1)\n',
+    '    width: _label.implicitWidth + 24 * Config.uiScale + skew\n    height: 24 * Config.uiScale\n    z: isActive ? 10 : (isHovered ? 5 : 1)\n',
+    '    width: _label.implicitWidth + 24 * Config.uiScale + skew\n    height: 24 * Config.uiScale\n    activeFocusOnTab: true\n    z: isActive ? 10 : ((isHovered || activeFocus) ? 5 : 1)\n',
 )
 filter_button_text = replace_all(
     filter_button_text,
@@ -2386,7 +2500,7 @@ filter_button_text = replace_all(
 filter_button_text = replace_all(
     filter_button_text,
     '    opacity: btn.activeOpacity\n\n    MouseArea {',
-    '    opacity: btn.activeOpacity\n\n    Keys.onReturnPressed: btn.clicked()\n    Keys.onSpacePressed: btn.clicked()\n\n    MouseArea {',
+    '    opacity: btn.activeOpacity\n\n    Keys.onReturnPressed: function(event) { btn.clicked(); event.accepted = true }\n    Keys.onSpacePressed: function(event) { btn.clicked(); event.accepted = true }\n\n    MouseArea {',
 )
 filter_button_qml.write_text(filter_button_text)
 
@@ -2450,7 +2564,7 @@ settings_input_qml.write_text(settings_input_text)
 settings_combo_text = settings_combo_qml.read_text()
 settings_combo_text = replace_all(
     settings_combo_text,
-    '    property var model: []\n    property var onSelect\n\n    width: parent ? parent.width : 0\n    spacing: 2\n',
+    '    property var model: []\n    property var onSelect\n\n    width: parent ? parent.width : 0\n    spacing: 2 * Config.uiScale\n',
     """    property var model: []
     property var onSelect
     activeFocusOnTab: true
@@ -2467,7 +2581,7 @@ settings_combo_text = replace_all(
     }
 
     width: parent ? parent.width : 0
-    spacing: 2
+    spacing: 2 * Config.uiScale
 
     Keys.onPressed: function(event) {
         if (event.key === Qt.Key_Left || event.key === Qt.Key_H || event.text === "h") {
@@ -2672,19 +2786,10 @@ settings_text = replace_all(
 )
 settings_text = replace_all(
     settings_text,
-    '{ key: "Shift + ← / →",  action: "Cycle colour filters" },',
-    '{ key: "Shift + ← / →", action: "Cycle colour filters" },',
-)
-settings_text = replace_all(
-    settings_text,
-    '{ key: "Shift + ↓",      action: "Toggle tag cloud" },',
-    '{ key: "Shift + j / ↓", action: "Toggle tag cloud" },',
-)
-settings_text = replace_all(
-    settings_text,
     """          model: [
-            { key: "Shift + ← / →", action: "Cycle colour filters" },
-            { key: "Shift + j / ↓", action: "Toggle tag cloud" },
+            { key: "Shift + ← / →",  action: "Cycle colour filters" },
+            { key: "Shift + ↑",      action: "Toggle filter bar" },
+            { key: "Shift + ↓",      action: "Toggle tag cloud" },
             { key: "Tab",            action: "Auto-complete tag" },
             { key: "Enter",          action: "Add tag (in tag input)" },
             { key: "Escape",         action: "Clear search / close" }
@@ -2710,7 +2815,8 @@ settings_text = replace_all(
             { key: "Shift + ← / →",               action: "Cycle colour filters" },
             { key: "Shift + j / ↓",               action: "Toggle tag cloud" },
             { key: "Tag cloud: Tab / Shift + Tab", action: "Move between search and tags" },
-            { key: "Tag cloud: ← / →",            action: "Move focused tag" },
+            { key: "Tag cloud: h / l / ← / →",    action: "Move focused tag" },
+            { key: "Tag cloud: j / k / ↑ / ↓",    action: "Move between tag rows" },
             { key: "Tag cloud: Enter / Space",    action: "Toggle focused tag" },
             { key: "Enter",                       action: "Apply current item / add tag in input" },
             { key: "Escape",                      action: "Clear search / close" },
