@@ -380,6 +380,22 @@ secrets_file = os.environ["SECRETS_FILE_PATH"]
 selector_text = wallpaper_selector.read_text()
 selector_text = replace_all(
     selector_text,
+    """  function _focusActiveList() {
+    if (wallpaperSelector.tagCloudVisible) return
+    if (isHexMode) hexListView.forceActiveFocus()
+    else if (isGridMode) thumbGridView.forceActiveFocus()
+    else sliceListView.forceActiveFocus()
+  }""",
+    """  function _focusActiveList() {
+    if (wallpaperSelector.tagCloudVisible) return
+    if (isHexMode) hexListView.forceActiveFocus()
+    else if (isGridMode) thumbGridView.forceActiveFocus()
+    else if (isMosaicMode) mosaicView.forceActiveFocus()
+    else sliceListView.forceActiveFocus()
+  }""",
+)
+selector_text = replace_all(
+    selector_text,
     '    if (item.type === "we") service.applyWE(item.weId)\n',
     '    if (item.type === "we") service.applyWE(item.weId, outputs)\n',
 )
@@ -432,8 +448,7 @@ selector_text = replace_all(
     if (!tagCloudVisible)
       return false
     tagCloudVisible = false
-    _setSelectedTags([])
-    Qt.callLater(function() { focusTimer.restart() })
+    focusTimer.restart()
     return true
   }
 
@@ -460,13 +475,11 @@ selector_text = replace_all(
       gridBackOverlay.hide()
     if (hexBackOverlay.overlayOpen)
       hexBackOverlay.hide()
-    if (tagCloudVisible) {
-      tagCloudVisible = false
-      _setSelectedTags([])
-    }
+    if (tagCloudVisible)
+      _closeTagCloud()
     Config.saveKey("components.wallpaperSelector.displayMode", mode)
     Config._configFile.reload()
-    Qt.callLater(function() { _focusActiveList() })
+    focusTimer.restart()
     return true
   }
 
@@ -1903,8 +1916,10 @@ tag_cloud_text = replace_all(
             } else if (event.key === Qt.Key_Down || event.key === Qt.Key_J || event.text === "j" || event.text === "J") {
                 if (!tagCloud.moveChipFocusVertical(1))
                     return
-            } else if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
+            } else if (event.key === Qt.Key_Backtab) {
                 tagCloud.focusSearchField()
+            } else if (event.key === Qt.Key_Tab) {
+                tagCloud.closeRequested()
             } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
                 if (!tagCloud.toggleFocusedTag())
                     return
@@ -1965,7 +1980,8 @@ tag_cloud_text = replace_all(
                     event.accepted = tagCloud.focusChipRow(false)
                 }
                 Keys.onBacktabPressed: function(event) {
-                    event.accepted = tagCloud.focusChipRow(true)
+                    tagCloud.closeRequested()
+                    event.accepted = true
                 }""",
 )
 tag_cloud_text = replace_all(
@@ -2458,6 +2474,69 @@ selector_text = replace_all(
 )
 selector_text = replace_all(
     selector_text,
+    """    MosaicView {
+      id: mosaicView
+
+      anchors.top: cardContainer.top
+      anchors.topMargin: wallpaperSelector.topBarHeight + 35
+      anchors.horizontalCenter: parent.horizontalCenter
+      width: Config.mosaicWidth
+      height: Config.mosaicHeight
+
+      service: service
+      colors: wallpaperSelector.colors
+      active: wallpaperSelector.cardVisible && !wallpaperSelector.anyBrowserOpen && wallpaperSelector.isMosaicMode
+      visible: active
+
+      onItemActivated: function(item) {
+        if (item) wallpaperSelector._applyItem(item)
+      }
+    }""",
+    """    MosaicView {
+      id: mosaicView
+
+      anchors.top: cardContainer.top
+      anchors.topMargin: wallpaperSelector.topBarHeight + 35
+      anchors.horizontalCenter: parent.horizontalCenter
+      width: Config.mosaicWidth
+      height: Config.mosaicHeight
+
+      service: service
+      colors: wallpaperSelector.colors
+      active: wallpaperSelector.cardVisible && !wallpaperSelector.anyBrowserOpen && wallpaperSelector.isMosaicMode
+      visible: active
+      activeFocusOnTab: true
+
+      Keys.onEscapePressed: wallpaperSelector.showing = false
+      Keys.onPressed: function(event) {
+        if (wallpaperSelector._handleFilterKey(event))
+          return
+        if (wallpaperSelector.settingsOpen) {
+          event.accepted = true
+          return
+        }
+        if (wallpaperSelector._handleItemKey(event))
+          return
+        if (event.modifiers !== Qt.NoModifier)
+          return
+        if (event.key === Qt.Key_Left || event.key === Qt.Key_H || event.text === "h") {
+          mosaicView._applyScroll(-Math.max(120, mosaicView.width * 0.08))
+          event.accepted = true
+          return
+        }
+        if (event.key === Qt.Key_Right || event.key === Qt.Key_L || event.text === "l") {
+          mosaicView._applyScroll(Math.max(120, mosaicView.width * 0.08))
+          event.accepted = true
+        }
+      }
+
+      onItemActivated: function(item) {
+        if (item) wallpaperSelector._applyItem(item)
+      }
+    }""",
+)
+selector_text = replace_all(
+    selector_text,
     """        TagCloud {
           parentWidth: selectorPanel.width
           colors: wallpaperSelector.colors
@@ -2815,12 +2894,12 @@ settings_text = replace_all(
             { key: "a",                           action: "Focus add-tag input (details open)" },
             { key: "Shift + ← / →",               action: "Cycle colour filters" },
             { key: "Shift + j / ↓",               action: "Toggle tag cloud" },
-            { key: "Tag cloud: Tab / Shift + Tab", action: "Move between search and tags" },
+             { key: "Tag cloud: Tab / Shift + Tab", action: "Move between search, tags, and wallpapers" },
             { key: "Tag cloud: h / l / ← / →",    action: "Move focused tag" },
             { key: "Tag cloud: j / k / ↑ / ↓",    action: "Move between tag rows" },
             { key: "Tag cloud: Enter / Space",    action: "Toggle focused tag" },
             { key: "Enter",                       action: "Apply current item / add tag in input" },
-            { key: "Escape",                      action: "Clear search / close" },
+             { key: "Escape",                      action: "Close / back out" },
             { key: "Settings: Tab / Shift + Tab", action: "Move between settings controls" },
             { key: "Settings: Enter / Space",     action: "Activate focused button or toggle" },
             { key: "Settings: ← / → / h / l",     action: "Change focused option values" },
