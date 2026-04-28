@@ -35,7 +35,7 @@ in {
     ./modules/home/ghostty.nix
     ./modules/home/neovim.nix
     ./modules/home/hyprland.nix
-    ./modules/home/dms
+    ./modules/home/wallpaper
     ./modules/home/pearpass.nix
     ./modules/home/xdg.nix
     ./modules/home/brave.nix
@@ -46,7 +46,6 @@ in {
     ./modules/home/spotify.nix
     ./modules/home/zellij.nix
     ./modules/home/scripts
-    ./modules/home/skwd-wall.nix
     ./modules/home/cursors.nix
     ./modules/home/vesktop.nix
     ./modules/home/keyring.nix
