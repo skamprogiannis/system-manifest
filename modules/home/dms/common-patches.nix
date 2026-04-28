@@ -261,14 +261,6 @@ in {
     ],
     root / "Modules/DankDash/WallpaperTab.qml": [
         (
-            "            SessionData.setMonitorWallpaper(targetScreenName, path);",
-            '            Quickshell.execDetached(["skwd-wall"]);',
-        ),
-        (
-            "            SessionData.setWallpaper(path);",
-            '            Quickshell.execDetached(["skwd-wall"]);',
-        ),
-        (
             "import QtQuick.Effects",
             "import QtQuick.Effects\nimport Quickshell",
         ),
@@ -362,11 +354,15 @@ in {
         ),
         (
             "        saveSettings();\n\n        if (typeof Theme !== \"undefined\") {\n            Theme.generateSystemThemesFromCurrentTheme();\n        }\n    }\n\n    function setWallpaperColor",
-            "        saveSettings();\n        if (typeof imagePath === \"string\" && imagePath.length > 0 && imagePath[0] !== \"#\") {\n            _skwdWallApplyProcess.running = false;\n            _skwdWallApplyProcess.command = [\"skwd\", \"wall\", \"apply\", imagePath];\n            _skwdWallApplyProcess.running = true;\n        }\n\n        if (typeof Theme !== \"undefined\") {\n            Theme.generateSystemThemesFromCurrentTheme();\n        }\n    }\n\n    function setWallpaperColor",
+            "        saveSettings();\n        if (typeof imagePath === \"string\" && imagePath.length > 0 && imagePath[0] !== \"#\") {\n            _skwdWallApplyProcess.running = false;\n            _skwdWallApplyProcess.command = [\"skwd\", \"wall\", \"apply\", JSON.stringify({type: \"static\", path: imagePath})];\n            _skwdWallApplyProcess.running = true;\n        }\n\n        if (typeof Theme !== \"undefined\") {\n            Theme.generateSystemThemesFromCurrentTheme();\n        }\n    }\n\n    function setWallpaperColor",
         ),
         (
             "        saveSettings();\n        Qt.callLater(() => {\n            isSwitchingMode = false;\n        });\n    }\n\n    function setDoNotDisturb",
             "        saveSettings();\n        if (typeof Theme !== \"undefined\") {\n            Theme.generateSystemThemesFromCurrentTheme();\n        }\n        Qt.callLater(() => {\n            isSwitchingMode = false;\n        });\n    }\n\n    function setDoNotDisturb",
+        ),
+        (
+            "        saveSettings();\n\n        if (typeof Theme !== \"undefined\" && typeof Quickshell !== \"undefined\" && typeof SettingsData !== \"undefined\") {\n            var screens = Quickshell.screens;\n            if (screens.length > 0) {\n                var targetMonitor = (SettingsData.matugenTargetMonitor && SettingsData.matugenTargetMonitor !== \"\") ? SettingsData.matugenTargetMonitor : screens[0].name;\n                if (screenName === targetMonitor) {\n                    Theme.generateSystemThemesFromCurrentTheme();\n                }\n            }\n        }\n    }\n\n    function setWallpaperTransition",
+            "        saveSettings();\n        if (typeof path === \"string\" && path.length > 0 && path[0] !== \"#\") {\n            _skwdWallApplyProcess.running = false;\n            _skwdWallApplyProcess.command = [\"skwd\", \"wall\", \"apply\", JSON.stringify({type: \"static\", path: path, outputs: [screenName]})];\n            _skwdWallApplyProcess.running = true;\n        }\n\n        if (typeof Theme !== \"undefined\" && typeof Quickshell !== \"undefined\" && typeof SettingsData !== \"undefined\") {\n            var screens = Quickshell.screens;\n            if (screens.length > 0) {\n                var targetMonitor = (SettingsData.matugenTargetMonitor && SettingsData.matugenTargetMonitor !== \"\") ? SettingsData.matugenTargetMonitor : screens[0].name;\n                if (screenName === targetMonitor) {\n                    Theme.generateSystemThemesFromCurrentTheme();\n                }\n            }\n        }\n    }\n\n    function setWallpaperTransition",
         ),
     ],
   '';

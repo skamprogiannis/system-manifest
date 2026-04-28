@@ -510,6 +510,7 @@ selector_text = replace_all(
       return false
     Config.saveKey("matugen.mode", mode)
     DaemonClient.retheme(Config.matugenScheme, mode)
+    Quickshell.execDetached([Config.scriptsDir + "/sync-dms-wallpaper.sh"])
     return true
   }
 
