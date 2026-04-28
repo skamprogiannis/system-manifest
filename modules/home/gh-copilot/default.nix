@@ -244,6 +244,10 @@ in {
         command = "npx";
         args = ["-y" "@upstash/context7-mcp"];
       };
+      etsy = {
+        type = "http";
+        url = "https://mcp.api.etsycloud.com/mcp";
+      };
     };
   };
 
