@@ -107,9 +107,10 @@ in {
       name = "Yazi";
       genericName = "Terminal File Manager";
       comment = "Browse files in Yazi using Ghostty";
-      exec = "ghostty -e yazi";
+      exec = "${pkgs.ghostty}/bin/ghostty -e ${pkgs.yazi}/bin/yazi %F";
       icon = "system-file-manager";
       terminal = false;
+      mimeType = ["inode/directory"];
       categories = ["System" "Utility" "FileManager"];
     };
     khal = {
@@ -144,6 +145,16 @@ in {
         "application/x-sh"
       ];
       categories = ["Utility" "TextEditor"];
+    };
+  };
+
+  xdg.mimeApps = {
+    enable = true;
+    associations.added = {
+      "inode/directory" = ["yazi.desktop"];
+    };
+    defaultApplications = {
+      "inode/directory" = ["yazi.desktop"];
     };
   };
 }
