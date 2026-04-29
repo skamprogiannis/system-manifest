@@ -121,12 +121,38 @@ let
     service="${spotifyServiceName}"
     creds="${spotifyCacheDir}/credentials.json"
     web_token="${spotifyCacheDir}/user_client_token.json"
+    auth_attempted=0
 
     needs_daemon() {
       [ "$#" -eq 0 ] && return 0
       case "$1" in
         playback|connect|like|get) return 0 ;;
       esac
+      return 1
+    }
+
+    service_has_failed() {
+      ${pkgs.systemd}/bin/systemctl --user is-failed --quiet "$service"
+    }
+
+    start_service() {
+      ${pkgs.systemd}/bin/systemctl --user reset-failed "$service" >/dev/null 2>&1 || true
+      ${pkgs.systemd}/bin/systemctl --user start "$service" >/dev/null 2>&1
+    }
+
+    wait_for_daemon() {
+      for _ in $(${pkgs.coreutils}/bin/seq 1 20); do
+        if ${pkgs.iproute2}/bin/ss -tln 'sport = :8081' 2>/dev/null | ${pkgs.gnugrep}/bin/grep -q LISTEN; then
+          return 0
+        fi
+
+        if service_has_failed; then
+          return 2
+        fi
+
+        ${pkgs.coreutils}/bin/sleep 0.5
+      done
+
       return 1
     }
 
@@ -153,22 +179,38 @@ let
     if [ ! -s "$creds" ]; then
       echo "spotify_player: no cached Spotify credentials; starting interactive login" >&2
       run_auth
+      auth_attempted=1
     fi
 
-    # Start daemon (idempotent). Failures are surfaced but not fatal — the
-    # real binary will report the underlying error to the user directly.
-    ${pkgs.systemd}/bin/systemctl --user reset-failed "$service" >/dev/null 2>&1 || true
-    if ! ${pkgs.systemd}/bin/systemctl --user start "$service" >/dev/null 2>&1; then
+    # If cached credentials have gone stale, the daemon dies quickly with a
+    # 400 refresh-token failure. Recover once by clearing the cached login and
+    # re-running the interactive auth flow, but never probe with a CLI command
+    # that could itself launch another browser tab.
+    daemon_status=0
+    if ! start_service; then
       echo "spotify_player: warning: $service failed to start; if Spotify rejects the cached login, run 'spotify_player authenticate'" >&2
     fi
 
-    # Brief wait for the daemon's TCP port (8081) so the TUI sees its device.
-    for _ in $(${pkgs.coreutils}/bin/seq 1 20); do
-      if ${pkgs.iproute2}/bin/ss -tln 'sport = :8081' 2>/dev/null | ${pkgs.gnugrep}/bin/grep -q LISTEN; then
-        break
+    wait_for_daemon || daemon_status=$?
+
+    if [ "$daemon_status" -eq 2 ] && [ "$auth_attempted" -eq 0 ] && [ -s "$creds" ]; then
+      echo "spotify_player: cached Spotify login expired; re-authenticating..." >&2
+      run_auth
+      auth_attempted=1
+      daemon_status=0
+
+      if ! start_service; then
+        echo "spotify_player: warning: $service failed to start after re-authentication" >&2
       fi
-      ${pkgs.coreutils}/bin/sleep 0.5
-    done
+
+      wait_for_daemon || daemon_status=$?
+    fi
+
+    if [ "$daemon_status" -eq 1 ]; then
+      echo "spotify_player: warning: $service did not become ready; the TUI may stay stuck in loading" >&2
+    elif [ "$daemon_status" -eq 2 ]; then
+      echo "spotify_player: warning: $service still fails after re-authentication; the TUI may stay stuck in loading" >&2
+    fi
 
     exec "$real_player" "$@"
   '';
