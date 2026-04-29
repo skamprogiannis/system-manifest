@@ -167,6 +167,24 @@
         run_expect 1 transmission-port-sync-invalid-port "$desktop_home/bin/transmission-port-sync" 0
         assert_log_contains "Error: port must be an integer between 1 and 65535."
 
+        if ${pkgs.gnugrep}/bin/grep -Fq "get key devices" "$desktop_home/bin/spotify_player"; then
+          echo "spotify_player wrapper must not probe 'get key devices' because it can relaunch OAuth." >&2
+          ${pkgs.gnused}/bin/sed -n '1,220p' "$desktop_home/bin/spotify_player" >&2
+          exit 1
+        fi
+
+        if ! ${pkgs.gnugrep}/bin/grep -Fq "cached Spotify login expired; re-authenticating..." "$desktop_home/bin/spotify_player"; then
+          echo "Expected spotify_player wrapper to recover stale cached Spotify logins." >&2
+          ${pkgs.gnused}/bin/sed -n '1,220p' "$desktop_home/bin/spotify_player" >&2
+          exit 1
+        fi
+
+        if ! ${pkgs.gnugrep}/bin/grep -Fq "service_has_failed()" "$desktop_home/bin/spotify_player"; then
+          echo "Expected spotify_player wrapper to detect failed daemon starts safely." >&2
+          ${pkgs.gnused}/bin/sed -n '1,220p' "$desktop_home/bin/spotify_player" >&2
+          exit 1
+        fi
+
         touch "$out"
       '';
       shellcheck = pkgs.runCommand "shellcheck-scripts" {
