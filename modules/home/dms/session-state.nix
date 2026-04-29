@@ -3,6 +3,7 @@
   pkgs,
   ...
 }: let
+  defaultWallpaperTransition = "disc";
   sessionDefaultsJson = builtins.toJSON {
     nightModeEnabled = false;
     nightModeAutoEnabled = false;
@@ -10,7 +11,7 @@
     themeModeShareGammaSettings = false;
     nightModeUseIPLocation = false;
     isLightMode = false;
-    wallpaperTransition = "fade";
+    wallpaperTransition = defaultWallpaperTransition;
     includedTransitions = [
       "fade"
       "wipe"

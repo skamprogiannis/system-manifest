@@ -13,6 +13,7 @@
   skwdScriptDir = "${homeDir}/.config/skwd-wall/scripts";
   skwdSecretsFile = "${homeDir}/.config/skwd-wall/secrets.env";
   skwdDefaultMonitor = "DP-1";
+  defaultWallpaperTransition = "disc";
 
   # Patch QML/runtime: vim keys, per-monitor apply, live config reload
   skwdWallPkg = pkgs.runCommand "skwd-wall-patched" {} ''
@@ -3490,16 +3491,16 @@ PY
     wallpaper_path="$1"
     outputs_csv="''${2:-}"
     session_file="$HOME/.local/state/DankMaterialShell/session.json"
-    transition="fade"
-    transition_type="fade"
-    transition_duration="0.5"
-    transition_step=""
-    transition_fps=""
-    transition_pos=""
+    transition="${defaultWallpaperTransition}"
+    transition_type="center"
+    transition_duration="0.45"
+    transition_step="72"
+    transition_fps="60"
+    transition_pos="center"
     transition_bezier=""
 
     if [ -f "$session_file" ]; then
-      transition="$(${pkgs.jq}/bin/jq -r '.wallpaperTransition // "fade"' "$session_file" 2>/dev/null || printf 'fade\n')"
+      transition="$(${pkgs.jq}/bin/jq -r '.wallpaperTransition // "${defaultWallpaperTransition}"' "$session_file" 2>/dev/null || printf '${defaultWallpaperTransition}\n')"
     fi
 
     case "$transition" in
@@ -3548,11 +3549,11 @@ PY
         transition_fps="60"
         ;;
       *)
-        transition_type="fade"
-        transition_duration="0.5"
-        transition_step="20"
+        transition_type="center"
+        transition_duration="0.45"
+        transition_step="72"
         transition_fps="60"
-        transition_bezier=".42,0,.58,1"
+        transition_pos="center"
         ;;
     esac
 
@@ -3981,9 +3982,6 @@ def resolve_capture(we_id):
 def maybe_generate_capture(we_id, preview):
     if not we_id or not capture_bin:
         return None
-    should_capture = preview is None or preview_is_low_confidence(preview)
-    if not should_capture:
-        return None
     try:
         subprocess.run(
             [capture_bin, we_id],
@@ -4135,7 +4133,7 @@ if config_file.exists():
         print(f"sync-dms-wallpaper: failed to parse {config_file}: {exc}", file=sys.stderr)
 allowed_transitions = {"none", "fade", "wipe", "disc", "stripes", "iris bloom", "pixelate", "portal", "random"}
 if data.get("wallpaperTransition") not in allowed_transitions:
-    data["wallpaperTransition"] = "fade"
+    data["wallpaperTransition"] = "${defaultWallpaperTransition}"
 if not isinstance(data.get("includedTransitions"), list) or not data["includedTransitions"]:
     data["includedTransitions"] = ["fade", "wipe", "disc", "stripes", "iris bloom", "pixelate", "portal"]
 
@@ -4152,10 +4150,11 @@ else:
 PY
     )"
 
-    if [ ! -f "$current_wallpaper" ]; then
-      echo "sync-dms-wallpaper: missing normalized current wallpaper preview" >&2
+    export GREETER_OVERRIDE_PATH="$greeter_override"
+    if [ ! -f "$live_wallpaper" ]; then
+      echo "sync-dms-wallpaper: missing live wallpaper still for greeter" >&2
     elif [ -d "$greeter_cache_dir" ] && [ -w "$greeter_cache_dir" ]; then
-      install -m 664 "$current_wallpaper" "$greeter_override.tmp"
+      install -m 664 "$live_wallpaper" "$greeter_override.tmp"
       mv -f "$greeter_override.tmp" "$greeter_override"
       chmod 664 "$greeter_override"
 
@@ -4166,7 +4165,7 @@ import os
 import sys
 
 settings_file = Path("/var/cache/dms-greeter/settings.json")
-wallpaper = Path(os.path.expanduser("~/.cache/skwd-wall/wallpaper/current.jpg"))
+wallpaper = Path(os.environ["GREETER_OVERRIDE_PATH"])
 
 if settings_file.exists():
     try:
