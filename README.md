@@ -11,7 +11,7 @@ Managed via **Nix Flakes** and **Home Manager**.
 - **USB: Portable Hyprland** — USB host boots through the same DMS greeter path as desktop and keeps the portable Hyprland session lean for lab machines. Uses a **hybrid squashfs** Nix store (compressed read-only image + tmpfs overlay) for near-ISO boot performance on lab machines; only new `/nix/store` writes use the tmpfs upper layer, while `/home` stays on the persistent encrypted USB root filesystem. Docker's heavy writable state is routed to ephemeral host-local scratch storage when available, falling back to tmpfs when no suitable host partition can be mounted.
 - **Gaming Mode:** A dedicated specialisation (`gaming-box`) that boots directly into Steam Big Picture Mode with Gamescope.
 - **Media & Productivity:**
-  - **Spotify Player:** Terminal-based Spotify client (`spotify_player`) with streaming support. The wrapper authenticates interactively before bootstrapping the background daemon so the login callback port is not stolen by a headless service on fresh setups.
+  - **Spotify Player:** Terminal-based Spotify client (`spotify_player`) with streaming support. The wrapper authenticates interactively before bootstrapping the background daemon so the login callback port is not stolen by a headless service on fresh setups, and it does one safe re-auth pass when Spotify later rejects a cached refresh token.
   - **Transmission:** BitTorrent daemon with `tremc` TUI frontend.
   - **Mailspring:** Email client; credentials stored via GNOME Keyring (runs standalone, no GNOME shell required).
   - **Obsidian:** Note-taking application with Home Manager plugin management.
