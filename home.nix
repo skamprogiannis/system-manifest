@@ -56,7 +56,6 @@ in {
   home.packages = with pkgs; [
     # GUI
     imv
-    gpu-screen-recorder
     mpv
     linux-wallpaperengine
     vesktop

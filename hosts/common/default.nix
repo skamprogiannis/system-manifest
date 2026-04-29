@@ -69,6 +69,7 @@
     zlib
     openssl
   ];
+  programs.gpu-screen-recorder.enable = true;
 
   # Allow the user to rebuild the system without a password
   security.sudo.extraRules = [
