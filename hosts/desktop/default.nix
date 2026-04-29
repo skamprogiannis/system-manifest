@@ -20,6 +20,35 @@
     configurationLimit = 20;
   };
   boot.loader.efi.canTouchEfiVariables = true;
+  system.activationScripts.preferSystemdBoot = lib.stringAfter ["etc"] ''
+    if [ -d /sys/firmware/efi/efivars ]; then
+      efi_output="$(${pkgs.efibootmgr}/bin/efibootmgr 2>/dev/null || true)"
+      systemd_entry="$(printf '%s\n' "$efi_output" \
+        | ${pkgs.gnugrep}/bin/grep -E '^Boot[0-9A-Fa-f]{4}\*?[[:space:]]+Linux Boot Manager([[:space:]].*)?$' \
+        | ${pkgs.coreutils}/bin/head -n 1 \
+        | ${pkgs.gnused}/bin/sed -E 's/^Boot([0-9A-Fa-f]{4}).*/\1/')"
+      boot_order="$(printf '%s\n' "$efi_output" \
+        | ${pkgs.gnused}/bin/sed -n 's/^BootOrder: //p' \
+        | ${pkgs.coreutils}/bin/head -n 1)"
+
+      if [ -n "$systemd_entry" ] && [ -n "$boot_order" ]; then
+        systemd_entry="$(printf '%s' "$systemd_entry" | ${pkgs.coreutils}/bin/tr '[:lower:]' '[:upper:]')"
+        new_order="$systemd_entry"
+        old_ifs="$IFS"
+        IFS=,
+        for entry in $boot_order; do
+          entry="$(printf '%s' "$entry" | ${pkgs.coreutils}/bin/tr '[:lower:]' '[:upper:]')"
+          [ "$entry" = "$systemd_entry" ] && continue
+          new_order="$new_order,$entry"
+        done
+        IFS="$old_ifs"
+
+        if [ "$boot_order" != "$new_order" ]; then
+          ${pkgs.efibootmgr}/bin/efibootmgr -o "$new_order" >/dev/null
+        fi
+      fi
+    fi
+  '';
 
   # Disk Encryption (Additional drives)
   boot.initrd.luks.devices."luks-a96ee21e-bc18-42ab-864c-d3ec22f4247a".device = "/dev/disk/by-uuid/a96ee21e-bc18-42ab-864c-d3ec22f4247a";
