@@ -20,8 +20,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    awww.url = "git+https://codeberg.org/LGFae/awww?ref=refs/heads/main&allRefs=1";
+
     skwd-wall = {
       url = "github:liixini/skwd-wall";
+      inputs.awww.follows = "awww";
     };
 
     pearpass-app-desktop = {
