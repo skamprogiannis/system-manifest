@@ -6,9 +6,11 @@
   hostType ? "desktop",
   ...
 }:
-assert lib.assertMsg (builtins.elem hostType ["desktop" "usb"]) "hostType must be \"desktop\" or \"usb\".";
-let
-  spotifyDeviceName = if hostType == "usb" then "nixos-usb" else "nixos-desktop";
+assert lib.assertMsg (builtins.elem hostType ["desktop" "usb"]) "hostType must be \"desktop\" or \"usb\"."; let
+  spotifyDeviceName =
+    if hostType == "usb"
+    then "nixos-usb"
+    else "nixos-desktop";
   spotifyServiceName = "spotify-player.service";
   spotifyUserClientId = "65b708073fc0480ea92a077233ca87bd";
   spotifyPlayerClientPatch = pkgs.writeText "patch-spotify-player-client.py" ''
@@ -86,9 +88,11 @@ let
   '';
   spotifyPlayerUpstreamPkg = inputs.spotify-player.defaultPackage.${pkgs.stdenv.hostPlatform.system};
   spotifyPlayerRawPkg = spotifyPlayerUpstreamPkg.overrideAttrs (old: {
-    postPatch = (old.postPatch or "") + ''
-      ${pkgs.python3}/bin/python3 ${spotifyPlayerClientPatch}
-    '';
+    postPatch =
+      (old.postPatch or "")
+      + ''
+        ${pkgs.python3}/bin/python3 ${spotifyPlayerClientPatch}
+      '';
   });
   spotifyConfigDir = "${config.xdg.configHome}/spotify-player";
   spotifyCacheDir = "${config.xdg.cacheHome}/spotify-player";
@@ -240,8 +244,8 @@ in {
   systemd.user.services.spotify-player = {
     Unit = {
       Description = "Spotify Player Daemon";
-      After = [ "network-online.target" ];
-      Wants = [ "network-online.target" ];
+      After = ["network-online.target"];
+      Wants = ["network-online.target"];
       StartLimitIntervalSec = 300;
       StartLimitBurst = 5;
     };

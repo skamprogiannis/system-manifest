@@ -10,6 +10,7 @@
   imports = [
     ../../home.nix
     ../../modules/home/dms/usb.nix
+    ../../modules/home/spotify/usb.nix
   ];
 
   system_manifest.navigation.wrapWorkspaces = true;
