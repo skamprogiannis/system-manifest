@@ -17,26 +17,28 @@ in {
     # GTK 3: Catppuccin Mocha
     gtk3.extraConfig.gtk-theme-name = "catppuccin-mocha-blue-standard";
     gtk4.theme = null;
-    # GTK 4: matugen dynamic colors + softer, more translucent popovers/menus (Ghostty context menu)
+    # GTK 4: matugen dynamic colors + coherent translucent popovers/menus.
+    # Paint the shell itself so GTK/WebKit apps do not get a transparent wrapper
+    # around a separate opaque inner contents node.
     gtk4.extraCss = ''
       @import url("dank-colors.css");
 
       popover.background,
       menu {
         background-image: none;
-        background-color: transparent;
-        border: none;
-        box-shadow: none;
+        background-color: alpha(#11111b, 0.80);
+        border: 1px solid alpha(#cdd6f4, 0.05);
+        border-radius: 14px;
+        box-shadow: 0 10px 28px alpha(#000000, 0.32);
       }
 
       popover.background > contents,
       popover contents,
       menu > contents {
         background-image: none;
-        background-color: alpha(#11111b, 0.80);
-        border: 1px solid alpha(#cdd6f4, 0.05);
-        border-radius: 14px;
-        box-shadow: 0 10px 28px alpha(#000000, 0.32);
+        background-color: transparent;
+        border: none;
+        box-shadow: none;
       }
     '';
   };
