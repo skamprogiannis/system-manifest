@@ -206,6 +206,17 @@
       -- winblend creates on glass terminals (Neovim limitation).
       vim.api.nvim_set_hl(0, "NormalFloat", { bg = "NONE" })
       vim.api.nvim_set_hl(0, "FloatBorder", { bg = "NONE" })
+      vim.api.nvim_set_hl(0, "Pmenu", { bg = "NONE" })
+      vim.api.nvim_set_hl(0, "PmenuSel", { bg = "NONE", bold = true, underline = true })
+      vim.api.nvim_set_hl(0, "PmenuSbar", { bg = "NONE" })
+      vim.api.nvim_set_hl(0, "PmenuThumb", { bg = "NONE" })
+      vim.api.nvim_set_hl(0, "BlinkCmpMenu", { link = "NormalFloat" })
+      vim.api.nvim_set_hl(0, "BlinkCmpMenuBorder", { link = "FloatBorder" })
+      vim.api.nvim_set_hl(0, "BlinkCmpMenuSelection", { bg = "NONE", bold = true, underline = true })
+      vim.api.nvim_set_hl(0, "BlinkCmpDoc", { link = "NormalFloat" })
+      vim.api.nvim_set_hl(0, "BlinkCmpDocBorder", { link = "FloatBorder" })
+      vim.api.nvim_set_hl(0, "BlinkCmpSignatureHelp", { link = "NormalFloat" })
+      vim.api.nvim_set_hl(0, "BlinkCmpSignatureHelpBorder", { link = "FloatBorder" })
 
       vim.o.winblend = 0
       if vim.fn.exists("+winborder") == 1 then
@@ -291,7 +302,29 @@
           keymap.preset = "default";
           appearance.nerd_font_variant = "mono";
           sources.default = [ "lsp" "path" "snippets" "buffer" ];
-          signature.enabled = true;
+          completion = {
+            menu = {
+              winblend = 0;
+              scrollbar = false;
+              winhighlight = "Normal:BlinkCmpMenu,FloatBorder:BlinkCmpMenuBorder,CursorLine:BlinkCmpMenuSelection,Search:None";
+            };
+            documentation = {
+              auto_show = true;
+              window = {
+                winblend = 0;
+                scrollbar = false;
+                winhighlight = "Normal:BlinkCmpDoc,FloatBorder:BlinkCmpDocBorder,EndOfBuffer:BlinkCmpDoc";
+              };
+            };
+          };
+          signature = {
+            enabled = true;
+            window = {
+              winblend = 0;
+              scrollbar = false;
+              winhighlight = "Normal:BlinkCmpSignatureHelp,FloatBorder:BlinkCmpSignatureHelpBorder";
+            };
+          };
         };
       };
 
