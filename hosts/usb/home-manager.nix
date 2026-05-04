@@ -4,12 +4,13 @@
   lib,
   ...
 }: {
-  # Keep this file as thin host wiring only. Use `hostType` for lightweight
-  # shared-module branches, and dedicated `.../usb.nix` modules for heavier
-  # host-specific patching or service overrides.
+  # Keep this file as thin host wiring only. Use `hostType` only for
+  # lightweight shared-module branches, and dedicated `.../usb.nix` modules
+  # for host-owned services, runtime/session files, or heavier overrides.
   imports = [
     ../../home.nix
     ../../modules/home/dms/usb.nix
+    ../../modules/home/scripts/usb.nix
     ../../modules/home/spotify/usb.nix
   ];
 
