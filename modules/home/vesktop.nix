@@ -7,10 +7,13 @@
 }:
 assert lib.assertMsg (builtins.elem hostType ["desktop" "usb"]) "hostType must be \"desktop\" or \"usb\".";
 let
+  wallpaperContracts = import ./wallpaper/contracts.nix;
+  skwdColorContract = wallpaperContracts.skwdColorContract;
   translucenceThemeName = "Translucence.theme.css";
   legacyGeneratedThemeName = "transluence-matugen.theme.css";
   vesktopEnabledThemes = [translucenceThemeName];
   vesktopEnabledThemesJson = builtins.toJSON vesktopEnabledThemes;
+  vesktopColorContractJson = builtins.toJSON skwdColorContract;
   vesktopThemeEnforcementJson = builtins.toJSON {
     plugins = {
       ClientTheme = {
@@ -49,22 +52,8 @@ import sys
 
 with open(sys.argv[1], encoding="utf-8") as fh:
     data = json.load(fh)
-required = (
-    "error",
-    "inversePrimary",
-    "onPrimary",
-    "outline",
-    "primary",
-    "primaryContainer",
-    "surfaceText",
-    "surfaceVariantText",
-    "surface",
-    "surfaceContainer",
-    "surfaceVariant",
-    "tertiary",
-    "tertiaryContainer",
-)
-missing = [key for key in required if key not in data]
+contract = json.loads(${lib.escapeShellArg vesktopColorContractJson})
+missing = [key for key in contract["requiredTokens"] if key not in data]
 raise SystemExit(0 if not missing else 1)
 PY
       then
@@ -88,7 +77,13 @@ import sys
 
 with open(sys.argv[1], encoding="utf-8") as fh:
     data = json.load(fh)
-primary = data.get("primary") or data.get("primaryContainer") or ""
+contract = json.loads(${lib.escapeShellArg vesktopColorContractJson})
+primary = ""
+for token in contract["accentFallbackTokens"]:
+    candidate = data.get(token) or ""
+    if isinstance(candidate, str) and candidate:
+        primary = candidate
+        break
 if not isinstance(primary, str):
     raise SystemExit(1)
 print(primary.lstrip("#"))
@@ -120,55 +115,15 @@ import sys
 
 with open(sys.argv[1], encoding="utf-8") as fh:
     data = json.load(fh)
-required = (
-    "background",
-    "error",
-    "inversePrimary",
-    "onPrimary",
-    "outline",
-    "primary",
-    "primaryContainer",
-    "surface",
-    "surfaceContainer",
-    "surfaceText",
-    "surfaceVariant",
-    "surfaceVariantText",
-    "tertiary",
-    "tertiaryContainer",
-)
-missing = [key for key in required if key not in data]
+contract = json.loads(${lib.escapeShellArg vesktopColorContractJson})
+missing = [key for key in contract["requiredTokens"] if key not in data]
 if missing:
     raise SystemExit("Invalid skwd-wall colors JSON schema")
 
-mapping = [
-    ("--online-indicator", data["inversePrimary"]),
-    ("--dnd-indicator", data["error"]),
-    ("--idle-indicator", data["tertiaryContainer"]),
-    ("--streaming-indicator", data["onPrimary"]),
-    ("--accent-1", data["tertiary"]),
-    ("--accent-2", data["primary"]),
-    ("--accent-3", data["primary"]),
-    ("--accent-4", data["surfaceContainer"]),
-    ("--accent-5", data["primaryContainer"]),
-    ("--mention", data["surface"]),
-    ("--mention-hover", data["surfaceContainer"]),
-    ("--text-0", data["surface"]),
-    ("--text-1", data["surfaceText"]),
-    ("--text-2", data["surfaceText"]),
-    ("--text-3", data["surfaceVariantText"]),
-    ("--text-4", data["surfaceVariantText"]),
-    ("--text-5", data["outline"]),
-    ("--bg-1", data["surfaceVariant"]),
-    ("--bg-2", data["surfaceContainer"]),
-    ("--bg-3", data["surface"]),
-    ("--bg-4", data["background"]),
-    ("--hover", data["surfaceContainer"]),
-    ("--active", data["surfaceContainer"]),
-    ("--message-hover", data["surfaceContainer"]),
-]
-
-for name, value in mapping:
-    print(f"  --dms-{name[2:]}: {value};")
+for entry in contract["vesktopMappings"]:
+    name = entry["cssVar"]
+    token = entry["token"]
+    print(f"  --dms-{name[2:]}: {data[token]};")
 PY
     }
 
@@ -326,6 +281,15 @@ EOF
   vesktopStateSync = pkgs.writeShellScript "vesktop-state-sync" ''
     set -euo pipefail
 
+    policy="''${1:-heal}"
+    case "$policy" in
+      heal|strict) ;;
+      *)
+        echo "vesktop-state-sync: unknown JSON policy '$policy' (expected heal or strict)" >&2
+        exit 2
+        ;;
+    esac
+
     CFG="$HOME/.config/vesktop"
     SETTINGS_DIR="$CFG/settings"
     USER_ASSETS="$CFG/userAssets"
@@ -342,6 +306,10 @@ EOF
       tmp=$(mktemp)
       if [ -s "$target" ] && ${pkgs.jq}/bin/jq empty "$target" >/dev/null 2>&1; then
         ${pkgs.jq}/bin/jq --argjson patch '${vesktopSettingsPatch}' '. + $patch' "$target" > "$tmp"
+      elif [ -s "$target" ] && [ "$policy" = "strict" ]; then
+        echo "vesktop-state-sync: failed to parse authoritative target $target" >&2
+        rm -f "$tmp"
+        return 1
       else
         printf '%s\n' '${vesktopSettingsPatch}' > "$tmp"
       fi
@@ -361,6 +329,10 @@ EOF
            | .useQuickCss = true
            | .transparent = true' \
           "$target" > "$tmp"
+      elif [ -s "$target" ] && [ "$policy" = "strict" ]; then
+        echo "vesktop-state-sync: failed to parse authoritative target $target" >&2
+        rm -f "$tmp"
+        return 1
       else
         printf '%s\n' '${vesktopThemeEnforcementJson}' > "$tmp"
       fi
@@ -383,14 +355,14 @@ EOF
 
   vesktopLaunchWrapper = pkgs.writeShellScript "vesktop-launch" ''
     set -euo pipefail
-    ${vesktopStateSync}
+    ${vesktopStateSync} strict
     exec ${pkgs.vesktop}/bin/vesktop ${lib.escapeShellArgs vesktopLaunchArgs} "$@"
   '';
 in {
   home.packages = [pkgs.vesktop regenTransluenceTheme];
 
   home.activation.syncVesktopThemeState = lib.hm.dag.entryAfter ["writeBoundary"] ''
-    ${vesktopStateSync}
+    ${vesktopStateSync} heal
   '';
 
   xdg.configFile."skwd-wall/scripts/reload-vesktop.sh".source = vesktopReloadHook;
