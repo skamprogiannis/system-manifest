@@ -7,6 +7,8 @@
 }: let
   pearpassExtensionId = "pdeffakfmcdnjjafophphgmddmigpejh";
   pearpassNativeHostName = "com.pears.pass";
+  pearpassStateDir = "${config.xdg.stateHome}/pearpass";
+  pearpassNativeErrorLog = "${pearpassStateDir}/native-error.log";
   pearpassPackageJson = builtins.fromJSON (builtins.readFile "${inputs.pearpass-app-desktop}/package.json");
   pearpassVersion =
     let
@@ -99,7 +101,8 @@
   # Uses pear-runtime directly (it links against Nix glibc fine — no FHS needed).
   # Must cd into PearPass's native-messaging dir so pear-runtime finds its config.
   pearpassNativeWrapper = pkgs.writeShellScript "pearpass-native" ''
-    exec 2>/tmp/pearpass-native-error.log
+    mkdir -p ${lib.escapeShellArg pearpassStateDir}
+    exec 2>${lib.escapeShellArg pearpassNativeErrorLog}
 
     NATIVE_DIR="$HOME/.config/pear/app-storage/by-dkey"
     # Find the PearPass native-messaging directory (dkey varies per install)

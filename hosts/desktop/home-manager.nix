@@ -4,6 +4,9 @@
   lib,
   ...
 }: {
+  # Keep this file as thin host wiring only. Shared modules may branch on
+  # `hostType` for lightweight defaults, but desktop-owned runtime behavior,
+  # patches, or session contracts should stay in dedicated host modules.
   imports = [
     ../../home.nix
     ../../modules/home/dms/desktop.nix

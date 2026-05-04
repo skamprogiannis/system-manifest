@@ -94,106 +94,109 @@
         "${desktopHome}/bin/hypr-nav"
         "${desktopHome}/bin/hypr-quit-active"
         "${desktopHome}/bin/screenshot-path-copy"
-        "${desktopHome}/bin/setup-persistent-usb"
         "${desktopHome}/bin/spotify_player"
         "${desktopHome}/bin/transmission-port-sync"
-        "${desktopHome}/bin/update-usb"
         "${desktopHome}/bin/zellij-sessionizer"
         "${usbHome}/bin/spotify_player"
+        "${usbHome}/bin/setup-persistent-usb"
+        "${usbHome}/bin/update-usb"
       ];
     in {
       desktop = self.nixosConfigurations.desktop.config.system.build.toplevel;
       usb = self.nixosConfigurations.usb.config.system.build.toplevel;
-      script-smoke = pkgs.runCommand "script-smoke-checks" {
-        nativeBuildInputs = [
-          pkgs.gnugrep
-          pkgs.gnused
-        ];
-      } ''
-        set -euo pipefail
+      script-smoke =
+        pkgs.runCommand "script-smoke-checks" {
+          nativeBuildInputs = [
+            pkgs.gnugrep
+            pkgs.gnused
+          ];
+        } ''
+          set -euo pipefail
 
-        desktop_home="${desktopHome}"
-        export HOME="$TMPDIR/home"
-        export XDG_RUNTIME_DIR="$TMPDIR/runtime"
-        mkdir -p "$HOME" "$XDG_RUNTIME_DIR"
+          desktop_home="${desktopHome}"
+          usb_home="${usbHome}"
+          export HOME="$TMPDIR/home"
+          export XDG_RUNTIME_DIR="$TMPDIR/runtime"
+          mkdir -p "$HOME" "$XDG_RUNTIME_DIR"
 
-        run_expect() {
-          local expected_status="$1"
-          local label="$2"
-          shift 2
+          run_expect() {
+            local expected_status="$1"
+            local label="$2"
+            shift 2
 
-          local log="$TMPDIR/$label.log"
-          set +e
-          "$@" >"$log" 2>&1
-          local status=$?
-          set -e
+            local log="$TMPDIR/$label.log"
+            set +e
+            "$@" >"$log" 2>&1
+            local status=$?
+            set -e
 
-          if [ "$status" -ne "$expected_status" ]; then
-            echo "Unexpected exit status for $label: got $status, expected $expected_status" >&2
-            ${pkgs.gnused}/bin/sed 's/^/  /' "$log" >&2
+            if [ "$status" -ne "$expected_status" ]; then
+              echo "Unexpected exit status for $label: got $status, expected $expected_status" >&2
+              ${pkgs.gnused}/bin/sed 's/^/  /' "$log" >&2
+              exit 1
+            fi
+
+            LAST_LOG="$log"
+          }
+
+          assert_log_contains() {
+            local needle="$1"
+            if ! ${pkgs.gnugrep}/bin/grep -Fq "$needle" "$LAST_LOG"; then
+              echo "Expected to find '$needle' in $LAST_LOG" >&2
+              ${pkgs.gnused}/bin/sed 's/^/  /' "$LAST_LOG" >&2
+              exit 1
+            fi
+          }
+
+          run_expect 0 setup-persistent-usb-help "$usb_home/bin/setup-persistent-usb" --help
+          assert_log_contains "Creates a fresh persistent NixOS USB"
+
+          run_expect 1 update-usb-invalid-mode "$usb_home/bin/update-usb" --mode nope
+          assert_log_contains "Error: invalid mode 'nope'."
+
+          if ! ${pkgs.gnugrep}/bin/grep -Fq "#/nix/}/init" "$usb_home/bin/update-usb"; then
+            echo "Expected update-usb to normalize squashfs verification paths relative to /nix." >&2
+            ${pkgs.gnused}/bin/sed -n '180,230p' "$usb_home/bin/update-usb" >&2
             exit 1
           fi
 
-          LAST_LOG="$log"
-        }
+          run_expect 0 gsr-record-help "$desktop_home/bin/gsr-record" --help
+          assert_log_contains "Usage: gsr-record"
 
-        assert_log_contains() {
-          local needle="$1"
-          if ! ${pkgs.gnugrep}/bin/grep -Fq "$needle" "$LAST_LOG"; then
-            echo "Expected to find '$needle' in $LAST_LOG" >&2
-            ${pkgs.gnused}/bin/sed 's/^/  /' "$LAST_LOG" >&2
+          run_expect 1 gsr-record-invalid-mode "$desktop_home/bin/gsr-record" nope
+          assert_log_contains "Error: unknown mode 'nope'."
+
+          run_expect 1 transmission-port-sync-invalid-port "$desktop_home/bin/transmission-port-sync" 0
+          assert_log_contains "Error: port must be an integer between 1 and 65535."
+
+          if ${pkgs.gnugrep}/bin/grep -Fq "get key devices" "$desktop_home/bin/spotify_player"; then
+            echo "spotify_player wrapper must not probe 'get key devices' because it can relaunch OAuth." >&2
+            ${pkgs.gnused}/bin/sed -n '1,220p' "$desktop_home/bin/spotify_player" >&2
             exit 1
           fi
-        }
 
-        run_expect 0 setup-persistent-usb-help "$desktop_home/bin/setup-persistent-usb" --help
-        assert_log_contains "Creates a fresh persistent NixOS USB"
+          if ! ${pkgs.gnugrep}/bin/grep -Fq "cached Spotify login expired; re-authenticating..." "$desktop_home/bin/spotify_player"; then
+            echo "Expected spotify_player wrapper to recover stale cached Spotify logins." >&2
+            ${pkgs.gnused}/bin/sed -n '1,220p' "$desktop_home/bin/spotify_player" >&2
+            exit 1
+          fi
 
-        run_expect 1 update-usb-invalid-mode "$desktop_home/bin/update-usb" --mode nope
-        assert_log_contains "Error: invalid mode 'nope'."
+          if ! ${pkgs.gnugrep}/bin/grep -Fq "service_has_failed()" "$desktop_home/bin/spotify_player"; then
+            echo "Expected spotify_player wrapper to detect failed daemon starts safely." >&2
+            ${pkgs.gnused}/bin/sed -n '1,220p' "$desktop_home/bin/spotify_player" >&2
+            exit 1
+          fi
 
-        if ! ${pkgs.gnugrep}/bin/grep -Fq "#/nix/}/init" "$desktop_home/bin/update-usb"; then
-          echo "Expected update-usb to normalize squashfs verification paths relative to /nix." >&2
-          ${pkgs.gnused}/bin/sed -n '180,230p' "$desktop_home/bin/update-usb" >&2
-          exit 1
-        fi
-
-        run_expect 0 gsr-record-help "$desktop_home/bin/gsr-record" --help
-        assert_log_contains "Usage: gsr-record"
-
-        run_expect 1 gsr-record-invalid-mode "$desktop_home/bin/gsr-record" nope
-        assert_log_contains "Error: unknown mode 'nope'."
-
-        run_expect 1 transmission-port-sync-invalid-port "$desktop_home/bin/transmission-port-sync" 0
-        assert_log_contains "Error: port must be an integer between 1 and 65535."
-
-        if ${pkgs.gnugrep}/bin/grep -Fq "get key devices" "$desktop_home/bin/spotify_player"; then
-          echo "spotify_player wrapper must not probe 'get key devices' because it can relaunch OAuth." >&2
-          ${pkgs.gnused}/bin/sed -n '1,220p' "$desktop_home/bin/spotify_player" >&2
-          exit 1
-        fi
-
-        if ! ${pkgs.gnugrep}/bin/grep -Fq "cached Spotify login expired; re-authenticating..." "$desktop_home/bin/spotify_player"; then
-          echo "Expected spotify_player wrapper to recover stale cached Spotify logins." >&2
-          ${pkgs.gnused}/bin/sed -n '1,220p' "$desktop_home/bin/spotify_player" >&2
-          exit 1
-        fi
-
-        if ! ${pkgs.gnugrep}/bin/grep -Fq "service_has_failed()" "$desktop_home/bin/spotify_player"; then
-          echo "Expected spotify_player wrapper to detect failed daemon starts safely." >&2
-          ${pkgs.gnused}/bin/sed -n '1,220p' "$desktop_home/bin/spotify_player" >&2
-          exit 1
-        fi
-
-        touch "$out"
-      '';
-      shellcheck = pkgs.runCommand "shellcheck-scripts" {
-        nativeBuildInputs = [pkgs.shellcheck];
-      } ''
-        set -euo pipefail
-        shellcheck -S warning ${pkgs.lib.escapeShellArgs shellcheckScripts}
-        touch "$out"
-      '';
+          touch "$out"
+        '';
+      shellcheck =
+        pkgs.runCommand "shellcheck-scripts" {
+          nativeBuildInputs = [pkgs.shellcheck];
+        } ''
+          set -euo pipefail
+          shellcheck -S warning ${pkgs.lib.escapeShellArgs shellcheckScripts}
+          touch "$out"
+        '';
     };
 
     nixosConfigurations = {
@@ -209,8 +212,11 @@
             home-manager.useUserPackages = true;
             home-manager.backupFileExtension = "backup";
             home-manager.extraSpecialArgs = {
-              # Use hostType only for lightweight shared-module branches.
-              # Keep heavier host-specific patching in dedicated host modules.
+              # `hostType` is only a selector for lightweight shared-module
+              # branches (small flags, package toggles, minor defaults). If a
+              # branch starts needing host-owned services, session/runtime
+              # files, or heavier patching, move it into dedicated host imports
+              # instead of extending the shared contract here.
               inherit inputs;
               hostType = "desktop";
             };
@@ -238,6 +244,9 @@
             home-manager.useUserPackages = true;
             home-manager.backupFileExtension = "backup";
             home-manager.extraSpecialArgs = {
+              # Keep USB on the same narrow `hostType` contract as desktop:
+              # lightweight shared branches only, never host-owned runtime
+              # behavior or larger service/session splits.
               inherit inputs;
               hostType = "usb";
             };

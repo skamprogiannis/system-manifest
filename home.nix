@@ -6,6 +6,11 @@
   ...
 }: let
   githubCopilotCliVersion = "1.0.34";
+  copilotRuntimeLibraryPath = pkgs.lib.makeLibraryPath [
+    pkgs.libsecret
+    pkgs.glib
+    pkgs.gcc-unwrapped.lib
+  ];
   githubCopilotCli = pkgs.stdenvNoCC.mkDerivation {
     pname = "github-copilot-cli";
     version = githubCopilotCliVersion;
@@ -89,17 +94,9 @@ in {
         cat > $out/bin/copilot <<'EOF'
         #!${pkgs.bash}/bin/bash
         if [[ -n "$LD_LIBRARY_PATH" ]]; then
-          export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath [
-          pkgs.libsecret
-          pkgs.glib
-          pkgs.gcc-unwrapped.lib
-        ]}:$LD_LIBRARY_PATH"
+          export LD_LIBRARY_PATH="${copilotRuntimeLibraryPath}:$LD_LIBRARY_PATH"
         else
-          export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath [
-          pkgs.libsecret
-          pkgs.glib
-          pkgs.gcc-unwrapped.lib
-        ]}"
+          export LD_LIBRARY_PATH="${copilotRuntimeLibraryPath}"
         fi
 
         if [[ -z "$GH_TOKEN" && -f "$HOME/.config/github-pat" ]]; then

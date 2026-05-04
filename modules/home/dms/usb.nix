@@ -8,6 +8,14 @@
   dmsBasePackage = inputs.dms.packages.${pkgs.stdenv.hostPlatform.system}.dms-shell;
   patchDmsPackage = import ./patch-package.nix {inherit pkgs;};
   dmsPatches = import ./common-patches.nix;
+  emptyScreenPreferences = lib.genAttrs [
+    "notifications"
+    "osd"
+    "toast"
+    "notepad"
+  ] (_: []);
+  disabledTimeout = lib.mkForce 0;
+  shortLockTimeout = lib.mkForce 600;
   usbDmsPackage = patchDmsPackage {
     package = dmsBasePackage;
     pythonPrelude = dmsPatches.pythonPrelude;
@@ -24,18 +32,13 @@ in {
     package = lib.mkForce usbDmsPackage;
     settings = {
       displayProfileAutoSelect = lib.mkForce true;
-      screenPreferences = lib.mkForce {
-        notifications = [];
-        osd = [];
-        toast = [];
-        notepad = [];
-      };
-      acLockTimeout = lib.mkForce 600;
-      acMonitorTimeout = lib.mkForce 0;
-      acSuspendTimeout = lib.mkForce 0;
-      batteryLockTimeout = lib.mkForce 600;
-      batteryMonitorTimeout = lib.mkForce 0;
-      batterySuspendTimeout = lib.mkForce 0;
+      screenPreferences = lib.mkForce emptyScreenPreferences;
+      acLockTimeout = shortLockTimeout;
+      acMonitorTimeout = disabledTimeout;
+      acSuspendTimeout = disabledTimeout;
+      batteryLockTimeout = shortLockTimeout;
+      batteryMonitorTimeout = disabledTimeout;
+      batterySuspendTimeout = disabledTimeout;
     };
   };
 }

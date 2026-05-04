@@ -3,28 +3,16 @@
   pkgs,
   ...
 }: let
-  defaultWallpaperTransition = "disc";
-  sessionDefaultsJson = builtins.toJSON {
-    nightModeEnabled = false;
-    nightModeAutoEnabled = false;
-    themeModeAutoEnabled = false;
-    themeModeShareGammaSettings = false;
-    nightModeUseIPLocation = false;
-    isLightMode = false;
-    wallpaperTransition = defaultWallpaperTransition;
-    includedTransitions = [
-      "fade"
-      "wipe"
-      "disc"
-      "stripes"
-      "iris bloom"
-      "pixelate"
-      "portal"
-    ];
-  };
+  wallpaperContracts = import ../wallpaper/contracts.nix;
+  sessionDefaultsJson = builtins.toJSON wallpaperContracts.dmsSessionDefaults;
+  allowedTransitionsJson = builtins.toJSON wallpaperContracts.wallpaperTransitions.allowed;
 in {
   xdg.configFile."DankMaterialShell/.firstlaunch".text = "";
 
+  # Home Manager activation owns the baseline schema for
+  # ~/.local/state/DankMaterialShell/session.json. Missing, malformed, or
+  # non-object content is healed back to defaults here so later runtime hooks
+  # can assume a sane floor without widening the shared contract.
   home.activation.ensureWritableDmsSession = lib.hm.dag.entryAfter ["writeBoundary"] ''
     state_dir="$HOME/.local/state/DankMaterialShell"
     session_file="$state_dir/session.json"
@@ -43,11 +31,13 @@ import sys
 session_path = Path(sys.argv[1])
 output_path = Path(sys.argv[2])
 defaults = json.loads(${lib.escapeShellArg sessionDefaultsJson})
-allowed_transitions = set(defaults["includedTransitions"] + ["none", "random"])
+allowed_transitions = set(json.loads(${lib.escapeShellArg allowedTransitionsJson}))
 
 try:
     data = json.loads(session_path.read_text()) if session_path.exists() else {}
 except json.JSONDecodeError:
+    # Malformed activation-owned JSON is treated like a missing file: recover to
+    # defaults here instead of failing activation.
     data = {}
 
 if not isinstance(data, dict):
