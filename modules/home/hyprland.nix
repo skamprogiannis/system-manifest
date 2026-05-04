@@ -417,6 +417,9 @@ in {
         windowrule = [
           "opacity 1.0 override, match:class ^(mpv|vlc|imv|feh)$"
           "opacity 1.0 override, match:title ^(Picture-in-Picture)$"
+          # Keep real fullscreen windows at full brightness even when unfocused.
+          "no_dim 1, match:fullscreen_state_internal 2"
+          "no_dim 1, match:fullscreen_state_internal 3"
           # Keep Vesktop fully opaque at compositor level; transparent UI
           # comes from Vesktop's native RGBA setting to preserve text opacity.
           "opacity 1.0 override, match:class ^(vesktop)$"
