@@ -6,7 +6,7 @@ Managed via **Nix Flakes** and **Home Manager**.
 
 ## Features
 
-- **Multi-Host Configuration:** Shared common configuration with host-specific overrides for `desktop` and `usb` (live/portable system).
+- **Multi-Host Configuration:** Shared common configuration with host-specific overrides for `desktop` and `usb` (live/portable system). `hostType` is intentionally kept to lightweight shared-module branches; host-owned runtime/session behavior stays in dedicated host modules.
 - **Hyprland Desktop:** Wayland tiling compositor with glassmorphism aesthetics powered by the [hyprglass](https://github.com/hyprnux/hyprglass) blur/vibrancy plugin (`light` theme, `default` preset), patched locally for current Hyprland API compatibility. Ghostty uses native `background-opacity` for true liquid-glass (background transparent, text fully opaque).
 - **USB: Portable Hyprland** — USB host boots through the same DMS greeter path as desktop and keeps the portable Hyprland session lean for lab machines. Uses a **hybrid squashfs** Nix store (compressed read-only image + tmpfs overlay) for near-ISO boot performance on lab machines; only new `/nix/store` writes use the tmpfs upper layer, while `/home` stays on the persistent encrypted USB root filesystem. Docker's heavy writable state is routed to ephemeral host-local scratch storage when available, falling back to tmpfs when no suitable host partition can be mounted.
 - **Gaming Mode:** A dedicated specialisation (`gaming-box`) that boots directly into Steam Big Picture Mode with Gamescope.
@@ -17,7 +17,7 @@ Managed via **Nix Flakes** and **Home Manager**.
   - **Obsidian:** Note-taking application with Home Manager plugin management.
   - **PearPass:** Declarative wrapper for the PearPass P2P password manager AppImage.
   - **Brave + Vimium C:** Declarative browser setup with preseeded extension settings and portable keymaps.
-- **Vesktop:** Discord client with declarative translucency and wallpaper-aware theming.
+- **Vesktop:** Discord client with declarative Translucence theming and a wallpaper-aware QuickCSS bridge.
 - **Dev Ready:** Pre-configured environment for Node.js, Python, Go, and Neovim (via nixvim), plus Clang build essentials. Neovim is also registered as the default text editor via an `nvim-text` desktop entry.
 - **AI Integrated:** Built-in configuration for **GitHub Copilot CLI** with per-repo `AGENTS.md` instructions plus curated skills for visualization, browser automation, static analysis, frontend design, architecture review, TDD bug triage, interface design, codebase zoom-out, and concise response modes. Global Copilot instructions live at `~/.copilot/copilot-instructions.md`.
 - **Modular Architecture:** Configuration split across `hosts/` (system-level) and `modules/home/` (user-level) for maintainability.
@@ -47,9 +47,10 @@ Packages tracked independently of nixpkgs for tighter version control:
 ## Workflow & UI
 
 - **Glassmorphism Aesthetics:** Ghostty uses `background-opacity = 0.40` (native RGBA) so the terminal background is near-transparent while text stays fully opaque, giving a liquid-glass terminal. GTK4 popover styling also softens the Ghostty context menu with a lighter outer border and more translucency. The hyprglass Hyprland plugin is active for blur/tint/refraction effects on transparent surfaces.
-- **Dynamic Theming:** Wallpaper-driven Matugen theming via [skwd-wall](https://github.com/liixini/skwd-wall) keeps Hyprland, Zathura, Vesktop, and DMS visually in sync. skwd-wall's built-in matugen generates Material Design 3 color tokens on each wallpaper change, and the current wallpaper cache is reused to keep DMS and the greeter aligned during switches. For Wallpaper Engine scenes with weak workshop previews, `skwd-we-capture-still --current-live` can save a faithful live still into the transition cache.
-- **Wallpaper Integration:** `modules/home/wallpaper/` is the wallpaper entrypoint. It wires skwd-wall and DMS together, while `modules/home/dms/session-state.nix` handles DMS session bootstrap and `modules/home/dms/settings.nix` owns the declarative shell settings.
+- **Dynamic Theming:** Wallpaper-driven Matugen theming via [skwd-wall](https://github.com/liixini/skwd-wall) keeps Hyprland, Zathura, Vesktop, and DMS visually in sync. Vesktop consumes the generated palette through `Translucence.theme.css` plus `~/.config/vesktop/settings/quickCss.css`, while the current wallpaper cache is reused to keep DMS and the greeter aligned during switches. For Wallpaper Engine scenes with weak workshop previews, `skwd-we-capture-still --current-live` can save a faithful live still into the transition cache.
+- **Wallpaper Integration:** `modules/home/wallpaper/` is the shared wallpaper entrypoint. `skwd-wall` owns wallpaper selection plus `~/.cache/skwd-wall/*`; `modules/home/dms/session-state.nix` owns the baseline `~/.local/state/DankMaterialShell/session.json`; and the sync hook in `modules/home/skwd-wall.nix` mirrors the selected wallpaper into DMS runtime state and the greeter cache. Hyprland stays a downstream consumer of that state.
 - **skwd-wall State:** `skwd-wall` UI settings write to `~/.config/skwd-wall/config.json`, but each Home Manager activation resets that file back to the declarative defaults from Nix. Local API keys can live outside git in `~/.config/skwd-wall/secrets.env`.
+- **Malformed JSON Policy:** Activation-owned JSON (`~/.config/skwd-wall/config.json`, `~/.local/state/DankMaterialShell/session.json`) is healed/reset to declarative defaults during activation. Runtime sync code fails closed before overwriting malformed authoritative targets, but only warns and continues for optional/cache-like inputs.
 - **Zellij Navigation:** `Alt`-based keybindings for all multiplexer actions; `Escape` exits any mode back to Normal and is unbound in Normal mode so it passes through to terminal apps (Vim, Copilot CLI, etc.).
 - **Keyboard Layout:** `us altgr-intl` + `gr simple`. `Super+Space` toggles layouts.
 - **Window Controls:** Super-based Hyprland keybindings cover moving, resizing, monitor focus, and monitor-to-monitor window moves.
@@ -102,17 +103,15 @@ nix flake check
 
 In this repo, `nix flake check` runs the checks defined in `flake.nix`: `desktop`, `usb`, `script-smoke`, and `shellcheck`. GitHub Actions keeps those host and script checks in separate jobs so CI failures stay isolated, while deployment remains manual via `nixos-rebuild switch --flake .#desktop` or `update-usb`.
 
+For later shared-contract refactors, treat `nix flake check` plus `nixos-rebuild dry-build --flake .#desktop` as the minimum validation floor. Runtime wallpaper/DMS ownership changes still need a manual wallpaper-switch smoke test, and USB-only session changes still require `update-usb` plus a real boot on target hardware.
+
 ### Update USB Drive
 
 ```bash
 sudo update-usb /path/to/system-manifest/main
 ```
 
-`update-usb` defaults to `--mode prebuild`, which builds locally and syncs the final squashfs image to the USB.
-
-It now prints the source `configurationRevision`, resolves the installed `/nix/var/nix/profiles/system` target, and verifies that the final `nix-store.squashfs` on the USB actually contains that exact system path.
-
-Always pass the worktree path that contains `flake.nix`, not the repo container root.
+`update-usb` defaults to `--mode prebuild`, which builds locally and syncs the final squashfs image to the USB. Always pass the worktree path that contains `flake.nix`, not the repo container root.
 
 ```bash
 sudo update-usb --mode prebuild /path/to/system-manifest/<worktree>
@@ -124,7 +123,7 @@ Use `--in-place` when local disk space is tight:
 sudo update-usb --in-place /path/to/system-manifest/<worktree>
 ```
 
-The script handles preflight checks, safe cleanup on `Ctrl+C`, first-boot Home Manager activation, and post-install revision verification. After booting the USB, confirm the running image with `nixos-version --json` and `readlink -f /run/current-system`.
+The script handles preflight checks, safe cleanup on `Ctrl+C`, first-boot Home Manager activation, and revision verification. After booting the USB, confirm the running image with `nixos-version --json` and `readlink -f /run/current-system`.
 
 `update-usb` and `nix flake check` prove the image builds correctly, but USB-only runtime issues still require a real boot on target hardware to verify rendering, cursor, DMS, and similar session behavior.
 

@@ -2,8 +2,8 @@
 
 ## Useful Commands
 
-- **Dry Run Build:** `nixos-rebuild dry-build --flake .#nixos` (Checks for evaluation errors without applying changes)
-- **Check Configuration:** `nixos-rebuild test --flake .#nixos` (Builds and activates, but doesn't add to bootloader - good for temporary testing)
+- **Dry Run Build:** `nixos-rebuild dry-build --flake .#desktop` (Use `.#usb` when validating the portable image.)
+- **Check Configuration:** `nixos-rebuild test --flake .#desktop` (Builds and activates, but doesn't add to bootloader - good for temporary testing.)
 - **Flake Check:** `nix flake check` (This is the standard Nix flake command. In this repo it runs the checks defined in `flake.nix`: `desktop`, `usb`, `script-smoke`, and `shellcheck`.)
 - **List Generations:** `nixos-rebuild list-generations`
 - **Garbage Collect:** `nix-collect-garbage -d` (Deletes old generations)
@@ -14,7 +14,7 @@
 - **Git & Gens:** Keep git commits atomic and descriptive.
 - **Commit Format:** Use **Conventional Commits** (`type(scope): message`).
   - Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`.
-  - Scopes: `desktop`, `laptop`, `usb`, `common`, `home`, `system`, or specific module names.
+  - Scopes: `desktop`, `usb`, `common`, `home`, `system`, or specific module names.
   - Example: `feat(desktop): enable steam and gamemode`
   - Example: `fix(usb): correct luks mounting path`
 - **Worktree-First Git:** `/home/stefan/system-manifest` is the repo container; the bare Git dir lives at `/home/stefan/system-manifest/.bare`. Do not edit anything inside `.bare`.
@@ -24,7 +24,7 @@
   - List active worktrees: `git --git-dir=/home/stefan/system-manifest/.bare worktree list`
   - Remove merged worktree: `git --git-dir=/home/stefan/system-manifest/.bare worktree remove /home/stefan/system-manifest/<dir>` and then `git --git-dir=/home/stefan/system-manifest/.bare branch -d <branch>`
   - Run all editing/build/git commands from the intended worktree path.
-- **System Git:** Ensure `git` is always in `environment.systemPackages` in `configuration.nix` (required for Flakes).
+- **System Git:** Ensure `git` stays in `hosts/common/default.nix` under `environment.systemPackages` (required for Flakes).
 - **Git Push:** Always `git push` (or force push if history was rewritten) immediately after creating a new commit.
 - **Copilot Instruction Source:** Repository-wide Copilot defaults are edited in `modules/home/gh-copilot/instructions.md`, which is synced to `~/.copilot/copilot-instructions.md` via Home Manager when you run `nixos-rebuild switch`.
 - **Squash Fix Chains:** If you need multiple attempts to fix something, squash them into a single commit before pushing (`git rebase -i` or `git commit --amend`). Avoid pushing fix→fix→fix chains that clutter history.
@@ -32,7 +32,7 @@
 - **Git Hygiene:** Always commit before `nixos-rebuild switch` so `nixos-rebuild list-generations` records a clean configuration revision for rollback and history tracking.
 - **README Updates:** Update `README.md` with significant durable changes. Keep it high-level: document capabilities, workflows, and entrypoints, not transient UI behavior or implementation trivia.
 - **Autonomy:** You are authorized to run `sudo nixos-rebuild switch --flake` autonomously when requested or implied by the workflow (e.g., "rebuild").
-- **Revision Tracking:** Always set `system.configurationRevision = inputs.self.rev or inputs.self.dirtyRev or null;` in `configuration.nix` so `nixos-rebuild list-generations` shows the commit hash.
+- **Revision Tracking:** Keep `system.configurationRevision = inputs.self.rev or inputs.self.dirtyRev or null;` in `hosts/common/default.nix` so `nixos-rebuild list-generations` shows the commit hash.
 - **Dry Run:** Always use `nixos-rebuild dry-build` before asking the user to build, especially for complex derivations.
 - **AppImages:** When wrapping AppImages with `appimageTools`, ensure common libraries like `webkitgtk`, `gtk4`, `libadwaita`, `graphene`, and `libsoup_3` are included in `extraPkgs` if the app has a GUI. Also include `gnome-themes-extra` and `gtk3` if theme errors occur.
 - **Pear Runtime**: Apps like PearPass may take several minutes to load on the first run due to P2P network discovery.
@@ -84,7 +84,7 @@ Use **Spec Kit** (`specify` CLI) to scaffold spec-driven development for new pro
 - **Hyprglass API Drift Fixes:** After Hyprland input updates, hyprglass may fail due to renderer/pass API changes. Patch the plugin derivation in `modules/home/hyprland.nix` (remove `GlassPassElement.cpp` usage and map old projection calls to `getBoxProjection` / `projectBoxToTarget`) before rebuilding.
 - **Hyprglass Build Validation:** If `switch` fails in hyprglass, run both `nixos-rebuild dry-build --flake .#desktop` and `nixos-rebuild switch --flake .#desktop` after patching; dry-build alone may pass while activation build still reveals renderer ABI mismatches.
 - **NIXOS_OZONE_WL Placement:** Must be in `home.sessionVariables` (e.g., in `modules/home/gh-copilot/default.nix`), NOT in Hyprland's `env =` block. Hyprland env= only propagates to keybind-launched apps, not DMS/QuickShell spotlight launchers. Session variables propagate to all user processes (D-Bus, systemd) and require log-out/log-in to take effect.
-- **Desktop Entry Exec Lines:** Cannot contain complex shell syntax, pipes, redirects, or unquoted special characters. Use `pkgs.writeShellScript` to create a wrapper script and reference it in `exec`. Example: Vesktop needs a wrapper to patch `settings.json` before launch because Vesktop overwrites settings on exit.
+- **Desktop Entry Exec Lines:** Cannot contain complex shell syntax, pipes, redirects, or unquoted special characters. Use `pkgs.writeShellScript` to create a wrapper script and reference it in `exec`. Example: Vesktop uses a wrapper to sync settings and regenerate the Translucence + QuickCSS theme bridge before launch.
 
 ## USB Update Workflow
 
@@ -118,49 +118,14 @@ At the lab: `copilot --resume` to pick up synced sessions.
 
 ## Wallpaper System Architecture
 
-Wallpaper selection and theming are handled by [skwd-wall](https://github.com/liixini/skwd-wall), a Quickshell-based selector with a Rust daemon backend.
+Wallpaper state lives under `modules/home/wallpaper/`, `modules/home/skwd-wall.nix`, and `modules/home/dms/{session-state,settings}.nix`.
 
-### Key components
-
-| Component | Purpose |
-|-----------|---------|
-| `skwd-wall` | GUI selector (Quickshell) with slice/grid/hex display modes |
-| `skwd-daemon` | Systemd user service — wallpaper lifecycle, boot restore, matugen |
-| `skwd` | CLI interface to the daemon |
-| `awww` | Static wallpaper renderer (wlr-layer-shell) |
-| `mpvpaper` | Video wallpaper renderer |
-| `linux-wallpaperengine` | Wallpaper Engine scene renderer |
-
-### Config
-
-Declared in `modules/home/skwd-wall.nix`. Config is generated at `~/.config/skwd-wall/config.json` via Home Manager. Custom matugen templates are merged with bundled ones into a Nix store path.
-
-### Matugen integrations
-
-| Integration | Template | Output |
-|-------------|----------|--------|
-| `skwd-wall` | `quickshell-colors.json` | Shell UI colors |
-| `hyprland-dms` | `hyprland-dms-colors.conf` | `~/.config/hypr/dms/colors.conf` (DMS + Hyprland borders) |
-| `zathura` | `zathura-colors` | `~/.config/zathura/skwd-colors` (included from zathurarc) |
-| `vesktop` | `vesktop.css` | `~/.config/vesktop/themes/skwd-matugen.css` |
-
-### DMS interaction
-
-- `awww` renders wallpapers via wlr-layer-shell at Background level, painting on top of DMS's PanelWindow
-- Matugen generates `colors.conf` → DMS sources it for Hyprland color variables
-- `Super+Shift+W` (`dms ipc call dash toggle wallpaper`) still toggles the DMS wallpaper dashboard widget
-
-### DMS IPC reference
-
-```bash
-dms ipc call dash toggle <tab>     # Toggle dash widget (wallpaper|overview|media|weather)
-dms ipc call spotlight toggle      # App launcher
-dms ipc call clipboard toggle      # Clipboard manager
-dms ipc call notifications toggle  # Notification center
-dms ipc call settings toggle       # Settings panel
-dms ipc call powermenu toggle      # Power menu
-dms ipc call lock lock             # Lock screen
-dms ipc call hypr toggleOverview   # Workspace overview
-dms ipc call mpris playPause       # Media control
-dms ipc call notifications clearAll  # Clear all notifications
-```
+- `modules/home/wallpaper/default.nix` is the shared wallpaper contract entrypoint only. Keep `hostType` branches lightweight there; host-owned services, runtime/session files, or heavier overrides belong in dedicated host imports or per-module `desktop.nix` / `usb.nix`.
+- `skwd-wall` + `skwd-daemon` own wallpaper selection, restore, and Matugen color generation.
+- Home Manager activation owns the baseline copies of `~/.config/skwd-wall/config.json` and `~/.local/state/DankMaterialShell/session.json`.
+- `sync-dms-wallpaper.sh` is the bridge: it mirrors skwd-wall's selected wallpaper into DMS runtime state and the greeter cache after skwd-wall has already resolved the active wallpaper.
+- `awww`, `mpvpaper`, and `linux-wallpaperengine` handle static, video, and Wallpaper Engine rendering.
+- Matugen feeds DMS/Hyprland colors, Zathura colors, and Vesktop's current Translucence flow via `~/.config/vesktop/themes/Translucence.theme.css` plus `~/.config/vesktop/settings/quickCss.css`.
+- Malformed JSON policy: activation-owned JSON heals/resets to declarative defaults during activation; runtime writers fail closed before overwriting malformed authoritative targets; best-effort reads from optional/cache inputs should warn and continue.
+- Validation floor for later shared-contract waves: run `nix flake check`, `nixos-rebuild dry-build --flake .#desktop`, and a manual wallpaper-switch smoke test. If USB-only runtime/session behavior changes, also run `update-usb` and boot the stick on real hardware.
+- `Super+Shift+W` (`dms ipc call dash toggle wallpaper`) still toggles the DMS wallpaper dashboard widget.
