@@ -10,7 +10,10 @@
   imports = [
     ../../home.nix
     ../../modules/home/dms/desktop.nix
+    ../../modules/home/scripts/usb.nix
   ];
+
+  system_manifest.scripts.enableSetupPersistentUsb = false;
 
   wayland.windowManager.hyprland.settings = {
     workspace = [
@@ -26,7 +29,6 @@
       "10, monitor:HDMI-A-1, default:true"
     ];
   };
-
 
   programs.zellij.settings.default_layout = "dev";
 }

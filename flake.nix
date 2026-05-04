@@ -96,10 +96,10 @@
         "${desktopHome}/bin/screenshot-path-copy"
         "${desktopHome}/bin/spotify_player"
         "${desktopHome}/bin/transmission-port-sync"
+        "${desktopHome}/bin/update-usb"
         "${desktopHome}/bin/zellij-sessionizer"
         "${usbHome}/bin/spotify_player"
         "${usbHome}/bin/setup-persistent-usb"
-        "${usbHome}/bin/update-usb"
       ];
     in {
       desktop = self.nixosConfigurations.desktop.config.system.build.toplevel;
@@ -151,12 +151,12 @@
           run_expect 0 setup-persistent-usb-help "$usb_home/bin/setup-persistent-usb" --help
           assert_log_contains "Creates a fresh persistent NixOS USB"
 
-          run_expect 1 update-usb-invalid-mode "$usb_home/bin/update-usb" --mode nope
+          run_expect 1 update-usb-invalid-mode "$desktop_home/bin/update-usb" --mode nope
           assert_log_contains "Error: invalid mode 'nope'."
 
-          if ! ${pkgs.gnugrep}/bin/grep -Fq "#/nix/}/init" "$usb_home/bin/update-usb"; then
+          if ! ${pkgs.gnugrep}/bin/grep -Fq "#/nix/}/init" "$desktop_home/bin/update-usb"; then
             echo "Expected update-usb to normalize squashfs verification paths relative to /nix." >&2
-            ${pkgs.gnused}/bin/sed -n '180,230p' "$usb_home/bin/update-usb" >&2
+            ${pkgs.gnused}/bin/sed -n '180,230p' "$desktop_home/bin/update-usb" >&2
             exit 1
           fi
 
