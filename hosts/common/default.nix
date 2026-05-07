@@ -131,6 +131,10 @@
   # Prevent annoying 90s hang on shutdown if a service fails to stop
   systemd.settings.Manager.DefaultTimeoutStopSec = "10s";
 
+  # Prefer dbus-broker for the long-term system target. Switching from dbus
+  # requires a boot/reboot transition instead of a live switch.
+  services.dbus.implementation = "broker";
+
   # Define a user account. Don't forget to set a password with ‘passwd’
   users.users.stefan = {
     isNormalUser = true;
