@@ -14,7 +14,7 @@
     "--enable-wayland-ime=true"
   ];
   pearpassPackageJson = builtins.fromJSON (builtins.readFile "${inputs.pearpass-app-desktop}/package.json");
-  pearpassVersion = let
+  pearpassSourceVersion = let
     version =
       pearpassPackageJson.version
         or (throw "pearpass-app-desktop/package.json is missing the version field");
@@ -23,15 +23,30 @@
     then version
     else throw "pearpass-app-desktop/package.json version must be a string";
 
-  pearpassSource = pkgs.fetchurl {
-    url = "https://github.com/tetherto/pearpass-app-desktop/releases/download/v${pearpassVersion}/PearPass-Desktop-Linux-x64-v${pearpassVersion}.AppImage";
-    hash = "sha256-9bYQvh0/+l0RoNsDL9VZiSPHPAgCqOH/qpz5PpE6wb0=";
+  # Upstream's source repo version can move ahead of the published Linux
+  # AppImage release. Keep following the repo for manifests/runtime data, but
+  # fetch the latest Linux asset that is actually published.
+  pearpassReleaseVersion = "1.6.0";
+
+  pearpassZipSource = pkgs.fetchurl {
+    url = "https://github.com/tetherto/pearpass-app-desktop/releases/download/v${pearpassReleaseVersion}/PearPass-Desktop-Linux-x64-v${pearpassReleaseVersion}.AppImage.zip";
+    hash = "sha256-9yIgwpIe+XPpz5kCyXD0QI9kpH4Ew1y3h2j0PnvSu7g=";
   };
+
+  pearpassSource =
+    pkgs.runCommand "PearPass-Desktop-Linux-x64-v${pearpassReleaseVersion}.AppImage" {
+      nativeBuildInputs = [pkgs.unzip];
+    } ''
+      tmpdir=$(mktemp -d)
+      unzip -j ${pearpassZipSource} "PearPass-Desktop-Linux-x64-v${pearpassReleaseVersion}.AppImage" -d "$tmpdir"
+      mv "$tmpdir/PearPass-Desktop-Linux-x64-v${pearpassReleaseVersion}.AppImage" "$out"
+      chmod +x "$out"
+    '';
 
   # Extract the AppImage to get the icon and resources
   pearpassExtracted = pkgs.appimageTools.extract {
     pname = "pearpass";
-    version = pearpassVersion;
+    version = pearpassReleaseVersion;
     src = pearpassSource;
   };
 
@@ -42,7 +57,7 @@
     } ''
       mkdir -p $out
       # Remove background (#232323), trim, and resize to fill standard icon space
-      convert ${pearpassExtracted}/PearPass.png \
+      convert ${pearpassExtracted}/usr/share/icons/hicolor/1024x1024/apps/pearpass-app-desktop.png \
         -fuzz 20% -transparent "#232323" \
         -trim \
         -resize 600x600 \

@@ -2863,7 +2863,7 @@
     )
     settings_text = replace_all(
         settings_text,
-        '          text: "WIP — Video and WE support coming."',
+        '          text: "WIP Video and WE support coming."',
         '          text: "Choose target outputs before applying a wallpaper."',
     )
     settings_text = replace_all(
@@ -2878,7 +2878,7 @@
     )
     settings_text = replace_all(
         settings_text,
-        '        text: "Shell commands to run after every wallpaper change. Use %type% (static/video/we), %name%, and %path% as placeholders."',
+        '        text: "Shell commands to run after every wallpaper change. The pills filter by type ALL fires for every change.\\n" +\n              "Placeholders:  %path%  =  wallpaper file or WE folder    •    %thumb%  =  always an image    •    %type%  =  image / video / we    •    %name%  =  basename"',
         '        text: "Built-in actions already run on every wallpaper change: apply the wallpaper, sync DMS state, and refresh matugen outputs. Add extra shell commands here if you want more hooks. Use %type% (static/video/we), %name%, and %path% as placeholders."',
     )
     settings_text = replace_all(
@@ -2950,7 +2950,14 @@
         apply_text,
         """    function applyVideo(path) {
             _saveState("video", path, "")
-            if (Config.isKDE) {
+            _videoCtxPath = path
+            _videoCtxName = _basename(path)
+            if (Config.pickOnlyMode || Config.externalWallpaperCommand) {
+                mpvProcess.command = ["sh", "-c",
+                    _killBackends +
+                    "rm -f " + JSON.stringify(videoDir + "/lockscreen-video.mp4")]
+                mpvProcess.running = true
+            } else if (Config.isKDE) {
                 _applyKdeVideo(path)
             } else {
                 mpvProcess.command = ["sh", "-c",
@@ -2968,7 +2975,14 @@
         function _applyKdeVideo(path) {""",
         """    function applyVideo(path, outputs) {
             _saveState("video", path, "")
-            if (Config.isKDE) {
+            _videoCtxPath = path
+            _videoCtxName = _basename(path)
+            if (Config.pickOnlyMode || Config.externalWallpaperCommand) {
+                mpvProcess.command = ["sh", "-c",
+                    _killBackends +
+                    "rm -f " + JSON.stringify(videoDir + "/lockscreen-video.mp4")]
+                mpvProcess.running = true
+            } else if (Config.isKDE) {
                 _applyKdeVideo(path)
             } else {
                 mpvProcess.command = ["sh", "-c",
@@ -3033,17 +3047,9 @@
     )
     apply_text = replace_all(
         apply_text,
-        """        _pendingAction = function() {
-                _launchWE(weId)
-                _extractWEThumb(weId)
-                wallpaperApplied("we", weId, weDir + "/" + weId)
-            }""",
-        """        _pendingAction = function() {
-                _showWEStill(weId)
-                _launchWE(weId)
-                _extractWEThumb(weId)
-                wallpaperApplied("we", weId, weDir + "/" + weId)
-            }""",
+        """                _launchWE(weId)""",
+        """                _showWEStill(weId)
+                _launchWE(weId)""",
     )
     apply_text = replace_all(
         apply_text,
@@ -3130,15 +3136,8 @@
     )
     apply_text = replace_all(
         apply_text,
-        """        onExited: function(code) {
-                if (code === 2) { console.log("WallpaperApplyService: matugen output unchanged, skipping reloads"); return }
-                service._propagateColors()
-            }""",
-        """        onExited: function(code) {
-                if (code === 2)
-                    console.log("WallpaperApplyService: matugen output unchanged; still running reload hooks")
-                service._propagateColors()
-            }""",
+        '            if (code === 2) { console.log("WallpaperApplyService: matugen output unchanged, skipping reloads"); return }',
+        '            if (code === 2)\n                console.log("WallpaperApplyService: matugen output unchanged; still running reload hooks")',
     )
     apply_text = replace_all(
         apply_text,

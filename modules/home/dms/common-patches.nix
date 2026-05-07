@@ -62,8 +62,8 @@ let
   overviewCard = ''
     root / "Modules/DankDash/Overview/Card.qml": [
         (
-            "color: Theme.withAlpha(Theme.surfaceContainerHigh, Theme.popupTransparency)",
-            "color: Theme.withAlpha(Theme.surfaceContainerHigh, Math.max(0.0, Theme.popupTransparency - 0.22))",
+            "color: Theme.nestedSurface",
+            "color: Theme.withAlpha(Theme.nestedSurface, Math.max(0.0, Theme.popupTransparency - 0.22))",
         ),
     ],
   '';
@@ -71,8 +71,8 @@ let
   calendarOverviewCard = ''
     root / "Modules/DankDash/Overview/CalendarOverviewCard.qml": [
         (
-            "color: Theme.withAlpha(Theme.surfaceContainerHigh, Theme.popupTransparency)",
-            "color: Theme.withAlpha(Theme.surfaceContainerHigh, Math.max(0.0, Theme.popupTransparency - 0.22))",
+            "color: Theme.nestedSurface",
+            "color: Theme.withAlpha(Theme.nestedSurface, Math.max(0.0, Theme.popupTransparency - 0.22))",
         ),
     ],
   '';
@@ -155,14 +155,25 @@ let
     ),
   '';
 
-  modalBorderFallback = ''
+  modalStandaloneBorderFallback = ''
     (
-        "                        border.color: BlurService.borderColor",
-        "                        border.color: BlurService.enabled ? BlurService.borderColor : Theme.outlineMedium",
+                        "                        border.color: BlurService.borderColor",
+                        "                        border.color: BlurService.enabled ? BlurService.borderColor : Theme.outlineMedium",
     ),
     (
-        "                        border.width: BlurService.borderWidth",
-        "                        border.width: BlurService.enabled ? BlurService.borderWidth : 1",
+                        "                        border.width: BlurService.borderWidth",
+                        "                        border.width: BlurService.enabled ? BlurService.borderWidth : 1",
+    ),
+  '';
+
+  modalConnectedBorderFallback = ''
+    (
+        '                        border.color: (root.connectedSurfaceOverride || root.frameOwnsConnectedChrome) ? "transparent" : BlurService.borderColor',
+        '                        border.color: (root.connectedSurfaceOverride || root.frameOwnsConnectedChrome) ? "transparent" : (BlurService.enabled ? BlurService.borderColor : Theme.outlineMedium)',
+    ),
+    (
+        '                        border.width: (root.connectedSurfaceOverride || root.frameOwnsConnectedChrome) ? 0 : BlurService.borderWidth',
+        '                        border.width: (root.connectedSurfaceOverride || root.frameOwnsConnectedChrome) ? 0 : (BlurService.enabled ? BlurService.borderWidth : 1)',
     ),
   '';
 
@@ -179,12 +190,12 @@ let
 
   notificationPopupBorderFallback = ''
     (
-        "            border.color: BlurService.borderColor",
-        '            border.color: BlurService.enabled ? BlurService.borderColor : Qt.rgba(Theme.outline.r, Theme.outline.g, Theme.outline.b, 0.12)',
+        '            border.color: win.connectedFrameMode ? "transparent" : BlurService.borderColor',
+        '            border.color: win.connectedFrameMode ? "transparent" : (BlurService.enabled ? BlurService.borderColor : Qt.rgba(Theme.outline.r, Theme.outline.g, Theme.outline.b, 0.12))',
     ),
     (
-        "            border.width: BlurService.borderWidth",
-        "            border.width: BlurService.enabled ? BlurService.borderWidth : 1",
+        "            border.width: win.connectedFrameMode ? 0 : BlurService.borderWidth",
+        "            border.width: win.connectedFrameMode ? 0 : (BlurService.enabled ? BlurService.borderWidth : 1)",
     ),
   '';
 in {
@@ -203,14 +214,17 @@ in {
     ${settingsSliderCard}
     ${settingsToggleCard}
     ${systemMonitorVariantCard}
-    root / "Widgets/DankPopout.qml": [
+    root / "Widgets/DankPopoutStandalone.qml": [
       ${dankPopoutBase}
       ${popoutBorderFallback}
     ],
-    root / "Modals/Common/DankModal.qml": [
-      ${modalBorderFallback}
+    root / "Modals/Common/DankModalStandalone.qml": [
+      ${modalStandaloneBorderFallback}
     ],
-    root / "Modals/DankLauncherV2/DankLauncherV2Modal.qml": [
+    root / "Modals/Common/DankModalConnected.qml": [
+      ${modalConnectedBorderFallback}
+    ],
+    root / "Modals/DankLauncherV2/DankLauncherV2ModalStandalone.qml": [
       ${launcherBorderFallback}
     ],
     root / "Modules/Notifications/Popup/NotificationPopup.qml": [
@@ -237,14 +251,17 @@ in {
     ${settingsSliderCard}
     ${settingsToggleCard}
     ${systemMonitorVariantCard}
-    root / "Widgets/DankPopout.qml": [
+    root / "Widgets/DankPopoutStandalone.qml": [
       ${dankPopoutBase}
       ${popoutBorderFallback}
     ],
-    root / "Modals/Common/DankModal.qml": [
-      ${modalBorderFallback}
+    root / "Modals/Common/DankModalStandalone.qml": [
+      ${modalStandaloneBorderFallback}
     ],
-    root / "Modals/DankLauncherV2/DankLauncherV2Modal.qml": [
+    root / "Modals/Common/DankModalConnected.qml": [
+      ${modalConnectedBorderFallback}
+    ],
+    root / "Modals/DankLauncherV2/DankLauncherV2ModalStandalone.qml": [
       ${launcherBorderFallback}
     ],
     root / "Modules/Notifications/Popup/NotificationPopup.qml": [
@@ -255,7 +272,7 @@ in {
     ${appSearchService}
     root / "Widgets/CachingImage.qml": [
         (
-            '        staticImg.source = cPath || encoded;',
+            "        cacheProbe.running = false;\n        cacheProbe.cachePath = cPath;\n        cacheProbe.fallbackSource = encoded;\n        cacheProbe.running = true;",
             '        staticImg.source = encoded;',
         ),
     ],
