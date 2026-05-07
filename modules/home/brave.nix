@@ -4,9 +4,11 @@
   hostType ? "desktop",
   ...
 }:
-assert lib.assertMsg (builtins.elem hostType ["desktop" "usb"]) "hostType must be \"desktop\" or \"usb\".";
-let
+assert lib.assertMsg (builtins.elem hostType ["desktop" "usb"]) "hostType must be \"desktop\" or \"usb\"."; let
   vimiumCExtensionId = "hfjbmagddngcpeloejdejnfgbamkjaeg";
+  stylusExtensionId = "clngdbkpkpeebahjckkjfobafhncgmne";
+  rabbyExtensionId = "acmacodkjbdgmoleebolmdjonilkdbch";
+  pearpassExtensionId = "pdeffakfmcdnjjafophphgmddmigpejh";
   vimiumCSeedLocalDir = ./brave/vimium-c/local-settings;
   vimiumCSeedSyncDir = ./brave/vimium-c/sync-settings;
   bravePreferencePatch = builtins.toJSON {
@@ -37,7 +39,7 @@ let
         hover_mode = 1;
         vertical_tabs_enabled = true;
         vertical_tabs_on_right = true;
-        vertical_tabs_collapsed = true;
+        vertical_tabs_collapsed = false;
         vertical_tabs_expanded_state_per_window = true;
         vertical_tabs_floating_enabled = false;
         vertical_tabs_hide_completely_when_collapsed = false;
@@ -51,6 +53,7 @@ let
       default_accelerators."56215" = [];
       sidebar = {
         hidden_built_in_items = [2];
+        last_used_built_in_item_type = 3;
         sidebar_items = [
           {
             built_in_item_type = 7;
@@ -71,6 +74,10 @@ let
         ];
       };
     };
+    extensions.pinned_extensions = [
+      vimiumCExtensionId
+      pearpassExtensionId
+    ];
     browser = {
       enable_spellchecking = true;
       show_home_button = false;
@@ -191,7 +198,9 @@ in {
     };
     extensions = [
       {id = vimiumCExtensionId;}
-      {id = "clngdbkpkpeebahjckkjfobafhncgmne";} # Stylus — custom CSS for catppuccin userstyles
+      {id = stylusExtensionId;} # Stylus — custom CSS for catppuccin userstyles
+      {id = rabbyExtensionId;}
+      {id = pearpassExtensionId;}
     ];
   };
 
