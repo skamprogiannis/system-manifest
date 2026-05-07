@@ -23,13 +23,13 @@
 
         cat > $out/bin/start-hyprland <<EOF
         #!${pkgs.bash}/bin/bash
-        exec ${pkgs.systemd}/bin/systemd-cat --identifier=start-hyprland -- ${hyprlandBase}/bin/start-hyprland "\$@"
+        exec ${hyprlandBase}/bin/start-hyprland "\$@"
         EOF
         chmod +x $out/bin/start-hyprland
 
         cat > $out/bin/Hyprland <<EOF
         #!${pkgs.bash}/bin/bash
-        exec ${pkgs.systemd}/bin/systemd-cat --identifier=Hyprland -- ${hyprlandBase}/bin/Hyprland "\$@"
+        exec ${hyprlandBase}/bin/Hyprland "\$@"
         EOF
         chmod +x $out/bin/Hyprland
 

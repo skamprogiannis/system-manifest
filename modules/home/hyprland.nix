@@ -423,9 +423,6 @@ in {
           # Keep Vesktop fully opaque at compositor level; transparent UI
           # comes from Vesktop's native RGBA setting to preserve text opacity.
           "opacity 1.0 override, match:class ^(vesktop)$"
-          # PearPass popovers are translucent and currently render through
-          # pear-runtime's XWayland path, so compositor blur makes them muddy.
-          "noblur, match:class ^(pear-runtime)$"
           # Center credential/auth dialogs so they don't spawn between monitors
           "float 1, match:class ^(pinentry|pinentry-gtk-2|pinentry-gnome3|ssh-askpass|git-askpass)$"
           "center 1, match:class ^(pinentry|pinentry-gtk-2|pinentry-gnome3|ssh-askpass|git-askpass)$"
@@ -442,6 +439,13 @@ in {
 
       extraConfig = ''
         $terminal = ghostty
+
+        # Hyprland v0.54 window rules use `no_blur` in the block syntax.
+        windowrule {
+          name = pearpass-no-blur
+          match:class = ^(pear-runtime)$
+          no_blur = true
+        }
 
         plugin:hyprglass {
           enabled = 1
