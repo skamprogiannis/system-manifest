@@ -423,6 +423,9 @@ in {
           # Keep Vesktop fully opaque at compositor level; transparent UI
           # comes from Vesktop's native RGBA setting to preserve text opacity.
           "opacity 1.0 override, match:class ^(vesktop)$"
+          # PearPass popovers are translucent and currently render through
+          # pear-runtime's XWayland path, so compositor blur makes them muddy.
+          "noblur, match:class ^(pear-runtime)$"
           # Center credential/auth dialogs so they don't spawn between monitors
           "float 1, match:class ^(pinentry|pinentry-gtk-2|pinentry-gnome3|ssh-askpass|git-askpass)$"
           "center 1, match:class ^(pinentry|pinentry-gtk-2|pinentry-gnome3|ssh-askpass|git-askpass)$"
