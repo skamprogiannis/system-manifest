@@ -53,9 +53,24 @@
   # Keep the games drive on the initrd unlock path for now. Delaying it to
   # stage 2 prompted during `switch` because the existing mount gets restarted.
   boot.initrd.luks.devices."luks-a96ee21e-bc18-42ab-864c-d3ec22f4247a".device = "/dev/disk/by-uuid/a96ee21e-bc18-42ab-864c-d3ec22f4247a";
-  # Keep swap on the existing LUKS mapping too. The partition is already LUKS-
-  # formatted, so stage-2 randomEncryption is not a drop-in replacement.
-  boot.initrd.luks.devices."luks-a2df8182-4853-442b-ba7c-6ca18af8696a".device = "/dev/disk/by-uuid/a2df8182-4853-442b-ba7c-6ca18af8696a";
+  # Swap uses stage-2 random encryption rather than an initrd unlock. Keep a
+  # one-time activation migration to remove the old LUKS wrapper/signature.
+  system.activationScripts.swapRandomEncryptionMigration = lib.stringAfter ["etc"] ''
+    swap_part=/dev/disk/by-partuuid/2a7da6b2-de21-4c28-a2cc-704fea184f2f
+    old_mapper=luks-a2df8182-4853-442b-ba7c-6ca18af8696a
+    old_mapper_dev=/dev/mapper/$old_mapper
+
+    ${pkgs.util-linux}/bin/swapoff "$old_mapper_dev" 2>/dev/null || true
+
+    if [ -e "$old_mapper_dev" ]; then
+      ${pkgs.cryptsetup}/bin/cryptsetup luksClose "$old_mapper" 2>/dev/null || true
+    fi
+
+    if ${pkgs.cryptsetup}/bin/cryptsetup isLuks "$swap_part" 2>/dev/null; then
+      ${pkgs.util-linux}/bin/wipefs -a "$swap_part"
+      ${pkgs.systemd}/bin/udevadm settle
+    fi
+  '';
 
   # File Systems
   fileSystems."/home/stefan/games" = {
