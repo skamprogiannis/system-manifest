@@ -29,6 +29,18 @@ in {
         fi
       }
 
+      prune_alt_nix_stores() {
+        local base="$1"
+
+        [ -d "$base" ] || return 0
+
+        ${pkgs.findutils}/bin/find "$base" -type d -path '*/files/alt-nix-store' -print0 \
+          | while IFS= read -r -d "" path; do
+              run_root ${pkgs.coreutils}/bin/chmod -R u+w "$path" 2>/dev/null || true
+              run_root ${pkgs.coreutils}/bin/rm -rf "$path"
+            done
+      }
+
       refresh_mapper() {
         local existing_mapper=""
         existing_mapper=$(${pkgs.util-linux}/bin/lsblk -nrpo NAME,TYPE "$LUKS_DEVICE" 2>/dev/null | ${pkgs.gnused}/bin/sed -n '/ crypt$/ { s/ crypt$//; p; q; }')
@@ -103,14 +115,21 @@ in {
       run_root mkdir -p "$USER_HOME/.copilot" "$LOCAL" "$MOUNT$USER_HOME/.copilot" "$REMOTE"
       run_root chown "$SYNC_USER:$SYNC_GROUP" "$USER_HOME/.copilot" "$LOCAL" "$MOUNT$USER_HOME/.copilot" "$REMOTE"
 
+      prune_alt_nix_stores "$LOCAL"
+      prune_alt_nix_stores "$REMOTE"
+
       case "$MODE" in
         to-usb)
           echo "Syncing desktop → USB..."
-          run_root ${pkgs.rsync}/bin/rsync -av --update --chown="$SYNC_USER:$SYNC_GROUP" "$LOCAL/" "$REMOTE/"
+          run_root ${pkgs.rsync}/bin/rsync -av --update --delete --chown="$SYNC_USER:$SYNC_GROUP" \
+            --exclude='*/files/alt-nix-store/***' \
+            "$LOCAL/" "$REMOTE/"
           ;;
         from-usb)
           echo "Syncing USB → desktop..."
-          run_root ${pkgs.rsync}/bin/rsync -av --update --chown="$SYNC_USER:$SYNC_GROUP" "$REMOTE/" "$LOCAL/"
+          run_root ${pkgs.rsync}/bin/rsync -av --update --delete --chown="$SYNC_USER:$SYNC_GROUP" \
+            --exclude='*/files/alt-nix-store/***' \
+            "$REMOTE/" "$LOCAL/"
           ;;
         *)
           echo "Usage: copilot-sessions-sync [to-usb|from-usb]"
