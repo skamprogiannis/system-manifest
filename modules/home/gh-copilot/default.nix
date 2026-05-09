@@ -114,89 +114,9 @@ in {
     recursive = true;
   };
 
-  # Impeccable — expose sub-skills at top-level so /skills can discover them.
-  home.file.".copilot/skills/adapt" = {
-    source = "${inputs.impeccable}/source/skills/adapt";
-    recursive = true;
-  };
-  home.file.".copilot/skills/animate" = {
-    source = "${inputs.impeccable}/source/skills/animate";
-    recursive = true;
-  };
-  home.file.".copilot/skills/arrange" = {
-    source = "${inputs.impeccable}/source/skills/arrange";
-    recursive = true;
-  };
-  home.file.".copilot/skills/audit" = {
-    source = "${inputs.impeccable}/source/skills/audit";
-    recursive = true;
-  };
-  home.file.".copilot/skills/bolder" = {
-    source = "${inputs.impeccable}/source/skills/bolder";
-    recursive = true;
-  };
-  home.file.".copilot/skills/clarify" = {
-    source = "${inputs.impeccable}/source/skills/clarify";
-    recursive = true;
-  };
-  home.file.".copilot/skills/colorize" = {
-    source = "${inputs.impeccable}/source/skills/colorize";
-    recursive = true;
-  };
-  home.file.".copilot/skills/critique" = {
-    source = "${inputs.impeccable}/source/skills/critique";
-    recursive = true;
-  };
-  home.file.".copilot/skills/delight" = {
-    source = "${inputs.impeccable}/source/skills/delight";
-    recursive = true;
-  };
-  home.file.".copilot/skills/distill" = {
-    source = "${inputs.impeccable}/source/skills/distill";
-    recursive = true;
-  };
-  home.file.".copilot/skills/extract" = {
-    source = "${inputs.impeccable}/source/skills/extract";
-    recursive = true;
-  };
-  home.file.".copilot/skills/harden" = {
-    source = "${inputs.impeccable}/source/skills/harden";
-    recursive = true;
-  };
+  # Impeccable — upstream now exposes a single GitHub Copilot skill bundle under `skill/`.
   home.file.".copilot/skills/impeccable" = {
-    source = "${inputs.impeccable}/source/skills/impeccable";
-    recursive = true;
-  };
-  home.file.".copilot/skills/normalize" = {
-    source = "${inputs.impeccable}/source/skills/normalize";
-    recursive = true;
-  };
-  home.file.".copilot/skills/onboard" = {
-    source = "${inputs.impeccable}/source/skills/onboard";
-    recursive = true;
-  };
-  home.file.".copilot/skills/optimize" = {
-    source = "${inputs.impeccable}/source/skills/optimize";
-    recursive = true;
-  };
-  home.file.".copilot/skills/overdrive" = {
-    source = "${inputs.impeccable}/source/skills/overdrive";
-    recursive = true;
-  };
-  home.file.".copilot/skills/polish" = {
-    source = "${inputs.impeccable}/source/skills/polish";
-    recursive = true;
-  };
-  home.file.".copilot/skills/quieter" = {
-    source = "${inputs.impeccable}/source/skills/quieter";
-    recursive = true;
-  };
-  home.file.".copilot/skills/shape" = {
-    source = "${inputs.impeccable}/source/skills/shape";
-    recursive = true;
-  };
-  home.file.".copilot/skills/typeset" = {
-    source = "${inputs.impeccable}/source/skills/typeset";
+    source = "${inputs.impeccable}/skill";
     recursive = true;
   };
 

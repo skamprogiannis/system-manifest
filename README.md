@@ -38,7 +38,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 | `skwd-wall` | `github:liixini/skwd-wall` | Quickshell wallpaper selector with built-in matugen, Wallhaven, Steam Workshop, and color sorting |
 | `pearpass-app-desktop` | `github:tetherto/pearpass-app-desktop` | PearPass AppImage source for NixOS wrapper |
 | `visual-explainer` | `github:nicobailon/visual-explainer` | HTML visualization generator for architecture diagrams and code explanations |
-| `impeccable` | `github:pbakaus/impeccable` | Frontend design skill with 20 commands for typography, color, layout, and motion |
+| `impeccable` | `github:pbakaus/impeccable` | Frontend design Copilot skill bundle for typography, color, layout, and motion |
 | `caveman` | `github:JuliusBrussee/caveman` | Copilot skill suite for concise low-token responses plus terse commit/review helpers |
 | `mattpocock-skills` | `github:mattpocock/skills` | Planning and engineering skill collection used here for architecture improvement, TDD, issue triage, interface design, and codebase zoom-out |
 | `trailofbits-skills` | `github:trailofbits/skills` | Security and analysis skill marketplace used here as the upstream source for the compact `static-analysis` Copilot skill |
