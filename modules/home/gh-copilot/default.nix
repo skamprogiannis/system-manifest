@@ -4,6 +4,10 @@
   ...
 }: let
   pinchtabVersion = "0.8.6";
+  copilotSkillDir = source: {
+    inherit source;
+    force = true;
+  };
   pinchtab = pkgs.stdenvNoCC.mkDerivation {
     pname = "pinchtab";
     version = pinchtabVersion;
@@ -97,10 +101,7 @@ in {
   # --- Skills ---
 
   # Visual Explainer — generates HTML diagrams, diff reviews, plan reviews
-  home.file.".copilot/skills/visual-explainer" = {
-    source = visualExplainerSkill;
-    recursive = true;
-  };
+  home.file.".copilot/skills/visual-explainer" = copilotSkillDir visualExplainerSkill;
 
   # Technical Debt — codebase health analysis and refactoring roadmaps
   home.file.".copilot/skills/technical-debt/SKILL.md".source = ./skills/technical-debt/SKILL.md;
@@ -109,46 +110,19 @@ in {
   home.file.".copilot/skills/browser-automation/SKILL.md".source = ./skills/browser-automation/SKILL.md;
 
   # Static Analysis — compact wrapper around Trail of Bits CodeQL, Semgrep, and SARIF guidance
-  home.file.".copilot/skills/static-analysis" = {
-    source = staticAnalysisSkill;
-    recursive = true;
-  };
+  home.file.".copilot/skills/static-analysis" = copilotSkillDir staticAnalysisSkill;
 
   # Impeccable — upstream now exposes a single GitHub Copilot skill bundle under `skill/`.
-  home.file.".copilot/skills/impeccable" = {
-    source = "${inputs.impeccable}/skill";
-    recursive = true;
-  };
+  home.file.".copilot/skills/impeccable" = copilotSkillDir "${inputs.impeccable}/skill";
 
   # UI/UX Pro Max — expose the upstream design skill pack and companion skills.
-  home.file.".copilot/skills/banner-design" = {
-    source = "${inputs.ui-ux-pro-max}/.claude/skills/banner-design";
-    recursive = true;
-  };
-  home.file.".copilot/skills/brand" = {
-    source = "${inputs.ui-ux-pro-max}/.claude/skills/brand";
-    recursive = true;
-  };
-  home.file.".copilot/skills/design" = {
-    source = "${inputs.ui-ux-pro-max}/.claude/skills/design";
-    recursive = true;
-  };
-  home.file.".copilot/skills/design-system" = {
-    source = "${inputs.ui-ux-pro-max}/.claude/skills/design-system";
-    recursive = true;
-  };
-  home.file.".copilot/skills/slides" = {
-    source = "${inputs.ui-ux-pro-max}/.claude/skills/slides";
-    recursive = true;
-  };
-  home.file.".copilot/skills/ui-styling" = {
-    source = "${inputs.ui-ux-pro-max}/.claude/skills/ui-styling";
-    recursive = true;
-  };
-  home.file.".copilot/skills/ui-ux-pro-max" = {
-    source = "${inputs.ui-ux-pro-max}/.claude/skills/ui-ux-pro-max";
-    recursive = true;
-  };
+  home.file.".copilot/skills/banner-design" = copilotSkillDir "${inputs.ui-ux-pro-max}/.claude/skills/banner-design";
+  home.file.".copilot/skills/brand" = copilotSkillDir "${inputs.ui-ux-pro-max}/.claude/skills/brand";
+  home.file.".copilot/skills/design" = copilotSkillDir "${inputs.ui-ux-pro-max}/.claude/skills/design";
+  home.file.".copilot/skills/design-system" = copilotSkillDir "${inputs.ui-ux-pro-max}/.claude/skills/design-system";
+  home.file.".copilot/skills/slides" = copilotSkillDir "${inputs.ui-ux-pro-max}/.claude/skills/slides";
+  home.file.".copilot/skills/ui-styling" = copilotSkillDir "${inputs.ui-ux-pro-max}/.claude/skills/ui-styling";
+  home.file.".copilot/skills/ui-ux-pro-max" = copilotSkillDir "${inputs.ui-ux-pro-max}/.claude/skills/ui-ux-pro-max";
 
   # Caveman — terse response mode plus focused commit/review helper skills
   home.file.".copilot/skills/caveman/SKILL.md".source = "${inputs.caveman}/skills/caveman/SKILL.md";
@@ -157,26 +131,11 @@ in {
   home.file.".copilot/skills/caveman-compress/SKILL.md".source = "${inputs.caveman}/caveman-compress/SKILL.md";
 
   # Matt Pocock skills — architecture, TDD, triage, and design helpers
-  home.file.".copilot/skills/design-an-interface" = {
-    source = "${inputs.mattpocock-skills}/design-an-interface";
-    recursive = true;
-  };
-  home.file.".copilot/skills/improve-codebase-architecture" = {
-    source = "${inputs.mattpocock-skills}/improve-codebase-architecture";
-    recursive = true;
-  };
-  home.file.".copilot/skills/tdd" = {
-    source = "${inputs.mattpocock-skills}/tdd";
-    recursive = true;
-  };
-  home.file.".copilot/skills/triage-issue" = {
-    source = "${inputs.mattpocock-skills}/triage-issue";
-    recursive = true;
-  };
-  home.file.".copilot/skills/zoom-out" = {
-    source = "${inputs.mattpocock-skills}/zoom-out";
-    recursive = true;
-  };
+  home.file.".copilot/skills/design-an-interface" = copilotSkillDir "${inputs.mattpocock-skills}/design-an-interface";
+  home.file.".copilot/skills/improve-codebase-architecture" = copilotSkillDir "${inputs.mattpocock-skills}/improve-codebase-architecture";
+  home.file.".copilot/skills/tdd" = copilotSkillDir "${inputs.mattpocock-skills}/tdd";
+  home.file.".copilot/skills/triage-issue" = copilotSkillDir "${inputs.mattpocock-skills}/triage-issue";
+  home.file.".copilot/skills/zoom-out" = copilotSkillDir "${inputs.mattpocock-skills}/zoom-out";
 
   # --- Custom Agents ---
 
