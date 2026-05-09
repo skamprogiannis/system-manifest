@@ -44,6 +44,7 @@ When building new projects from scratch, use the following workflow and tools:
 | `browser-automation` | Control Chrome via PinchTab for testing, scraping, form filling | Ask to test a web UI, extract page content, or automate browser tasks |
 | `static-analysis` | Run security-focused static analysis workflows around CodeQL, Semgrep, and SARIF parsing | Ask for a scanner-backed security audit, CodeQL/Semgrep scan, or help interpreting SARIF findings |
 | `impeccable` | Frontend design skill with 20 commands (`/audit`, `/polish`, `/typeset`, `/arrange`, etc.) covering typography, color, layout, motion, and anti-patterns | Any frontend/UI work — building web components, pages, or applications |
+| `ui-ux-pro-max` | UI/UX design skill pack with companion skills for design systems, styling, branding, banners, and slides | Ask for broader UI/UX direction, design systems, visual styling, branding, presentations, or polished interface work |
 | `caveman` | Token-compressed response style plus helpers for terse commits/reviews (`caveman-commit`, `caveman-review`) | Ask for concise, low-token output or compressed review/commit phrasing |
 
 ### Available Agents

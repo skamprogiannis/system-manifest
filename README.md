@@ -19,7 +19,7 @@ Managed via **Nix Flakes** and **Home Manager**.
   - **Brave + Vimium C:** Declarative browser setup with preseeded extension settings and portable keymaps.
 - **Vesktop:** Discord client with declarative Translucence theming and a wallpaper-aware QuickCSS bridge.
 - **Dev Ready:** Pre-configured environment for Node.js, Python, Go, and Neovim (via nixvim), plus Clang build essentials. Neovim is also registered as the default text editor via an `nvim-text` desktop entry.
-- **AI Integrated:** Built-in configuration for **GitHub Copilot CLI** with per-repo `AGENTS.md` instructions plus curated skills for visualization, browser automation, static analysis, frontend design, architecture review, TDD bug triage, interface design, codebase zoom-out, and concise response modes. Global Copilot instructions live at `~/.copilot/copilot-instructions.md`.
+- **AI Integrated:** Built-in configuration for **GitHub Copilot CLI** with per-repo `AGENTS.md` instructions plus curated skills for visualization, browser automation, static analysis, frontend design (`impeccable` and the UI/UX Pro Max pack), architecture review, TDD bug triage, interface design, codebase zoom-out, and concise response modes. Global Copilot instructions live at `~/.copilot/copilot-instructions.md`.
 - **Modular Architecture:** Configuration split across `hosts/` (system-level) and `modules/home/` (user-level) for maintainability.
 - **Voiden:** Declarative AppImage wrapper for the Voiden offline-first API client.
 - **Binary Caches:** Configured for `hyprland.cachix.org`, `nix-community.cachix.org`, and `ghostty.cachix.org`.
@@ -39,6 +39,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 | `pearpass-app-desktop` | `github:tetherto/pearpass-app-desktop` | PearPass AppImage source for NixOS wrapper |
 | `visual-explainer` | `github:nicobailon/visual-explainer` | HTML visualization generator for architecture diagrams and code explanations |
 | `impeccable` | `github:pbakaus/impeccable` | Frontend design Copilot skill bundle for typography, color, layout, and motion |
+| `ui-ux-pro-max` | `github:nextlevelbuilder/ui-ux-pro-max-skill` | UI/UX design skill pack with companion skills for design systems, styling, branding, banners, and slides |
 | `caveman` | `github:JuliusBrussee/caveman` | Copilot skill suite for concise low-token responses plus terse commit/review helpers |
 | `mattpocock-skills` | `github:mattpocock/skills` | Planning and engineering skill collection used here for architecture improvement, TDD, issue triage, interface design, and codebase zoom-out |
 | `trailofbits-skills` | `github:trailofbits/skills` | Security and analysis skill marketplace used here as the upstream source for the compact `static-analysis` Copilot skill |

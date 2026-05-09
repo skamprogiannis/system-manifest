@@ -845,6 +845,7 @@
         "skwd-wall": "skwd-wall",
         "spotify-player": "spotify-player",
         "trailofbits-skills": "trailofbits-skills",
+        "ui-ux-pro-max": "ui-ux-pro-max",
         "visual-explainer": "visual-explainer"
       }
     },
@@ -1136,6 +1137,22 @@
         "owner": "jcollie",
         "ref": "main",
         "repo": "zon2nix",
+        "type": "github"
+      }
+    },
+    "ui-ux-pro-max": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1775192899,
+        "narHash": "sha256-tgGnZt6ITH8IDPqglNDC1JCt5ZkVMGcET9IbP0vITjo=",
+        "owner": "nextlevelbuilder",
+        "repo": "ui-ux-pro-max-skill",
+        "rev": "b7e3af80f6e331f6fb456667b82b12cade7c9d35",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nextlevelbuilder",
+        "repo": "ui-ux-pro-max-skill",
         "type": "github"
       }
     }

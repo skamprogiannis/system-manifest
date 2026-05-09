@@ -120,6 +120,36 @@ in {
     recursive = true;
   };
 
+  # UI/UX Pro Max — expose the upstream design skill pack and companion skills.
+  home.file.".copilot/skills/banner-design" = {
+    source = "${inputs.ui-ux-pro-max}/.claude/skills/banner-design";
+    recursive = true;
+  };
+  home.file.".copilot/skills/brand" = {
+    source = "${inputs.ui-ux-pro-max}/.claude/skills/brand";
+    recursive = true;
+  };
+  home.file.".copilot/skills/design" = {
+    source = "${inputs.ui-ux-pro-max}/.claude/skills/design";
+    recursive = true;
+  };
+  home.file.".copilot/skills/design-system" = {
+    source = "${inputs.ui-ux-pro-max}/.claude/skills/design-system";
+    recursive = true;
+  };
+  home.file.".copilot/skills/slides" = {
+    source = "${inputs.ui-ux-pro-max}/.claude/skills/slides";
+    recursive = true;
+  };
+  home.file.".copilot/skills/ui-styling" = {
+    source = "${inputs.ui-ux-pro-max}/.claude/skills/ui-styling";
+    recursive = true;
+  };
+  home.file.".copilot/skills/ui-ux-pro-max" = {
+    source = "${inputs.ui-ux-pro-max}/.claude/skills/ui-ux-pro-max";
+    recursive = true;
+  };
+
   # Caveman — terse response mode plus focused commit/review helper skills
   home.file.".copilot/skills/caveman/SKILL.md".source = "${inputs.caveman}/skills/caveman/SKILL.md";
   home.file.".copilot/skills/caveman-commit/SKILL.md".source = "${inputs.caveman}/skills/caveman-commit/SKILL.md";
