@@ -1,4 +1,5 @@
 {
+  lib,
   pkgs,
   inputs,
   ...
@@ -8,6 +9,23 @@
     inherit source;
     force = true;
   };
+  sanitizeSkillName = skillName: source:
+    pkgs.runCommand "copilot-skill-${skillName}" {} ''
+      cp -r ${source} "$out"
+      chmod -R u+w "$out"
+      ${pkgs.python3}/bin/python3 - <<'PY' "$out/SKILL.md" "${skillName}"
+from pathlib import Path
+import re
+import sys
+
+path = Path(sys.argv[1])
+skill_name = sys.argv[2]
+text = path.read_text()
+text = re.sub(r"^name:\s*.*$", f"name: {skill_name}", text, count=1, flags=re.MULTILINE)
+path.write_text(text)
+PY
+    '';
+  uiUxSkill = skillName: source: copilotSkillDir (sanitizeSkillName skillName source);
   pinchtab = pkgs.stdenvNoCC.mkDerivation {
     pname = "pinchtab";
     version = pinchtabVersion;
@@ -116,13 +134,13 @@ in {
   home.file.".copilot/skills/impeccable" = copilotSkillDir "${inputs.impeccable}/skill";
 
   # UI/UX Pro Max — expose the upstream design skill pack and companion skills.
-  home.file.".copilot/skills/banner-design" = copilotSkillDir "${inputs.ui-ux-pro-max}/.claude/skills/banner-design";
-  home.file.".copilot/skills/brand" = copilotSkillDir "${inputs.ui-ux-pro-max}/.claude/skills/brand";
-  home.file.".copilot/skills/design" = copilotSkillDir "${inputs.ui-ux-pro-max}/.claude/skills/design";
-  home.file.".copilot/skills/design-system" = copilotSkillDir "${inputs.ui-ux-pro-max}/.claude/skills/design-system";
-  home.file.".copilot/skills/slides" = copilotSkillDir "${inputs.ui-ux-pro-max}/.claude/skills/slides";
-  home.file.".copilot/skills/ui-styling" = copilotSkillDir "${inputs.ui-ux-pro-max}/.claude/skills/ui-styling";
-  home.file.".copilot/skills/ui-ux-pro-max" = copilotSkillDir "${inputs.ui-ux-pro-max}/.claude/skills/ui-ux-pro-max";
+  home.file.".copilot/skills/banner-design" = uiUxSkill "banner-design" "${inputs.ui-ux-pro-max}/.claude/skills/banner-design";
+  home.file.".copilot/skills/brand" = uiUxSkill "brand" "${inputs.ui-ux-pro-max}/.claude/skills/brand";
+  home.file.".copilot/skills/design" = uiUxSkill "design" "${inputs.ui-ux-pro-max}/.claude/skills/design";
+  home.file.".copilot/skills/design-system" = uiUxSkill "design-system" "${inputs.ui-ux-pro-max}/.claude/skills/design-system";
+  home.file.".copilot/skills/slides" = uiUxSkill "slides" "${inputs.ui-ux-pro-max}/.claude/skills/slides";
+  home.file.".copilot/skills/ui-styling" = uiUxSkill "ui-styling" "${inputs.ui-ux-pro-max}/.claude/skills/ui-styling";
+  home.file.".copilot/skills/ui-ux-pro-max" = uiUxSkill "ui-ux-pro-max" "${inputs.ui-ux-pro-max}/.claude/skills/ui-ux-pro-max";
 
   # Caveman — terse response mode plus focused commit/review helper skills
   home.file.".copilot/skills/caveman/SKILL.md".source = "${inputs.caveman}/skills/caveman/SKILL.md";
@@ -144,6 +162,17 @@ in {
 
   # Security Reviewer — OWASP-focused security analysis for new code
   home.file.".copilot/agents/security-reviewer.agent.md".source = ./agents/security-reviewer.agent.md;
+
+  home.activation.cleanupCopilotSkillBackups = lib.hm.dag.entryAfter ["writeBoundary"] ''
+    skills_dir="$HOME/.copilot/skills"
+    if [ -d "$skills_dir" ]; then
+      while IFS= read -r -d $'\0' backup_path; do
+        echo "Removing stale Copilot skill backup $backup_path"
+        ${pkgs.coreutils}/bin/chmod -R u+w "$backup_path"
+        ${pkgs.coreutils}/bin/rm -rf "$backup_path"
+      done < <(${pkgs.findutils}/bin/find "$skills_dir" -mindepth 1 -maxdepth 1 -name '*.backup' -print0)
+    fi
+  '';
 
   # MCP servers — Context7 for library docs; GitHub MCP is built-in
   home.file.".copilot/mcp-config.json".text = builtins.toJSON {
