@@ -158,6 +158,7 @@ in {
     nil
     pacvim
     pandoc
+    playwright-test
     python3
     python3Packages.python-lsp-server
     ripgrep
