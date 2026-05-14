@@ -8,7 +8,7 @@ Managed via **Nix Flakes** and **Home Manager**.
 
 - **Multi-Host Configuration:** Shared common configuration with host-specific overrides for `desktop` and `usb` (live/portable system). `hostType` is intentionally kept to lightweight shared-module branches; host-owned runtime/session behavior stays in dedicated host modules.
 - **Hyprland Desktop:** Wayland tiling compositor with glassmorphism aesthetics powered by the [hyprglass](https://github.com/hyprnux/hyprglass) blur/vibrancy plugin (`light` theme, `default` preset), patched locally for current Hyprland API compatibility. Ghostty uses native `background-opacity` for true liquid-glass (background transparent, text fully opaque).
-- **USB: Portable Hyprland** — USB host boots through the same DMS greeter path as desktop and keeps the portable Hyprland session lean for lab machines. Uses a **hybrid squashfs** Nix store (compressed read-only image + tmpfs overlay) for near-ISO boot performance on lab machines; only new `/nix/store` writes use the tmpfs upper layer, while `/home` stays on the persistent encrypted USB root filesystem. Docker's heavy writable state is routed to ephemeral host-local scratch storage when available, falling back to tmpfs when no suitable host partition can be mounted.
+- **USB: Portable Hyprland** — USB host boots through the same DMS greeter path as desktop and keeps the portable Hyprland session lean for lab machines. By default it uses a **hybrid squashfs** Nix store (compressed read-only image + tmpfs overlay) for near-ISO boot performance on slow USB media; only new `/nix/store` writes use the tmpfs upper layer, while `/home` stays on the persistent encrypted USB root filesystem. A manual `ram-store` boot specialisation can first copy the compressed store image into host RAM, then fall back to the USB-backed lower layer if the machine does not have enough memory headroom. Docker's heavy writable state is routed to ephemeral host-local scratch storage when available, falling back to tmpfs when no suitable host partition can be mounted.
 - **Gaming Mode:** A dedicated specialisation (`gaming-box`) that boots directly into Steam Big Picture Mode with Gamescope.
 - **Media & Productivity:**
   - **Spotify Player:** Terminal-based Spotify client (`spotify_player`) with streaming support. The wrapper authenticates interactively before bootstrapping the background daemon so the login callback port is not stolen by a headless service on fresh setups, it does one safe re-auth pass when Spotify later rejects a cached refresh token, and it can read a personal Spotify app client ID from `~/.config/spotify-player/client_id` so Web API auth does not depend on a shared client ID when Spotify rate-limits it.
@@ -127,6 +127,12 @@ sudo update-usb --in-place /path/to/system-manifest/<worktree>
 The script handles preflight checks, safe cleanup on `Ctrl+C`, first-boot Home Manager activation, and revision verification. After booting the USB, confirm the running image with `nixos-version --json` and `readlink -f /run/current-system`.
 
 `update-usb` and `nix flake check` prove the image builds correctly, but USB-only runtime issues still require a real boot on target hardware to verify rendering, cursor, DMS, and similar session behavior.
+
+### USB RAM Store Mode
+
+Choose the USB **`ram-store` specialisation** from the bootloader when you want the system to copy `nix-store.squashfs` into RAM before mounting `/nix/store`.
+
+That mode keeps the writable layer disposable, improves steady-state store reads after boot, and falls back to the default USB-backed lower store if the host does not have enough free memory.
 
 ### Initialize / Reformat Persistent USB
 

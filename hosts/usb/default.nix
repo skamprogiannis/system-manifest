@@ -29,6 +29,13 @@
   # Ensure the USB doesn't try to load Nvidia drivers from the host
   services.xserver.videoDrivers = lib.mkForce ["modesetting" "fbdev"];
 
+  specialisation = {
+    ram-store.configuration = {
+      system.nixos.tags = ["ram-store"];
+      systemManifest.usb.store.mode = "ram-backed";
+    };
+  };
+
   # User setup
   users.users.stefan.initialPassword = "nixos";
 }
