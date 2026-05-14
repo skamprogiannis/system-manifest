@@ -12,7 +12,7 @@ assert lib.assertMsg (builtins.elem hostType ["desktop" "usb"]) "hostType must b
     then "nixos-usb"
     else "nixos-desktop";
   spotifyServiceName = "spotify-player.service";
-  spotifyUserClientId = "65b708073fc0480ea92a077233ca87bd";
+  spotifySharedClientId = "65b708073fc0480ea92a077233ca87bd";
   spotifyPlayerClientPatch = pkgs.writeText "patch-spotify-player-client.py" ''
     import re
     from pathlib import Path
@@ -98,14 +98,27 @@ assert lib.assertMsg (builtins.elem hostType ["desktop" "usb"]) "hostType must b
   spotifyCacheDir = "${config.xdg.cacheHome}/spotify-player";
   spotifyDaemonConfigDir = "${config.xdg.configHome}/spotify-player-daemon";
   spotifyDaemonArgs = "-c ${spotifyDaemonConfigDir} --daemon";
+  spotifyClientIdFile = "${spotifyConfigDir}/client_id";
+  spotifyClientIdStamp = "${config.xdg.stateHome}/system-manifest/spotify-client-id-v1";
+  spotifyClientIdCommand = pkgs.writeShellScript "spotify-player-client-id" ''
+    set -euo pipefail
+
+    client_id_file="${spotifyClientIdFile}"
+    if [ -s "$client_id_file" ]; then
+      exec ${pkgs.coreutils}/bin/cat "$client_id_file"
+    fi
+
+    printf '%s\n' "${spotifySharedClientId}"
+  '';
 
   # Subcommands that need the daemon running. Everything else (and any
   # unknown command/flag) is passed straight through to the real binary.
   appTomlBase = ''
     client_port = 8081
     login_redirect_uri = "http://127.0.0.1:8989/login"
-    client_id = "${spotifyUserClientId}"
+    client_id_command = { command = "${spotifyClientIdCommand}", args = [] }
     enable_streaming = "DaemonOnly"
+    app_refresh_duration_in_ms = 0
     playback_refresh_duration_in_ms = 0
     default_device = "${spotifyDeviceName}"
 
@@ -123,9 +136,33 @@ assert lib.assertMsg (builtins.elem hostType ["desktop" "usb"]) "hostType must b
 
     real_player="${spotifyPlayerRawPkg}/bin/spotify_player"
     service="${spotifyServiceName}"
+    cache_dir="${spotifyCacheDir}"
+    client_id_file="${spotifyClientIdFile}"
+    client_id_stamp="${spotifyClientIdStamp}"
     creds="${spotifyCacheDir}/credentials.json"
     web_token="${spotifyCacheDir}/user_client_token.json"
     auth_attempted=0
+    shopt -s nullglob
+
+    effective_client_id() {
+      "${spotifyClientIdCommand}"
+    }
+
+    sync_client_id_cache() {
+      local current_id previous_id
+      current_id="$(effective_client_id)"
+      mkdir -p "$(${pkgs.coreutils}/bin/dirname "$client_id_stamp")"
+
+      if [ -s "$client_id_stamp" ]; then
+        previous_id="$(<"$client_id_stamp")"
+        if [ "$previous_id" != "$current_id" ]; then
+          rm -f "$creds" "$web_token"
+          echo "spotify_player: Spotify client ID changed; clearing cached auth before re-authenticating" >&2
+        fi
+      fi
+
+      printf '%s\n' "$current_id" > "$client_id_stamp"
+    }
 
     needs_daemon() {
       [ "$#" -eq 0 ] && return 0
@@ -160,6 +197,29 @@ assert lib.assertMsg (builtins.elem hostType ["desktop" "usb"]) "hostType must b
       return 1
     }
 
+    latest_spotify_log() {
+      local log latest=""
+      local logs=("$cache_dir"/spotify-player-*.log)
+
+      if [ "''${#logs[@]}" -eq 0 ] || [ ! -e "''${logs[0]}" ]; then
+        return 1
+      fi
+
+      for log in "''${logs[@]}"; do
+        if [ -z "$latest" ] || [ "$log" -nt "$latest" ]; then
+          latest="$log"
+        fi
+      done
+
+      printf '%s\n' "$latest"
+    }
+
+    daemon_log_has_rate_limit() {
+      local latest_log
+      latest_log="$(latest_spotify_log)" || return 1
+      ${pkgs.gnugrep}/bin/grep -Eq 'status code 429 Too Many Requests|"status":[[:space:]]*429|"message":[[:space:]]*"API rate limit exceeded"' "$latest_log"
+    }
+
     run_auth() {
       ${pkgs.systemd}/bin/systemctl --user stop "$service" >/dev/null 2>&1 || true
       ${pkgs.systemd}/bin/systemctl --user reset-failed "$service" >/dev/null 2>&1 || true
@@ -167,6 +227,8 @@ assert lib.assertMsg (builtins.elem hostType ["desktop" "usb"]) "hostType must b
       echo "spotify_player: starting interactive Spotify login" >&2
       "$real_player" -c "${spotifyConfigDir}" authenticate
     }
+
+    sync_client_id_cache
 
     # Explicit auth subcommand
     if [ "$#" -gt 0 ] && { [ "$1" = "auth" ] || [ "$1" = "authenticate" ]; }; then
@@ -214,6 +276,14 @@ assert lib.assertMsg (builtins.elem hostType ["desktop" "usb"]) "hostType must b
       echo "spotify_player: warning: $service did not become ready; the TUI may stay stuck in loading" >&2
     elif [ "$daemon_status" -eq 2 ]; then
       echo "spotify_player: warning: $service still fails after re-authentication; the TUI may stay stuck in loading" >&2
+    fi
+
+    if daemon_log_has_rate_limit; then
+      if [ -s "$client_id_file" ]; then
+        echo "spotify_player: warning: Spotify Web API is rate-limited for the current client ID; wait for Spotify's Retry-After window, then run 'spotify_player authenticate' if the TUI stays blank" >&2
+      else
+        echo "spotify_player: warning: Spotify Web API is rate-limited for the shared client ID; add your own Spotify app client ID to '$client_id_file' and rerun 'spotify_player authenticate' if the TUI stays blank" >&2
+      fi
     fi
 
     exec "$real_player" "$@"
