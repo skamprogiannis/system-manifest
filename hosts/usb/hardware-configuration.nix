@@ -171,8 +171,10 @@ in {
         }
 
         fallback_read_only_store() {
-          mount_read_only_store || exit 1
-          exit 0
+          if mount_read_only_store; then
+            exit 0
+          fi
+          exit 1
         }
 
         mount_overlay_store() {
