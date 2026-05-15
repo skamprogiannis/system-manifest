@@ -176,7 +176,7 @@ in {
             -o lowerdir=/sysroot/nix/.ro-store,upperdir=/sysroot/nix/.rw-store/upper,workdir=/sysroot/nix/.rw-store/work \
             /sysroot/nix/store; then
             echo "initrd-usb-overlay-store: overlay mount failed" >&2
-            umount /sysroot/nix/.rw-store || echo "initrd-usb-overlay-store: warning: tmpfs cleanup failed, RAM will remain allocated until reboot" >&2
+            umount /sysroot/nix/.rw-store || echo "initrd-usb-overlay-store: warning: tmpfs cleanup failed, which may leave RAM allocated" >&2
             mount_read_only_store || exit 1
           fi
         else
