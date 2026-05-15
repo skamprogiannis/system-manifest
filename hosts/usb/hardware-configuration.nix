@@ -133,7 +133,7 @@ in {
           return 1
         }
 
-        mkdir -p /sysroot/nix/.ro-store /sysroot/nix/.rw-store
+        mkdir -p /sysroot/nix/store /sysroot/nix/.ro-store /sysroot/nix/.rw-store
 
         if [ "$store_mode" = "ram-backed" ]; then
           image_bytes="$(stat -c %s "$lower_store_image")"
@@ -158,12 +158,25 @@ in {
           fi
         fi
 
+        mount_read_only_store() {
+          echo "initrd-usb-overlay-store: falling back to read-only squashfs /nix/store" >&2
+          mount --move /sysroot/nix/.ro-store /sysroot/nix/store
+        }
+
         mount -t squashfs -o loop,ro "$lower_mount_source" /sysroot/nix/.ro-store
-        mount -t tmpfs -o mode=0755,size=''${upper_size_mib}M tmpfs /sysroot/nix/.rw-store
-        mkdir -m 0755 -p /sysroot/nix/.rw-store/upper /sysroot/nix/.rw-store/work
-        mount -t overlay overlay \
-          -o lowerdir=/sysroot/nix/.ro-store,upperdir=/sysroot/nix/.rw-store/upper,workdir=/sysroot/nix/.rw-store/work \
-          /sysroot/nix/store
+        if mount -t tmpfs -o mode=0755,size=''${upper_size_mib}M tmpfs /sysroot/nix/.rw-store; then
+          mkdir -m 0755 -p /sysroot/nix/.rw-store/upper /sysroot/nix/.rw-store/work
+          if ! mount -t overlay overlay \
+            -o lowerdir=/sysroot/nix/.ro-store,upperdir=/sysroot/nix/.rw-store/upper,workdir=/sysroot/nix/.rw-store/work \
+            /sysroot/nix/store; then
+            echo "initrd-usb-overlay-store: overlay mount failed" >&2
+            umount /sysroot/nix/.rw-store || true
+            mount_read_only_store
+          fi
+        else
+          echo "initrd-usb-overlay-store: tmpfs upper mount failed" >&2
+          mount_read_only_store
+        fi
       '';
     };
 
