@@ -25,7 +25,7 @@ in {
     upperSizeMiB = lib.mkOption {
       type = lib.types.ints.positive;
       default = 2048;
-      description = "Size of the disposable tmpfs upper layer for /nix/store.";
+      description = "Size of the disposable tmpfs upper layer for /nix/store in usb-backed mode.";
     };
 
     ramImageTmpfsPercent = lib.mkOption {
@@ -92,9 +92,10 @@ in {
       fsType = "vfat";
     };
 
-    # Hybrid squashfs Nix store: compressed read-only image + tmpfs overlay.
+    # Hybrid squashfs Nix store: compressed read-only image + writable overlay.
     # Reads come from the squashfs (sequential, compressed, fast on USB).
-    # Writes go to tmpfs (volatile — lost on reboot, fine for lab use).
+    # Writes go to tmpfs by default, or to an ext4 scratch area in ram-store mode
+    # to avoid keeping both the squashfs image and overlay upper layer in RAM.
     #
     # When the ram-store specialisation is selected, initrd first copies the
     # squashfs image into tmpfs and mounts the RAM copy as the lower layer. If
@@ -139,7 +140,7 @@ in {
           image_bytes="$(stat -c %s "$lower_store_image")"
           mem_available_kib="$(read_meminfo_kib MemAvailable || read_meminfo_kib MemTotal)"
           available_bytes=$((mem_available_kib * 1024))
-          required_bytes=$((image_bytes + upper_size_mib * 1024 * 1024 + ram_mode_safety_mib * 1024 * 1024))
+          required_bytes=$((image_bytes + ram_mode_safety_mib * 1024 * 1024))
 
           if [ "$available_bytes" -ge "$required_bytes" ]; then
             mkdir -p /sysroot/nix/.ram-store-image
@@ -167,15 +168,29 @@ in {
           }
         }
 
+        mount_overlay_store() {
+          mkdir -p /sysroot/nix/store
+          mount -t overlay overlay \
+            -o lowerdir=/sysroot/nix/.ro-store,upperdir=/sysroot/nix/.rw-store/upper,workdir=/sysroot/nix/.rw-store/work \
+            /sysroot/nix/store
+        }
+
         if ! mount -t squashfs -o loop,ro "$lower_mount_source" /sysroot/nix/.ro-store; then
           echo "initrd-usb-overlay-store: failed to mount squashfs lower store" >&2
           exit 1
         fi
-        if mount -t tmpfs -o mode=0755,size=''${upper_size_mib}M tmpfs /sysroot/nix/.rw-store; then
-          mkdir -m 0755 -p /sysroot/nix/.rw-store/upper /sysroot/nix/.rw-store/work
-          if ! mount -t overlay overlay \
-            -o lowerdir=/sysroot/nix/.ro-store,upperdir=/sysroot/nix/.rw-store/upper,workdir=/sysroot/nix/.rw-store/work \
-            /sysroot/nix/store; then
+
+        if [ "$store_mode" = "ram-backed" ]; then
+          echo "initrd-usb-overlay-store: using disk-backed scratch upper store"
+          rm -rf /sysroot/nix/.rw-store/upper /sysroot/nix/.rw-store/work
+          mkdir -p /sysroot/nix/.rw-store/upper /sysroot/nix/.rw-store/work
+          if ! mount_overlay_store; then
+            echo "initrd-usb-overlay-store: overlay mount failed" >&2
+            mount_read_only_store || exit 1
+          fi
+        elif mount -t tmpfs -o mode=0755,size=''${upper_size_mib}M tmpfs /sysroot/nix/.rw-store; then
+          mkdir -p /sysroot/nix/.rw-store/upper /sysroot/nix/.rw-store/work
+          if ! mount_overlay_store; then
             echo "initrd-usb-overlay-store: overlay mount failed" >&2
             if ! umount /sysroot/nix/.rw-store; then
               echo "initrd-usb-overlay-store: warning: tmpfs cleanup failed" >&2
