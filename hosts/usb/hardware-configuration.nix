@@ -178,10 +178,9 @@ in {
             /sysroot/nix/store; then
             echo "initrd-usb-overlay-store: overlay mount failed" >&2
             if ! umount /sysroot/nix/.rw-store; then
+              echo "initrd-usb-overlay-store: warning: tmpfs cleanup failed" >&2
               if mountpoint -q /sysroot/nix/.rw-store; then
-                echo "initrd-usb-overlay-store: warning: tmpfs cleanup failed, leaving tmpfs mounted and consuming RAM" >&2
-              else
-                echo "initrd-usb-overlay-store: warning: tmpfs cleanup failed" >&2
+                echo "initrd-usb-overlay-store: warning: tmpfs remains mounted and consuming RAM" >&2
               fi
             fi
             mount_read_only_store || exit 1
