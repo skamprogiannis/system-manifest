@@ -197,6 +197,7 @@ in {
             if mountpoint -q /sysroot/nix/.rw-store; then
               echo "initrd-usb-overlay-store: warning: tmpfs remains mounted and consuming RAM" >&2
             fi
+            return 1
           fi
         }
 
@@ -204,7 +205,7 @@ in {
           # Defensive cleanup for initrd retries or switching from the tmpfs-backed path.
           if mountpoint -q /sysroot/nix/.rw-store; then
             umount /sysroot/nix/.rw-store || {
-              echo "initrd-usb-overlay-store: failed to unmount stale scratch upper mount" >&2
+              echo "initrd-usb-overlay-store: failed to unmount unexpected mount at /sysroot/nix/.rw-store" >&2
               return 1
             }
           fi
@@ -234,11 +235,15 @@ in {
           if prepare_upper_dirs; then
             if ! mount_overlay_store; then
               echo "initrd-usb-overlay-store: overlay mount failed" >&2
-              cleanup_tmpfs_upper
+              if ! cleanup_tmpfs_upper; then
+                echo "initrd-usb-overlay-store: continuing with read-only fallback after tmpfs cleanup failure" >&2
+              fi
               mount_read_only_store || exit 1
             fi
           else
-            cleanup_tmpfs_upper
+            if ! cleanup_tmpfs_upper; then
+              echo "initrd-usb-overlay-store: continuing with read-only fallback after tmpfs cleanup failure" >&2
+            fi
             mount_read_only_store || exit 1
           fi
         else
