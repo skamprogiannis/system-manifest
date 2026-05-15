@@ -160,10 +160,11 @@ in {
 
         mount_read_only_store() {
           echo "initrd-usb-overlay-store: falling back to read-only squashfs /nix/store" >&2
-          mount --move /sysroot/nix/.ro-store /sysroot/nix/store || {
+          mount --bind /sysroot/nix/.ro-store /sysroot/nix/store || {
             echo "initrd-usb-overlay-store: failed to mount read-only store at /sysroot/nix/store" >&2
             return 1
           }
+          umount /sysroot/nix/.ro-store || echo "initrd-usb-overlay-store: warning: failed to unmount temporary squashfs lower mount" >&2
         }
 
         if ! mount -t squashfs -o loop,ro "$lower_mount_source" /sysroot/nix/.ro-store; then
@@ -176,7 +177,7 @@ in {
             -o lowerdir=/sysroot/nix/.ro-store,upperdir=/sysroot/nix/.rw-store/upper,workdir=/sysroot/nix/.rw-store/work \
             /sysroot/nix/store; then
             echo "initrd-usb-overlay-store: overlay mount failed" >&2
-            umount /sysroot/nix/.rw-store || echo "initrd-usb-overlay-store: warning: tmpfs cleanup failed, which may leave RAM allocated" >&2
+            umount /sysroot/nix/.rw-store || echo "initrd-usb-overlay-store: warning: failed to unmount tmpfs at /sysroot/nix/.rw-store, which remains mounted and may interfere with fallback" >&2
             mount_read_only_store || exit 1
           fi
         else
