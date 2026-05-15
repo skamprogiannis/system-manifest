@@ -170,13 +170,6 @@ in {
           }
         }
 
-        fallback_read_only_store() {
-          if mount_read_only_store; then
-            exit 0
-          fi
-          exit 1
-        }
-
         mount_overlay_store() {
           mkdir -p /sysroot/nix/store
           mount -t overlay overlay \
@@ -197,7 +190,6 @@ in {
             if mountpoint -q /sysroot/nix/.rw-store; then
               echo "initrd-usb-overlay-store: warning: tmpfs remains mounted and consuming RAM" >&2
             fi
-            return 1
           fi
         }
 
@@ -222,24 +214,28 @@ in {
 
         if [ "$upper_store_kind" = "scratch" ]; then
           echo "initrd-usb-overlay-store: ram-store using disk-backed scratch upper store"
-          reset_scratch_upper || fallback_read_only_store
-          if ! mount_overlay_store; then
-            echo "initrd-usb-overlay-store: overlay mount failed" >&2
-            fallback_read_only_store
+          if reset_scratch_upper; then
+            if ! mount_overlay_store; then
+              echo "initrd-usb-overlay-store: overlay mount failed" >&2
+              mount_read_only_store || exit 1
+            fi
+          else
+            mount_read_only_store || exit 1
           fi
         elif mount -t tmpfs -o mode=0755,size=''${upper_size_mib}M tmpfs /sysroot/nix/.rw-store; then
-          prepare_upper_dirs || {
-            cleanup_tmpfs_upper || true
-            fallback_read_only_store
-          }
-          if ! mount_overlay_store; then
-            echo "initrd-usb-overlay-store: overlay mount failed" >&2
-            cleanup_tmpfs_upper || true
-            fallback_read_only_store
+          if prepare_upper_dirs; then
+            if ! mount_overlay_store; then
+              echo "initrd-usb-overlay-store: overlay mount failed" >&2
+              cleanup_tmpfs_upper
+              mount_read_only_store || exit 1
+            fi
+          else
+            cleanup_tmpfs_upper
+            mount_read_only_store || exit 1
           fi
         else
           echo "initrd-usb-overlay-store: tmpfs upper mount failed" >&2
-          fallback_read_only_store
+          mount_read_only_store || exit 1
         fi
       '';
     };
