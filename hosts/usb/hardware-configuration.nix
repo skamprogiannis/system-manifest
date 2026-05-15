@@ -170,6 +170,11 @@ in {
           }
         }
 
+        fallback_read_only_store() {
+          mount_read_only_store || exit 1
+          exit 0
+        }
+
         mount_overlay_store() {
           mkdir -p /sysroot/nix/store
           mount -t overlay overlay \
@@ -190,7 +195,22 @@ in {
             if mountpoint -q /sysroot/nix/.rw-store; then
               echo "initrd-usb-overlay-store: warning: tmpfs remains mounted and consuming RAM" >&2
             fi
+            return 1
           fi
+        }
+
+        reset_scratch_upper() {
+          if mountpoint -q /sysroot/nix/.rw-store; then
+            umount /sysroot/nix/.rw-store || {
+              echo "initrd-usb-overlay-store: failed to unmount stale scratch upper mount" >&2
+              return 1
+            }
+          fi
+          rm -rf /sysroot/nix/.rw-store || {
+            echo "initrd-usb-overlay-store: failed to reset scratch upper store" >&2
+            return 1
+          }
+          prepare_upper_dirs
         }
 
         if ! mount -t squashfs -o loop,ro "$lower_mount_source" /sysroot/nix/.ro-store; then
@@ -200,29 +220,24 @@ in {
 
         if [ "$upper_store_kind" = "scratch" ]; then
           echo "initrd-usb-overlay-store: ram-store using disk-backed scratch upper store"
-          rm -rf /sysroot/nix/.rw-store
-          prepare_upper_dirs || {
-            mount_read_only_store || exit 1
-            exit 0
-          }
+          reset_scratch_upper || fallback_read_only_store
           if ! mount_overlay_store; then
             echo "initrd-usb-overlay-store: overlay mount failed" >&2
-            mount_read_only_store || exit 1
+            fallback_read_only_store
           fi
         elif mount -t tmpfs -o mode=0755,size=''${upper_size_mib}M tmpfs /sysroot/nix/.rw-store; then
           prepare_upper_dirs || {
-            cleanup_tmpfs_upper
-            mount_read_only_store || exit 1
-            exit 0
+            cleanup_tmpfs_upper || true
+            fallback_read_only_store
           }
           if ! mount_overlay_store; then
             echo "initrd-usb-overlay-store: overlay mount failed" >&2
-            cleanup_tmpfs_upper
-            mount_read_only_store || exit 1
+            cleanup_tmpfs_upper || true
+            fallback_read_only_store
           fi
         else
           echo "initrd-usb-overlay-store: tmpfs upper mount failed" >&2
-          mount_read_only_store || exit 1
+          fallback_read_only_store
         fi
       '';
     };
