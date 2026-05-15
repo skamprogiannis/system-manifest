@@ -173,12 +173,12 @@ in {
             -o lowerdir=/sysroot/nix/.ro-store,upperdir=/sysroot/nix/.rw-store/upper,workdir=/sysroot/nix/.rw-store/work \
             /sysroot/nix/store; then
             echo "initrd-usb-overlay-store: overlay mount failed" >&2
-            umount /sysroot/nix/.rw-store || echo "initrd-usb-overlay-store: warning: failed to unmount tmpfs upper" >&2
-            mount_read_only_store
+            umount /sysroot/nix/.rw-store || echo "initrd-usb-overlay-store: warning: failed to clean up tmpfs upper after overlay mount failure" >&2
+            mount_read_only_store || exit 1
           fi
         else
           echo "initrd-usb-overlay-store: tmpfs upper mount failed" >&2
-          mount_read_only_store
+          mount_read_only_store || exit 1
         fi
       '';
     };
