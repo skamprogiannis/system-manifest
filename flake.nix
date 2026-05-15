@@ -216,6 +216,12 @@
             exit 1
           fi
 
+          if ! ${pkgs.gnugrep}/bin/grep -Fq "spotify-player auth OAuth block not found" ${./modules/home/spotify.nix}; then
+            echo "Expected spotify module to patch the upstream auth flow to honor the configured client ID." >&2
+            ${pkgs.gnused}/bin/sed -n '1,140p' ${./modules/home/spotify.nix} >&2
+            exit 1
+          fi
+
           touch "$out"
         '';
       shellcheck =
