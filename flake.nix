@@ -159,8 +159,8 @@
           run_expect 1 update-usb-invalid-mode "$desktop_home/bin/update-usb" --mode nope
           assert_log_contains "Error: invalid mode 'nope'."
 
-          if ! ${pkgs.gnugrep}/bin/grep -Fq "#/nix/}/init" "$desktop_home/bin/update-usb"; then
-            echo "Expected update-usb to normalize squashfs verification paths relative to /nix." >&2
+          if ! ${pkgs.gnugrep}/bin/grep -Fq "#/nix/store/}/init" "$desktop_home/bin/update-usb"; then
+            echo "Expected update-usb to normalize squashfs verification paths relative to /nix/store." >&2
             ${pkgs.gnused}/bin/sed -n '180,230p' "$desktop_home/bin/update-usb" >&2
             exit 1
           fi
