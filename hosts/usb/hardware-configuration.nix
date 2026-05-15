@@ -174,12 +174,19 @@ in {
           mkdir -p /sysroot/nix/store
           mount -t overlay overlay \
             -o lowerdir=/sysroot/nix/.ro-store,upperdir=/sysroot/nix/.rw-store/upper,workdir=/sysroot/nix/.rw-store/work \
-            /sysroot/nix/store
+            /sysroot/nix/store || {
+            echo "initrd-usb-overlay-store: failed to mount writable overlay store" >&2
+            return 1
+          }
         }
 
         prepare_upper_dirs() {
-          install -d -m 0755 /sysroot/nix/.rw-store/upper /sysroot/nix/.rw-store/work || {
+          mkdir -p /sysroot/nix/.rw-store/upper /sysroot/nix/.rw-store/work || {
             echo "initrd-usb-overlay-store: failed to create overlay upper/work directories" >&2
+            return 1
+          }
+          chmod 0755 /sysroot/nix/.rw-store/upper /sysroot/nix/.rw-store/work || {
+            echo "initrd-usb-overlay-store: failed to set overlay upper/work directory permissions" >&2
             return 1
           }
         }
