@@ -122,6 +122,7 @@ in {
         upper_size_mib=${toString usbStore.upperSizeMiB}
         ram_image_tmpfs_percent=${toString usbStore.ramImageTmpfsPercent}
         ram_mode_safety_mib=${toString usbStore.ramModeSafetyMiB}
+        upper_store_kind=tmpfs
 
         read_meminfo_kib() {
           key="$1"
@@ -137,6 +138,7 @@ in {
         mkdir -p /sysroot/nix/.ro-store /sysroot/nix/.rw-store
 
         if [ "$store_mode" = "ram-backed" ]; then
+          upper_store_kind=scratch
           image_bytes="$(stat -c %s "$lower_store_image")"
           mem_available_kib="$(read_meminfo_kib MemAvailable || read_meminfo_kib MemTotal)"
           available_bytes=$((mem_available_kib * 1024))
@@ -180,9 +182,9 @@ in {
           exit 1
         fi
 
-        if [ "$store_mode" = "ram-backed" ]; then
-          echo "initrd-usb-overlay-store: using disk-backed scratch upper store"
-          rm -rf /sysroot/nix/.rw-store/upper /sysroot/nix/.rw-store/work
+        if [ "$upper_store_kind" = "scratch" ]; then
+          echo "initrd-usb-overlay-store: ram-store using disk-backed scratch upper store"
+          rm -rf /sysroot/nix/.rw-store
           mkdir -p /sysroot/nix/.rw-store/upper /sysroot/nix/.rw-store/work
           if ! mount_overlay_store; then
             echo "initrd-usb-overlay-store: overlay mount failed" >&2
