@@ -166,14 +166,17 @@ in {
           }
         }
 
-        mount -t squashfs -o loop,ro "$lower_mount_source" /sysroot/nix/.ro-store
+        if ! mount -t squashfs -o loop,ro "$lower_mount_source" /sysroot/nix/.ro-store; then
+          echo "initrd-usb-overlay-store: failed to mount squashfs lower store" >&2
+          exit 1
+        fi
         if mount -t tmpfs -o mode=0755,size=''${upper_size_mib}M tmpfs /sysroot/nix/.rw-store; then
           mkdir -m 0755 -p /sysroot/nix/.rw-store/upper /sysroot/nix/.rw-store/work
           if ! mount -t overlay overlay \
             -o lowerdir=/sysroot/nix/.ro-store,upperdir=/sysroot/nix/.rw-store/upper,workdir=/sysroot/nix/.rw-store/work \
             /sysroot/nix/store; then
             echo "initrd-usb-overlay-store: overlay mount failed" >&2
-            umount /sysroot/nix/.rw-store || echo "initrd-usb-overlay-store: warning: tmpfs cleanup failed" >&2
+            umount /sysroot/nix/.rw-store || echo "initrd-usb-overlay-store: warning: tmpfs cleanup failed, RAM will remain allocated until reboot" >&2
             mount_read_only_store || exit 1
           fi
         else
