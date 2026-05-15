@@ -25,7 +25,7 @@ in {
     upperSizeMiB = lib.mkOption {
       type = lib.types.ints.positive;
       default = 2048;
-      description = "Size of the disposable tmpfs upper layer for /nix/store in usb-backed mode.";
+      description = "Size of the disposable tmpfs upper layer for /nix/store (used only when not in ram-store mode).";
     };
 
     ramImageTmpfsPercent = lib.mkOption {
@@ -177,6 +177,22 @@ in {
             /sysroot/nix/store
         }
 
+        prepare_upper_dirs() {
+          install -d -m 0755 /sysroot/nix/.rw-store/upper /sysroot/nix/.rw-store/work || {
+            echo "initrd-usb-overlay-store: failed to create overlay upper/work directories" >&2
+            return 1
+          }
+        }
+
+        cleanup_tmpfs_upper() {
+          if ! umount /sysroot/nix/.rw-store; then
+            echo "initrd-usb-overlay-store: warning: tmpfs cleanup failed" >&2
+            if mountpoint -q /sysroot/nix/.rw-store; then
+              echo "initrd-usb-overlay-store: warning: tmpfs remains mounted and consuming RAM" >&2
+            fi
+          fi
+        }
+
         if ! mount -t squashfs -o loop,ro "$lower_mount_source" /sysroot/nix/.ro-store; then
           echo "initrd-usb-overlay-store: failed to mount squashfs lower store" >&2
           exit 1
@@ -185,21 +201,23 @@ in {
         if [ "$upper_store_kind" = "scratch" ]; then
           echo "initrd-usb-overlay-store: ram-store using disk-backed scratch upper store"
           rm -rf /sysroot/nix/.rw-store
-          mkdir -p /sysroot/nix/.rw-store/upper /sysroot/nix/.rw-store/work
+          prepare_upper_dirs || {
+            mount_read_only_store || exit 1
+            exit 0
+          }
           if ! mount_overlay_store; then
             echo "initrd-usb-overlay-store: overlay mount failed" >&2
             mount_read_only_store || exit 1
           fi
         elif mount -t tmpfs -o mode=0755,size=''${upper_size_mib}M tmpfs /sysroot/nix/.rw-store; then
-          mkdir -p /sysroot/nix/.rw-store/upper /sysroot/nix/.rw-store/work
+          prepare_upper_dirs || {
+            cleanup_tmpfs_upper
+            mount_read_only_store || exit 1
+            exit 0
+          }
           if ! mount_overlay_store; then
             echo "initrd-usb-overlay-store: overlay mount failed" >&2
-            if ! umount /sysroot/nix/.rw-store; then
-              echo "initrd-usb-overlay-store: warning: tmpfs cleanup failed" >&2
-              if mountpoint -q /sysroot/nix/.rw-store; then
-                echo "initrd-usb-overlay-store: warning: tmpfs remains mounted and consuming RAM" >&2
-              fi
-            fi
+            cleanup_tmpfs_upper
             mount_read_only_store || exit 1
           fi
         else
