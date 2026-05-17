@@ -2,36 +2,8 @@
   config,
   pkgs,
   inputs,
-  lib,
   ...
-}: let
-  githubCopilotCliVersion = "1.0.34";
-  copilotRuntimeLibraryPath = pkgs.lib.makeLibraryPath [
-    pkgs.libsecret
-    pkgs.glib
-    pkgs.gcc-unwrapped.lib
-  ];
-  githubCopilotCli = pkgs.stdenvNoCC.mkDerivation {
-    pname = "github-copilot-cli";
-    version = githubCopilotCliVersion;
-    src = pkgs.fetchzip {
-      url = "https://github.com/github/copilot-cli/releases/download/v${githubCopilotCliVersion}/copilot-linux-x64.tar.gz";
-      hash = "sha256-SfSIhF0o1cF2EHS2PtMk90SY/xQY5uq6quhK3Qb3EmM=";
-      stripRoot = false;
-    };
-    installPhase = ''
-      install -Dm755 "$src/copilot" "$out/bin/copilot"
-    '';
-    meta = with lib; {
-      description = "GitHub Copilot CLI";
-      homepage = "https://github.com/github/copilot-cli";
-      license = licenses.unfree;
-      mainProgram = "copilot";
-      platforms = ["x86_64-linux"];
-      sourceProvenance = with sourceTypes; [binaryNativeCode];
-    };
-  };
-in {
+}: {
   home.username = "stefan";
   home.homeDirectory = "/home/stefan";
 
@@ -44,7 +16,7 @@ in {
     ./modules/home/pearpass.nix
     ./modules/home/xdg.nix
     ./modules/home/brave.nix
-    ./modules/home/gh-copilot
+    ./modules/home/codex
     ./modules/home/firefox.nix
     ./modules/home/theme.nix
     ./modules/home/obsidian.nix
@@ -80,70 +52,6 @@ in {
     file
     imagemagick
     gcr
-    # Wrap copilot CLI so keytar.node can find libsecret at runtime
-    (pkgs.symlinkJoin {
-      name = "github-copilot-cli-wrapped";
-      paths = [githubCopilotCli];
-      postBuild = ''
-        rm -f $out/bin/copilot
-        cp ${githubCopilotCli}/bin/copilot $out/bin/upstream-copilot
-        chmod +x $out/bin/upstream-copilot
-
-        # Keep executable basename "copilot" (gh checks PATH for this name),
-        # but run the real binary with filtered args and NixOS runtime libs.
-        cat > $out/bin/copilot <<'EOF'
-        #!${pkgs.bash}/bin/bash
-        if [[ -n "$LD_LIBRARY_PATH" ]]; then
-          export LD_LIBRARY_PATH="${copilotRuntimeLibraryPath}:$LD_LIBRARY_PATH"
-        else
-          export LD_LIBRARY_PATH="${copilotRuntimeLibraryPath}"
-        fi
-
-        if [[ -z "$GH_TOKEN" && -f "$HOME/.config/github-pat" ]]; then
-          export GH_TOKEN="$(<"$HOME/.config/github-pat")"
-        fi
-
-        # Drop any inherited direnv/flake environment before starting Copilot.
-        # Copilot can still access repo-local tools explicitly via `nix develop -c`
-        # or `direnv exec`, but it should not inherit an already-active dev shell.
-        if [[ -n "''${DIRENV_DIFF:-}" || -n "''${DIRENV_DIR:-}" ]]; then
-          original_pwd="$PWD"
-          if ! cd "$HOME"; then
-            echo "failed to switch to \$HOME while unloading direnv state" >&2
-            exit 1
-          fi
-          if ! direnv_exports="$(${pkgs.direnv}/bin/direnv export bash 2>/dev/null)"; then
-            echo "failed to unload inherited direnv state before starting copilot" >&2
-            exit 1
-          fi
-          eval "$direnv_exports"
-          if ! cd "$original_pwd"; then
-            echo "failed to restore working directory after unloading direnv state" >&2
-            exit 1
-          fi
-        fi
-
-        args=()
-        for arg in "$@"; do
-          if [[ "$arg" == "--no-warnings" ]]; then
-            continue
-          fi
-          args+=("$arg")
-        done
-
-        # The upstream loader behavior depends on argv0 ending in "copilot".
-        # Use a symlinked binary name that preserves this suffix.
-        real="$(dirname "$0")/upstream-copilot"
-        if [[ ! -x "$real" ]]; then
-          echo "copilot runtime binary not found: $real" >&2
-          exit 1
-        fi
-
-        exec "$real" --no-auto-update "''${args[@]}"
-        EOF
-        chmod +x $out/bin/copilot
-      '';
-    })
     glow
     gnumake
     go

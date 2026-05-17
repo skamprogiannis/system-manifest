@@ -19,7 +19,7 @@ Managed via **Nix Flakes** and **Home Manager**.
   - **Brave + Vimium C:** Declarative browser setup with preseeded extension settings and portable keymaps.
 - **Vesktop:** Discord client with declarative Translucence theming and a wallpaper-aware QuickCSS bridge.
 - **Dev Ready:** Pre-configured environment for Node.js, Python, Go, Playwright, and Neovim (via nixvim), plus Clang build essentials. Neovim is also registered as the default text editor via an `nvim-text` desktop entry.
-- **AI Integrated:** Built-in configuration for **GitHub Copilot CLI** with per-repo `AGENTS.md` instructions plus curated skills for visualization, browser automation, static analysis, frontend design (`impeccable` and the UI/UX Pro Max pack), architecture review, TDD bug triage, interface design, codebase zoom-out, and concise response modes. Global Copilot instructions live at `~/.copilot/copilot-instructions.md`.
+- **AI Integrated:** Built-in configuration for **Codex CLI** with per-repo `AGENTS.md` instructions, global defaults in `~/.codex/AGENTS.md`, custom agents in `~/.codex/agents`, and curated skills in `~/.agents/skills` for visualization, browser automation, static analysis, frontend design, architecture review, TDD bug triage, interface design, codebase zoom-out, and concise response modes.
 - **Modular Architecture:** Configuration split across `hosts/` (system-level) and `modules/home/` (user-level) for maintainability.
 - **Voiden:** Declarative AppImage wrapper for the Voiden offline-first API client.
 - **Binary Caches:** Configured for `hyprland.cachix.org`, `nix-community.cachix.org`, and `ghostty.cachix.org`.
@@ -38,11 +38,11 @@ Packages tracked independently of nixpkgs for tighter version control:
 | `skwd-wall` | `github:liixini/skwd-wall` | Quickshell wallpaper selector with built-in matugen, Wallhaven, Steam Workshop, and color sorting |
 | `pearpass-app-desktop` | `github:tetherto/pearpass-app-desktop` | PearPass AppImage source for NixOS wrapper |
 | `visual-explainer` | `github:nicobailon/visual-explainer` | HTML visualization generator for architecture diagrams and code explanations |
-| `impeccable` | `github:pbakaus/impeccable` | Frontend design Copilot skill bundle for typography, color, layout, and motion |
+| `impeccable` | `github:pbakaus/impeccable` | Frontend design skill bundle for typography, color, layout, and motion |
 | `ui-ux-pro-max` | `github:nextlevelbuilder/ui-ux-pro-max-skill` | UI/UX design skill pack with companion skills for design systems, styling, branding, banners, and slides |
-| `caveman` | `github:JuliusBrussee/caveman` | Copilot skill suite for concise low-token responses plus terse commit/review helpers |
+| `caveman` | `github:JuliusBrussee/caveman` | Skill suite for concise low-token responses plus terse commit/review helpers |
 | `mattpocock-skills` | `github:mattpocock/skills` | Planning and engineering skill collection used here for architecture improvement, TDD, issue triage, interface design, and codebase zoom-out |
-| `trailofbits-skills` | `github:trailofbits/skills` | Security and analysis skill marketplace used here as the upstream source for the compact `static-analysis` Copilot skill |
+| `trailofbits-skills` | `github:trailofbits/skills` | Security and analysis skill marketplace used here as the upstream source for the compact `static-analysis` skill |
 | `dms` | `github:AvengeMedia/DankMaterialShell` | Fast-moving shell UI |
 
 ## Workflow & UI
@@ -52,7 +52,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 - **Wallpaper Integration:** `modules/home/wallpaper/` is the shared wallpaper entrypoint. `skwd-wall` owns wallpaper selection plus `~/.cache/skwd-wall/*`; `modules/home/dms/session-state.nix` owns the baseline `~/.local/state/DankMaterialShell/session.json`; and the sync hook in `modules/home/skwd-wall.nix` mirrors the selected wallpaper into DMS runtime state and the greeter cache. Hyprland stays a downstream consumer of that state.
 - **skwd-wall State:** `skwd-wall` UI settings write to `~/.config/skwd-wall/config.json`, but each Home Manager activation resets that file back to the declarative defaults from Nix. Local API keys can live outside git in `~/.config/skwd-wall/secrets.env`.
 - **Malformed JSON Policy:** Activation-owned JSON (`~/.config/skwd-wall/config.json`, `~/.local/state/DankMaterialShell/session.json`) is healed/reset to declarative defaults during activation. Runtime sync code fails closed before overwriting malformed authoritative targets, but only warns and continues for optional/cache-like inputs.
-- **Zellij Navigation:** `Alt`-based keybindings for all multiplexer actions; `Escape` exits any mode back to Normal and is unbound in Normal mode so it passes through to terminal apps (Vim, Copilot CLI, etc.).
+- **Zellij Navigation:** `Alt`-based keybindings for all multiplexer actions; `Escape` exits any mode back to Normal and is unbound in Normal mode so it passes through to terminal apps (Vim, Codex CLI, etc.).
 - **Keyboard Layout:** `us altgr-intl` + `gr simple`. `Super+Space` toggles layouts.
 - **Window Controls:** Super-based Hyprland keybindings cover moving, resizing, monitor focus, and monitor-to-monitor window moves.
 - **Hard Quit:** `Super+Shift+X` force-terminates the active app process for clients like Vesktop or ProtonVPN that minimize to tray on normal close.
@@ -60,9 +60,9 @@ Packages tracked independently of nixpkgs for tighter version control:
 - **DMS Shell:** Core shell layout, widget placement, and launcher behavior are managed declaratively in Nix.
 - **Screenshots:** `dms screenshot` handles region/window/full capture with image-to-clipboard. `screenshot-path-copy` wraps it to copy the file path instead (useful for sharing with AI agents).
 - **Screen Recording:** `gsr-record` wraps GPU Screen Recorder for region, active-window, and focused-monitor capture, saving clips to `~/videos/screencasts`.
-- **GitHub Copilot CLI:** Copilot is integrated into the Neovim + terminal workflow with repository-specific instructions.
-- **Browser Automation:** PinchTab is installed declaratively so the Copilot browser-automation skill has the CLI it documents.
-- **Static Analysis:** CodeQL, Semgrep, and SARIF tooling are installed declaratively to back the compact `static-analysis` Copilot skill.
+- **Codex CLI:** Codex is integrated into the Neovim + terminal workflow with repository-specific instructions, `/goal` enabled, Context7/Etsy/OpenAI Docs MCP servers, custom reviewer agents, and a Zellij tab launched with preserved scrollback.
+- **Browser Automation:** PinchTab is installed declaratively so the browser-automation skill has the CLI it documents.
+- **Static Analysis:** CodeQL, Semgrep, and SARIF tooling are installed declaratively to back the compact `static-analysis` skill.
 - **DNS:** Quad9 (`9.9.9.9`) for privacy-focused DNS resolution.
 - **XDG directories:** Lowercase paths such as `~/downloads`, `~/pictures`, and `~/wallpapers` are canonical. Legacy uppercase XDG folders are migrated into the lowercase layout when it is safe to do so, and Yazi assigns the expected special-folder icons to those lowercase names.
 
@@ -70,14 +70,14 @@ Packages tracked independently of nixpkgs for tighter version control:
 
 | Script | Description |
 |--------|-------------|
-| `zellij-sessionizer` | Zellij sessionizer — fuzzy-find a project and attach or create a dev session with Neovim and Copilot workflow tabs (`zs` is the short alias) |
+| `zellij-sessionizer` | Zellij sessionizer — fuzzy-find a project and attach or create a dev session with Neovim and Codex workflow tabs (`zs` is the short alias) |
 | `screenshot-path-copy` | Wraps `dms screenshot` to copy the saved file path to clipboard (instead of image) |
 | `hypr-nav` | Hyprland focus movement with workspace wrapping at boundaries |
 | `hypr-quit-active` | Force-quits the active app process when a client minimizes to tray instead of exiting |
 | `gsr-record` | Toggles GPU Screen Recorder for region, focused monitor, or active-window capture and saves clips under `~/videos/screencasts` |
 | `skwd-we-capture-still` | Captures a Wallpaper Engine still image into `~/.cache/skwd-wall/wallpaper/we-captures/`, with `--current-live` for a faithful live-screen fallback |
 | `transmission-port-sync` | Syncs Transmission's configured peer port (for example after a VPN-forwarded port change) |
-| `copilot-sessions-sync` | Syncs `~/.copilot/session-state/` between desktop and USB (`to-usb` / `from-usb`) |
+| `codex-state-sync` | Syncs resumable Codex state between desktop and USB (`to-usb` / `from-usb`) while leaving auth/config/cache local |
 | `specify` | Spec Kit CLI wrapper — scaffolds spec-driven development for new projects |
 | `setup-persistent-usb` | Initialises a fresh LUKS-encrypted persistent NixOS USB drive |
 | `update-usb` | Updates the USB image using prebuild mode by default, with `--in-place` as a lower-disk-space fallback |
@@ -146,14 +146,14 @@ sudo setup-persistent-usb /dev/sdX
 
 Select **"NixOS - desktop-gaming-box"** from the bootloader menu (GRUB).
 
-### Sync Copilot Sessions (Desktop ↔ USB)
+### Sync Codex State (Desktop <-> USB)
 
 ```bash
-copilot-sessions-sync to-usb    # before leaving for a lab machine
-copilot-sessions-sync from-usb  # after returning
+codex-state-sync to-usb    # before leaving for a lab machine
+codex-state-sync from-usb  # after returning
 ```
 
-The script syncs the invoking user's `~/.copilot/session-state/` and escalates with `sudo` only for the USB mount/unlock steps.
+The script syncs resumable Codex state from `~/.codex/` and escalates with `sudo` only for the USB mount/unlock steps. Auth, declarative config, skills, agents, caches, and logs remain local to each machine.
 
 ## License
 

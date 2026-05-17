@@ -5,7 +5,7 @@ in {
     (pkgs.writeShellScriptBin "specify" ''
       exec ${pkgs.uv}/bin/uvx --from git+https://github.com/github/spec-kit.git specify "$@"
     '')
-    (pkgs.writeShellScriptBin "copilot-sessions-sync" ''
+    (pkgs.writeShellScriptBin "codex-state-sync" ''
       set -euo pipefail
       MODE="''${1:-to-usb}"
       SYNC_USER="''${SUDO_USER:-''${USER:-$(${pkgs.coreutils}/bin/id -un)}}"
@@ -16,8 +16,8 @@ in {
       MAPPER="$PREFERRED_MAPPER"
       MAPPER_DEV="/dev/mapper/$MAPPER"
       MOUNT="/mnt/usb-sync"
-      LOCAL="$USER_HOME/.copilot/session-state"
-      REMOTE="$MOUNT$USER_HOME/.copilot/session-state"
+      LOCAL="$USER_HOME/.codex"
+      REMOTE="$MOUNT$USER_HOME/.codex"
       OPENED_MAPPER=0
       MOUNTED=0
 
@@ -112,27 +112,51 @@ in {
       fi
       run_root mount "$MAPPER_DEV" "$MOUNT"
       MOUNTED=1
-      run_root mkdir -p "$USER_HOME/.copilot" "$LOCAL" "$MOUNT$USER_HOME/.copilot" "$REMOTE"
-      run_root chown "$SYNC_USER:$SYNC_GROUP" "$USER_HOME/.copilot" "$LOCAL" "$MOUNT$USER_HOME/.copilot" "$REMOTE"
+      run_root mkdir -p "$LOCAL" "$REMOTE"
+      run_root chown "$SYNC_USER:$SYNC_GROUP" "$LOCAL" "$REMOTE"
 
       prune_alt_nix_stores "$LOCAL"
       prune_alt_nix_stores "$REMOTE"
 
       case "$MODE" in
         to-usb)
-          echo "Syncing desktop → USB..."
+          echo "Syncing desktop -> USB..."
           run_root ${pkgs.rsync}/bin/rsync -av --update --delete --chown="$SYNC_USER:$SYNC_GROUP" \
             --exclude='*/files/alt-nix-store/***' \
+            --exclude='auth.json' \
+            --exclude='config.toml' \
+            --exclude='AGENTS.md' \
+            --exclude='agents/***' \
+            --exclude='skills/***' \
+            --exclude='cache/***' \
+            --exclude='log/***' \
+            --exclude='.tmp/***' \
+            --exclude='logs*.sqlite*' \
+            --exclude='models_cache.json' \
+            --exclude='version.json' \
+            --exclude='installation_id' \
             "$LOCAL/" "$REMOTE/"
           ;;
         from-usb)
-          echo "Syncing USB → desktop..."
+          echo "Syncing USB -> desktop..."
           run_root ${pkgs.rsync}/bin/rsync -av --update --delete --chown="$SYNC_USER:$SYNC_GROUP" \
             --exclude='*/files/alt-nix-store/***' \
+            --exclude='auth.json' \
+            --exclude='config.toml' \
+            --exclude='AGENTS.md' \
+            --exclude='agents/***' \
+            --exclude='skills/***' \
+            --exclude='cache/***' \
+            --exclude='log/***' \
+            --exclude='.tmp/***' \
+            --exclude='logs*.sqlite*' \
+            --exclude='models_cache.json' \
+            --exclude='version.json' \
+            --exclude='installation_id' \
             "$REMOTE/" "$LOCAL/"
           ;;
         *)
-          echo "Usage: copilot-sessions-sync [to-usb|from-usb]"
+          echo "Usage: codex-state-sync [to-usb|from-usb]"
           exit 1
           ;;
       esac

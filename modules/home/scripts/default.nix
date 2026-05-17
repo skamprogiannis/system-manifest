@@ -1,6 +1,6 @@
 {...}: {
   imports = [
-    ./copilot.nix
+    ./codex.nix
     ./desktop.nix
   ];
 }

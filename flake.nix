@@ -94,7 +94,7 @@
       desktopHome = self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.path;
       usbHome = self.nixosConfigurations.usb.config.home-manager.users.stefan.home.path;
       shellcheckScripts = [
-        "${desktopHome}/bin/copilot-sessions-sync"
+        "${desktopHome}/bin/codex-state-sync"
         "${desktopHome}/bin/gsr-record"
         "${desktopHome}/bin/hypr-nav"
         "${desktopHome}/bin/hypr-quit-active"
@@ -204,8 +204,8 @@
             exit 1
           fi
 
-          if ! ${pkgs.gnugrep}/bin/grep -Fq "app_refresh_duration_in_ms = 0" ${./modules/home/spotify.nix}; then
-            echo "Expected spotify module to disable periodic app refresh polling." >&2
+          if ! ${pkgs.gnugrep}/bin/grep -Fq "app_refresh_duration_in_ms = 32" ${./modules/home/spotify.nix}; then
+            echo "Expected spotify module to keep fast periodic app refresh polling." >&2
             ${pkgs.gnused}/bin/sed -n '100,170p' ${./modules/home/spotify.nix} >&2
             exit 1
           fi

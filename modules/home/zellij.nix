@@ -33,7 +33,7 @@
           }
 
           normal {
-            // Esc is unbound so Vim, Copilot etc. receive it uninterrupted
+            // Esc is unbound so Vim, Codex etc. receive it uninterrupted
             unbind "Esc"
           }
 
@@ -96,7 +96,7 @@
             bind "Alt ," { PreviousSwapLayout; }
             bind "Alt ." { NextSwapLayout; }
           }
-          
+
           move {
             bind "Esc" { SwitchToMode "Normal"; }
             bind "h" { MovePane "Left"; }
@@ -220,7 +220,7 @@
         local query
         local cwd
         cwd=$(pwd)
-        
+
         if [[ -z "$input" ]]; then
           return 1
         fi
@@ -246,7 +246,7 @@
           echo "$cwd/$query"
           return 0
         fi
-        
+
         if [[ -d ~/repositories/"$query" ]]; then
           echo ~/repositories/"$query"
           return 0
@@ -257,12 +257,12 @@
           echo "$nested_match"
           return 0
         fi
-        
+
         if [[ -d ~/"$query" ]]; then
           echo ~/"$query"
           return 0
         fi
-        
+
         return 1
       }
 
@@ -341,13 +341,15 @@
                 plugin location="zellij:status-bar"
             }
         }
-        
+
         tab name="vim" focus=true {
             pane name="nvim" command="/etc/profiles/per-user/${config.home.username}/bin/nvim" focus=true
         }
 
-        tab name="copilot" {
-            pane name="copilot" command="/etc/profiles/per-user/${config.home.username}/bin/copilot"
+        tab name="codex" {
+            pane name="codex" command="/etc/profiles/per-user/${config.home.username}/bin/codex" {
+                args "--no-alt-screen"
+            }
         }
     }
   '';

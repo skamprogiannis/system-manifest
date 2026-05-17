@@ -26,7 +26,7 @@
   - Run all editing/build/git commands from the intended worktree path.
 - **System Git:** Ensure `git` stays in `hosts/common/default.nix` under `environment.systemPackages` (required for Flakes).
 - **Git Push:** Always `git push` (or force push if history was rewritten) immediately after creating a new commit.
-- **Copilot Instruction Source:** Repository-wide Copilot defaults are edited in `modules/home/gh-copilot/instructions.md`, which is synced to `~/.copilot/copilot-instructions.md` via Home Manager when you run `nixos-rebuild switch`.
+- **Codex Instruction Source:** Repository-wide Codex defaults are edited in `modules/home/codex/instructions.md`, which is synced to `~/.codex/AGENTS.md` via Home Manager when you run `nixos-rebuild switch`.
 - **Squash Fix Chains:** If you need multiple attempts to fix something, squash them into a single commit before pushing (`git rebase -i` or `git commit --amend`). Avoid pushing fix→fix→fix chains that clutter history.
 
 - **Git Hygiene:** Always commit before `nixos-rebuild switch` so `nixos-rebuild list-generations` records a clean configuration revision for rollback and history tracking.
@@ -63,15 +63,15 @@
 
 ## Greenfield Projects: Spec Kit Workflow
 
-Use **Spec Kit** (`specify` CLI) to scaffold spec-driven development for new projects. This unlocks `/speckit.*` slash commands in Copilot CLI.
+Use **Spec Kit** (`specify` CLI) to scaffold spec-driven development for new projects. The Codex integration installs skills in `.agents/skills` and invokes them as `$speckit-*`.
 
-- **Initialize a project:** `specify init <PROJECT_NAME> --ai copilot` (run in the project directory)
-- **Slash commands available after init:**
-  - `/speckit.constitution` — Define guiding principles
-  - `/speckit.specify` — Describe what to build
-  - `/speckit.plan` — Generate an implementation plan
-  - `/speckit.tasks` — Break down work into tasks
-  - `/speckit.implement` — Trigger implementation workflow
+- **Initialize a project:** `specify init <PROJECT_NAME> --integration codex` (run in the project directory)
+- **Skills available after init:**
+  - `$speckit-constitution` — Define guiding principles
+  - `$speckit-specify` — Describe what to build
+  - `$speckit-plan` — Generate an implementation plan
+  - `$speckit-tasks` — Break down work into tasks
+  - `$speckit-implement` — Trigger implementation workflow
 - The `specify` binary is installed declaratively via a `uvx` wrapper — no manual installation needed.
 
 
@@ -83,7 +83,7 @@ Use **Spec Kit** (`specify` CLI) to scaffold spec-driven development for new pro
 - **Hyprglass Transparency:** Hyprglass draws at `DECORATION_LAYER_BOTTOM` (behind window content). Glass only shows through transparent pixels. Native RGBA transparency (Ghostty's `background-opacity`, Vesktop's `transparent: true`) = proper liquid glass with opaque text. Compositor opacity (`opacity X override`) = uniform fade (text also becomes transparent). For compositor-opacity apps, use the `compositor_glass` preset (higher blur, lower refraction) to mask text fade. Default preset `high_contrast` (blur 1.2, contrast 1.14) is less milky than `default` (blur 2.0).
 - **Hyprglass API Drift Fixes:** After Hyprland input updates, hyprglass may fail due to renderer/pass API changes. Patch the plugin derivation in `modules/home/hyprland.nix` (remove `GlassPassElement.cpp` usage and map old projection calls to `getBoxProjection` / `projectBoxToTarget`) before rebuilding.
 - **Hyprglass Build Validation:** If `switch` fails in hyprglass, run both `nixos-rebuild dry-build --flake .#desktop` and `nixos-rebuild switch --flake .#desktop` after patching; dry-build alone may pass while activation build still reveals renderer ABI mismatches.
-- **NIXOS_OZONE_WL Placement:** Must be in `home.sessionVariables` (e.g., in `modules/home/gh-copilot/default.nix`), NOT in Hyprland's `env =` block. Hyprland env= only propagates to keybind-launched apps, not DMS/QuickShell spotlight launchers. Session variables propagate to all user processes (D-Bus, systemd) and require log-out/log-in to take effect.
+- **NIXOS_OZONE_WL Placement:** Must be in `home.sessionVariables` (e.g., in `modules/home/codex/default.nix`), NOT in Hyprland's `env =` block. Hyprland env= only propagates to keybind-launched apps, not DMS/QuickShell spotlight launchers. Session variables propagate to all user processes (D-Bus, systemd) and require log-out/log-in to take effect.
 - **Desktop Entry Exec Lines:** Cannot contain complex shell syntax, pipes, redirects, or unquoted special characters. Use `pkgs.writeShellScript` to create a wrapper script and reference it in `exec`. Example: Vesktop uses a wrapper to sync settings and regenerate the Translucence + QuickCSS theme bridge before launch.
 
 ## USB Update Workflow
@@ -94,18 +94,18 @@ Use **Spec Kit** (`specify` CLI) to scaffold spec-driven development for new pro
 - **Note:** Script preflight checks mountpoint safety and can auto-enter `nix-shell` when `mksquashfs` is missing. Always pass a worktree path containing `flake.nix` (for example `.../main`), not the repo container root.
 - **Boot Modes:** The USB keeps the default squashfs+tmpfs hybrid store path, and also exposes a manual `ram-store` specialisation that copies `nix-store.squashfs` into RAM before mounting `/nix/store`. If memory is too tight, that specialisation falls back to the default USB-backed lower layer.
 - **Runtime Validation:** `nix flake check` and `dry-build` do not prove USB-only runtime behavior. For cursor/rendering/DMS issues, update the stick and boot it on real target hardware before declaring the fix done.
-- **GH auth on foreign machines:** When booting the USB on a computer lab machine, gnome-keyring may not auto-unlock. Store a fine-grained PAT (with "Copilot Requests" permission) in `~/.config/github-pat` on the encrypted USB partition: `echo "ghp_..." > ~/.config/github-pat && chmod 600 ~/.config/github-pat`. The shell will auto-export it as `GH_TOKEN`. This file is protected by LUKS and never committed to git.
+- **GH auth on foreign machines:** When booting the USB on a computer lab machine, gnome-keyring may not auto-unlock. Store a fine-grained PAT with the repository permissions needed by `gh` in `~/.config/github-pat` on the encrypted USB partition: `echo "ghp_..." > ~/.config/github-pat && chmod 600 ~/.config/github-pat`. The shell will auto-export it as `GH_TOKEN`. This file is protected by LUKS and never committed to git.
 
-## Copilot Session Sync (Desktop ↔ USB)
+## Codex State Sync (Desktop <-> USB)
 
-Copilot sessions live in `~/.copilot/session-state/`. To share them between desktop and USB, plug in the USB and use `copilot-sessions-sync`:
+Codex resumable state lives under `~/.codex/`. To share it between desktop and USB, plug in the USB and use `codex-state-sync`:
 
-- `copilot-sessions-sync to-usb` — push desktop sessions to USB (run before leaving for a lab)
-- `copilot-sessions-sync from-usb` — pull USB sessions back to desktop (run when back home)
+- `codex-state-sync to-usb` — push desktop Codex state to USB (run before leaving for a lab)
+- `codex-state-sync from-usb` — pull USB Codex state back to desktop (run when back home)
 
-The script finds the USB automatically via the `NIXOS_USB_CRYPT` disk label, unlocks LUKS, mounts, rsyncs, and unmounts. Requires `sudo`.
+The script finds the USB automatically via the `NIXOS_USB_CRYPT` disk label, unlocks LUKS, mounts, rsyncs, and unmounts. It excludes auth, declarative config, skills, agents, caches, and logs. Requires `sudo`.
 
-At the lab: `copilot --resume` to pick up synced sessions.
+At the lab: `codex resume` to pick up synced sessions.
 
 **Zellij sessions** are process-based (in-RAM) and cannot be shared across machines — this is fundamental. Config is declarative and identical on both systems.
 
