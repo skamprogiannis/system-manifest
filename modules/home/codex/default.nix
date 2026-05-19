@@ -62,6 +62,40 @@
       chmod +x "$out/bin/codex"
     '';
   };
+  codexNotify = pkgs.writeShellScriptBin "codex-notify" ''
+    set -eu
+
+    payload="''${1:-}"
+    if [ -z "$payload" ]; then
+      exit 0
+    fi
+
+    if ! event_type="$(printf '%s' "$payload" | ${pkgs.jq}/bin/jq -r '.type // empty' 2>/dev/null)"; then
+      exit 0
+    fi
+
+    if [ "$event_type" != "agent-turn-complete" ]; then
+      exit 0
+    fi
+
+    last_message="$(printf '%s' "$payload" | ${pkgs.jq}/bin/jq -r '."last-assistant-message" // "Turn complete"' 2>/dev/null)"
+    input_message="$(printf '%s' "$payload" | ${pkgs.jq}/bin/jq -r '."input-messages" // [] | join(" ") | .[0:240]' 2>/dev/null)"
+    cwd="$(printf '%s' "$payload" | ${pkgs.jq}/bin/jq -r '.cwd // empty' 2>/dev/null)"
+
+    body="$last_message"
+    if [ -n "$input_message" ]; then
+      body="$input_message"
+    elif [ -n "$cwd" ]; then
+      body="$cwd"
+    fi
+
+    ${pkgs.libnotify}/bin/notify-send \
+      -a "Codex" \
+      -u normal \
+      -h string:desktop-entry:codex \
+      "Codex needs input" \
+      "$body"
+  '';
   pinchtabVersion = "0.8.6";
   skillDir = source: {
     inherit source;
@@ -143,6 +177,7 @@ in {
   home.packages = [
     pkgs.bubblewrap
     codexCli
+    codexNotify
     pkgs.codeql
     pinchtab
     pkgs.python3Packages."sarif-tools"
@@ -180,8 +215,12 @@ in {
     sandbox_mode = "workspace-write"
     cli_auth_credentials_store = "file"
     suppress_unstable_features_warning = true
+    notify = ["${codexNotify}/bin/codex-notify"]
 
     [tui]
+    notifications = ["agent-turn-complete", "approval-requested"]
+    notification_method = "bel"
+    notification_condition = "unfocused"
     vim_mode_default = true
 
     [projects."/home/stefan/system-manifest"]

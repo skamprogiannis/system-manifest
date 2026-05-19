@@ -23,6 +23,8 @@
       alpha-blending = "linear-corrected";
       # Boost contrast ratio threshold so text stays readable on bright wallpapers.
       minimum-contrast = 1.1;
+      # Codex uses BEL for "needs input"; attention maps it to Hyprland urgency.
+      bell-features = "no-system,no-audio,attention,title,no-border";
       cursor-style = "block";
       cursor-style-blink = false;
       shell-integration-features = "no-cursor";
@@ -43,7 +45,6 @@
         "ctrl+shift+k=unbind"
         "ctrl+shift+l=unbind"
         "ctrl+enter=unbind"
-
       ];
     };
   };
