@@ -19,7 +19,7 @@ Managed via **Nix Flakes** and **Home Manager**.
   - **Brave + Vimium C:** Declarative browser setup with preseeded extension settings and portable keymaps.
 - **Vesktop:** Discord client with declarative Translucence theming and a wallpaper-aware QuickCSS bridge.
 - **Dev Ready:** Pre-configured environment for Node.js, Python, Go, Playwright, and Neovim (via nixvim), plus Clang build essentials. Neovim is also registered as the default text editor via an `nvim-text` desktop entry.
-- **AI Integrated:** Built-in configuration for **Codex CLI** with per-repo `AGENTS.md` instructions, global defaults in `~/.codex/AGENTS.md`, custom agents in `~/.codex/agents`, and curated skills in `~/.agents/skills` for visualization, browser automation, static analysis, frontend design, architecture review, TDD bug triage, interface design, codebase zoom-out, and concise response modes.
+- **AI Integrated:** Built-in configuration for **Codex CLI** with per-repo `AGENTS.md` instructions, global defaults in `~/.codex/AGENTS.md`, custom agents in `~/.codex/agents`, and explicitly enabled curated skills in `~/.agents/skills` for visualization, browser automation, static analysis, frontend design, architecture review, diagnosis, TDD, issue triage, PRDs, prototyping, codebase zoom-out, and concise response modes.
 - **Modular Architecture:** Configuration split across `hosts/` (system-level) and `modules/home/` (user-level) for maintainability.
 - **Voiden:** Declarative AppImage wrapper for the Voiden offline-first API client.
 - **Binary Caches:** Configured for `hyprland.cachix.org`, `nix-community.cachix.org`, and `ghostty.cachix.org`.
@@ -41,26 +41,26 @@ Packages tracked independently of nixpkgs for tighter version control:
 | `impeccable` | `github:pbakaus/impeccable` | Frontend design skill bundle for typography, color, layout, and motion |
 | `ui-ux-pro-max` | `github:nextlevelbuilder/ui-ux-pro-max-skill` | UI/UX design skill pack with companion skills for design systems, styling, branding, banners, and slides |
 | `caveman` | `github:JuliusBrussee/caveman` | Skill suite for concise low-token responses plus terse commit/review helpers |
-| `mattpocock-skills` | `github:mattpocock/skills` | Planning and engineering skill collection used here for architecture improvement, TDD, issue triage, interface design, and codebase zoom-out |
+| `mattpocock-skills` | `github:mattpocock/skills` | Planning and engineering skill collection used here for diagnosis, docs-aware plan grilling, architecture improvement, TDD, issue triage, issue/PRD generation, prototyping, and codebase zoom-out |
 | `trailofbits-skills` | `github:trailofbits/skills` | Security and analysis skill marketplace used here as the upstream source for the compact `static-analysis` skill |
 | `dms` | `github:AvengeMedia/DankMaterialShell` | Fast-moving shell UI |
 
 ## Workflow & UI
 
-- **Glassmorphism Aesthetics:** Ghostty uses `background-opacity = 0.40` (native RGBA) so the terminal background is near-transparent while text stays fully opaque, giving a liquid-glass terminal. GTK4 popover styling also softens the Ghostty context menu with a lighter outer border and more translucency. The hyprglass Hyprland plugin is active for blur/tint/refraction effects on transparent surfaces.
+- **Glassmorphism Aesthetics:** Ghostty uses `background-opacity = 0.40` (native RGBA) and applies it to colored cells too, so the terminal background and Codex color blocks stay translucent while text remains fully opaque. GTK4 popover styling also softens the Ghostty context menu with a lighter outer border and more translucency. The hyprglass Hyprland plugin is active for blur/tint/refraction effects on transparent surfaces.
 - **Dynamic Theming:** Wallpaper-driven Matugen theming via [skwd-wall](https://github.com/liixini/skwd-wall) keeps Hyprland, Zathura, Vesktop, and DMS visually in sync. Vesktop consumes the generated palette through `Translucence.theme.css` plus `~/.config/vesktop/settings/quickCss.css`, while the current wallpaper cache is reused to keep DMS and the greeter aligned during switches. For Wallpaper Engine scenes with weak workshop previews, `skwd-we-capture-still --current-live` can save a faithful live still into the transition cache.
 - **Wallpaper Integration:** `modules/home/wallpaper/` is the shared wallpaper entrypoint. `skwd-wall` owns wallpaper selection plus `~/.cache/skwd-wall/*`; `modules/home/dms/session-state.nix` owns the baseline `~/.local/state/DankMaterialShell/session.json`; and the sync hook in `modules/home/skwd-wall.nix` mirrors the selected wallpaper into DMS runtime state and the greeter cache. Hyprland stays a downstream consumer of that state.
 - **skwd-wall State:** `skwd-wall` UI settings write to `~/.config/skwd-wall/config.json`, but each Home Manager activation resets that file back to the declarative defaults from Nix. Local API keys can live outside git in `~/.config/skwd-wall/secrets.env`.
 - **Malformed JSON Policy:** Activation-owned JSON (`~/.config/skwd-wall/config.json`, `~/.local/state/DankMaterialShell/session.json`) is healed/reset to declarative defaults during activation. Runtime sync code fails closed before overwriting malformed authoritative targets, but only warns and continues for optional/cache-like inputs.
 - **Zellij Navigation:** `Alt`-based keybindings for all multiplexer actions; `Escape` exits any mode back to Normal and is unbound in Normal mode so it passes through to terminal apps (Vim, Codex CLI, etc.).
-- **Keyboard Layout:** `us altgr-intl` + `gr simple`. `Super+Space` toggles layouts.
+- **Keyboard Layout:** `us altgr-intl` + `gr simple`. `Super+Space` toggles layouts, and IBus is started with the Hyprland session for Greek dead-key composition.
 - **Window Controls:** Super-based Hyprland keybindings cover moving, resizing, monitor focus, and monitor-to-monitor window moves.
 - **Hard Quit:** `Super+Shift+X` force-terminates the active app process for clients like Vesktop or ProtonVPN that minimize to tray on normal close.
 - **Launcher Shortcuts:** Common launch actions cover Yazi, wallpapers, screenshots, and the DMS notepad.
 - **DMS Shell:** Core shell layout, widget placement, and launcher behavior are managed declaratively in Nix.
 - **Screenshots:** `dms screenshot` handles region/window/full capture with image-to-clipboard. `screenshot-path-copy` wraps it to copy the file path instead (useful for sharing with AI agents).
 - **Screen Recording:** `gsr-record` wraps GPU Screen Recorder for region, active-window, and focused-monitor capture, saving clips to `~/videos/screencasts`.
-- **Codex CLI:** Codex is integrated into the Neovim + terminal workflow with repository-specific instructions, `/goal` enabled, Context7/Etsy/OpenAI Docs MCP servers, custom reviewer agents, and a Zellij tab launched with preserved scrollback.
+- **Codex CLI:** Codex is integrated into the Neovim + terminal workflow with repository-specific instructions, `/goal` enabled, explicit declarative skill enablement, Context7/Etsy/OpenAI Docs MCP servers, custom reviewer agents, BEL-based terminal urgency, and a Zellij tab launched with preserved scrollback.
 - **Browser Automation:** PinchTab is installed declaratively so the browser-automation skill has the CLI it documents.
 - **Static Analysis:** CodeQL, Semgrep, and SARIF tooling are installed declaratively to back the compact `static-analysis` skill.
 - **DNS:** Quad9 (`9.9.9.9`) for privacy-focused DNS resolution.

@@ -43,6 +43,15 @@ Always check the local repository for `AGENTS.md` first. Local repository instru
 | `impeccable` | Frontend design skill covering typography, color, layout, motion, and anti-patterns | Any frontend/UI work |
 | `ui-ux-pro-max` | UI/UX design skill pack for design systems, styling, branding, banners, and slides | Broader UI/UX direction, design systems, branding, or polished interface work |
 | `caveman` | Token-compressed response style plus terse commit/review helpers | Ask for concise, low-token output or compressed review/commit phrasing |
+| `diagnose` | Disciplined reproduce/minimize/hypothesize/instrument/fix loop | Hard bugs, broken behavior, or performance regressions |
+| `tdd` | Red-green-refactor feature and bug-fix workflow | Ask for TDD, test-first work, or integration-test-driven changes |
+| `triage` | Issue workflow and triage role state machine | Ask to create, review, or prepare issues |
+| `improve-codebase-architecture` | Find architectural refactoring opportunities | Ask to improve architecture, testability, or codebase navigation |
+| `zoom-out` | Explain a code area from a higher level | Ask for broader context or unfamiliar module maps |
+| `prototype` | Build throwaway prototypes for design validation | Ask to prototype UI, state, or data-model choices |
+| `to-issues` | Convert plans/specs into implementation issues | Ask to break plans into issues |
+| `to-prd` | Convert current context into a PRD | Ask to write a PRD |
+| `grill-with-docs` | Stress-test plans against docs and domain language | Ask to be grilled or validate against docs |
 
 ## Available Custom Agents
 

@@ -11,7 +11,7 @@
     settings = {
       theme = "Catppuccin Mocha";
       background-opacity = 0.40;
-      background-opacity-cells = false;
+      background-opacity-cells = true;
       background = "000000";
       selection-foreground = "cdd6f4";
       selection-background = "313244";

@@ -156,6 +156,29 @@ in {
       qt6.qtwayland
     ];
 
+    home.sessionVariables = {
+      GTK_IM_MODULE = "ibus";
+      QT_IM_MODULE = "ibus";
+      XMODIFIERS = "@im=ibus";
+    };
+
+    systemd.user.services.ibus-daemon = {
+      Unit = {
+        Description = "IBus input method daemon";
+        After = ["hyprland-session.target"];
+        PartOf = ["hyprland-session.target"];
+      };
+      Service = {
+        Type = "simple";
+        ExecStart = "${pkgs.ibus}/bin/ibus-daemon --xim --replace --verbose";
+        Restart = "on-failure";
+        RestartSec = "2";
+      };
+      Install = {
+        WantedBy = ["hyprland-session.target"];
+      };
+    };
+
     wayland.windowManager.hyprland = {
       enable = true;
       package = hyprland-pkg;
@@ -215,6 +238,8 @@ in {
         debug = {
           # Suppress the wall of debug text visible on the TTY during startup
           disable_logs = true;
+          enable_stdout_logs = false;
+          disable_time = true;
         };
 
         input = {

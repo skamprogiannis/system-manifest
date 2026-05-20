@@ -104,8 +104,15 @@
     "mem_sleep_default=deep"
     "nohibernate"
     "quiet"
+    "systemd.show_status=false"
+    "rd.systemd.show_status=false"
     "udev.log_level=3"
   ];
+
+  i18n.inputMethod = {
+    enable = true;
+    type = "ibus";
+  };
 
   # Disable USB wakeup for mice to prevent accidental wakeups from hibernation
   services.udev.extraRules = ''
