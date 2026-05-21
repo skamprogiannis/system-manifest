@@ -92,6 +92,15 @@
     ],
   '';
 
+  launcherSourceClassifier = ''
+    root / "Modals/DankLauncherV2/ControllerUtils.js": [
+        (
+            '    if (exec.indexOf("/nix/store/") !== -1\n        || exec.indexOf("/run/current-system/sw/") !== -1\n        || exec.indexOf("/etc/profiles/per-user/") !== -1)\n        return "nix";\n\n    return "system";',
+            '    if (exec.indexOf("steam://rungameid/") !== -1)\n        return "system";\n\n    if (exec.indexOf("/nix/store/") !== -1\n        || exec.indexOf("/run/current-system/sw/") !== -1\n        || exec.indexOf("/etc/profiles/per-user/") !== -1)\n        return "nix";\n\n    if (cmd0.length > 0 && cmd0.indexOf("/") === -1)\n        return "nix";\n\n    return "system";',
+        ),
+    ],
+  '';
+
   commonLists = ''
     root / "Common/settings/Lists.qml": [
         (
@@ -235,6 +244,7 @@ in {
     ${overviewCard}
     ${calendarOverviewCard}
     ${appSearchService}
+    ${launcherSourceClassifier}
     ${commonLists}
     ${clockWidget}
     # Expose a clearHistory IPC command so keybinds can wipe the History tab.
@@ -272,6 +282,7 @@ in {
     ${overviewCard}
     ${calendarOverviewCard}
     ${appSearchService}
+    ${launcherSourceClassifier}
     root / "Widgets/CachingImage.qml": [
         (
             "        cacheProbe.running = false;\n        cacheProbe.cachePath = cPath;\n        cacheProbe.fallbackSource = encoded;\n        cacheProbe.running = true;",
