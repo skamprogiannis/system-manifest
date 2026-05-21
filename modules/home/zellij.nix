@@ -10,6 +10,7 @@
       default_shell = "${pkgs.bashInteractive}/bin/bash";
       escape_timeout = 0;
       pane_frames = false;
+      simplified_ui = true;
       theme = "catppuccin-mocha";
     };
     extraConfig = ''
@@ -347,9 +348,7 @@
         }
 
         tab name="codex" {
-            pane name="codex" command="/etc/profiles/per-user/${config.home.username}/bin/codex" {
-                args "--no-alt-screen"
-            }
+            pane name="codex" command="/etc/profiles/per-user/${config.home.username}/bin/codex"
         }
     }
   '';
