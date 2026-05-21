@@ -4,8 +4,9 @@
   ...
 }: let
   dmsBasePackage = inputs.dms.packages.${pkgs.stdenv.hostPlatform.system}.dms-shell;
+  skwdWallPackage = inputs.skwd-wall.packages.${pkgs.stdenv.hostPlatform.system}.default;
   patchDmsPackage = import ./patch-package.nix {inherit pkgs;};
-  dmsPatches = import ./common-patches.nix;
+  dmsPatches = import ./common-patches.nix {inherit skwdWallPackage;};
   dmsPatchedPackage = patchDmsPackage {
     package = dmsBasePackage;
     pythonPrelude = dmsPatches.pythonPrelude;
