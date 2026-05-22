@@ -58,7 +58,7 @@
     gopls
     jq
     libsecret
-    nodejs_22
+    nodejs_24
     typescript-language-server
     prettier
     eslint
