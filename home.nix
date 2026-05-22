@@ -72,6 +72,7 @@
     ripgrep
     ruff
     rust-analyzer
+    sqlite
     statix
     transmission_4
     tremc
