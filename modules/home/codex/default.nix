@@ -35,10 +35,6 @@
       rm -f "$out/bin/codex"
       cat > "$out/bin/codex" <<'EOF'
       #!${pkgs.bash}/bin/bash
-      if [[ -z "$GH_TOKEN" && -f "$HOME/.config/github-pat" ]]; then
-        export GH_TOKEN="$(<"$HOME/.config/github-pat")"
-      fi
-
       # Start Codex from a clean shell instead of inheriting repo dev-shell state.
       if [[ -n "''${DIRENV_DIFF:-}" || -n "''${DIRENV_DIR:-}" ]]; then
         original_pwd="$PWD"
@@ -235,9 +231,6 @@ in {
   programs.bash.initExtra = ''
     export EDITOR=nvim
     export VISUAL=nvim
-    if [ -z "$GH_TOKEN" ] && [ -f "$HOME/.config/github-pat" ]; then
-      export GH_TOKEN="$(cat "$HOME/.config/github-pat")"
-    fi
   '';
 
   programs.gh = {

@@ -94,7 +94,7 @@ Use **Spec Kit** (`specify` CLI) to scaffold spec-driven development for new pro
 - **Note:** Script preflight checks mountpoint safety and can auto-enter `nix-shell` when `mksquashfs` is missing. Always pass a worktree path containing `flake.nix` (for example `.../main`), not the repo container root.
 - **Boot Modes:** The USB keeps the default squashfs+tmpfs hybrid store path, and also exposes a manual `ram-store` specialisation that copies `nix-store.squashfs` into RAM before mounting `/nix/store`. If memory is too tight, that specialisation falls back to the default USB-backed lower layer.
 - **Runtime Validation:** `nix flake check` and `dry-build` do not prove USB-only runtime behavior. For cursor/rendering/DMS issues, update the stick and boot it on real target hardware before declaring the fix done.
-- **GH auth on foreign machines:** When booting the USB on a computer lab machine, gnome-keyring may not auto-unlock. Store a fine-grained PAT with the repository permissions needed by `gh` in `~/.config/github-pat` on the encrypted USB partition: `echo "ghp_..." > ~/.config/github-pat && chmod 600 ~/.config/github-pat`. The shell will auto-export it as `GH_TOKEN`. This file is protected by LUKS and never committed to git.
+- **GH auth on foreign machines:** Prefer `gh auth login --web --git-protocol https`. If gnome-keyring is unavailable, log in again for that environment rather than exporting a long-lived PAT through `GH_TOKEN`.
 
 ## Codex State Sync (Desktop <-> USB)
 
