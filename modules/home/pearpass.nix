@@ -95,14 +95,25 @@
       runScript = "${pearpassExtracted}/AppRun";
     });
 
-  # Helper to write manifests to all browser directories
+  # Helper to write manifests to all browser directories.
   writeManifests = pkgs.writeShellScript "pearpass-write-manifests" ''
+    set -euo pipefail
+
     for dir in \
       "$HOME/.config/BraveSoftware/Brave-Browser/NativeMessagingHosts" \
       "$HOME/.config/chromium/NativeMessagingHosts" \
       "$HOME/.config/google-chrome/NativeMessagingHosts"; do
-      mkdir -p "$dir"
-      cp -f ${pearpassManifest} "$dir/${pearpassNativeHostName}.json"
+      ${pkgs.coreutils}/bin/mkdir -p "$dir"
+
+      target="$dir/${pearpassNativeHostName}.json"
+      if [ -f "$target" ] && ${pkgs.diffutils}/bin/cmp -s ${pearpassManifest} "$target"; then
+        continue
+      fi
+
+      tmp=$(${pkgs.coreutils}/bin/mktemp "$dir/.${pearpassNativeHostName}.json.XXXXXX")
+      ${pkgs.coreutils}/bin/cp -f ${pearpassManifest} "$tmp"
+      ${pkgs.coreutils}/bin/chmod 0644 "$tmp"
+      ${pkgs.coreutils}/bin/mv -f "$tmp" "$target"
     done
   '';
 
@@ -171,10 +182,36 @@ in {
   };
 
   # Write native messaging manifests as regular files (not symlinks).
-  # PearPass GUI overwrites symlinks with its own manifests at startup,
-  # which use #!/bin/bash (missing on NixOS). Regular files + the launcher
-  # wrapper ensure our FHS-compatible host is always in place.
+  # PearPass GUI overwrites manifests with upstream hosts that use /bin/bash or
+  # an unwrapped Electron binary. Keep restoring the Pear runtime wrapper.
   home.activation.pearpassNativeManifests = lib.hm.dag.entryAfter ["writeBoundary"] ''
     run ${writeManifests}
   '';
+
+  systemd.user.services.pearpass-native-manifests = {
+    Unit = {
+      Description = "Restore PearPass browser native messaging manifests";
+    };
+    Service = {
+      Type = "oneshot";
+      ExecStart = "${writeManifests}";
+    };
+  };
+
+  systemd.user.paths.pearpass-native-manifests = {
+    Unit = {
+      Description = "Watch PearPass browser native messaging manifests";
+    };
+    Path = {
+      PathChanged = [
+        "%h/.config/BraveSoftware/Brave-Browser/NativeMessagingHosts"
+        "%h/.config/chromium/NativeMessagingHosts"
+        "%h/.config/google-chrome/NativeMessagingHosts"
+      ];
+      Unit = "pearpass-native-manifests.service";
+    };
+    Install = {
+      WantedBy = ["default.target"];
+    };
+  };
 }
