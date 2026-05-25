@@ -405,6 +405,7 @@ in {
           # --- Special Workspaces ---
           "$mod, grave, togglespecialworkspace, music"
           "$mod SHIFT, grave, movetoworkspace, special:music"
+          "$mod CTRL, grave, movetoworkspacesilent, special:music"
 
           # --- Screenshots (image to clipboard) ---
           ", Print, exec, dms screenshot region --dir ~/pictures/screenshots"

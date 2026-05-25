@@ -93,6 +93,10 @@
     checks.${system} = let
       desktopHome = self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.path;
       usbHome = self.nixosConfigurations.usb.config.home-manager.users.stefan.home.path;
+      desktopHyprlandBindsFile = builtins.toFile "desktop-hyprland-binds" (
+        builtins.concatStringsSep "\n"
+        self.nixosConfigurations.desktop.config.home-manager.users.stefan.wayland.windowManager.hyprland.settings.bind
+      );
       shellcheckScripts = [
         "${desktopHome}/bin/codex-state-sync"
         "${desktopHome}/bin/gsr-record"
@@ -109,6 +113,30 @@
     in {
       desktop = self.nixosConfigurations.desktop.config.system.build.toplevel;
       usb = self.nixosConfigurations.usb.config.system.build.toplevel;
+      hyprland-keybinds =
+        pkgs.runCommand "hyprland-keybind-checks" {
+          nativeBuildInputs = [
+            pkgs.gnugrep
+            pkgs.gnused
+          ];
+        } ''
+          set -euo pipefail
+
+          assert_bind() {
+            local bind="$1"
+            if ! grep -Fxq "$bind" ${desktopHyprlandBindsFile}; then
+              echo "Expected desktop Hyprland bind: $bind" >&2
+              sed 's/^/  /' ${desktopHyprlandBindsFile} >&2
+              exit 1
+            fi
+          }
+
+          assert_bind '$mod, grave, togglespecialworkspace, music'
+          assert_bind '$mod SHIFT, grave, movetoworkspace, special:music'
+          assert_bind '$mod CTRL, grave, movetoworkspacesilent, special:music'
+
+          touch "$out"
+        '';
       script-smoke =
         pkgs.runCommand "script-smoke-checks" {
           nativeBuildInputs = [
