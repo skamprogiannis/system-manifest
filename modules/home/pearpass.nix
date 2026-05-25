@@ -49,6 +49,8 @@
     version = pearpassReleaseVersion;
     src = pearpassSource;
   };
+  pearpassAppBinary = "${pearpassExtracted}/pearpass-app-desktop.bin";
+  pearpassNativeBridge = "${pearpassExtracted}/resources/app/dist/native-messaging-bridge.bundle.cjs";
 
   # Process the icon to remove the background and resize
   pearpassIcon =
@@ -73,26 +75,35 @@
     doCheck = false;
   });
 
+  pearpassFHSTargetPkgs = pkgs:
+    with pkgs;
+      (pkgs.appimageTools.defaultFhsEnvArgs.targetPkgs pkgs)
+      ++ [
+        gtk4
+        graphene
+        webkitgtk_6_0
+        libsoup_3
+        libadwaita
+        gnome-themes-extra
+        pearpassOpenSSL11
+        harfbuzz
+        icu
+        libsecret
+        libnotify
+      ];
+
   pearpassGUIEnv = pkgs.buildFHSEnv (pkgs.appimageTools.defaultFhsEnvArgs
     // {
       name = "pearpass-gui-env";
-      targetPkgs = pkgs:
-        with pkgs;
-          (pkgs.appimageTools.defaultFhsEnvArgs.targetPkgs pkgs)
-          ++ [
-            gtk4
-            graphene
-            webkitgtk_6_0
-            libsoup_3
-            libadwaita
-            gnome-themes-extra
-            pearpassOpenSSL11
-            harfbuzz
-            icu
-            libsecret
-            libnotify
-          ];
+      targetPkgs = pearpassFHSTargetPkgs;
       runScript = "${pearpassExtracted}/AppRun";
+    });
+
+  pearpassNativeEnv = pkgs.buildFHSEnv (pkgs.appimageTools.defaultFhsEnvArgs
+    // {
+      name = "pearpass-native-env";
+      targetPkgs = pearpassFHSTargetPkgs;
+      runScript = pearpassAppBinary;
     });
 
   # Helper to write manifests to all browser directories.
@@ -131,30 +142,15 @@
     ${writeManifests}
   '';
 
-  # Wrapper for Native Messaging.
-  # Uses pear-runtime directly (it links against Nix glibc fine — no FHS needed).
-  # Must cd into PearPass's native-messaging dir so pear-runtime finds its config.
+  # Wrapper for native messaging. Upstream launches this bridge with the
+  # Electron binary in Node mode, so it needs the same FHS libraries as the GUI.
   pearpassNativeWrapper = pkgs.writeShellScript "pearpass-native" ''
     mkdir -p ${lib.escapeShellArg pearpassStateDir}
     exec 2>${lib.escapeShellArg pearpassNativeErrorLog}
 
-    NATIVE_DIR="$HOME/.config/pear/app-storage/by-dkey"
-    # Find the PearPass native-messaging directory (dkey varies per install)
-    for d in "$NATIVE_DIR"/*/native-messaging; do
-      if [ -d "$d" ]; then
-        cd "$d"
-        break
-      fi
-    done
-
-    PEAR_RUNTIME="$HOME/.config/pear/current/by-arch/linux-x64/bin/pear-runtime"
-    if [ ! -x "$PEAR_RUNTIME" ]; then
-      echo "pear-runtime not found" >&2
-      exit 1
-    fi
-
-    exec "$PEAR_RUNTIME" run \
-      --trusted pear://i49831s3quatekogbc411cdfmg6xmjt1dycxxr3kt1b1qms5x8ro \
+    export ELECTRON_RUN_AS_NODE=1
+    exec ${pearpassNativeEnv}/bin/pearpass-native-env \
+      ${lib.escapeShellArg pearpassNativeBridge} \
       "$@"
   '';
 
@@ -183,7 +179,7 @@ in {
 
   # Write native messaging manifests as regular files (not symlinks).
   # PearPass GUI overwrites manifests with upstream hosts that use /bin/bash or
-  # an unwrapped Electron binary. Keep restoring the Pear runtime wrapper.
+  # an unwrapped Electron binary. Keep restoring the Nix-wrapped bridge.
   home.activation.pearpassNativeManifests = lib.hm.dag.entryAfter ["writeBoundary"] ''
     run ${writeManifests}
   '';
