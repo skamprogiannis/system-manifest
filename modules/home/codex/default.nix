@@ -276,6 +276,9 @@ in {
         [mcp_servers.etsy]
         url = "https://mcp.api.etsycloud.com/mcp"
 
+        [mcp_servers.linear]
+        url = "https://mcp.linear.app/mcp"
+
         [mcp_servers.openaiDeveloperDocs]
         url = "https://developers.openai.com/mcp"
       '';
