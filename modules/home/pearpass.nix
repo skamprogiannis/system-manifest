@@ -26,22 +26,14 @@
   # Upstream's source repo version can move ahead of the published Linux
   # AppImage release. Keep following the repo for manifests/runtime data, but
   # fetch the latest Linux asset that is actually published.
-  pearpassReleaseVersion = "1.6.0";
+  pearpassReleaseVersion = "2.1.0";
 
-  pearpassZipSource = pkgs.fetchurl {
-    url = "https://github.com/tetherto/pearpass-app-desktop/releases/download/v${pearpassReleaseVersion}/PearPass-Desktop-Linux-x64-v${pearpassReleaseVersion}.AppImage.zip";
-    hash = "sha256-9yIgwpIe+XPpz5kCyXD0QI9kpH4Ew1y3h2j0PnvSu7g=";
+  pearpassAppImageSource = pkgs.fetchurl {
+    url = "https://github.com/tetherto/pearpass-app-desktop/releases/download/v${pearpassReleaseVersion}/PearPass-Desktop-Linux-x64-v${pearpassReleaseVersion}.AppImage";
+    hash = "sha256-3iqUrulYMRLSSgNkLZqLamVIcI51iriWZVw7Y4VLxe8=";
   };
 
-  pearpassSource =
-    pkgs.runCommand "PearPass-Desktop-Linux-x64-v${pearpassReleaseVersion}.AppImage" {
-      nativeBuildInputs = [pkgs.unzip];
-    } ''
-      tmpdir=$(mktemp -d)
-      unzip -j ${pearpassZipSource} "PearPass-Desktop-Linux-x64-v${pearpassReleaseVersion}.AppImage" -d "$tmpdir"
-      mv "$tmpdir/PearPass-Desktop-Linux-x64-v${pearpassReleaseVersion}.AppImage" "$out"
-      chmod +x "$out"
-    '';
+  pearpassSource = pearpassAppImageSource;
 
   # Extract the AppImage to get the icon and resources
   pearpassExtracted = pkgs.appimageTools.extract {
