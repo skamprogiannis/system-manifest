@@ -6,7 +6,7 @@
   ...
 }: let
   dmsBasePackage = inputs.dms.packages.${pkgs.stdenv.hostPlatform.system}.dms-shell;
-  skwdWallPackage = inputs.skwd-wall.packages.${pkgs.stdenv.hostPlatform.system}.default;
+  skwdWallPackage = import ../skwd-wall-package.nix {inherit pkgs inputs;};
   patchDmsPackage = import ./patch-package.nix {inherit pkgs;};
   dmsPatches = import ./common-patches.nix {inherit skwdWallPackage;};
   emptyScreenPreferences = lib.genAttrs [

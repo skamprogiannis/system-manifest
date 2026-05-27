@@ -10,7 +10,7 @@
   wallpaperTransitionContract = wallpaperContracts.wallpaperTransitions;
   dmsWallpaperSessionSync = wallpaperContracts.dmsWallpaperSessionSync;
   skwdColorContract = wallpaperContracts.skwdColorContract;
-  skwdWallBase = inputs.skwd-wall.packages.${pkgs.stdenv.hostPlatform.system}.default;
+  skwdWallBase = import ./skwd-wall-package.nix {inherit pkgs inputs;};
   homeDir = config.home.homeDirectory;
   steamLibraryDir = "${homeDir}/games/SteamLibrary";
   steamWorkshopDir = "${steamLibraryDir}/steamapps/workshop/content/431960";
