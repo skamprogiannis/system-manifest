@@ -13,6 +13,7 @@ id_ed25519
 .vscode/
 .idea/
 *.swp
+nvim.log
 
 # Errors
 errors.log
