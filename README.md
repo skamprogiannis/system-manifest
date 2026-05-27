@@ -111,7 +111,7 @@ The laptop host is intended for a UEFI dual-boot install with Secure Boot disabl
 nix flake check
 ```
 
-In this repo, `nix flake check` runs the checks defined in `flake.nix`: `desktop`, `usb`, `laptop`, `script-smoke`, and `shellcheck`. GitHub Actions keeps those host and script checks in separate jobs so CI failures stay isolated, while deployment remains manual via `nixos-rebuild switch --flake .#desktop`, `nixos-rebuild switch --flake .#laptop`, or `update-usb`.
+In this repo, `nix flake check` runs the checks defined in `flake.nix`: `desktop`, `usb`, `laptop`, `hyprland-keybinds`, `neovim-langmap`, `script-smoke`, and `shellcheck`. GitHub Actions keeps host and support checks isolated, serializes full Nix builds to avoid upstream fetch throttling, and uses the configured Nix caches plus GitHub's Nix store cache. Deployment remains manual via `nixos-rebuild switch --flake .#desktop`, `nixos-rebuild switch --flake .#laptop`, or `update-usb`.
 
 For later shared-contract refactors, treat `nix flake check` plus `nixos-rebuild dry-build --flake .#desktop` as the minimum validation floor. Runtime wallpaper/DMS ownership changes still need a manual wallpaper-switch smoke test, and USB-only session changes still require `update-usb` plus a real boot on target hardware.
 

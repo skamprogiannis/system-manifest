@@ -12,10 +12,12 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+      max-parallel: 1
       matrix:
         host:
           - desktop
           - usb
+          - laptop
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -24,18 +26,49 @@ jobs:
         uses: cachix/install-nix-action@v27
         with:
           extra_nix_config: |
+            accept-flake-config = true
             experimental-features = nix-command flakes
+            max-jobs = 2
+            cores = 2
+            http-connections = 10
+            substituters = https://cache.nixos.org https://hyprland.cachix.org https://nix-community.cachix.org https://ghostty.cachix.org
+            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= hyprland.cachix.org-1:a7pgxzMz7+chwVL3/pzj6jIBMioiJM7ypFP8PwtkuGc= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= ghostty.cachix.org-1:QB389yTa6gTyneehvqG58y0WnHjQOqgnA+wBnpWWxns=
+
+      - name: Restore Nix cache
+        uses: nix-community/cache-nix-action@v7
+        with:
+          primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.lock') }}-${{ matrix.host }}
+          restore-prefixes-first-match: |
+            nix-${{ runner.os }}-${{ hashFiles('flake.lock') }}-
+            nix-${{ runner.os }}-
+          gc-max-store-size-linux: 5G
 
       - name: Build host check
-        run: nix build --print-build-logs .#checks.x86_64-linux.${{ matrix.host }}
+        run: |
+          for attempt in 1 2 3; do
+            if nix build --print-build-logs .#checks.x86_64-linux.${{ matrix.host }}; then
+              exit 0
+            fi
 
-  script-check:
+            if [ "$attempt" -eq 3 ]; then
+              exit 1
+            fi
+
+            sleep "$((attempt * 30))"
+          done
+
+  support-check:
     name: Validate ${{ matrix.check }}
     runs-on: ubuntu-latest
+    needs: host-check
+    if: ${{ always() }}
     strategy:
       fail-fast: false
+      max-parallel: 1
       matrix:
         check:
+          - hyprland-keybinds
+          - neovim-langmap
           - script-smoke
           - shellcheck
     steps:
@@ -46,7 +79,33 @@ jobs:
         uses: cachix/install-nix-action@v27
         with:
           extra_nix_config: |
+            accept-flake-config = true
             experimental-features = nix-command flakes
+            max-jobs = 2
+            cores = 2
+            http-connections = 10
+            substituters = https://cache.nixos.org https://hyprland.cachix.org https://nix-community.cachix.org https://ghostty.cachix.org
+            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= hyprland.cachix.org-1:a7pgxzMz7+chwVL3/pzj6jIBMioiJM7ypFP8PwtkuGc= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= ghostty.cachix.org-1:QB389yTa6gTyneehvqG58y0WnHjQOqgnA+wBnpWWxns=
 
-      - name: Build script check
-        run: nix build --print-build-logs .#checks.x86_64-linux.${{ matrix.check }}
+      - name: Restore Nix cache
+        uses: nix-community/cache-nix-action@v7
+        with:
+          primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.lock') }}-${{ matrix.check }}
+          restore-prefixes-first-match: |
+            nix-${{ runner.os }}-${{ hashFiles('flake.lock') }}-
+            nix-${{ runner.os }}-
+          gc-max-store-size-linux: 5G
+
+      - name: Build support check
+        run: |
+          for attempt in 1 2 3; do
+            if nix build --print-build-logs .#checks.x86_64-linux.${{ matrix.check }}; then
+              exit 0
+            fi
+
+            if [ "$attempt" -eq 3 ]; then
+              exit 1
+            fi
+
+            sleep "$((attempt * 30))"
+          done
