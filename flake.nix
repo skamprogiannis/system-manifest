@@ -15,11 +15,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    spotify-player = {
-      url = "github:aome510/spotify-player";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
     awww.url = "git+https://codeberg.org/LGFae/awww?ref=refs/heads/main&allRefs=1";
 
     skwd-wall = {

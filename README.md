@@ -35,7 +35,6 @@ Packages tracked independently of nixpkgs for tighter version control:
 | `ghostty` | `github:ghostty-org/ghostty` | Stays on latest release; uses `ghostty.cachix.org` for fast installs |
 | `home-manager` | `github:nix-community/home-manager` | Tracks nixpkgs-unstable |
 | `nixvim` | `github:nix-community/nixvim` | Full Neovim config in Nix |
-| `spotify-player` | `github:aome510/spotify-player` | Picks up latest client fixes before nixpkgs |
 | `skwd-wall` | `github:liixini/skwd-wall` | Quickshell wallpaper selector with built-in matugen, Wallhaven, Steam Workshop, and color sorting |
 | `pearpass-app-desktop` | `github:tetherto/pearpass-app-desktop` | PearPass AppImage source for NixOS wrapper |
 | `visual-explainer` | `github:nicobailon/visual-explainer` | HTML visualization generator for architecture diagrams and code explanations |

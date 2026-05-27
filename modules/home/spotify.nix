@@ -1,7 +1,6 @@
 {
   config,
   pkgs,
-  inputs,
   lib,
   hostType ? "desktop",
   ...
@@ -188,7 +187,15 @@ pub struct AuthConfig {
     if not _vendor:
         print("WARNING: cargoDepsCopy not set, skipping rspotify-model patches")
     else:
-        _rsp_src = _os.path.join(_vendor, "rspotify-model-0.15.3", "src")
+        _rsp_candidates = []
+        for _root, _dirs, _files in _os.walk(_vendor):
+            if _os.path.basename(_root) == "rspotify-model-0.15.3":
+                _candidate = _os.path.join(_root, "src")
+                if _os.path.isdir(_candidate):
+                    _rsp_candidates.append(_candidate)
+        if len(_rsp_candidates) != 1:
+            raise SystemExit(f"expected one rspotify-model source tree, found {len(_rsp_candidates)}")
+        _rsp_src = _rsp_candidates[0]
         def _serde_default(text, field):
             return text.replace("    " + field, "    #[serde(default)]\n    " + field)
         _rsp_patches = [
@@ -209,7 +216,7 @@ pub struct AuthConfig {
             open(_fpath, "w").write(_text)
             print(f"Patched rspotify-model: {_fn}")
   ''));
-  spotifyPlayerUpstreamPkg = inputs.spotify-player.defaultPackage.${pkgs.stdenv.hostPlatform.system};
+  spotifyPlayerUpstreamPkg = pkgs.spotify-player;
   spotifyPlayerRawPkg = spotifyPlayerUpstreamPkg.overrideAttrs (old: {
     postPatch =
       (old.postPatch or "")
