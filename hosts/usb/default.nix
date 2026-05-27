@@ -31,6 +31,7 @@
 
   specialisation = {
     ram-store.configuration = {
+      boot.loader.grub.configurationName = "ram-store";
       system.nixos.tags = ["ram-store"];
       systemManifest.usb.store.mode = "ram-backed";
     };

@@ -88,6 +88,7 @@
     checks.${system} = let
       desktopHome = self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.path;
       usbHome = self.nixosConfigurations.usb.config.home-manager.users.stefan.home.path;
+      usbInitrd = self.nixosConfigurations.usb.config.system.build.initialRamdisk;
       neovimLangmapFile = builtins.toFile "neovim-langmap" self.nixosConfigurations.desktop.config.home-manager.users.stefan.programs.nixvim.opts.langmap;
       desktopHyprlandBindsFile = builtins.toFile "desktop-hyprland-binds" (
         builtins.concatStringsSep "\n"
@@ -110,6 +111,39 @@
       desktop = self.nixosConfigurations.desktop.config.system.build.toplevel;
       usb = self.nixosConfigurations.usb.config.system.build.toplevel;
       laptop = self.nixosConfigurations.laptop.config.system.build.toplevel;
+      usb-initrd-ordering =
+        pkgs.runCommand "usb-initrd-ordering-check" {
+          nativeBuildInputs = [
+            pkgs.cpio
+            pkgs.gnugrep
+            pkgs.zstd
+          ];
+        } ''
+          set -euo pipefail
+
+          zstdcat ${usbInitrd}/initrd | cpio -t > initrd-files 2>/dev/null
+
+          if ! grep -Eq '/initrd-find-nixos-closure[.]service[.]requires/initrd-usb-overlay-store[.]service$' initrd-files; then
+            echo "Expected initrd-find-nixos-closure.service to require initrd-usb-overlay-store.service." >&2
+            grep -E 'initrd-(find-nixos-closure|usb-overlay-store)' initrd-files >&2 || true
+            exit 1
+          fi
+
+          zstdcat ${usbInitrd}/initrd | cpio -i --to-stdout '*unit-initrd-usb-overlay-store.service/initrd-usb-overlay-store.service' > overlay-unit 2>/dev/null
+
+          if [ ! -s overlay-unit ]; then
+            echo "Expected generated initrd-usb-overlay-store.service unit in initrd." >&2
+            exit 1
+          fi
+
+          if ! grep -Fq "Before=initrd-find-nixos-closure.service initrd-fs.target" overlay-unit; then
+            echo "Expected USB overlay service to run before initrd-find-nixos-closure.service." >&2
+            sed 's/^/  /' overlay-unit >&2
+            exit 1
+          fi
+
+          touch "$out"
+        '';
       hyprland-keybinds =
         pkgs.runCommand "hyprland-keybind-checks" {
           nativeBuildInputs = [

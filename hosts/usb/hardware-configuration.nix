@@ -110,8 +110,14 @@ in {
       description = "Prepare USB squashfs-backed /nix/store overlay";
       requires = ["sysroot.mount"];
       after = ["sysroot.mount"];
-      requiredBy = ["initrd-fs.target"];
-      before = ["initrd-fs.target"];
+      requiredBy = [
+        "initrd-find-nixos-closure.service"
+        "initrd-fs.target"
+      ];
+      before = [
+        "initrd-find-nixos-closure.service"
+        "initrd-fs.target"
+      ];
       unitConfig.DefaultDependencies = false;
       serviceConfig.Type = "oneshot";
       path = with pkgs; [
@@ -142,6 +148,11 @@ in {
         }
 
         # --- Phase 1: Choose lower source ---
+
+        if [ ! -f "$lower_store_image" ]; then
+          echo "initrd-usb-overlay-store: FATAL: squashfs image not found at $lower_store_image" >&2
+          exit 1
+        fi
 
         mkdir -p /sysroot/nix/.ro-store
 
@@ -260,7 +271,7 @@ in {
           else
             mount_read_only_store || exit 1
           fi
-        elif mount -t tmpfs -o mode=0755,size=''${upper_size_mib}M tmpfs /sysroot/nix/.rw-store; then
+        elif mkdir -p /sysroot/nix/.rw-store && mount -t tmpfs -o mode=0755,size=''${upper_size_mib}M tmpfs /sysroot/nix/.rw-store; then
           if prepare_upper_dirs; then
             if mount_overlay_store; then
               write_store_mode_marker "writable-overlay"
