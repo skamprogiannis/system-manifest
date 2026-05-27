@@ -14,7 +14,8 @@
     opts = {
       autoread = true;
       hlsearch = true;
-      langmap = "\\;q,:Q,ςw,ΣW,εe,ΕE,ρr,ΡR,τt,ΤT,υy,ΥY,θu,ΘU,ιi,ΙI,οo,ΟO,πp,ΠP,αa,ΑA,σs,ΣS,δd,ΔD,φf,ΦF,γg,ΓG,ηh,ΗH,ξj,ΞJ,κk,ΚK,λl,ΛL,ζz,ΖZ,χx,ΧX,ψc,ΨC,ωv,ΩV,βb,ΒB,νn,ΝN,μm,ΜM";
+      # Uppercase Greek has collisions, for example Shift-W and Shift-S both produce Sigma.
+      langmap = "\\;q,:Q,ςw,εe,ρr,τt,υy,θu,ιi,οo,πp,αa,σs,δd,φf,γg,ηh,ξj,κk,λl,ζz,χx,ψc,ωv,βb,νn,μm";
       swapfile = false;
       number = true;
       relativenumber = true;

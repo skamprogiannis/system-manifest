@@ -93,6 +93,7 @@
     checks.${system} = let
       desktopHome = self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.path;
       usbHome = self.nixosConfigurations.usb.config.home-manager.users.stefan.home.path;
+      neovimLangmapFile = builtins.toFile "neovim-langmap" self.nixosConfigurations.desktop.config.home-manager.users.stefan.programs.nixvim.opts.langmap;
       desktopHyprlandBindsFile = builtins.toFile "desktop-hyprland-binds" (
         builtins.concatStringsSep "\n"
         self.nixosConfigurations.desktop.config.home-manager.users.stefan.wayland.windowManager.hyprland.settings.bind
@@ -135,6 +136,29 @@
           assert_bind '$mod, grave, togglespecialworkspace, music'
           assert_bind '$mod SHIFT, grave, movetoworkspace, special:music'
           assert_bind '$mod CTRL, grave, movetoworkspacesilent, special:music'
+
+          touch "$out"
+        '';
+      neovim-langmap =
+        pkgs.runCommand "neovim-langmap-checks" {
+          nativeBuildInputs = [pkgs.python3];
+        } ''
+          set -euo pipefail
+
+          python3 - ${neovimLangmapFile} <<'PY'
+          import sys
+          from pathlib import Path
+
+          text = Path(sys.argv[1]).read_text(encoding="utf-8")
+          uppercase_greek = sorted({ch for ch in text if "\u0391" <= ch <= "\u03a9"})
+          if uppercase_greek:
+              print(
+                  "Neovim langmap must not contain uppercase Greek sources: "
+                  + ", ".join(uppercase_greek),
+                  file=sys.stderr,
+              )
+              raise SystemExit(1)
+          PY
 
           touch "$out"
         '';
