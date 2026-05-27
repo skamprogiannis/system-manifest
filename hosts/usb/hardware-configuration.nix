@@ -72,6 +72,10 @@ in {
     # availableKernelModules only bundles them in the initrd — it does
     # not guarantee they are loaded when postMountCommands executes.
     boot.initrd.kernelModules = ["loop" "squashfs" "overlay"];
+    boot.initrd.systemd.emergencyAccess = true;
+    boot.initrd.systemd.initrdBin = [
+      config.boot.initrd.systemd.package.util-linux
+    ];
     hardware.enableAllFirmware = true;
 
     # Enable LUKS support
@@ -122,10 +126,31 @@ in {
       serviceConfig.Type = "oneshot";
       path = with pkgs; [
         coreutils
+        kmod
         util-linux
       ];
       script = ''
         set -eu
+
+        mkdir -p /run /sysroot/var/log
+        log_file=/sysroot/var/log/initrd-usb-overlay-store.log
+        if ! : > "$log_file"; then
+          log_file=/run/initrd-usb-overlay-store.log
+          : > "$log_file"
+        fi
+
+        log() {
+          printf 'initrd-usb-overlay-store: %s\n' "$1" | tee -a "$log_file"
+        }
+
+        warn() {
+          printf 'initrd-usb-overlay-store: %s\n' "$1" | tee -a "$log_file" >&2
+        }
+
+        fatal() {
+          warn "FATAL: $1"
+          exit 1
+        }
 
         lower_store_image=/sysroot/nix-store.squashfs
         lower_mount_source="$lower_store_image"
@@ -150,11 +175,13 @@ in {
         # --- Phase 1: Choose lower source ---
 
         if [ ! -f "$lower_store_image" ]; then
-          echo "initrd-usb-overlay-store: FATAL: squashfs image not found at $lower_store_image" >&2
-          exit 1
+          fatal "squashfs image not found at $lower_store_image"
         fi
 
         mkdir -p /sysroot/nix/.ro-store
+        modprobe loop || warn "loop module load failed or was already handled"
+        modprobe squashfs || warn "squashfs module load failed or was already handled"
+        modprobe overlay || warn "overlay module load failed or was already handled"
 
         if [ "$store_mode" = "ram-backed" ]; then
           upper_store_kind=scratch
@@ -169,24 +196,29 @@ in {
             ram_store_image=/sysroot/nix/.ram-store-image/nix-store.squashfs
             if cp "$lower_store_image" "$ram_store_image"; then
               lower_mount_source="$ram_store_image"
-              echo "initrd-usb-overlay-store: squashfs image copied to RAM"
+              log "squashfs image copied to RAM"
             else
-              echo "initrd-usb-overlay-store: RAM copy failed, falling back to USB-backed squashfs" >&2
+              warn "RAM copy failed, falling back to USB-backed squashfs"
               rm -f "$ram_store_image"
               umount /sysroot/nix/.ram-store-image || true
             fi
           else
-            echo "initrd-usb-overlay-store: insufficient memory for RAM-backed lower store, falling back to USB-backed squashfs" >&2
+            warn "insufficient memory for RAM-backed lower store, falling back to USB-backed squashfs"
           fi
         fi
 
         # --- Phase 2: Mount lower store (hard failure) ---
 
-        if ! mount -t squashfs -o loop,ro "$lower_mount_source" /sysroot/nix/.ro-store; then
-          echo "initrd-usb-overlay-store: FATAL: failed to mount squashfs lower store from $lower_mount_source" >&2
-          exit 1
+        loop_device="$(losetup --find --show --read-only "$lower_mount_source")" || {
+          fatal "failed to allocate read-only loop device for $lower_mount_source"
+        }
+
+        if ! mount -t squashfs -o ro "$loop_device" /sysroot/nix/.ro-store; then
+          losetup -d "$loop_device" || true
+          fatal "failed to mount squashfs lower store from $lower_mount_source through $loop_device"
         fi
-        echo "initrd-usb-overlay-store: lower store mounted (source: $lower_mount_source)"
+        printf '%s\n' "$loop_device" > /run/nixos-usb-store-loopdev
+        log "lower store mounted from $lower_mount_source through $loop_device"
 
         # --- Phase 3 helpers ---
 
@@ -197,12 +229,12 @@ in {
         }
 
         mount_read_only_store() {
-          echo "initrd-usb-overlay-store: falling back to read-only squashfs /nix/store" >&2
+          warn "falling back to read-only squashfs /nix/store"
           mkdir -p /sysroot/nix/store
           if mount --bind /sysroot/nix/.ro-store /sysroot/nix/store; then
             write_store_mode_marker "read-only-fallback"
           else
-            echo "initrd-usb-overlay-store: FATAL: failed to mount read-only store at /sysroot/nix/store" >&2
+            warn "FATAL: failed to mount read-only store at /sysroot/nix/store"
             return 1
           fi
         }
@@ -214,27 +246,27 @@ in {
             /sysroot/nix/store; then
             return 0
           else
-            echo "initrd-usb-overlay-store: failed to mount writable overlay store" >&2
+            warn "failed to mount writable overlay store"
             return 1
           fi
         }
 
         prepare_upper_dirs() {
           if ! mkdir -p /sysroot/nix/.rw-store/upper /sysroot/nix/.rw-store/work; then
-            echo "initrd-usb-overlay-store: failed to create overlay upper/work directories" >&2
+            warn "failed to create overlay upper/work directories"
             return 1
           fi
           if ! chmod 0755 /sysroot/nix/.rw-store/upper /sysroot/nix/.rw-store/work; then
-            echo "initrd-usb-overlay-store: failed to set overlay upper/work directory permissions" >&2
+            warn "failed to set overlay upper/work directory permissions"
             return 1
           fi
         }
 
         cleanup_tmpfs_upper() {
           if ! umount /sysroot/nix/.rw-store; then
-            echo "initrd-usb-overlay-store: warning: tmpfs upper cleanup failed" >&2
+            warn "warning: tmpfs upper cleanup failed"
             if mountpoint -q /sysroot/nix/.rw-store; then
-              echo "initrd-usb-overlay-store: warning: tmpfs remains mounted and consuming RAM" >&2
+              warn "warning: tmpfs remains mounted and consuming RAM"
             fi
             return 1
           fi
@@ -247,12 +279,12 @@ in {
         reset_scratch_upper() {
           if mountpoint -q /sysroot/nix/.rw-store; then
             umount /sysroot/nix/.rw-store || {
-              echo "initrd-usb-overlay-store: failed to unmount unexpected mount at /sysroot/nix/.rw-store" >&2
+              warn "failed to unmount unexpected mount at /sysroot/nix/.rw-store"
               return 1
             }
           fi
           rm -rf /sysroot/nix/.rw-store || {
-            echo "initrd-usb-overlay-store: failed to reset scratch upper store" >&2
+            warn "failed to reset scratch upper store"
             return 1
           }
           prepare_upper_dirs
@@ -261,7 +293,7 @@ in {
         # --- Phase 3: Mount writable overlay or fall back to read-only ---
 
         if [ "$upper_store_kind" = "scratch" ]; then
-          echo "initrd-usb-overlay-store: using USB-root ext4 scratch for overlay upper"
+          log "using USB-root ext4 scratch for overlay upper"
           if reset_scratch_upper; then
             if mount_overlay_store; then
               write_store_mode_marker "writable-scratch-overlay"
@@ -277,18 +309,18 @@ in {
               write_store_mode_marker "writable-overlay"
             else
               if ! cleanup_tmpfs_upper; then
-                echo "initrd-usb-overlay-store: continuing with read-only fallback after tmpfs cleanup failure" >&2
+                warn "continuing with read-only fallback after tmpfs cleanup failure"
               fi
               mount_read_only_store || exit 1
             fi
           else
             if ! cleanup_tmpfs_upper; then
-              echo "initrd-usb-overlay-store: continuing with read-only fallback after tmpfs cleanup failure" >&2
+              warn "continuing with read-only fallback after tmpfs cleanup failure"
             fi
             mount_read_only_store || exit 1
           fi
         else
-          echo "initrd-usb-overlay-store: tmpfs upper mount failed" >&2
+          warn "tmpfs upper mount failed"
           mount_read_only_store || exit 1
         fi
       '';
