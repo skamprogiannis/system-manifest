@@ -2,9 +2,9 @@
 
 ## Useful Commands
 
-- **Dry Run Build:** `nixos-rebuild dry-build --flake .#desktop` (Use `.#usb` when validating the portable image.)
+- **Dry Run Build:** `nixos-rebuild dry-build --flake .#desktop` (Use `.#usb` for the portable image and `.#laptop` for the laptop profile.)
 - **Check Configuration:** `nixos-rebuild test --flake .#desktop` (Builds and activates, but doesn't add to bootloader - good for temporary testing.)
-- **Flake Check:** `nix flake check` (This is the standard Nix flake command. In this repo it runs the checks defined in `flake.nix`: `desktop`, `usb`, `script-smoke`, and `shellcheck`.)
+- **Flake Check:** `nix flake check` (This is the standard Nix flake command. In this repo it runs the checks defined in `flake.nix`: `desktop`, `usb`, `laptop`, `script-smoke`, and `shellcheck`.)
 - **List Generations:** `nixos-rebuild list-generations`
 - **Garbage Collect:** `nix-collect-garbage -d` (Deletes old generations)
 
@@ -14,7 +14,7 @@
 - **Git & Gens:** Keep git commits atomic and descriptive.
 - **Commit Format:** Use **Conventional Commits** (`type(scope): message`).
   - Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`.
-  - Scopes: `desktop`, `usb`, `common`, `home`, `system`, or specific module names.
+  - Scopes: `desktop`, `usb`, `laptop`, `common`, `home`, `system`, or specific module names.
   - Example: `feat(desktop): enable steam and gamemode`
   - Example: `fix(usb): correct luks mounting path`
 - **Worktree-First Git:** `/home/stefan/system-manifest` is the repo container; the bare Git dir lives at `/home/stefan/system-manifest/.bare`. Do not edit anything inside `.bare`.
@@ -50,9 +50,9 @@
 - **Subagent Rebuilds:** Use a subagent (task tool) to handle `nixos-rebuild` commands (dry-run and switch) to keep the main context clean and handle potential long output.
 - **Bug Reporting:** When a bug is reported, prioritize writing a reproduction test before attempting a fix. Use subagents to implement the fix and verify it with the passing test.
 - **Pre-Completion Dry Build:** After any config/code change and before reporting "done," run `nixos-rebuild dry-build --flake .#desktop` yourself and fix any failures before handing back to the user.
-- **CI Shape:** GitHub Actions mirrors the flake checks with separate host (`desktop`, `usb`) and script-quality (`script-smoke`, `shellcheck`) jobs so failures stay isolated.
+- **CI Shape:** GitHub Actions mirrors the flake checks with separate host (`desktop`, `usb`, `laptop`) and script-quality (`script-smoke`, `shellcheck`) jobs so failures stay isolated.
 - **ShellCheck Scope:** ShellCheck currently lints the generated custom shell entrypoints from the Home Manager profiles, including host-variant wrappers where desktop and USB differ. If more shell logic moves into standalone `.sh` files later, extend linting to those sources too.
-- **Validation vs Deployment:** CI and `nix flake check` only validate buildability and scripted checks. Deployment is still manual: `nixos-rebuild switch --flake .#desktop` for desktop and `update-usb` for the USB image.
+- **Validation vs Deployment:** CI and `nix flake check` only validate buildability and scripted checks. Deployment is still manual: `nixos-rebuild switch --flake .#desktop` for desktop, `nixos-rebuild switch --flake .#laptop` for laptop, and `update-usb` for the USB image.
 
 ## Hyprland Keybind Guidance
 

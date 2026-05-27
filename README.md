@@ -6,9 +6,10 @@ Managed via **Nix Flakes** and **Home Manager**.
 
 ## Features
 
-- **Multi-Host Configuration:** Shared common configuration with host-specific overrides for `desktop` and `usb` (live/portable system). `hostType` is intentionally kept to lightweight shared-module branches; host-owned runtime/session behavior stays in dedicated host modules.
+- **Multi-Host Configuration:** Shared common configuration with host-specific overrides for `desktop`, `usb` (live/portable system), and `laptop` (dual-boot/mobile workstation). `hostType` is intentionally kept to lightweight shared-module branches; host-owned runtime/session behavior stays in dedicated host modules.
 - **Hyprland Desktop:** Wayland tiling compositor with glassmorphism aesthetics powered by the [hyprglass](https://github.com/hyprnux/hyprglass) blur/vibrancy plugin (`light` theme, `default` preset), patched locally for current Hyprland API compatibility. Ghostty uses native `background-opacity` for true liquid-glass (background transparent, text fully opaque).
 - **USB: Portable Hyprland** — USB host boots through the same DMS greeter path as desktop and keeps the portable Hyprland session lean for lab machines. By default it uses a **hybrid squashfs** Nix store (compressed read-only image + tmpfs overlay) for near-ISO boot performance on slow USB media; only new `/nix/store` writes use the tmpfs upper layer, while `/home` stays on the persistent encrypted USB root filesystem. A manual `ram-store` boot specialisation can first copy the compressed store image into host RAM, then fall back to the USB-backed lower layer if the machine does not have enough memory headroom. Docker's heavy writable state is routed to ephemeral host-local scratch storage when available, falling back to tmpfs when no suitable host partition can be mounted.
+- **Laptop: Dual-Boot Hyprland** — Laptop host keeps the full desktop muscle-memory workflow with portable display detection, encrypted-root install labels, Caps-to-Escape, Greek/US layouts, Zellij, Neovim, Codex, and browser setup.
 - **Gaming Mode:** A dedicated specialisation (`gaming-box`) that boots directly into Steam Big Picture Mode with Gamescope.
 - **Media & Productivity:**
   - **Spotify Player:** Terminal-based Spotify client (`spotify_player`) with streaming support. The wrapper authenticates interactively before bootstrapping the background daemon so the login callback port is not stolen by a headless service on fresh setups, it does one safe re-auth pass when Spotify later rejects a cached refresh token, and it can read a personal Spotify app client ID from `~/.config/spotify-player/client_id` so Web API auth does not depend on a shared client ID when Spotify rate-limits it.
@@ -96,13 +97,21 @@ sudo nixos-rebuild switch --flake .#desktop
 nixos-rebuild dry-build --flake .#desktop
 ```
 
-### Flake Check (both host builds)
+### Rebuild Laptop
+
+```bash
+sudo nixos-rebuild switch --flake .#laptop
+```
+
+The laptop host is intended for a UEFI dual-boot install with Secure Boot disabled and an encrypted root. Its hardware config expects these install labels: `NIXOS_LAPTOP_BOOT` for the NixOS ESP, `NIXOS_LAPTOP_CRYPT` for the LUKS partition, and `NIXOS_LAPTOP_ROOT` for the ext4 filesystem inside LUKS.
+
+### Flake Check (all host builds)
 
 ```bash
 nix flake check
 ```
 
-In this repo, `nix flake check` runs the checks defined in `flake.nix`: `desktop`, `usb`, `script-smoke`, and `shellcheck`. GitHub Actions keeps those host and script checks in separate jobs so CI failures stay isolated, while deployment remains manual via `nixos-rebuild switch --flake .#desktop` or `update-usb`.
+In this repo, `nix flake check` runs the checks defined in `flake.nix`: `desktop`, `usb`, `laptop`, `script-smoke`, and `shellcheck`. GitHub Actions keeps those host and script checks in separate jobs so CI failures stay isolated, while deployment remains manual via `nixos-rebuild switch --flake .#desktop`, `nixos-rebuild switch --flake .#laptop`, or `update-usb`.
 
 For later shared-contract refactors, treat `nix flake check` plus `nixos-rebuild dry-build --flake .#desktop` as the minimum validation floor. Runtime wallpaper/DMS ownership changes still need a manual wallpaper-switch smoke test, and USB-only session changes still require `update-usb` plus a real boot on target hardware.
 

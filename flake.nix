@@ -113,6 +113,7 @@
     in {
       desktop = self.nixosConfigurations.desktop.config.system.build.toplevel;
       usb = self.nixosConfigurations.usb.config.system.build.toplevel;
+      laptop = self.nixosConfigurations.laptop.config.system.build.toplevel;
       hyprland-keybinds =
         pkgs.runCommand "hyprland-keybind-checks" {
           nativeBuildInputs = [
@@ -318,6 +319,32 @@
             home-manager.users.stefan = {
               imports = [
                 ./hosts/usb/home-manager.nix
+                inputs.nixvim.homeModules.nixvim
+              ];
+            };
+          }
+        ];
+      };
+
+      laptop = nixpkgs.lib.nixosSystem {
+        inherit system;
+        specialArgs = {inherit inputs;};
+        modules = [
+          ./hosts/laptop/default.nix
+          inputs.dms.nixosModules.greeter
+          home-manager.nixosModules.home-manager
+          {
+            home-manager.useGlobalPkgs = true;
+            home-manager.useUserPackages = true;
+            home-manager.backupFileExtension = "backup";
+            home-manager.extraSpecialArgs = {
+              inherit inputs;
+              hostType = "laptop";
+            };
+            home-manager.users.stefan.systemd.user.startServices = "sd-switch";
+            home-manager.users.stefan = {
+              imports = [
+                ./hosts/laptop/home-manager.nix
                 inputs.nixvim.homeModules.nixvim
               ];
             };

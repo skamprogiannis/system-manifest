@@ -4,7 +4,7 @@
   hostType ? "desktop",
   ...
 }:
-assert lib.assertMsg (builtins.elem hostType ["desktop" "usb"]) "hostType must be \"desktop\" or \"usb\"."; let
+assert lib.assertMsg (builtins.elem hostType ["desktop" "usb" "laptop"]) "hostType must be \"desktop\", \"usb\", or \"laptop\"."; let
   vimiumCExtensionId = "hfjbmagddngcpeloejdejnfgbamkjaeg";
   stylusExtensionId = "clngdbkpkpeebahjckkjfobafhncgmne";
   rabbyExtensionId = "acmacodkjbdgmoleebolmdjonilkdbch";

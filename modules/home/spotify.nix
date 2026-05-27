@@ -6,10 +6,12 @@
   hostType ? "desktop",
   ...
 }:
-assert lib.assertMsg (builtins.elem hostType ["desktop" "usb"]) "hostType must be \"desktop\" or \"usb\"."; let
+assert lib.assertMsg (builtins.elem hostType ["desktop" "usb" "laptop"]) "hostType must be \"desktop\", \"usb\", or \"laptop\"."; let
   spotifyDeviceName =
     if hostType == "usb"
     then "nixos-usb"
+    else if hostType == "laptop"
+    then "nixos-laptop"
     else "nixos-desktop";
   spotifyServiceName = "spotify-player.service";
   spotifySharedClientId = "65b708073fc0480ea92a077233ca87bd";

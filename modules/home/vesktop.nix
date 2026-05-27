@@ -5,7 +5,7 @@
   hostType ? "desktop",
   ...
 }:
-assert lib.assertMsg (builtins.elem hostType ["desktop" "usb"]) "hostType must be \"desktop\" or \"usb\".";
+assert lib.assertMsg (builtins.elem hostType ["desktop" "usb" "laptop"]) "hostType must be \"desktop\", \"usb\", or \"laptop\".";
 let
   wallpaperContracts = import ./wallpaper/contracts.nix;
   skwdColorContract = wallpaperContracts.skwdColorContract;
