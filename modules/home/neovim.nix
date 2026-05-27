@@ -14,6 +14,7 @@
     opts = {
       autoread = true;
       hlsearch = true;
+      langmap = "\\;q,:Q,ςw,ΣW,εe,ΕE,ρr,ΡR,τt,ΤT,υy,ΥY,θu,ΘU,ιi,ΙI,οo,ΟO,πp,ΠP,αa,ΑA,σs,ΣS,δd,ΔD,φf,ΦF,γg,ΓG,ηh,ΗH,ξj,ΞJ,κk,ΚK,λl,ΛL,ζz,ΖZ,χx,ΧX,ψc,ΨC,ωv,ΩV,βb,ΒB,νn,ΝN,μm,ΜM";
       swapfile = false;
       number = true;
       relativenumber = true;
