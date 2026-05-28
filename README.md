@@ -8,7 +8,7 @@ Managed via **Nix Flakes** and **Home Manager**.
 
 - **Multi-Host Configuration:** Shared common configuration with host-specific overrides for `desktop`, `usb` (live/portable system), and `laptop` (dual-boot/mobile workstation). `hostType` is intentionally kept to lightweight shared-module branches; host-owned runtime/session behavior stays in dedicated host modules.
 - **Hyprland Desktop:** Wayland tiling compositor with glassmorphism aesthetics powered by the [hyprglass](https://github.com/hyprnux/hyprglass) blur/vibrancy plugin (`light` theme, `default` preset), patched locally for current Hyprland API compatibility. Ghostty uses native `background-opacity` for true liquid-glass (background transparent, text fully opaque).
-- **USB: Portable Hyprland** — USB host boots through the same DMS greeter path as desktop and keeps the portable Hyprland session lean for lab machines. By default it uses a **hybrid squashfs** Nix store (compressed read-only image + tmpfs overlay) for near-ISO boot performance on slow USB media; only new `/nix/store` writes use the tmpfs upper layer, while `/home` stays on the persistent encrypted USB root filesystem. A manual `ram-store` boot specialisation can first copy the compressed store image into host RAM, then fall back to the USB-backed lower layer if the machine does not have enough memory headroom. Docker's heavy writable state is routed to ephemeral host-local scratch storage when available, falling back to tmpfs when no suitable host partition can be mounted.
+- **USB: Portable Hyprland** — USB host boots through the same DMS greeter path as desktop and keeps the portable Hyprland session lean for lab machines. By default it uses a **hybrid squashfs** Nix store (compressed read-only image + tmpfs overlay) for near-ISO boot performance on slow USB media; only new `/nix/store` writes use the tmpfs upper layer, while `/home` stays on the persistent encrypted USB root filesystem. Manual `ram-store` and `host-auto-store` boot specialisations can move store pressure into host RAM or an automatically selected host Linux partition. Docker's heavy writable state is routed to ephemeral host-local scratch storage when available, falling back to tmpfs when no suitable host partition can be mounted.
 - **Laptop: Dual-Boot Hyprland** — Laptop host keeps the full desktop muscle-memory workflow with portable display detection, encrypted-root install labels, Caps-to-Escape, Greek/US layouts, Zellij, Neovim, Codex, and browser setup.
 - **Gaming Mode:** A dedicated specialisation (`gaming-box`) that boots directly into Steam Big Picture Mode with Gamescope.
 - **Media & Productivity:**
@@ -141,6 +141,19 @@ The script handles preflight checks, safe cleanup on `Ctrl+C`, first-boot Home M
 Choose the USB **`ram-store` specialisation** from the bootloader when you want the system to copy `nix-store.squashfs` into RAM before mounting `/nix/store`.
 
 That mode keeps the writable layer disposable, improves steady-state store reads after boot, and falls back to the default USB-backed lower store if the host does not have enough free memory.
+
+### USB Host Auto Store Mode
+
+Choose the USB **`host-auto-store` specialisation** on lab machines where it is acceptable to use a writable host Linux partition as temporary scratch storage. The USB scans non-removable `ext2`, `ext3`, `ext4`, `xfs`, and `btrfs` partitions, copies `nix-store.squashfs` to `.nixos-usb/store/nix-store.squashfs`, and uses `.nixos-usb/store/rw/{upper,work}` for the writable `/nix/store` overlay layer.
+
+After boot, check which path was used:
+
+```bash
+cat /run/nixos-usb-store-mode
+cat /var/log/initrd-usb-overlay-store.log
+```
+
+`writable-host-auto-overlay` means both store reads and writes are backed by the host partition. If no suitable partition can be mounted or copied to, the specialisation falls back to the default USB-backed squashfs with tmpfs writable layer. This mode can leave `.nixos-usb/store` behind on the selected host partition until that machine's own cleanup policy removes it.
 
 ### Initialize / Reformat Persistent USB
 
