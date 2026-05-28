@@ -6,6 +6,8 @@
   mountUnit = path: "${lib.strings.replaceStrings ["/" "-"] ["-" "\\x2d"] (lib.strings.removePrefix "/" path)}.mount";
   roStoreMount = mountUnit "/sysroot/nix/.ro-store";
   rwStoreMount = mountUnit "/sysroot/nix/.rw-store";
+  coreutils = "${pkgs.coreutils}/bin";
+  utilLinux = "${pkgs.util-linux}/bin";
 in {
   boot.initrd.systemd.enable = true;
 
@@ -78,13 +80,13 @@ in {
       fi
 
       source_stamp() {
-        stat -c '%s:%Y' "$lower_store_image"
+        ${coreutils}/stat -c '%s:%Y' "$lower_store_image"
       }
 
       find_host_store_candidates() {
         min_bytes="$1"
 
-        lsblk -pnrbo PATH,TYPE,RM,FSTYPE,SIZE |
+        ${utilLinux}/lsblk -pnrbo PATH,TYPE,RM,FSTYPE,SIZE |
           while IFS=' ' read -r path type removable fstype size; do
             case "$type:$removable:$fstype" in
               part:0:ext4 | part:0:ext3 | part:0:ext2 | part:0:xfs | part:0:btrfs)
@@ -94,23 +96,23 @@ in {
                 ;;
             esac
           done |
-          sort -nr
+          ${coreutils}/sort -nr
       }
 
       prepare_rw_dirs() {
-        rm -rf "$host_rw_root/store" "$host_rw_root/work"
-        mkdir -m 0755 -p "$host_rw_root/store" "$host_rw_root/work"
+        ${coreutils}/rm -rf "$host_rw_root/store" "$host_rw_root/work"
+        ${coreutils}/mkdir -m 0755 -p "$host_rw_root/store" "$host_rw_root/work"
       }
 
       prepare_usb_tmpfs_fallback() {
-        if mountpoint -q "$host_store_mount"; then
-          umount "$host_store_mount" || true
+        if ${utilLinux}/mountpoint -q "$host_store_mount"; then
+          ${utilLinux}/umount "$host_store_mount" || true
         fi
-        rm -rf "$host_store_mount"
-        mkdir -p "$host_store_mount"
-        mount -t tmpfs -o "mode=0755,size=''${upper_size_mib}M" tmpfs "$host_store_mount"
-        mkdir -p "$host_store_root" "$host_rw_root"
-        ln -sfn "$lower_store_image" "$host_store_image"
+        ${coreutils}/rm -rf "$host_store_mount"
+        ${coreutils}/mkdir -p "$host_store_mount"
+        ${utilLinux}/mount -t tmpfs -o "mode=0755,size=''${upper_size_mib}M" tmpfs "$host_store_mount"
+        ${coreutils}/mkdir -p "$host_store_root" "$host_rw_root"
+        ${coreutils}/ln -sfn "$lower_store_image" "$host_store_image"
         printf '%s\n' "$(source_stamp)" > "$host_store_stamp"
         prepare_rw_dirs
         printf '%s\n' "writable-overlay-host-auto-tmpfs-fallback" > /run/nixos-usb-store-mode
@@ -120,32 +122,32 @@ in {
         current_stamp="$(source_stamp)"
         if [ -f "$host_store_image" ] \
           && [ -f "$host_store_stamp" ] \
-          && [ "$(cat "$host_store_stamp")" = "$current_stamp" ]; then
+          && [ "$(${coreutils}/cat "$host_store_stamp")" = "$current_stamp" ]; then
           return 0
         fi
 
-        rm -f "$host_store_image.tmp"
-        cp "$lower_store_image" "$host_store_image.tmp"
-        mv "$host_store_image.tmp" "$host_store_image"
+        ${coreutils}/rm -f "$host_store_image.tmp"
+        ${coreutils}/cp "$lower_store_image" "$host_store_image.tmp"
+        ${coreutils}/mv "$host_store_image.tmp" "$host_store_image"
         printf '%s\n' "$current_stamp" > "$host_store_stamp"
       }
 
-      image_bytes="$(stat -c %s "$lower_store_image")"
+      image_bytes="$(${coreutils}/stat -c %s "$lower_store_image")"
       min_bytes=$((image_bytes + (upper_size_mib + 1024) * 1024 * 1024))
       candidate_file=/run/nixos-usb-host-store-candidates
 
-      mkdir -p /run "$host_store_mount"
+      ${coreutils}/mkdir -p /run "$host_store_mount"
       find_host_store_candidates "$min_bytes" > "$candidate_file"
 
       while IFS='	' read -r _size device fstype; do
         [ -n "$device" ] || continue
 
-        if ! mount -o rw,noatime "$device" "$host_store_mount"; then
+        if ! ${utilLinux}/mount -o rw,noatime "$device" "$host_store_mount"; then
           log "failed to mount $device ($fstype)"
           continue
         fi
 
-        mkdir -p "$host_store_root" "$host_rw_root"
+        ${coreutils}/mkdir -p "$host_store_root" "$host_rw_root"
 
         if copy_store_image_if_needed; then
           prepare_rw_dirs
@@ -154,8 +156,8 @@ in {
         fi
 
         log "failed to prepare squashfs image on $device ($fstype)"
-        rm -f "$host_store_image.tmp"
-        umount "$host_store_mount" || true
+        ${coreutils}/rm -f "$host_store_image.tmp"
+        ${utilLinux}/umount "$host_store_mount" || true
       done < "$candidate_file"
 
       log "using tmpfs fallback; no eligible unencrypted host filesystem found"
