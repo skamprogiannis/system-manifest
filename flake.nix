@@ -84,9 +84,10 @@
       desktopHome = self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.path;
       usbHome = self.nixosConfigurations.usb.config.home-manager.users.stefan.home.path;
       usbInitrd = self.nixosConfigurations.usb.config.system.build.initialRamdisk;
-      usbOverlayScript = builtins.toFile "usb-overlay-store-script" self.nixosConfigurations.usb.config.boot.initrd.systemd.services.initrd-usb-overlay-store.script;
-      usbRamStoreOverlayScript = builtins.toFile "usb-ram-store-overlay-store-script" self.nixosConfigurations.usb.config.specialisation.ram-store.configuration.boot.initrd.systemd.services.initrd-usb-overlay-store.script;
-      usbHostAutoOverlayScript = builtins.toFile "usb-host-auto-overlay-store-script" self.nixosConfigurations.usb.config.specialisation.host-auto-store.configuration.boot.initrd.systemd.services.initrd-usb-overlay-store.script;
+      usbRamStoreInitrd = self.nixosConfigurations.usb.config.specialisation.ram-store.configuration.system.build.initialRamdisk;
+      usbRamStorePrepareScript = builtins.toFile "usb-ram-store-prepare-script" self.nixosConfigurations.usb.config.specialisation.ram-store.configuration.boot.initrd.systemd.services.initrd-usb-ram-store-prepare.script;
+      usbHostAutoStoreInitrd = self.nixosConfigurations.usb.config.specialisation.host-auto-store.configuration.system.build.initialRamdisk;
+      usbHostAutoStorePrepareScript = builtins.toFile "usb-host-auto-store-prepare-script" self.nixosConfigurations.usb.config.specialisation.host-auto-store.configuration.boot.initrd.systemd.services.initrd-usb-host-auto-store-prepare.script;
       neovimLangmapFile = builtins.toFile "neovim-langmap" self.nixosConfigurations.desktop.config.home-manager.users.stefan.programs.nixvim.opts.langmap;
       desktopHyprlandBindsFile = builtins.toFile "desktop-hyprland-binds" (
         builtins.concatStringsSep "\n"
@@ -113,72 +114,155 @@
         pkgs.runCommand "usb-initrd-ordering-check" {
           nativeBuildInputs = [
             pkgs.cpio
+            pkgs.findutils
             pkgs.gnugrep
+            pkgs.systemd
             pkgs.zstd
           ];
         } ''
           set -euo pipefail
 
-          zstdcat ${usbInitrd}/initrd | cpio -t > initrd-files 2>/dev/null
+          unpack_initrd() {
+            local image="$1"
+            local target="$2"
+            mkdir -p "$target"
+            (cd "$target" && zstdcat "$image/initrd" | cpio -id --quiet)
+          }
 
-          if ! grep -Eq '/initrd-find-nixos-closure[.]service[.]requires/initrd-usb-overlay-store[.]service$' initrd-files; then
-            echo "Expected initrd-find-nixos-closure.service to require initrd-usb-overlay-store.service." >&2
-            grep -E 'initrd-(find-nixos-closure|usb-overlay-store)' initrd-files >&2 || true
-            exit 1
-          fi
+          generate_mount_units() {
+            local initrd_dir="$1"
+            local generated_dir="$2"
+            local fstab
 
-          zstdcat ${usbInitrd}/initrd | cpio -i --to-stdout '*unit-initrd-usb-overlay-store.service/initrd-usb-overlay-store.service' > overlay-unit 2>/dev/null
+            fstab="$(find "$initrd_dir/nix/store" -maxdepth 1 -type f -name '*-initrd-fstab' -print -quit)"
+            if [ -z "$fstab" ]; then
+              echo "Expected initrd-fstab in $initrd_dir." >&2
+              find "$initrd_dir/nix/store" -maxdepth 1 -type f -print >&2
+              exit 1
+            fi
 
-          if [ ! -s overlay-unit ]; then
-            echo "Expected generated initrd-usb-overlay-store.service unit in initrd." >&2
-            exit 1
-          fi
+            mkdir -p "$generated_dir" "$generated_dir.early" "$generated_dir.late"
+            SYSTEMD_IN_INITRD=1 SYSTEMD_SYSROOT_FSTAB="$fstab" \
+              ${pkgs.systemd}/lib/systemd/system-generators/systemd-fstab-generator "$generated_dir" "$generated_dir.early" "$generated_dir.late"
+          }
 
-          if ! grep -Fq "Before=initrd-find-nixos-closure.service initrd-fs.target" overlay-unit; then
-            echo "Expected USB overlay service to run before initrd-find-nixos-closure.service." >&2
-            sed 's/^/  /' overlay-unit >&2
-            exit 1
-          fi
+          find_unit() {
+            local dir="$1"
+            local pattern="$2"
+            local unit
 
-          if ! grep -Fq "store_mode=usb-backed" ${usbOverlayScript}; then
-            echo "Expected default USB overlay script to use usb-backed mode." >&2
-            exit 1
-          fi
+            unit="$(find "$dir" "$dir.early" "$dir.late" -type f -name "$pattern" -print -quit)"
+            if [ -z "$unit" ]; then
+              echo "Expected generated unit matching $pattern." >&2
+              find "$dir" "$dir.early" "$dir.late" -type f -print >&2
+              exit 1
+            fi
 
-          if ! grep -Fq "store_mode=ram-backed" ${usbRamStoreOverlayScript}; then
-            echo "Expected ram-store overlay script to use ram-backed mode." >&2
-            exit 1
-          fi
+            printf '%s\n' "$unit"
+          }
 
-          if ! grep -Fq "writable-scratch-overlay" ${usbRamStoreOverlayScript}; then
-            echo "Expected ram-store overlay script to use USB-root scratch upper." >&2
-            exit 1
-          fi
+          find_static_unit() {
+            local initrd_dir="$1"
+            local unit_name="$2"
+            local unit
 
-          if ! grep -Fq "store_mode=host-auto" ${usbHostAutoOverlayScript}; then
-            echo "Expected host-auto-store overlay script to use host-auto mode." >&2
-            exit 1
-          fi
+            unit="$(find "$initrd_dir" -type f -name "$unit_name" -print -quit)"
+            if [ -z "$unit" ]; then
+              echo "Expected static initrd unit $unit_name." >&2
+              find "$initrd_dir" -type f -name '*.service' -print >&2
+              exit 1
+            fi
 
-          if ! grep -Fq "find_host_store_candidates" ${usbHostAutoOverlayScript}; then
-            echo "Expected host-auto-store overlay script to scan host partitions." >&2
-            exit 1
-          fi
+            printf '%s\n' "$unit"
+          }
 
-          if ! grep -Fq ".nixos-usb/store" ${usbHostAutoOverlayScript}; then
-            echo "Expected host-auto-store overlay script to use the host .nixos-usb/store directory." >&2
-            exit 1
-          fi
+          assert_contains() {
+            local needle="$1"
+            local file="$2"
+            local label="$3"
 
-          if ! grep -Fq "writable-host-auto-overlay" ${usbHostAutoOverlayScript}; then
-            echo "Expected host-auto-store overlay script to mark host-auto overlays." >&2
-            exit 1
-          fi
+            if ! grep -Fq "$needle" "$file"; then
+              echo "Expected $label to contain: $needle" >&2
+              sed 's/^/  /' "$file" >&2
+              exit 1
+            fi
+          }
 
-          if ! grep -Fq "writable-overlay-host-auto-lower" ${usbHostAutoOverlayScript}; then
-            echo "Expected host-auto-store overlay script to fall back to tmpfs upper after host lower setup." >&2
-            exit 1
-          fi
+          assert_default_units() {
+            local generated_dir="$1"
+            local ro_unit rw_unit store_unit
+
+            ro_unit="$(find_unit "$generated_dir" 'sysroot-nix-.ro*store.mount')"
+            rw_unit="$(find_unit "$generated_dir" 'sysroot-nix-.rw*store.mount')"
+            store_unit="$(find_unit "$generated_dir" 'sysroot-nix-store.mount')"
+
+            assert_contains "What=/sysroot/nix-store.squashfs" "$ro_unit" "default /nix/.ro-store unit"
+            assert_contains "Where=/sysroot/nix/.ro-store" "$ro_unit" "default /nix/.ro-store unit"
+            assert_contains "Type=squashfs" "$ro_unit" "default /nix/.ro-store unit"
+            assert_contains "loop" "$ro_unit" "default /nix/.ro-store unit"
+            assert_contains "threads=multi" "$ro_unit" "default /nix/.ro-store unit"
+
+            assert_contains "What=tmpfs" "$rw_unit" "default /nix/.rw-store unit"
+            assert_contains "Type=tmpfs" "$rw_unit" "default /nix/.rw-store unit"
+            assert_contains "size=2048M" "$rw_unit" "default /nix/.rw-store unit"
+
+            assert_contains "Type=overlay" "$store_unit" "default /nix/store unit"
+            assert_contains "lowerdir=/sysroot/nix/.ro-store" "$store_unit" "default /nix/store unit"
+            assert_contains "upperdir=/sysroot/nix/.rw-store/store" "$store_unit" "default /nix/store unit"
+            assert_contains "workdir=/sysroot/nix/.rw-store/work" "$store_unit" "default /nix/store unit"
+          }
+
+          assert_ram_units() {
+            local initrd_dir="$1"
+            local generated_dir="$2"
+            local ro_unit rw_unit prep_unit
+
+            ro_unit="$(find_unit "$generated_dir" 'sysroot-nix-.ro*store.mount')"
+            rw_unit="$(find_unit "$generated_dir" 'sysroot-nix-.rw*store.mount')"
+            prep_unit="$(find_static_unit "$initrd_dir" 'initrd-usb-ram-store-prepare.service')"
+
+            assert_contains "What=/sysroot/nix/.ram-store-image/nix-store.squashfs" "$ro_unit" "ram-store /nix/.ro-store unit"
+            assert_contains "What=/sysroot/nix/.ram-store-rw" "$rw_unit" "ram-store /nix/.rw-store unit"
+            assert_contains "Type=none" "$rw_unit" "ram-store /nix/.rw-store unit"
+            assert_contains "bind" "$rw_unit" "ram-store /nix/.rw-store unit"
+            assert_contains "Before=sysroot-nix-.ro\\x2dstore.mount sysroot-nix-.rw\\x2dstore.mount" "$prep_unit" "ram-store prep unit"
+            assert_contains "writable-scratch-overlay-ram-lower" ${usbRamStorePrepareScript} "ram-store prep script"
+            assert_contains "writable-scratch-overlay-usb-lower" ${usbRamStorePrepareScript} "ram-store prep script"
+          }
+
+          assert_host_auto_units() {
+            local initrd_dir="$1"
+            local generated_dir="$2"
+            local ro_unit rw_unit prep_unit
+
+            ro_unit="$(find_unit "$generated_dir" 'sysroot-nix-.ro*store.mount')"
+            rw_unit="$(find_unit "$generated_dir" 'sysroot-nix-.rw*store.mount')"
+            prep_unit="$(find_static_unit "$initrd_dir" 'initrd-usb-host-auto-store-prepare.service')"
+
+            assert_contains "What=/sysroot/nix/.host-store/.nixos-usb/store/nix-store.squashfs" "$ro_unit" "host-auto /nix/.ro-store unit"
+            assert_contains "What=/sysroot/nix/.host-store/.nixos-usb/store/rw" "$rw_unit" "host-auto /nix/.rw-store unit"
+            assert_contains "Type=none" "$rw_unit" "host-auto /nix/.rw-store unit"
+            assert_contains "bind" "$rw_unit" "host-auto /nix/.rw-store unit"
+            assert_contains "find_host_store_candidates" ${usbHostAutoStorePrepareScript} "host-auto prep script"
+            assert_contains ".nixos-usb/store" ${usbHostAutoStorePrepareScript} "host-auto prep script"
+            assert_contains "writable-host-auto-overlay" ${usbHostAutoStorePrepareScript} "host-auto prep script"
+            assert_contains "writable-overlay-host-auto-usb-fallback" ${usbHostAutoStorePrepareScript} "host-auto prep script"
+          }
+
+          unpack_initrd ${usbInitrd} default-initrd
+          generate_mount_units default-initrd default-generated
+          assert_default_units default-generated
+
+          find_closure_unit="$(find_static_unit default-initrd 'initrd-find-nixos-closure.service')"
+          assert_contains "RequiresMountsFor=/sysroot/nix/store" "$find_closure_unit" "initrd-find-nixos-closure unit"
+
+          unpack_initrd ${usbRamStoreInitrd} ram-initrd
+          generate_mount_units ram-initrd ram-generated
+          assert_ram_units ram-initrd ram-generated
+
+          unpack_initrd ${usbHostAutoStoreInitrd} host-auto-initrd
+          generate_mount_units host-auto-initrd host-auto-generated
+          assert_host_auto_units host-auto-initrd host-auto-generated
 
           touch "$out"
         '';
