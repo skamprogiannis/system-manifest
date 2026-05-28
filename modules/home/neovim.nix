@@ -14,8 +14,8 @@
     opts = {
       autoread = true;
       hlsearch = true;
-      # Uppercase Greek has collisions, for example Shift-W and Shift-S both produce Sigma.
-      langmap = "\\;q,:Q,ςw,εe,ρr,τt,υy,θu,ιi,οo,πp,αa,σs,δd,φf,γg,ηh,ξj,κk,λl,ζz,χx,ψc,ωv,βb,νn,μm";
+      # Uppercase Greek has collisions, and punctuation mappings break Vim command keys.
+      langmap = "ςw,εe,ρr,τt,υy,θu,ιi,οo,πp,αa,σs,δd,φf,γg,ηh,ξj,κk,λl,ζz,χx,ψc,ωv,βb,νn,μm";
       swapfile = false;
       number = true;
       relativenumber = true;
