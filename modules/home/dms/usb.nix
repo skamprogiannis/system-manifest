@@ -23,12 +23,6 @@
     replacementsPython = dmsPatches.usbReplacementsPython;
   };
 in {
-  systemd.user.services.dms.Service.Environment = [
-    "QS_NO_GL=1"
-    "QT_QUICK_BACKEND=software"
-    "QSG_RENDER_LOOP=basic"
-  ];
-
   programs.dank-material-shell = {
     package = lib.mkForce usbDmsPackage;
     settings = {

@@ -71,6 +71,8 @@
   };
 in {
   programs.dank-material-shell.settings = {
+    configVersion = 11;
+
     # Keep settings declarative while removing setup prompts in DMS UI.
     barConfigs = [
       (commonBarStyle // {

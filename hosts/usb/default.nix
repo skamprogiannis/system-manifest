@@ -45,4 +45,22 @@
 
   # User setup
   users.users.stefan.initialPassword = "nixos";
+
+  specialisation = {
+    host-auto-store.configuration = {
+      imports = [./host-auto-store.nix];
+      system.nixos.tags = ["host-auto-store"];
+    };
+
+    software-rendering.configuration = {
+      system.nixos.tags = ["software-rendering"];
+      home-manager.users.stefan = {
+        systemd.user.services.dms.Service.Environment = [
+          "QS_NO_GL=1"
+          "QT_QUICK_BACKEND=software"
+          "QSG_RENDER_LOOP=basic"
+        ];
+      };
+    };
+  };
 }
