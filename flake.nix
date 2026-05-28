@@ -84,6 +84,9 @@
       desktopHome = self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.path;
       usbHome = self.nixosConfigurations.usb.config.home-manager.users.stefan.home.path;
       usbInitrd = self.nixosConfigurations.usb.config.system.build.initialRamdisk;
+      usbOverlayScript = builtins.toFile "usb-overlay-store-script" self.nixosConfigurations.usb.config.boot.initrd.systemd.services.initrd-usb-overlay-store.script;
+      usbRamStoreOverlayScript = builtins.toFile "usb-ram-store-overlay-store-script" self.nixosConfigurations.usb.config.specialisation.ram-store.configuration.boot.initrd.systemd.services.initrd-usb-overlay-store.script;
+      usbHostAutoOverlayScript = builtins.toFile "usb-host-auto-overlay-store-script" self.nixosConfigurations.usb.config.specialisation.host-auto-store.configuration.boot.initrd.systemd.services.initrd-usb-overlay-store.script;
       neovimLangmapFile = builtins.toFile "neovim-langmap" self.nixosConfigurations.desktop.config.home-manager.users.stefan.programs.nixvim.opts.langmap;
       desktopHyprlandBindsFile = builtins.toFile "desktop-hyprland-binds" (
         builtins.concatStringsSep "\n"
@@ -134,6 +137,46 @@
           if ! grep -Fq "Before=initrd-find-nixos-closure.service initrd-fs.target" overlay-unit; then
             echo "Expected USB overlay service to run before initrd-find-nixos-closure.service." >&2
             sed 's/^/  /' overlay-unit >&2
+            exit 1
+          fi
+
+          if ! grep -Fq "store_mode=usb-backed" ${usbOverlayScript}; then
+            echo "Expected default USB overlay script to use usb-backed mode." >&2
+            exit 1
+          fi
+
+          if ! grep -Fq "store_mode=ram-backed" ${usbRamStoreOverlayScript}; then
+            echo "Expected ram-store overlay script to use ram-backed mode." >&2
+            exit 1
+          fi
+
+          if ! grep -Fq "writable-scratch-overlay" ${usbRamStoreOverlayScript}; then
+            echo "Expected ram-store overlay script to use USB-root scratch upper." >&2
+            exit 1
+          fi
+
+          if ! grep -Fq "store_mode=host-auto" ${usbHostAutoOverlayScript}; then
+            echo "Expected host-auto-store overlay script to use host-auto mode." >&2
+            exit 1
+          fi
+
+          if ! grep -Fq "find_host_store_candidates" ${usbHostAutoOverlayScript}; then
+            echo "Expected host-auto-store overlay script to scan host partitions." >&2
+            exit 1
+          fi
+
+          if ! grep -Fq ".nixos-usb/store" ${usbHostAutoOverlayScript}; then
+            echo "Expected host-auto-store overlay script to use the host .nixos-usb/store directory." >&2
+            exit 1
+          fi
+
+          if ! grep -Fq "writable-host-auto-overlay" ${usbHostAutoOverlayScript}; then
+            echo "Expected host-auto-store overlay script to mark host-auto overlays." >&2
+            exit 1
+          fi
+
+          if ! grep -Fq "writable-overlay-host-auto-lower" ${usbHostAutoOverlayScript}; then
+            echo "Expected host-auto-store overlay script to fall back to tmpfs upper after host lower setup." >&2
             exit 1
           fi
 

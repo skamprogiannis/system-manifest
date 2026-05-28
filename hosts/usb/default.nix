@@ -30,6 +30,12 @@
   services.xserver.videoDrivers = lib.mkForce ["modesetting" "fbdev"];
 
   specialisation = {
+    host-auto-store.configuration = {
+      boot.loader.grub.configurationName = "host-auto-store";
+      system.nixos.tags = ["host-auto-store"];
+      systemManifest.usb.store.mode = "host-auto";
+    };
+
     ram-store.configuration = {
       boot.loader.grub.configurationName = "ram-store";
       system.nixos.tags = ["ram-store"];
