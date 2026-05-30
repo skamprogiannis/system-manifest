@@ -42,7 +42,7 @@
       }
       {
         event = "FileType";
-        pattern = [ "javascript" "typescript" "javascriptreact" "typescriptreact" ];
+        pattern = ["javascript" "typescript" "javascriptreact" "typescriptreact"];
         # Prettier standard: 2 spaces
         command = "setlocal tabstop=2 shiftwidth=2 softtabstop=2 colorcolumn=100";
       }
@@ -54,7 +54,7 @@
       }
       {
         event = "FileType";
-        pattern = [ "c" "cpp" ];
+        pattern = ["c" "cpp"];
         command = "setlocal tabstop=4 shiftwidth=4 softtabstop=4 colorcolumn=100";
       }
       {
@@ -303,7 +303,7 @@
         settings = {
           keymap.preset = "default";
           appearance.nerd_font_variant = "mono";
-          sources.default = [ "lsp" "path" "snippets" "buffer" ];
+          sources.default = ["lsp" "path" "snippets" "buffer"];
           completion = {
             menu = {
               winblend = 0;
@@ -341,14 +341,14 @@
             lsp_fallback = false;
           };
           formatters_by_ft = {
-            javascript = [ "prettier" ];
-            typescript = [ "prettier" ];
-            javascriptreact = [ "prettier" ];
-            typescriptreact = [ "prettier" ];
-            python = [ "ruff_format" ];
-            nix = [ "alejandra" ];
-          c = [ "clang_format" ];
-          cpp = [ "clang_format" ];
+            javascript = ["prettier"];
+            typescript = ["prettier"];
+            javascriptreact = ["prettier"];
+            typescriptreact = ["prettier"];
+            python = ["ruff_format"];
+            nix = ["alejandra"];
+            c = ["clang_format"];
+            cpp = ["clang_format"];
           };
         };
       };
@@ -356,14 +356,14 @@
       lint = {
         enable = true;
         lintersByFt = {
-          javascript = [ "eslint" ];
-          typescript = [ "eslint" ];
-          javascriptreact = [ "eslint" ];
-          typescriptreact = [ "eslint" ];
-          python = [ "ruff" ];
-          nix = [ "statix" ];
-          c = [ "cppcheck" ];
-          cpp = [ "cppcheck" ];
+          javascript = ["eslint"];
+          typescript = ["eslint"];
+          javascriptreact = ["eslint"];
+          typescriptreact = ["eslint"];
+          python = ["ruff"];
+          nix = ["statix"];
+          c = ["cppcheck"];
+          cpp = ["cppcheck"];
         };
       };
 
@@ -420,7 +420,7 @@
     keymaps = [
       # --- Clipboard (system) ---
       {
-        mode = [ "n" "v" ];
+        mode = ["n" "v"];
         key = "<leader>y";
         action = ''"+y'';
         options.desc = "Yank to system clipboard";
@@ -445,7 +445,7 @@
       }
       # --- Void-register delete (preserve yank) ---
       {
-        mode = [ "n" "v" ];
+        mode = ["n" "v"];
         key = "<leader>d";
         action = ''"_d'';
         options.desc = "Delete to void register (keep yank intact)";
@@ -565,7 +565,7 @@
       }
       # --- Format ---
       {
-        mode = [ "n" "v" ];
+        mode = ["n" "v"];
         key = "<leader>cf";
         action = "<cmd>lua require('conform').format({ async = true })<cr>";
         options.desc = "Format buffer";
@@ -610,5 +610,4 @@
       }
     ];
   };
-
 }

@@ -45,7 +45,7 @@ in {
 
   # Catppuccin GTK theme (GTK 3 only — GTK 4 uses matugen/dank-colors.css) + icon packs
   home.packages = with pkgs; [
-    (catppuccin-gtk.override { variant = "mocha"; })
+    (catppuccin-gtk.override {variant = "mocha";})
     dracula-icon-theme
     hicolor-icon-theme
   ];
@@ -53,8 +53,7 @@ in {
   home.file.".local/share/applications/firefox.desktop".source = firefoxDesktopFile;
   # Steam drops per-game icons into ~/.local/share/icons/hicolor; provide the
   # theme metadata there so Qt/Quickshell launchers can resolve those icons.
-  home.file.".local/share/icons/hicolor/index.theme".source =
-    "${pkgs.hicolor-icon-theme}/share/icons/hicolor/index.theme";
+  home.file.".local/share/icons/hicolor/index.theme".source = "${pkgs.hicolor-icon-theme}/share/icons/hicolor/index.theme";
   # Override steam.desktop locally so launchers hide Steam's jump-list actions.
   home.file.".local/share/applications/steam.desktop".text = ''
     [Desktop Entry]
@@ -124,10 +123,30 @@ in {
       noDisplay = true;
     };
     # Hide individual Zathura plugin desktop entries — only the main one should appear
-    "org.pwmt.zathura-djvu" = { name = "Zathura"; exec = "zathura %U"; noDisplay = true; settings.Hidden = "true"; };
-    "org.pwmt.zathura-pdf-mupdf" = { name = "Zathura"; exec = "zathura %U"; noDisplay = true; settings.Hidden = "true"; };
-    "org.pwmt.zathura-cb" = { name = "Zathura"; exec = "zathura %U"; noDisplay = true; settings.Hidden = "true"; };
-    "org.pwmt.zathura-ps" = { name = "Zathura"; exec = "zathura %U"; noDisplay = true; settings.Hidden = "true"; };
+    "org.pwmt.zathura-djvu" = {
+      name = "Zathura";
+      exec = "zathura %U";
+      noDisplay = true;
+      settings.Hidden = "true";
+    };
+    "org.pwmt.zathura-pdf-mupdf" = {
+      name = "Zathura";
+      exec = "zathura %U";
+      noDisplay = true;
+      settings.Hidden = "true";
+    };
+    "org.pwmt.zathura-cb" = {
+      name = "Zathura";
+      exec = "zathura %U";
+      noDisplay = true;
+      settings.Hidden = "true";
+    };
+    "org.pwmt.zathura-ps" = {
+      name = "Zathura";
+      exec = "zathura %U";
+      noDisplay = true;
+      settings.Hidden = "true";
+    };
     # Neovim in Ghostty — used as the default text editor
     "nvim-text" = {
       name = "Neovim";

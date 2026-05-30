@@ -12,10 +12,12 @@ let
   in {
     default = "disc";
     inherit included;
-    allowed = included ++ [
-      "none"
-      "random"
-    ];
+    allowed =
+      included
+      ++ [
+        "none"
+        "random"
+      ];
   };
 in {
   dmsMonitorIdentity = {

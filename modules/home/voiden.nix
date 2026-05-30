@@ -18,25 +18,26 @@
   app = pkgs.appimageTools.wrapType2 {
     pname = "voiden";
     inherit version src;
-    extraPkgs = pkgs: with pkgs; [
-      webkitgtk_4_1
-      gtk4
-      libadwaita
-      graphene
-      libsoup_3
-      gnome-themes-extra
-      gtk3
-    ];
+    extraPkgs = pkgs:
+      with pkgs; [
+        webkitgtk_4_1
+        gtk4
+        libadwaita
+        graphene
+        libsoup_3
+        gnome-themes-extra
+        gtk3
+      ];
   };
 in {
-  home.packages = [ app ];
+  home.packages = [app];
 
   xdg.desktopEntries.voiden = {
     name = "Voiden";
     comment = "Offline-first API client";
     exec = "${app}/bin/voiden %U";
     icon = "${extracted}/resources/logo-dark.png";
-    categories = [ "Development" "Network" ];
+    categories = ["Development" "Network"];
     terminal = false;
   };
 }

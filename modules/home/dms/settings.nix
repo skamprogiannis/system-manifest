@@ -75,134 +75,139 @@ in {
 
     # Keep settings declarative while removing setup prompts in DMS UI.
     barConfigs = [
-      (commonBarStyle // {
-        id = "default";
-        name = "Main Bar";
-        enabled = true;
-        position = 0;
-        screenPreferences = [
-          (monitorPreference monitorIdentity.primary)
-        ];
-        showOnLastDisplay = false;
-        leftWidgets = [
-          "workspaceSwitcher"
-          compactRunningAppsWidget
-          compactFocusedWindowWidget
-          (enabledWidget "systemTray")
-        ];
-        centerWidgets = [
-          {
-            id = "clock";
-            enabled = true;
-            clockCompactMode = false;
-          }
-          {
-            id = "music";
-            enabled = true;
-            mediaSize = 1;
-          }
-          {
-            id = "weather";
-            enabled = true;
-          }
-        ];
-        rightWidgets = [
-          (enabledWidget "cpuUsage")
-          {
-            id = "memUsage";
-            enabled = true;
-            showSwap = true;
-          }
-          {
-            id = "gpuTemp";
-            enabled = true;
-            selectedGpuIndex = 0;
-            pciId = "10de:220a";
-          }
-          (enabledWidget "notificationButton")
-          (enabledWidget "battery")
-          (enabledWidget "controlCenterButton")
-        ];
-      })
-      (commonBarStyle // topShadowStyle // {
-        id = "bar1774633251014";
-        name = "Secondary Bar";
-        enabled = true;
-        position = 0;
-        screenPreferences = [
-          (monitorPreference monitorIdentity.secondary)
-        ];
-        showOnLastDisplay = false;
-        leftWidgets = [
-          (enabledWidget "launcherButton")
-          (enabledWidget "clipboard")
-          (enabledWidget "notepadButton")
-          (enabledWidget "colorPicker")
-          (enabledWidget "idleInhibitor")
-          (enabledWidget "powerMenuButton")
-        ];
-        centerWidgets = [
-          (enabledWidget "network_speed_monitor")
-          (enabledWidget "vpn")
-        ];
-        rightWidgets = [
-          {
-            id = "keyboard_layout_name";
-            enabled = true;
-            keyboardLayoutNameCompactMode = false;
-          }
-          compactFocusedWindowWidget
-          compactRunningAppsWidget
-          (enabledWidget "workspaceSwitcher")
-        ];
-      })
-      (commonBarStyle // topShadowStyle // {
-        id = "bar1774633251575";
-        name = "Unified Bar";
-        enabled = true;
-        position = 0;
-        screenPreferences = [];
-        showOnLastDisplay = true;
-        leftWidgets = [
-          (enabledWidget "launcherButton")
-          (enabledWidget "workspaceSwitcher")
-          (enabledWidget "systemTray")
-          compactRunningAppsWidget
-          (enabledWidget "focusedWindow")
-        ];
-        centerWidgets = [
-          {
-            id = "clock";
-            enabled = true;
-            clockCompactMode = true;
-            showSeconds = false;
-          }
-          {
-            id = "music";
-            enabled = true;
-            mediaSize = 0;
-          }
-          "weather"
-        ];
-        rightWidgets = [
-          (enabledWidget "cpuUsage")
-          {
-            id = "memUsage";
-            enabled = true;
-            showSwap = true;
-          }
-          {
-            id = "gpuTemp";
-            enabled = true;
-            selectedGpuIndex = 0;
-            pciId = "";
-            minimumWidth = true;
-          }
-          (enabledWidget "notificationButton")
-          (enabledWidget "battery")
-          (enabledWidget "controlCenterButton")
-        ];
-      })
+      (commonBarStyle
+        // {
+          id = "default";
+          name = "Main Bar";
+          enabled = true;
+          position = 0;
+          screenPreferences = [
+            (monitorPreference monitorIdentity.primary)
+          ];
+          showOnLastDisplay = false;
+          leftWidgets = [
+            "workspaceSwitcher"
+            compactRunningAppsWidget
+            compactFocusedWindowWidget
+            (enabledWidget "systemTray")
+          ];
+          centerWidgets = [
+            {
+              id = "clock";
+              enabled = true;
+              clockCompactMode = false;
+            }
+            {
+              id = "music";
+              enabled = true;
+              mediaSize = 1;
+            }
+            {
+              id = "weather";
+              enabled = true;
+            }
+          ];
+          rightWidgets = [
+            (enabledWidget "cpuUsage")
+            {
+              id = "memUsage";
+              enabled = true;
+              showSwap = true;
+            }
+            {
+              id = "gpuTemp";
+              enabled = true;
+              selectedGpuIndex = 0;
+              pciId = "10de:220a";
+            }
+            (enabledWidget "notificationButton")
+            (enabledWidget "battery")
+            (enabledWidget "controlCenterButton")
+          ];
+        })
+      (commonBarStyle
+        // topShadowStyle
+        // {
+          id = "bar1774633251014";
+          name = "Secondary Bar";
+          enabled = true;
+          position = 0;
+          screenPreferences = [
+            (monitorPreference monitorIdentity.secondary)
+          ];
+          showOnLastDisplay = false;
+          leftWidgets = [
+            (enabledWidget "launcherButton")
+            (enabledWidget "clipboard")
+            (enabledWidget "notepadButton")
+            (enabledWidget "colorPicker")
+            (enabledWidget "idleInhibitor")
+            (enabledWidget "powerMenuButton")
+          ];
+          centerWidgets = [
+            (enabledWidget "network_speed_monitor")
+            (enabledWidget "vpn")
+          ];
+          rightWidgets = [
+            {
+              id = "keyboard_layout_name";
+              enabled = true;
+              keyboardLayoutNameCompactMode = false;
+            }
+            compactFocusedWindowWidget
+            compactRunningAppsWidget
+            (enabledWidget "workspaceSwitcher")
+          ];
+        })
+      (commonBarStyle
+        // topShadowStyle
+        // {
+          id = "bar1774633251575";
+          name = "Unified Bar";
+          enabled = true;
+          position = 0;
+          screenPreferences = [];
+          showOnLastDisplay = true;
+          leftWidgets = [
+            (enabledWidget "launcherButton")
+            (enabledWidget "workspaceSwitcher")
+            (enabledWidget "systemTray")
+            compactRunningAppsWidget
+            (enabledWidget "focusedWindow")
+          ];
+          centerWidgets = [
+            {
+              id = "clock";
+              enabled = true;
+              clockCompactMode = true;
+              showSeconds = false;
+            }
+            {
+              id = "music";
+              enabled = true;
+              mediaSize = 0;
+            }
+            "weather"
+          ];
+          rightWidgets = [
+            (enabledWidget "cpuUsage")
+            {
+              id = "memUsage";
+              enabled = true;
+              showSwap = true;
+            }
+            {
+              id = "gpuTemp";
+              enabled = true;
+              selectedGpuIndex = 0;
+              pciId = "";
+              minimumWidth = true;
+            }
+            (enabledWidget "notificationButton")
+            (enabledWidget "battery")
+            (enabledWidget "controlCenterButton")
+          ];
+        })
     ];
 
     # --- DISPLAYS & WIDGET SCREENS ---

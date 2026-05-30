@@ -5,8 +5,7 @@
   hostType ? "desktop",
   ...
 }:
-assert lib.assertMsg (builtins.elem hostType ["desktop" "usb" "laptop"]) "hostType must be \"desktop\", \"usb\", or \"laptop\".";
-let
+assert lib.assertMsg (builtins.elem hostType ["desktop" "usb" "laptop"]) "hostType must be \"desktop\", \"usb\", or \"laptop\"."; let
   wallpaperContracts = import ./wallpaper/contracts.nix;
   skwdColorContract = wallpaperContracts.skwdColorContract;
   translucenceThemeName = "Translucence.theme.css";
@@ -27,232 +26,232 @@ let
   vesktopLauncherIcon = "${pkgs.vesktop}/share/icons/hicolor/256x256/apps/vesktop.png";
 
   regenTransluenceTheme = pkgs.writeShellScriptBin "regen-vesktop-transluence-theme" ''
-    set -euo pipefail
+        set -euo pipefail
 
-    THEME_DIR="$HOME/.config/vesktop/themes"
-    SETTINGS_DIR="$HOME/.config/vesktop/settings"
-    OUT="$THEME_DIR/${translucenceThemeName}"
-    QUICKCSS_OUT="$SETTINGS_DIR/quickCss.css"
-    SRC_JSON="$HOME/.cache/skwd-wall/colors.json"
-    OVERLAY_STORE="${./vesktop/transluence-matugen.overlay.css}"
+        THEME_DIR="$HOME/.config/vesktop/themes"
+        SETTINGS_DIR="$HOME/.config/vesktop/settings"
+        OUT="$THEME_DIR/${translucenceThemeName}"
+        QUICKCSS_OUT="$SETTINGS_DIR/quickCss.css"
+        SRC_JSON="$HOME/.cache/skwd-wall/colors.json"
+        OVERLAY_STORE="${./vesktop/transluence-matugen.overlay.css}"
 
-    mkdir -p "$THEME_DIR" "$SETTINGS_DIR"
-    [ -f "$SRC_JSON" ] || exit 0
-    [ -f "$OVERLAY_STORE" ] || exit 0
+        mkdir -p "$THEME_DIR" "$SETTINGS_DIR"
+        [ -f "$SRC_JSON" ] || exit 0
+        [ -f "$OVERLAY_STORE" ] || exit 0
 
-    # DMS can rewrite palette state in bursts. Wait for a stable snapshot.
-    stable_hash=""
-    for _ in $(${pkgs.coreutils}/bin/seq 1 40); do
-      hash_a=$(${pkgs.coreutils}/bin/md5sum "$SRC_JSON" | ${pkgs.coreutils}/bin/cut -d' ' -f1)
-      ${pkgs.coreutils}/bin/sleep 0.05
-      hash_b=$(${pkgs.coreutils}/bin/md5sum "$SRC_JSON" | ${pkgs.coreutils}/bin/cut -d' ' -f1)
-      if [ "$hash_a" = "$hash_b" ] && ${pkgs.python3}/bin/python3 - "$SRC_JSON" <<'PY'
-import json
-import sys
+        # DMS can rewrite palette state in bursts. Wait for a stable snapshot.
+        stable_hash=""
+        for _ in $(${pkgs.coreutils}/bin/seq 1 40); do
+          hash_a=$(${pkgs.coreutils}/bin/md5sum "$SRC_JSON" | ${pkgs.coreutils}/bin/cut -d' ' -f1)
+          ${pkgs.coreutils}/bin/sleep 0.05
+          hash_b=$(${pkgs.coreutils}/bin/md5sum "$SRC_JSON" | ${pkgs.coreutils}/bin/cut -d' ' -f1)
+          if [ "$hash_a" = "$hash_b" ] && ${pkgs.python3}/bin/python3 - "$SRC_JSON" <<'PY'
+    import json
+    import sys
 
-with open(sys.argv[1], encoding="utf-8") as fh:
-    data = json.load(fh)
-contract = json.loads(${lib.escapeShellArg vesktopColorContractJson})
-missing = [key for key in contract["requiredTokens"] if key not in data]
-raise SystemExit(0 if not missing else 1)
-PY
-      then
-        stable_hash="$hash_a"
-        break
-      fi
-    done
+    with open(sys.argv[1], encoding="utf-8") as fh:
+        data = json.load(fh)
+    contract = json.loads(${lib.escapeShellArg vesktopColorContractJson})
+    missing = [key for key in contract["requiredTokens"] if key not in data]
+    raise SystemExit(0 if not missing else 1)
+    PY
+          then
+            stable_hash="$hash_a"
+            break
+          fi
+        done
 
-    if [ -z "$stable_hash" ]; then
-      echo "regen-vesktop-transluence-theme: skipped because skwd-wall colors.json never reached the expected schema" >&2
-      exit 0
-    fi
+        if [ -z "$stable_hash" ]; then
+          echo "regen-vesktop-transluence-theme: skipped because skwd-wall colors.json never reached the expected schema" >&2
+          exit 0
+        fi
 
-    accent_hue="220"
-    accent_saturation="82%"
-    accent_lightness="76%"
+        accent_hue="220"
+        accent_saturation="82%"
+        accent_lightness="76%"
 
-    accent_hex=$(${pkgs.python3}/bin/python3 - "$SRC_JSON" <<'PY'
-import json
-import sys
+        accent_hex=$(${pkgs.python3}/bin/python3 - "$SRC_JSON" <<'PY'
+    import json
+    import sys
 
-with open(sys.argv[1], encoding="utf-8") as fh:
-    data = json.load(fh)
-contract = json.loads(${lib.escapeShellArg vesktopColorContractJson})
-primary = ""
-for token in contract["accentFallbackTokens"]:
-    candidate = data.get(token) or ""
-    if isinstance(candidate, str) and candidate:
-        primary = candidate
-        break
-if not isinstance(primary, str):
-    raise SystemExit(1)
-print(primary.lstrip("#"))
-PY
+    with open(sys.argv[1], encoding="utf-8") as fh:
+        data = json.load(fh)
+    contract = json.loads(${lib.escapeShellArg vesktopColorContractJson})
+    primary = ""
+    for token in contract["accentFallbackTokens"]:
+        candidate = data.get(token) or ""
+        if isinstance(candidate, str) and candidate:
+            primary = candidate
+            break
+    if not isinstance(primary, str):
+        raise SystemExit(1)
+    print(primary.lstrip("#"))
+    PY
+        )
+
+        if [ -n "$accent_hex" ]; then
+          accent_triplet=$(${pkgs.python3}/bin/python3 - "$accent_hex" <<'PY'
+    import colorsys
+    import sys
+
+    hexv = sys.argv[1].strip()
+    r = int(hexv[0:2], 16) / 255.0
+    g = int(hexv[2:4], 16) / 255.0
+    b = int(hexv[4:6], 16) / 255.0
+    h, l, s = colorsys.rgb_to_hls(r, g, b)
+    print(f"{round(h * 360)} {s * 100:.1f}% {l * 100:.1f}%")
+    PY
     )
+          accent_hue=$(printf '%s' "$accent_triplet" | ${pkgs.coreutils}/bin/cut -d' ' -f1)
+          accent_saturation=$(printf '%s' "$accent_triplet" | ${pkgs.coreutils}/bin/cut -d' ' -f2)
+          accent_lightness=$(printf '%s' "$accent_triplet" | ${pkgs.coreutils}/bin/cut -d' ' -f3)
+        fi
 
-    if [ -n "$accent_hex" ]; then
-      accent_triplet=$(${pkgs.python3}/bin/python3 - "$accent_hex" <<'PY'
-import colorsys
-import sys
+        render_quickcss_source_root() {
+          ${pkgs.python3}/bin/python3 - "$SRC_JSON" <<'PY'
+    import json
+    import sys
 
-hexv = sys.argv[1].strip()
-r = int(hexv[0:2], 16) / 255.0
-g = int(hexv[2:4], 16) / 255.0
-b = int(hexv[4:6], 16) / 255.0
-h, l, s = colorsys.rgb_to_hls(r, g, b)
-print(f"{round(h * 360)} {s * 100:.1f}% {l * 100:.1f}%")
-PY
-)
-      accent_hue=$(printf '%s' "$accent_triplet" | ${pkgs.coreutils}/bin/cut -d' ' -f1)
-      accent_saturation=$(printf '%s' "$accent_triplet" | ${pkgs.coreutils}/bin/cut -d' ' -f2)
-      accent_lightness=$(printf '%s' "$accent_triplet" | ${pkgs.coreutils}/bin/cut -d' ' -f3)
-    fi
+    with open(sys.argv[1], encoding="utf-8") as fh:
+        data = json.load(fh)
+    contract = json.loads(${lib.escapeShellArg vesktopColorContractJson})
+    missing = [key for key in contract["requiredTokens"] if key not in data]
+    if missing:
+        raise SystemExit("Invalid skwd-wall colors JSON schema")
 
-    render_quickcss_source_root() {
-      ${pkgs.python3}/bin/python3 - "$SRC_JSON" <<'PY'
-import json
-import sys
+    for entry in contract["vesktopMappings"]:
+        name = entry["cssVar"]
+        token = entry["token"]
+        print(f"  --dms-{name[2:]}: {data[token]};")
+    PY
+        }
 
-with open(sys.argv[1], encoding="utf-8") as fh:
-    data = json.load(fh)
-contract = json.loads(${lib.escapeShellArg vesktopColorContractJson})
-missing = [key for key in contract["requiredTokens"] if key not in data]
-if missing:
-    raise SystemExit("Invalid skwd-wall colors JSON schema")
+        render_theme_bridge_root() {
+          cat <<'EOF'
+    :root {
+      --online-indicator: var(--dms-online-indicator, #43a25a);
+      --dnd-indicator: var(--dms-dnd-indicator, #f23f43);
+      --idle-indicator: var(--dms-idle-indicator, #f0b232);
+      --streaming-indicator: var(--dms-streaming-indicator, #593695);
 
-for entry in contract["vesktopMappings"]:
-    name = entry["cssVar"]
-    token = entry["token"]
-    print(f"  --dms-{name[2:]}: {data[token]};")
-PY
+      --accent-1: var(--dms-accent-1, #c9d0ff);
+      --accent-2: var(--dms-accent-2, #b0c6ff);
+      --accent-3: var(--dms-accent-3, #b0c6ff);
+      --accent-4: var(--dms-accent-4, #38393e);
+      --accent-5: var(--dms-accent-5, #4e5058);
+
+      --mention: var(--dms-mention, #17191f);
+      --mention-hover: var(--dms-mention-hover, #1e2128);
+
+      --text-0: var(--dms-text-0, #121317);
+      --text-1: var(--dms-text-1, #f2f3f5);
+      --text-2: var(--dms-text-2, #dbdee1);
+      --text-3: var(--dms-text-3, #b5bac1);
+      --text-4: var(--dms-text-4, #949ba4);
+      --text-5: var(--dms-text-5, #6d727a);
+
+      --bg-1: var(--dms-bg-1, #202225);
+      --bg-2: var(--dms-bg-2, #2b2d31);
+      --bg-3: var(--dms-bg-3, #1e1f22);
+      --bg-4: var(--dms-bg-4, #111214);
+
+      --hover: var(--dms-hover, #35373c);
+      --active: var(--dms-active, #3f4248);
+      --message-hover: var(--dms-message-hover, #2a2d31);
+
+      --accent-hue: var(--dms-accent-hue, 220);
+      --accent-saturation: var(--dms-accent-saturation, 82%);
+      --accent-lightness: var(--dms-accent-lightness, 76%);
+
+      --green-to-accent-3-filter: var(--dms-green-to-accent-3-filter, hue-rotate(56deg) saturate(1.43));
+      --blurple-to-accent-3-filter: var(--dms-blurple-to-accent-3-filter, hue-rotate(304deg) saturate(0.84) brightness(1.2));
     }
+    EOF
+        }
 
-    render_theme_bridge_root() {
-      cat <<'EOF'
-:root {
-  --online-indicator: var(--dms-online-indicator, #43a25a);
-  --dnd-indicator: var(--dms-dnd-indicator, #f23f43);
-  --idle-indicator: var(--dms-idle-indicator, #f0b232);
-  --streaming-indicator: var(--dms-streaming-indicator, #593695);
+        # Keep temp files outside the watched Vesktop paths:
+        # - the themes directory is watched as a directory, so temp files there trigger reload flicker
+        # - quickCss.css is watched as a file, so replacing it breaks/inconsistently reattaches the watcher
+        theme_tmp=$(mktemp)
+        quickcss_tmp=$(mktemp)
+        src_hash="$stable_hash"
+        trap 'rm -f "$theme_tmp" "$quickcss_tmp"' EXIT
 
-  --accent-1: var(--dms-accent-1, #c9d0ff);
-  --accent-2: var(--dms-accent-2, #b0c6ff);
-  --accent-3: var(--dms-accent-3, #b0c6ff);
-  --accent-4: var(--dms-accent-4, #38393e);
-  --accent-5: var(--dms-accent-5, #4e5058);
+        cat > "$theme_tmp" <<EOF
+    /**
+     * @name Translucence Matugen
+     * @description Custom Translucence base with dynamic Matugen source vars bridged from QuickCSS
+     * @author skamprogiannis
+     * @version 1.7.1
+     */
 
-  --mention: var(--dms-mention, #17191f);
-  --mention-hover: var(--dms-mention-hover, #1e2128);
+    @import url(https://capnkitten.github.io/BetterDiscord/Themes/Translucence/css/source.css);
+    EOF
+        printf '\n/* ----- QuickCSS source bridge ----- */\n' >> "$theme_tmp"
+        render_theme_bridge_root >> "$theme_tmp"
+        printf '\n/* ----- Transluence overlay ----- */\n' >> "$theme_tmp"
+        cat "$OVERLAY_STORE" >> "$theme_tmp"
 
-  --text-0: var(--dms-text-0, #121317);
-  --text-1: var(--dms-text-1, #f2f3f5);
-  --text-2: var(--dms-text-2, #dbdee1);
-  --text-3: var(--dms-text-3, #b5bac1);
-  --text-4: var(--dms-text-4, #949ba4);
-  --text-5: var(--dms-text-5, #6d727a);
+        cat > "$quickcss_tmp" <<EOF
+    /* Source hash: $src_hash (~/.cache/skwd-wall/colors.json, skwd-wall Vesktop token mapping) */
 
-  --bg-1: var(--dms-bg-1, #202225);
-  --bg-2: var(--dms-bg-2, #2b2d31);
-  --bg-3: var(--dms-bg-3, #1e1f22);
-  --bg-4: var(--dms-bg-4, #111214);
+    /* ----- QuickCSS source vars for the static Translucence bridge ----- */
+    :root {
+    EOF
+        render_quickcss_source_root >> "$quickcss_tmp"
+        printf '}\n' >> "$quickcss_tmp"
 
-  --hover: var(--dms-hover, #35373c);
-  --active: var(--dms-active, #3f4248);
-  --message-hover: var(--dms-message-hover, #2a2d31);
+        cat >> "$quickcss_tmp" <<EOF
 
-  --accent-hue: var(--dms-accent-hue, 220);
-  --accent-saturation: var(--dms-accent-saturation, 82%);
-  --accent-lightness: var(--dms-accent-lightness, 76%);
+    /* ----- Derived accent HSL from Matugen accent ----- */
+    :root {
+      --dms-accent-hue: $accent_hue;
+      --dms-accent-saturation: $accent_saturation;
+      --dms-accent-lightness: $accent_lightness;
 
-  --green-to-accent-3-filter: var(--dms-green-to-accent-3-filter, hue-rotate(56deg) saturate(1.43));
-  --blurple-to-accent-3-filter: var(--dms-blurple-to-accent-3-filter, hue-rotate(304deg) saturate(0.84) brightness(1.2));
-}
-EOF
+      /* Keep the non-structural icon filter variables from the old DMS template. */
+      --dms-green-to-accent-3-filter: hue-rotate(56deg) saturate(1.43);
+      --dms-blurple-to-accent-3-filter: hue-rotate(304deg) saturate(0.84) brightness(1.2);
     }
+    EOF
 
-    # Keep temp files outside the watched Vesktop paths:
-    # - the themes directory is watched as a directory, so temp files there trigger reload flicker
-    # - quickCss.css is watched as a file, so replacing it breaks/inconsistently reattaches the watcher
-    theme_tmp=$(mktemp)
-    quickcss_tmp=$(mktemp)
-    src_hash="$stable_hash"
-    trap 'rm -f "$theme_tmp" "$quickcss_tmp"' EXIT
+        cleanup_legacy_files() {
+          ${pkgs.coreutils}/bin/rm -f \
+            "$THEME_DIR/.transluence-matugen.palette.css" \
+            "$THEME_DIR/.transluence-matugen.overlay.css" \
+            "$THEME_DIR/dank-discord.css" \
+            "$THEME_DIR/skwd-matugen.css" \
+            "$THEME_DIR/${legacyGeneratedThemeName}" \
+            "$THEME_DIR/${legacyGeneratedThemeName}.backup"
+        }
 
-    cat > "$theme_tmp" <<EOF
-/**
- * @name Translucence Matugen
- * @description Custom Translucence base with dynamic Matugen source vars bridged from QuickCSS
- * @author skamprogiannis
- * @version 1.7.1
- */
+        write_if_changed() {
+          local src="$1"
+          local dst="$2"
+          if [ -f "$dst" ] && ${pkgs.diffutils}/bin/cmp -s "$src" "$dst"; then
+            rm -f "$src"
+            return 0
+          fi
+          mv "$src" "$dst"
+          return 0
+        }
 
-@import url(https://capnkitten.github.io/BetterDiscord/Themes/Translucence/css/source.css);
-EOF
-    printf '\n/* ----- QuickCSS source bridge ----- */\n' >> "$theme_tmp"
-    render_theme_bridge_root >> "$theme_tmp"
-    printf '\n/* ----- Transluence overlay ----- */\n' >> "$theme_tmp"
-    cat "$OVERLAY_STORE" >> "$theme_tmp"
+        write_in_place_if_changed() {
+          local src="$1"
+          local dst="$2"
+          if [ -f "$dst" ] && ${pkgs.diffutils}/bin/cmp -s "$src" "$dst"; then
+            rm -f "$src"
+            return 0
+          fi
+          ${pkgs.coreutils}/bin/mkdir -p "$(${pkgs.coreutils}/bin/dirname "$dst")"
+          ${pkgs.coreutils}/bin/cat "$src" > "$dst"
+          rm -f "$src"
+          return 0
+        }
 
-    cat > "$quickcss_tmp" <<EOF
-/* Source hash: $src_hash (~/.cache/skwd-wall/colors.json, skwd-wall Vesktop token mapping) */
-
-/* ----- QuickCSS source vars for the static Translucence bridge ----- */
-:root {
-EOF
-    render_quickcss_source_root >> "$quickcss_tmp"
-    printf '}\n' >> "$quickcss_tmp"
-
-    cat >> "$quickcss_tmp" <<EOF
-
-/* ----- Derived accent HSL from Matugen accent ----- */
-:root {
-  --dms-accent-hue: $accent_hue;
-  --dms-accent-saturation: $accent_saturation;
-  --dms-accent-lightness: $accent_lightness;
-
-  /* Keep the non-structural icon filter variables from the old DMS template. */
-  --dms-green-to-accent-3-filter: hue-rotate(56deg) saturate(1.43);
-  --dms-blurple-to-accent-3-filter: hue-rotate(304deg) saturate(0.84) brightness(1.2);
-}
-EOF
-
-    cleanup_legacy_files() {
-      ${pkgs.coreutils}/bin/rm -f \
-        "$THEME_DIR/.transluence-matugen.palette.css" \
-        "$THEME_DIR/.transluence-matugen.overlay.css" \
-        "$THEME_DIR/dank-discord.css" \
-        "$THEME_DIR/skwd-matugen.css" \
-        "$THEME_DIR/${legacyGeneratedThemeName}" \
-        "$THEME_DIR/${legacyGeneratedThemeName}.backup"
-    }
-
-    write_if_changed() {
-      local src="$1"
-      local dst="$2"
-      if [ -f "$dst" ] && ${pkgs.diffutils}/bin/cmp -s "$src" "$dst"; then
-        rm -f "$src"
-        return 0
-      fi
-      mv "$src" "$dst"
-      return 0
-    }
-
-    write_in_place_if_changed() {
-      local src="$1"
-      local dst="$2"
-      if [ -f "$dst" ] && ${pkgs.diffutils}/bin/cmp -s "$src" "$dst"; then
-        rm -f "$src"
-        return 0
-      fi
-      ${pkgs.coreutils}/bin/mkdir -p "$(${pkgs.coreutils}/bin/dirname "$dst")"
-      ${pkgs.coreutils}/bin/cat "$src" > "$dst"
-      rm -f "$src"
-      return 0
-    }
-
-    write_if_changed "$theme_tmp" "$OUT"
-    write_in_place_if_changed "$quickcss_tmp" "$QUICKCSS_OUT"
-    cleanup_legacy_files
+        write_if_changed "$theme_tmp" "$OUT"
+        write_in_place_if_changed "$quickcss_tmp" "$QUICKCSS_OUT"
+        cleanup_legacy_files
   '';
 
   vesktopReloadHook = pkgs.writeShellScript "reload-vesktop.sh" ''

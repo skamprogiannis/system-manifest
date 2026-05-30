@@ -1,7 +1,4 @@
-{
-  pkgs,
-  ...
-}: {
+{pkgs, ...}: {
   imports = [
     ../common/default.nix
     ../../modules/desktop-enviroments/hyprland.nix

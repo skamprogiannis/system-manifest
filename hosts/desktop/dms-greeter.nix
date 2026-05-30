@@ -99,14 +99,16 @@
   greeterBasePackage = inputs.dms.packages.${pkgs.stdenv.hostPlatform.system}.dms-shell;
 
   greeterPatchedPackage = greeterBasePackage.overrideAttrs (old: {
-    postInstall = (old.postInstall or "") + ''
-      target_qml="$out/share/quickshell/dms/Services/PortalService.qml"
-      if [ -f "$target_qml" ]; then
-        chmod u+w "$target_qml"
-        ${pkgs.python3}/bin/python3 ${portalServicePatchScript} "$target_qml"
-        chmod a-w "$target_qml"
-      fi
-    '';
+    postInstall =
+      (old.postInstall or "")
+      + ''
+        target_qml="$out/share/quickshell/dms/Services/PortalService.qml"
+        if [ -f "$target_qml" ]; then
+          chmod u+w "$target_qml"
+          ${pkgs.python3}/bin/python3 ${portalServicePatchScript} "$target_qml"
+          chmod a-w "$target_qml"
+        fi
+      '';
   });
 
   avatarPng = pkgs.runCommand "${greeterUser}-avatar-png" {nativeBuildInputs = [pkgs.ffmpeg];} ''

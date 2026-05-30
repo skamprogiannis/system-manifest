@@ -28,12 +28,12 @@
   # Script to copy plugin files
   installScript = pkgs.writeShellScript "install-obsidian-webpage-html-export" ''
     mkdir -p "${pluginPath}"
-    
+
     # Copy files
     cp -f "${mainJs}" "${pluginPath}/main.js"
     cp -f "${manifest}" "${pluginPath}/manifest.json"
     cp -f "${styles}" "${pluginPath}/styles.css"
-    
+
     # Ensure proper permissions
     chmod -R u+rw "${pluginPath}"
   '';
@@ -43,8 +43,8 @@ in {
   systemd.user.services.obsidian-webpage-html-export = {
     Unit = {
       Description = "Install Webpage HTML Export plugin for Obsidian";
-      After = [ "graphical-session-pre.target" ];
-      PartOf = [ "graphical-session.target" ];
+      After = ["graphical-session-pre.target"];
+      PartOf = ["graphical-session.target"];
     };
     Service = {
       Type = "oneshot";
@@ -52,7 +52,7 @@ in {
       RemainAfterExit = true;
     };
     Install = {
-      WantedBy = [ "graphical-session.target" ];
+      WantedBy = ["graphical-session.target"];
     };
   };
 }

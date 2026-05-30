@@ -1,7 +1,4 @@
-{
-  pkgs,
-  ...
-}: let
+{pkgs, ...}: let
   dockerScratchStart = pkgs.writeShellScript "docker-host-scratch-start" ''
     set -eu
 
