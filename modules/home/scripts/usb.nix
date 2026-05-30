@@ -200,8 +200,8 @@ in {
         MODE="$DEFAULT_MODE"
         FLAKE_DIR="$PWD"
         NIX_SHELL_PACKAGES=(squashfsTools cryptsetup util-linux coreutils findutils gnused)
-        REQUIRED_TOOLS=(nixos-install cryptsetup mount umount find rm du cut nproc mountpoint sed mktemp cp mv date chroot lsblk)
-        OPENED_MAPPER=0
+        REQUIRED_TOOLS=(nixos-install cryptsetup mount umount findmnt find rm du cut sort nproc mountpoint sed mktemp cp mv date chroot lsblk sleep sync)
+        CLOSE_MAPPER_ON_CLEANUP=0
         MOUNTED_ROOT=0
         MOUNTED_BOOT=0
         MOUNTED_STAGE_STORE=0
@@ -330,6 +330,61 @@ in {
               printf '%s\n' "$output" >&2
             fi
           fi
+        }
+
+        cleanup_mount_tree() {
+          local target mount_targets
+
+          if ! mount_targets="$(findmnt -Rrn --target "$MOUNT_POINT" -o TARGET 2>/dev/null)"; then
+            return 0
+          fi
+
+          while IFS= read -r target; do
+            if [ -n "$target" ]; then
+              printf '%s\n' "$target"
+            fi
+          done <<< "$mount_targets" | sort -r | while IFS= read -r target; do
+            if mountpoint -q "$target"; then
+              run_cleanup_step "failed to unmount $target" umount "$target"
+            fi
+          done
+        }
+
+        settle_usb_devices() {
+          sync
+          if command -v udevadm >/dev/null 2>&1; then
+            udevadm settle || true
+          fi
+        }
+
+        close_usb_mapper() {
+          local attempt output
+
+          settle_usb_devices
+
+          for attempt in 1 2 3 4 5; do
+            if output="$(cryptsetup close "$USB_MAPPER_NAME" 2>&1)"; then
+              return 0
+            fi
+
+            cleanup_mount_tree
+            settle_usb_devices
+
+            if [ "$attempt" -lt 5 ]; then
+              sleep 1
+            fi
+          done
+
+          if output="$(cryptsetup close --deferred "$USB_MAPPER_NAME" 2>&1)"; then
+            echo "Deferred mapper close scheduled for $USB_MAPPER_NAME."
+            return 0
+          fi
+
+          cleanup_warn "failed to close mapper $USB_MAPPER_NAME"
+          if [ -n "$output" ]; then
+            printf '%s\n' "$output" >&2
+          fi
+          return 1
         }
 
         refresh_usb_mapper() {
@@ -522,17 +577,14 @@ in {
             echo "Cleaning up mounts..."
           fi
 
-          if [ "$MOUNTED_STAGE_STORE" -eq 1 ]; then
-            run_cleanup_step "failed to unmount $MOUNT_POINT/nix/store" umount "$MOUNT_POINT/nix/store"
+          if [ "$MOUNTED_STAGE_STORE" -eq 1 ] || [ "$MOUNTED_BOOT" -eq 1 ] || [ "$MOUNTED_ROOT" -eq 1 ]; then
+            cleanup_mount_tree
+            MOUNTED_STAGE_STORE=0
+            MOUNTED_BOOT=0
+            MOUNTED_ROOT=0
           fi
-          if [ "$MOUNTED_BOOT" -eq 1 ]; then
-            run_cleanup_step "failed to unmount $MOUNT_POINT/boot" umount "$MOUNT_POINT/boot"
-          fi
-          if [ "$MOUNTED_ROOT" -eq 1 ]; then
-            run_cleanup_step "failed to unmount $MOUNT_POINT" umount "$MOUNT_POINT"
-          fi
-          if [ "$OPENED_MAPPER" -eq 1 ]; then
-            run_cleanup_step "failed to close mapper $USB_MAPPER_NAME" cryptsetup close "$USB_MAPPER_NAME"
+          if [ "$CLOSE_MAPPER_ON_CLEANUP" -eq 1 ]; then
+            close_usb_mapper || true
           fi
 
           if [ -n "$STAGE_DIR" ] && [ -d "$STAGE_DIR" ]; then
@@ -597,9 +649,9 @@ in {
         refresh_usb_mapper
         if [ ! -e "$USB_ROOT_DEV" ]; then
           cryptsetup open "$USB_ROOT_PART" "$PREFERRED_USB_MAPPER_NAME"
-          OPENED_MAPPER=1
           refresh_usb_mapper
         fi
+        CLOSE_MAPPER_ON_CLEANUP=1
         phase_end
 
         phase_begin "mounting" "Mounting"

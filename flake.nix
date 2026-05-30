@@ -426,6 +426,18 @@
             exit 1
           fi
 
+          if ! ${pkgs.gnugrep}/bin/grep -Fq "cryptsetup close --deferred" "$desktop_home/bin/update-usb"; then
+            echo "Expected update-usb cleanup to defer mapper closure when immediate close stays busy." >&2
+            ${pkgs.gnused}/bin/sed -n '500,580p' "$desktop_home/bin/update-usb" >&2
+            exit 1
+          fi
+
+          if ! ${pkgs.gnugrep}/bin/grep -Fq "findmnt -Rrn" "$desktop_home/bin/update-usb"; then
+            echo "Expected update-usb cleanup to recursively inspect /mnt before closing the mapper." >&2
+            ${pkgs.gnused}/bin/sed -n '500,580p' "$desktop_home/bin/update-usb" >&2
+            exit 1
+          fi
+
           run_expect 0 gsr-record-help "$desktop_home/bin/gsr-record" --help
           assert_log_contains "Usage: gsr-record"
 
