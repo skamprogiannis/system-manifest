@@ -200,7 +200,8 @@ in {
         MODE="$DEFAULT_MODE"
         FLAKE_DIR="$PWD"
         NIX_SHELL_PACKAGES=(squashfsTools cryptsetup util-linux coreutils findutils gnused)
-        REQUIRED_TOOLS=(nixos-install cryptsetup mount umount findmnt find rm du cut sort nproc mountpoint sed mktemp cp mv date chroot lsblk sleep sync)
+        REQUIRED_TOOLS=(nixos-install cryptsetup mount umount findmnt find rm du cut sort nproc mountpoint sed mktemp cp mv date chroot lsblk sleep sync stat)
+        FORCE_UPDATE=0
         CLOSE_MAPPER_ON_CLEANUP=0
         MOUNTED_ROOT=0
         MOUNTED_BOOT=0
@@ -212,6 +213,8 @@ in {
         LOCAL_SQUASHFS=""
         FINAL_SQUASHFS=""
         EXPECTED_CONFIG_REVISION=""
+        DESIRED_SYSTEM_TOPLEVEL=""
+        DESIRED_INIT_RELATIVE=""
         TARGET_CONFIG_REVISION=""
         TARGET_NIXOS_VERSION=""
         TARGET_SYSTEM_TOPLEVEL=""
@@ -224,7 +227,7 @@ in {
         usage() {
           cat <<EOF
         Usage:
-          sudo update-usb [--mode prebuild|in-place] [--in-place] [path-to-flake-dir]
+          sudo update-usb [--mode prebuild|in-place] [--in-place] [--force] [path-to-flake-dir]
 
         Defaults:
           mode:      $DEFAULT_MODE
@@ -236,6 +239,7 @@ in {
           sudo update-usb /path/to/system-manifest/main
           sudo update-usb --mode prebuild /path/to/system-manifest/main
           sudo update-usb --in-place /path/to/system-manifest/main
+          sudo update-usb --force /path/to/system-manifest/main
         EOF
         }
 
@@ -278,6 +282,10 @@ in {
                 ;;
               --in-place)
                 MODE="in-place"
+                shift
+                ;;
+              --force)
+                FORCE_UPDATE=1
                 shift
                 ;;
               -h|--help)
@@ -417,6 +425,33 @@ in {
           printf '%s' "$result"
         }
 
+        read_desired_system_toplevel() {
+          local error_log=""
+          local result=""
+
+          error_log=$(mktemp)
+          if ! result=$(nix eval --raw "$FLAKE_DIR#nixosConfigurations.usb.config.system.build.toplevel" 2>"$error_log"); then
+            echo "Warning: failed to evaluate desired USB system toplevel from $FLAKE_DIR" >&2
+            if [ -s "$error_log" ]; then
+              cat "$error_log" >&2
+            fi
+            rm -f "$error_log"
+            return 1
+          fi
+
+          rm -f "$error_log"
+          printf '%s' "$result"
+        }
+
+        capture_desired_system_metadata() {
+          DESIRED_SYSTEM_TOPLEVEL=""
+          DESIRED_INIT_RELATIVE=""
+
+          if DESIRED_SYSTEM_TOPLEVEL="$(read_desired_system_toplevel)"; then
+            DESIRED_INIT_RELATIVE="''${DESIRED_SYSTEM_TOPLEVEL#/nix/store/}/init"
+          fi
+        }
+
         version_json_field() {
           local key="$1"
           local value=""
@@ -510,6 +545,39 @@ in {
           echo "usb squashfs timestamp: $(stat -c '%y' "$squashfs_path")"
         }
 
+        skip_if_existing_squashfs_is_current() {
+          local squashfs_path="$MOUNT_POINT/nix-store.squashfs"
+
+          if [ "$FORCE_UPDATE" -eq 1 ]; then
+            echo "Force update requested; skipping existing squashfs preflight."
+            return 0
+          fi
+
+          if [ -z "$DESIRED_SYSTEM_TOPLEVEL" ] || [ -z "$DESIRED_INIT_RELATIVE" ]; then
+            echo "Warning: desired USB system path unavailable; continuing update." >&2
+            return 0
+          fi
+
+          if [ ! -f "$squashfs_path" ]; then
+            echo "No existing USB squashfs found; continuing update."
+            return 0
+          fi
+
+          if unsquashfs -cat "$squashfs_path" "$DESIRED_INIT_RELATIVE" >/dev/null 2>&1; then
+            echo "Existing USB squashfs already contains the desired system; skipping update."
+            if [ -n "$EXPECTED_CONFIG_REVISION" ]; then
+              echo "Expected revision: $EXPECTED_CONFIG_REVISION"
+            fi
+            echo "Desired USB system path: $DESIRED_SYSTEM_TOPLEVEL"
+            echo "USB squashfs timestamp: $(stat -c '%y' "$squashfs_path")"
+            echo "Pass --force to rebuild and rewrite the USB anyway."
+            return 1
+          fi
+
+          echo "Existing USB squashfs does not contain the desired system; continuing update."
+          return 0
+        }
+
         if ! command -v mksquashfs >/dev/null 2>&1 || ! command -v unsquashfs >/dev/null 2>&1; then
           if [ "''${USB_UPDATE_IN_NIX_SHELL:-0}" != "1" ] && command -v nix-shell >/dev/null 2>&1; then
             REEXEC_ARGS=""
@@ -545,11 +613,15 @@ in {
         fi
 
         EXPECTED_CONFIG_REVISION="$(read_expected_config_revision || true)"
+        capture_desired_system_metadata
         echo "Source flake dir: $FLAKE_DIR"
         if [ -n "$EXPECTED_CONFIG_REVISION" ]; then
           echo "Source USB revision: $EXPECTED_CONFIG_REVISION"
         else
           echo "Warning: could not resolve Source USB revision from $FLAKE_DIR"
+        fi
+        if [ -n "$DESIRED_SYSTEM_TOPLEVEL" ]; then
+          echo "Desired USB system path: $DESIRED_SYSTEM_TOPLEVEL"
         fi
 
         if [ ! -e "$USB_ROOT_PART" ]; then
@@ -663,6 +735,15 @@ in {
         mkdir -p "$MOUNT_POINT/boot"
         mount "$USB_BOOT_DEV" "$MOUNT_POINT/boot"
         MOUNTED_BOOT=1
+        phase_end
+
+        phase_begin "checking-existing-squashfs" "Checking existing USB squashfs"
+        if ! skip_if_existing_squashfs_is_current; then
+          phase_end
+          CURRENT_PHASE="done"
+          print_timing_summary
+          exit 0
+        fi
         phase_end
 
         phase_begin "cleaning-stale-nix-state" "Cleaning stale Nix state"

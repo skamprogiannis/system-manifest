@@ -420,6 +420,9 @@
           run_expect 1 update-usb-invalid-mode "$desktop_home/bin/update-usb" --mode nope
           assert_log_contains "Error: invalid mode 'nope'."
 
+          run_expect 0 update-usb-help "$desktop_home/bin/update-usb" --help
+          assert_log_contains "sudo update-usb [--mode prebuild|in-place] [--in-place] [--force] [path-to-flake-dir]"
+
           if ! ${pkgs.gnugrep}/bin/grep -Fq "#/nix/store/}/init" "$desktop_home/bin/update-usb"; then
             echo "Expected update-usb to normalize squashfs verification paths relative to /nix/store." >&2
             ${pkgs.gnused}/bin/sed -n '180,230p' "$desktop_home/bin/update-usb" >&2
@@ -435,6 +438,18 @@
           if ! ${pkgs.gnugrep}/bin/grep -Fq "findmnt -Rrn" "$desktop_home/bin/update-usb"; then
             echo "Expected update-usb cleanup to recursively inspect /mnt before closing the mapper." >&2
             ${pkgs.gnused}/bin/sed -n '500,580p' "$desktop_home/bin/update-usb" >&2
+            exit 1
+          fi
+
+          if ! ${pkgs.gnugrep}/bin/grep -Fq "#nixosConfigurations.usb.config.system.build.toplevel" "$desktop_home/bin/update-usb"; then
+            echo "Expected update-usb to evaluate the desired USB system toplevel before duplicate-store checks." >&2
+            ${pkgs.gnused}/bin/sed -n '390,530p' "$desktop_home/bin/update-usb" >&2
+            exit 1
+          fi
+
+          if ! ${pkgs.gnugrep}/bin/grep -Fq "Existing USB squashfs already contains the desired system; skipping update." "$desktop_home/bin/update-usb"; then
+            echo "Expected update-usb to skip when the current squashfs contains the desired system." >&2
+            ${pkgs.gnused}/bin/sed -n '480,580p' "$desktop_home/bin/update-usb" >&2
             exit 1
           fi
 
