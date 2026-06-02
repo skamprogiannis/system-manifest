@@ -190,6 +190,7 @@ in {
   hyprland-keybinds =
     pkgs.runCommand "hyprland-keybind-checks" {
       nativeBuildInputs = [
+        pkgs.findutils
         pkgs.gnugrep
         pkgs.gnused
       ];
@@ -382,6 +383,18 @@ in {
 
       run_expect 1 transmission-port-sync-invalid-port "$desktop_home/bin/transmission-port-sync" 0
       assert_log_contains "Error: port must be an integer between 1 and 65535."
+
+      if ! ${pkgs.gnugrep}/bin/grep -Fq "skwd-daemon.service.d/livefix.conf" "$desktop_home/activate"; then
+        echo "Expected Home Manager activation to remove stale skwd-daemon livefix drop-ins." >&2
+        ${pkgs.gnused}/bin/sed -n '/cleanupLegacySkwdDaemonLivefix/,/fi/p' "$desktop_home/activate" >&2
+        exit 1
+      fi
+
+      if ! ${pkgs.gnugrep}/bin/grep -R -Fq "DMS_FORCE_EXT_WORKSPACE=1" "$usb_home"; then
+        echo "Expected USB DMS service to force ext-workspace state instead of the fragile Hyprland event socket." >&2
+        ${pkgs.findutils}/bin/find "$usb_home" -path '*dms.service*' -print >&2
+        exit 1
+      fi
 
       if ${pkgs.gnugrep}/bin/grep -Fq "get key devices" "$desktop_home/bin/spotify_player"; then
         echo "spotify_player wrapper must not probe 'get key devices' because it can relaunch OAuth." >&2
