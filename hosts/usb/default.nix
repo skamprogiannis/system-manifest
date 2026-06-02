@@ -42,17 +42,6 @@
       system.nixos.tags = ["ram-store"];
       systemManifest.usb.store.mode = "ram-backed";
     };
-
-    software-rendering.configuration = {
-      system.nixos.tags = ["software-rendering"];
-      home-manager.users.stefan = {
-        systemd.user.services.dms.Service.Environment = [
-          "QS_NO_GL=1"
-          "QT_QUICK_BACKEND=software"
-          "QSG_RENDER_LOOP=basic"
-        ];
-      };
-    };
   };
 
   # User setup
