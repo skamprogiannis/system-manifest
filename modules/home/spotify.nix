@@ -227,6 +227,7 @@ assert lib.assertMsg (builtins.elem hostType ["desktop" "usb" "laptop"]) "hostTy
   spotifyConfigDir = "${config.xdg.configHome}/spotify-player";
   spotifyCacheDir = "${config.xdg.cacheHome}/spotify-player";
   spotifyDaemonConfigDir = "${config.xdg.configHome}/spotify-player-daemon";
+  spotifyDaemonClientPort = 8082;
   spotifyDaemonArgs = "-c ${spotifyDaemonConfigDir} --daemon";
   spotifyClientIdFile = "${spotifyConfigDir}/client_id";
   spotifyClientIdStamp = "${config.xdg.stateHome}/system-manifest/spotify-client-id-v1";
@@ -243,8 +244,8 @@ assert lib.assertMsg (builtins.elem hostType ["desktop" "usb" "laptop"]) "hostTy
 
   # Subcommands that need the daemon running. Everything else (and any
   # unknown command/flag) is passed straight through to the real binary.
-  appTomlCommon = ''
-    client_port = 8081
+  appTomlCommon = clientPort: ''
+    client_port = ${toString clientPort}
     login_redirect_uri = "http://127.0.0.1:8989/login"
     client_id_command = { command = "${spotifyClientIdCommand}", args = [] }
     app_refresh_duration_in_ms = 32
@@ -267,10 +268,19 @@ assert lib.assertMsg (builtins.elem hostType ["desktop" "usb" "laptop"]) "hostTy
     cache_dir="${spotifyCacheDir}"
     client_id_file="${spotifyClientIdFile}"
     client_id_stamp="${spotifyClientIdStamp}"
+    daemon_config_dir="${spotifyDaemonConfigDir}"
+    daemon_port="${toString spotifyDaemonClientPort}"
     creds="${spotifyCacheDir}/credentials.json"
     web_token="${spotifyCacheDir}/user_client_token.json"
     auth_attempted=0
     shopt -s nullglob
+
+    lock_root="''${XDG_RUNTIME_DIR:-/tmp}"
+    exec 9>"$lock_root/spotify-player-wrapper.lock"
+    if ! ${pkgs.util-linux}/bin/flock -n 9; then
+      echo "spotify_player: another startup/auth flow is running; waiting..." >&2
+      ${pkgs.util-linux}/bin/flock 9
+    fi
 
     effective_client_id() {
       "${spotifyClientIdCommand}"
@@ -311,7 +321,7 @@ assert lib.assertMsg (builtins.elem hostType ["desktop" "usb" "laptop"]) "hostTy
 
     wait_for_daemon() {
       for _ in $(${pkgs.coreutils}/bin/seq 1 20); do
-        if ${pkgs.iproute2}/bin/ss -tln 'sport = :8081' 2>/dev/null | ${pkgs.gnugrep}/bin/grep -q LISTEN; then
+        if ${pkgs.iproute2}/bin/ss -tln "sport = :$daemon_port" 2>/dev/null | ${pkgs.gnugrep}/bin/grep -q LISTEN; then
           return 0
         fi
 
@@ -366,6 +376,7 @@ assert lib.assertMsg (builtins.elem hostType ["desktop" "usb" "laptop"]) "hostTy
 
     # Pass-through for anything that doesn't need the daemon
     if ! needs_daemon "$@"; then
+      exec 9>&-
       exec "$real_player" "$@"
     fi
 
@@ -414,6 +425,17 @@ assert lib.assertMsg (builtins.elem hostType ["desktop" "usb" "laptop"]) "hostTy
       fi
     fi
 
+    exec 9>&-
+    if [ "$#" -gt 0 ]; then
+      exec "$real_player" -c "$daemon_config_dir" "$@"
+    fi
+
+    exec 8>"$lock_root/spotify-player-tui.lock"
+    if ! ${pkgs.util-linux}/bin/flock -n 8; then
+      echo "spotify_player: TUI is already running" >&2
+      exit 0
+    fi
+
     exec "$real_player" "$@"
   '';
 in {
@@ -426,7 +448,7 @@ in {
     enable_notify = false
     enable_streaming = "Always"
     playback_refresh_duration_in_ms = 0
-    ${appTomlCommon}'';
+    ${appTomlCommon 8081}'';
 
   # Daemon config: Never streaming — only MPRIS and notifications.
   # The TUI owns the librespot device; the daemon mirrors playback state
@@ -437,7 +459,7 @@ in {
     notify_transient = true
     enable_streaming = "Never"
     playback_refresh_duration_in_ms = 5000
-    ${appTomlCommon}'';
+    ${appTomlCommon spotifyDaemonClientPort}'';
 
   programs.spotify-player = {
     enable = true;
