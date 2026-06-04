@@ -8,6 +8,8 @@
 }: let
   usb = import ../../modules/shared/usb-constants.nix;
   usbStore = config.systemManifest.usb.store;
+  coreutils = "${pkgs.coreutils}/bin";
+  utilLinux = "${pkgs.util-linux}/bin";
   roStoreDevice =
     if usbStore.mode == "ram-backed"
     then "/sysroot/nix/.ram-store-image/nix-store.squashfs"
@@ -199,19 +201,19 @@ in {
             }
 
             fall_back_to_usb_image() {
-              if mountpoint -q "$ram_store_dir"; then
-                umount "$ram_store_dir" || true
+              if ${utilLinux}/mountpoint -q "$ram_store_dir"; then
+                ${utilLinux}/umount "$ram_store_dir" || true
               fi
-              rm -rf "$ram_store_dir"
-              mkdir -p "$ram_store_dir"
-              ln -sfn "$lower_store_image" "$ram_store_image"
+              ${coreutils}/rm -rf "$ram_store_dir"
+              ${coreutils}/mkdir -p "$ram_store_dir"
+              ${coreutils}/ln -sfn "$lower_store_image" "$ram_store_image"
               printf '%s\n' "writable-scratch-overlay-usb-lower" > /run/nixos-usb-store-mode
             }
 
-            mkdir -p /run "$ram_store_dir" "$scratch_store_dir"
-            rm -rf "$scratch_store_dir/store" "$scratch_store_dir/work"
+            ${coreutils}/mkdir -p /run "$ram_store_dir" "$scratch_store_dir"
+            ${coreutils}/rm -rf "$scratch_store_dir/store" "$scratch_store_dir/work"
 
-            image_bytes="$(stat -c %s "$lower_store_image")"
+            image_bytes="$(${coreutils}/stat -c %s "$lower_store_image")"
             mem_available_kib="$(read_meminfo_kib MemAvailable || read_meminfo_kib MemTotal)"
             available_bytes=$((mem_available_kib * 1024))
             required_bytes=$((image_bytes + ${toString usbStore.ramModeSafetyMiB} * 1024 * 1024))
@@ -222,8 +224,8 @@ in {
               exit 0
             fi
 
-            if mount -t tmpfs -o mode=0755,size=${toString usbStore.ramImageTmpfsPercent}% tmpfs "$ram_store_dir" \
-              && cp "$lower_store_image" "$ram_store_image"; then
+            if ${utilLinux}/mount -t tmpfs -o mode=0755,size=${toString usbStore.ramImageTmpfsPercent}% tmpfs "$ram_store_dir" \
+              && ${coreutils}/cp "$lower_store_image" "$ram_store_image"; then
               printf '%s\n' "writable-scratch-overlay-ram-lower" > /run/nixos-usb-store-mode
             else
               echo "initrd-usb-ram-store-prepare: RAM copy failed, using USB lower image" >&2
@@ -270,7 +272,7 @@ in {
             find_host_store_candidates() {
               min_bytes="$1"
 
-              lsblk -pnrbo PATH,TYPE,RM,FSTYPE,SIZE |
+              ${utilLinux}/lsblk -pnrbo PATH,TYPE,RM,FSTYPE,SIZE |
                 while IFS=' ' read -r path type removable fstype size; do
                   case "$type:$removable:$fstype" in
                     part:0:ext4 | part:0:ext3 | part:0:ext2 | part:0:xfs | part:0:btrfs)
@@ -280,47 +282,47 @@ in {
                       ;;
                   esac
                 done |
-                sort -nr
+                ${coreutils}/sort -nr
             }
 
             prepare_usb_fallback() {
-              if mountpoint -q "$host_store_mount"; then
-                umount "$host_store_mount" || true
+              if ${utilLinux}/mountpoint -q "$host_store_mount"; then
+                ${utilLinux}/umount "$host_store_mount" || true
               fi
-              rm -rf "$host_store_mount"
-              mkdir -p "$host_store_root" "$host_rw_root"
-              ln -sfn "$lower_store_image" "$host_store_image"
-              rm -rf "$host_rw_root/store" "$host_rw_root/work"
+              ${coreutils}/rm -rf "$host_store_mount"
+              ${coreutils}/mkdir -p "$host_store_root" "$host_rw_root"
+              ${coreutils}/ln -sfn "$lower_store_image" "$host_store_image"
+              ${coreutils}/rm -rf "$host_rw_root/store" "$host_rw_root/work"
               printf '%s\n' "writable-overlay-host-auto-usb-fallback" > /run/nixos-usb-store-mode
             }
 
-            image_bytes="$(stat -c %s "$lower_store_image")"
+            image_bytes="$(${coreutils}/stat -c %s "$lower_store_image")"
             min_bytes=$((image_bytes + (upper_size_mib + 1024) * 1024 * 1024))
             candidate_file=/run/nixos-usb-host-store-candidates
 
-            mkdir -p /run "$host_store_mount"
+            ${coreutils}/mkdir -p /run "$host_store_mount"
             find_host_store_candidates "$min_bytes" > "$candidate_file"
 
             while IFS='	' read -r _size device fstype; do
               [ -n "$device" ] || continue
 
-              if ! mount -o rw,noatime "$device" "$host_store_mount"; then
+              if ! ${utilLinux}/mount -o rw,noatime "$device" "$host_store_mount"; then
                 echo "initrd-usb-host-auto-store-prepare: failed to mount $device ($fstype)" >&2
                 continue
               fi
 
-              mkdir -p "$host_store_root" "$host_rw_root"
-              rm -f "$host_store_image.tmp"
+              ${coreutils}/mkdir -p "$host_store_root" "$host_rw_root"
+              ${coreutils}/rm -f "$host_store_image.tmp"
 
-              if cp "$lower_store_image" "$host_store_image.tmp" && mv "$host_store_image.tmp" "$host_store_image"; then
-                rm -rf "$host_rw_root/store" "$host_rw_root/work"
+              if ${coreutils}/cp "$lower_store_image" "$host_store_image.tmp" && ${coreutils}/mv "$host_store_image.tmp" "$host_store_image"; then
+                ${coreutils}/rm -rf "$host_rw_root/store" "$host_rw_root/work"
                 printf '%s\n' "writable-host-auto-overlay" > /run/nixos-usb-store-mode
                 exit 0
               fi
 
               echo "initrd-usb-host-auto-store-prepare: failed to copy squashfs to $device ($fstype)" >&2
-              rm -f "$host_store_image.tmp"
-              umount "$host_store_mount" || true
+              ${coreutils}/rm -f "$host_store_image.tmp"
+              ${utilLinux}/umount "$host_store_mount" || true
             done < "$candidate_file"
 
             echo "initrd-usb-host-auto-store-prepare: using USB-root fallback" >&2
