@@ -211,6 +211,55 @@
   ];
   skillHomeFiles = builtins.listToAttrs (map skillHomeFile declarativeSkills);
   skillConfigToml = lib.concatMapStringsSep "\n" skillConfig declarativeSkills;
+  codexConfigPython = pkgs.python3.withPackages (ps: [ps.tomli-w]);
+  codexConfigText = ''
+    model = "gpt-5.5"
+    model_reasoning_effort = "high"
+    plan_mode_reasoning_effort = "xhigh"
+    approval_policy = "on-request"
+    sandbox_mode = "workspace-write"
+    cli_auth_credentials_store = "file"
+    suppress_unstable_features_warning = true
+
+    [tui]
+    notifications = ["agent-turn-complete", "approval-requested"]
+    notification_method = "bel"
+    notification_condition = "unfocused"
+    vim_mode_default = true
+
+    [projects."/home/stefan/system-manifest"]
+    trust_level = "trusted"
+
+    [features]
+    goals = true
+    multi_agent = true
+    plugins = true
+
+    ${skillConfigToml}
+
+    [mcp_servers.context7]
+    command = "npx"
+    args = ["-y", "@upstash/context7-mcp"]
+
+    [mcp_servers.etsy]
+    url = "https://mcp.api.etsycloud.com/mcp"
+
+    [mcp_servers.linear]
+    url = "https://mcp.linear.app/mcp"
+
+    [mcp_servers.openaiDeveloperDocs]
+    url = "https://developers.openai.com/mcp"
+  '';
+  codexConfigSeed = pkgs.writeText "codex-config.toml" codexConfigText;
+  codexConfigMerger = pkgs.writeTextFile {
+    name = "merge-codex-config";
+    destination = "/bin/merge-codex-config";
+    executable = true;
+    text = ''
+      #!${codexConfigPython}/bin/python3
+      ${builtins.readFile ./merge-config.py}
+    '';
+  };
 in {
   home.packages = [
     pkgs.bubblewrap
@@ -244,46 +293,13 @@ in {
     // {
       ".codex/AGENTS.md".text = builtins.readFile ./instructions.md;
       ".codex/diagrams/.keep".text = "";
-      ".codex/config.toml".text = ''
-        model = "gpt-5.5"
-        model_reasoning_effort = "high"
-        plan_mode_reasoning_effort = "xhigh"
-        approval_policy = "on-request"
-        sandbox_mode = "workspace-write"
-        cli_auth_credentials_store = "file"
-        suppress_unstable_features_warning = true
-
-        [tui]
-        notifications = ["agent-turn-complete", "approval-requested"]
-        notification_method = "bel"
-        notification_condition = "unfocused"
-        vim_mode_default = true
-
-        [projects."/home/stefan/system-manifest"]
-        trust_level = "trusted"
-
-        [features]
-        goals = true
-        multi_agent = true
-        plugins = true
-
-        ${skillConfigToml}
-
-        [mcp_servers.context7]
-        command = "npx"
-        args = ["-y", "@upstash/context7-mcp"]
-
-        [mcp_servers.etsy]
-        url = "https://mcp.api.etsycloud.com/mcp"
-
-        [mcp_servers.linear]
-        url = "https://mcp.linear.app/mcp"
-
-        [mcp_servers.openaiDeveloperDocs]
-        url = "https://developers.openai.com/mcp"
-      '';
 
       ".codex/agents/plan-reviewer.toml".text = builtins.readFile ./agents/plan-reviewer.toml;
       ".codex/agents/security-reviewer.toml".text = builtins.readFile ./agents/security-reviewer.toml;
     };
+
+  home.activation.ensureWritableCodexConfig = lib.hm.dag.entryAfter ["writeBoundary"] ''
+    run mkdir -p "$HOME/.codex"
+    run ${codexConfigMerger}/bin/merge-codex-config ${codexConfigSeed} "$HOME/.codex/config.toml"
+  '';
 }
