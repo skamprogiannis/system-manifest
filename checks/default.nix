@@ -3,12 +3,18 @@
   pkgs,
 }: let
   desktopHome = self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.path;
+  desktopActivation = self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.activationPackage;
   usbHome = self.nixosConfigurations.usb.config.home-manager.users.stefan.home.path;
   usbInitrd = self.nixosConfigurations.usb.config.system.build.initialRamdisk;
   usbRamStoreInitrd = self.nixosConfigurations.usb.config.specialisation.ram-store.configuration.system.build.initialRamdisk;
-  usbRamStorePrepareScript = builtins.toFile "usb-ram-store-prepare-script" self.nixosConfigurations.usb.config.specialisation.ram-store.configuration.boot.initrd.systemd.services.initrd-usb-ram-store-prepare.script;
+  usbRamStorePrepareScript = pkgs.writeText "usb-ram-store-prepare-script" self.nixosConfigurations.usb.config.specialisation.ram-store.configuration.boot.initrd.systemd.services.initrd-usb-ram-store-prepare.script;
   usbHostAutoStoreInitrd = self.nixosConfigurations.usb.config.specialisation.host-auto-store.configuration.system.build.initialRamdisk;
-  usbHostAutoStorePrepareScript = builtins.toFile "usb-host-auto-store-prepare-script" self.nixosConfigurations.usb.config.specialisation.host-auto-store.configuration.boot.initrd.systemd.services.initrd-usb-host-auto-store-prepare.script;
+  usbHostAutoStorePrepareScript = pkgs.writeText "usb-host-auto-store-prepare-script" self.nixosConfigurations.usb.config.specialisation.host-auto-store.configuration.boot.initrd.systemd.services.initrd-usb-host-auto-store-prepare.script;
+  usbDmsServiceEnvironmentFile = builtins.toFile "usb-dms-service-environment" (
+    builtins.concatStringsSep "\n"
+    self.nixosConfigurations.usb.config.home-manager.users.stefan.systemd.user.services.dms.Service.Environment
+  );
+  codexConfigPython = pkgs.python3.withPackages (ps: [ps.tomli-w]);
   neovimLangmapFile = builtins.toFile "neovim-langmap" self.nixosConfigurations.desktop.config.home-manager.users.stefan.programs.nixvim.opts.langmap;
   desktopHyprlandBindsFile = builtins.toFile "desktop-hyprland-binds" (
     builtins.concatStringsSep "\n"
@@ -308,6 +314,7 @@ in {
       set -euo pipefail
 
       desktop_home="${desktopHome}"
+      desktop_activation="${desktopActivation}"
       usb_home="${usbHome}"
       export HOME="$TMPDIR/home"
       export XDG_RUNTIME_DIR="$TMPDIR/runtime"
@@ -390,17 +397,124 @@ in {
       run_expect 1 transmission-port-sync-invalid-port "$desktop_home/bin/transmission-port-sync" 0
       assert_log_contains "Error: port must be an integer between 1 and 65535."
 
-      if ! ${pkgs.gnugrep}/bin/grep -Fq "skwd-daemon.service.d/livefix.conf" "$desktop_home/activate"; then
+      if ! ${pkgs.gnugrep}/bin/grep -Fq "skwd-daemon.service.d/livefix.conf" "$desktop_activation/activate"; then
         echo "Expected Home Manager activation to remove stale skwd-daemon livefix drop-ins." >&2
-        ${pkgs.gnused}/bin/sed -n '/cleanupLegacySkwdDaemonLivefix/,/fi/p' "$desktop_home/activate" >&2
+        ${pkgs.gnused}/bin/sed -n '/cleanupLegacySkwdDaemonLivefix/,/fi/p' "$desktop_activation/activate" >&2
         exit 1
       fi
 
-      if ! ${pkgs.gnugrep}/bin/grep -R -Fq "DMS_FORCE_EXT_WORKSPACE=1" "$usb_home"; then
-        echo "Expected USB DMS service to force ext-workspace state instead of the fragile Hyprland event socket." >&2
-        ${pkgs.findutils}/bin/find "$usb_home" -path '*dms.service*' -print >&2
+      assert_log_contains_file() {
+        local needle="$1"
+        local file="$2"
+        local message="$3"
+        if ! ${pkgs.gnugrep}/bin/grep -Fq "$needle" "$file"; then
+          echo "$message" >&2
+          ${pkgs.gnused}/bin/sed 's/^/  /' "$file" >&2
+          exit 1
+        fi
+      }
+
+      assert_log_contains_file \
+        "DMS_FORCE_EXT_WORKSPACE=1" \
+        ${usbDmsServiceEnvironmentFile} \
+        "Expected USB DMS service to force ext-workspace state instead of the fragile Hyprland event socket."
+
+      if ! ${pkgs.gnugrep}/bin/grep -Fq "/bin/merge-codex-config" "$desktop_activation/activate"; then
+        echo "Expected Home Manager activation to call the generated Codex config merger." >&2
+        ${pkgs.gnused}/bin/sed -n '/ensureWritableCodexConfig/,/Activating/p' "$desktop_activation/activate" >&2
         exit 1
       fi
+
+      codex_seed="$TMPDIR/codex-seed.toml"
+      cat > "$codex_seed" <<'TOML'
+      model = "gpt-5.5"
+      approval_policy = "on-request"
+
+      [tui]
+      vim_mode_default = true
+
+      [projects."/home/stefan/system-manifest"]
+      trust_level = "trusted"
+
+      [features]
+      goals = true
+      TOML
+
+      run_codex_merge() {
+        ${codexConfigPython}/bin/python3 ${../modules/home/codex/merge-config.py} "$codex_seed" "$1"
+      }
+
+      no_existing="$TMPDIR/codex/no-existing/config.toml"
+      run_codex_merge "$no_existing"
+      ${codexConfigPython}/bin/python3 - "$no_existing" <<'PY'
+      import os
+      from pathlib import Path
+      import stat
+      import sys
+      import tomllib
+
+      path = Path(sys.argv[1])
+      with path.open("rb") as f:
+          data = tomllib.load(f)
+
+      assert data["model"] == "gpt-5.5"
+      assert data["projects"]["/home/stefan/system-manifest"]["trust_level"] == "trusted"
+      assert stat.S_IMODE(os.stat(path).st_mode) == 0o600
+      PY
+
+      existing_dir="$TMPDIR/codex/existing"
+      existing="$existing_dir/config.toml"
+      mkdir -p "$existing_dir"
+      cat > "$existing" <<'TOML'
+      model = "old"
+      local_only = "kept"
+
+      [features]
+      local_flag = true
+      goals = false
+
+      [projects."/home/stefan/system-manifest"]
+      trust_level = "untrusted"
+
+      [projects."/tmp/other"]
+      trust_level = "trusted"
+      TOML
+      run_codex_merge "$existing"
+      ${codexConfigPython}/bin/python3 - "$existing" <<'PY'
+      from pathlib import Path
+      import sys
+      import tomllib
+
+      with Path(sys.argv[1]).open("rb") as f:
+          data = tomllib.load(f)
+
+      assert data["model"] == "gpt-5.5"
+      assert data["local_only"] == "kept"
+      assert data["features"]["goals"] is True
+      assert data["features"]["local_flag"] is True
+      assert data["projects"]["/home/stefan/system-manifest"]["trust_level"] == "trusted"
+      assert data["projects"]["/tmp/other"]["trust_level"] == "trusted"
+      PY
+
+      malformed_dir="$TMPDIR/codex/malformed"
+      malformed="$malformed_dir/config.toml"
+      mkdir -p "$malformed_dir"
+      printf '%s\n' '[broken' > "$malformed"
+      run_codex_merge "$malformed"
+      ${codexConfigPython}/bin/python3 - "$malformed_dir" "$malformed" <<'PY'
+      from pathlib import Path
+      import sys
+      import tomllib
+
+      directory = Path(sys.argv[1])
+      config = Path(sys.argv[2])
+      backups = list(directory.glob("config.toml.invalid-*"))
+      assert len(backups) == 1
+      assert backups[0].read_text() == "[broken\n"
+      with config.open("rb") as f:
+          data = tomllib.load(f)
+      assert data["model"] == "gpt-5.5"
+      PY
 
       if ${pkgs.gnugrep}/bin/grep -Fq "get key devices" "$desktop_home/bin/spotify_player"; then
         echo "spotify_player wrapper must not probe 'get key devices' because it can relaunch OAuth." >&2
