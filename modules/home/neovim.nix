@@ -369,7 +369,17 @@
 
       lualine = {
         enable = true;
-        settings.options.theme = "auto";
+        settings.options = {
+          theme = "auto";
+          section_separators = {
+            left = ">";
+            right = "<";
+          };
+          component_separators = {
+            left = ">";
+            right = "<";
+          };
+        };
       };
 
       gitsigns = {
