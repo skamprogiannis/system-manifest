@@ -372,12 +372,12 @@
         settings.options = {
           theme = "auto";
           section_separators = {
-            left = ">";
-            right = "<";
+            left = "";
+            right = "";
           };
           component_separators = {
-            left = ">";
-            right = "<";
+            left = "";
+            right = "";
           };
         };
       };
