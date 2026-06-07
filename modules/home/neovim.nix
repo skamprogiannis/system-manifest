@@ -569,6 +569,18 @@
       }
       {
         mode = "n";
+        key = "[b";
+        action = "<cmd>bprevious<cr>";
+        options.desc = "Previous buffer";
+      }
+      {
+        mode = "n";
+        key = "]b";
+        action = "<cmd>bnext<cr>";
+        options.desc = "Next buffer";
+      }
+      {
+        mode = "n";
         key = "<leader>fh";
         action = "<cmd>lua Snacks.picker.help()<cr>";
         options.desc = "Help tags";
