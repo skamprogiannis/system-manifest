@@ -4,7 +4,7 @@
 
 - **Dry Run Build:** `nixos-rebuild dry-build --flake .#desktop` (Use `.#usb` for the portable image and `.#laptop` for the laptop profile.)
 - **Check Configuration:** `nixos-rebuild test --flake .#desktop` (Builds and activates, but doesn't add to bootloader - good for temporary testing.)
-- **Flake Check:** `nix flake check` (This is the standard Nix flake command. In this repo it runs the checks defined in `flake.nix`: `desktop`, `usb`, `laptop`, `hyprland-keybinds`, `neovim-langmap`, `script-smoke`, and `shellcheck`.)
+- **Flake Check:** `nix flake check` (This is the standard Nix flake command. In this repo it runs the host and support checks defined by the Check registry in `checks/registry.nix`.)
 - **List Generations:** `nixos-rebuild list-generations`
 - **Garbage Collect:** `nix-collect-garbage -d` (Deletes old generations)
 
@@ -50,7 +50,7 @@
 - **Subagent Rebuilds:** Use a subagent (task tool) to handle `nixos-rebuild` commands (dry-run and switch) to keep the main context clean and handle potential long output.
 - **Bug Reporting:** When a bug is reported, prioritize writing a reproduction test before attempting a fix. Use subagents to implement the fix and verify it with the passing test.
 - **Pre-Completion Dry Build:** After any config/code change and before reporting "done," run `nixos-rebuild dry-build --flake .#desktop` yourself and fix any failures before handing back to the user.
-- **CI Shape:** GitHub Actions mirrors the flake checks with separate host (`desktop`, `usb`, `laptop`) and support (`hyprland-keybinds`, `neovim-langmap`, `script-smoke`, `shellcheck`) jobs so failures stay isolated. CI serializes full Nix builds and uses configured Nix caches plus GitHub's Nix store cache to reduce upstream fetch throttling.
+- **CI Shape:** GitHub Actions mirrors the Check registry groups in `checks/registry.nix` with separate host and support jobs so failures stay isolated. CI serializes full Nix builds and uses configured Nix caches plus GitHub's Nix store cache to reduce upstream fetch throttling.
 - **ShellCheck Scope:** ShellCheck currently lints the generated custom shell entrypoints from the Home Manager profiles, including host-variant wrappers where desktop and USB differ. If more shell logic moves into standalone `.sh` files later, extend linting to those sources too.
 - **Validation vs Deployment:** CI and `nix flake check` only validate buildability and scripted checks. Deployment is still manual: `nixos-rebuild switch --flake .#desktop` for desktop, `nixos-rebuild switch --flake .#laptop` for laptop, and `update-usb` for the USB image.
 

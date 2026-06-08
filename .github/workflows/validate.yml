@@ -67,10 +67,14 @@ jobs:
       max-parallel: 1
       matrix:
         check:
+          - usb-initrd-ordering
           - hyprland-keybinds
           - neovim-langmap
+          - neovim-lsp-health
+          - wallpaper-runtime
           - script-smoke
           - shellcheck
+          - ci-registry
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
