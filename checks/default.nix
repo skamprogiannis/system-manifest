@@ -4,6 +4,7 @@
 }: let
   desktopHome = self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.path;
   desktopActivation = self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.activationPackage;
+  desktopZellijDevLayoutFile = pkgs.writeText "desktop-zellij-dev-layout" self.nixosConfigurations.desktop.config.home-manager.users.stefan.xdg.configFile."zellij/layouts/dev.kdl".text;
   usbHome = self.nixosConfigurations.usb.config.home-manager.users.stefan.home.path;
   usbInitrd = self.nixosConfigurations.usb.config.system.build.initialRamdisk;
   usbRamStoreInitrd = self.nixosConfigurations.usb.config.specialisation.ram-store.configuration.system.build.initialRamdisk;
@@ -396,6 +397,18 @@ in {
 
       run_expect 1 transmission-port-sync-invalid-port "$desktop_home/bin/transmission-port-sync" 0
       assert_log_contains "Error: port must be an integer between 1 and 65535."
+
+      if ! ${pkgs.gnugrep}/bin/grep -Fq 'command="${pkgs.bashInteractive}/bin/bash"' ${desktopZellijDevLayoutFile}; then
+        echo "Expected zellij dev layout to launch Codex through a shell." >&2
+        ${pkgs.gnused}/bin/sed -n '/tab name="codex"/,/}/p' ${desktopZellijDevLayoutFile} >&2
+        exit 1
+      fi
+
+      if ! ${pkgs.gnugrep}/bin/grep -Fq 'args "-lc" "exec codex"' ${desktopZellijDevLayoutFile}; then
+        echo "Expected zellij dev layout to start Codex like a shell-launched command." >&2
+        ${pkgs.gnused}/bin/sed -n '/tab name="codex"/,/}/p' ${desktopZellijDevLayoutFile} >&2
+        exit 1
+      fi
 
       if ! ${pkgs.gnugrep}/bin/grep -Fq "skwd-daemon.service.d/livefix.conf" "$desktop_activation/activate"; then
         echo "Expected Home Manager activation to remove stale skwd-daemon livefix drop-ins." >&2

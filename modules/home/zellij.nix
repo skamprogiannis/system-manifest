@@ -348,7 +348,9 @@
         }
 
         tab name="codex" {
-            pane name="codex" command="/etc/profiles/per-user/${config.home.username}/bin/codex"
+            pane name="codex" command="${pkgs.bashInteractive}/bin/bash" {
+                args "-lc" "exec codex"
+            }
         }
     }
   '';
