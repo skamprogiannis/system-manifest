@@ -48,6 +48,14 @@ in {
       skwd_pkg="$(dirname "$(dirname "$skwd_bin")")"
       assert_executable "$skwd_pkg/libexec/skwd-wall/awww" "skwd-wall awww helper"
       assert_executable "$skwd_pkg/libexec/skwd-wall/linux-wallpaperengine" "skwd-wall Wallpaper Engine helper"
+      skwd_apply_static="$(sed -n 's/^apply_static="\([^"]*\)"$/\1/p' "$skwd_pkg/libexec/skwd-wall/awww")"
+      assert_executable "$skwd_apply_static" "skwd-wall static apply helper"
+      assert_contains "awww query" "$skwd_apply_static" "skwd-wall static apply helper"
+
+      if grep -Fq "pgrep -x awww-daemon" "$skwd_apply_static"; then
+        echo "skwd-wall static apply helper must probe the daemon socket, not the wrapped process name." >&2
+        exit 1
+      fi
 
       assert_contains "sync-dms-wallpaper: missing both" "${desktopSkwdDmsSyncHook}" "DMS wallpaper sync hook"
       assert_contains "skwd-we-capture-still" "${desktopHome}/bin/skwd-we-capture-still" "Wallpaper Engine capture helper"

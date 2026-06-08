@@ -75,11 +75,15 @@
         ;;
     esac
 
-    if ! pgrep -x awww-daemon >/dev/null; then
+    daemon_ready() {
+      ${pkgs.awww}/bin/awww query >/dev/null 2>&1
+    }
+
+    if ! daemon_ready; then
       setsid ${pkgs.awww}/bin/awww-daemon >/dev/null 2>&1 &
-      for _ in 1 2 3 4 5; do
-        sleep 0.3
-        pgrep -x awww-daemon >/dev/null && break
+      for _ in 1 2 3 4 5 6 7 8 9 10; do
+        sleep 0.1
+        daemon_ready && break
       done
     fi
 
@@ -137,11 +141,15 @@
 
     [ -n "$still_path" ] || exit 0
 
-    if ! pgrep -x awww-daemon >/dev/null; then
+    daemon_ready() {
+      ${pkgs.awww}/bin/awww query >/dev/null 2>&1
+    }
+
+    if ! daemon_ready; then
       setsid ${pkgs.awww}/bin/awww-daemon >/dev/null 2>&1 &
-      for _ in 1 2 3 4 5; do
-        sleep 0.3
-        pgrep -x awww-daemon >/dev/null && break
+      for _ in 1 2 3 4 5 6 7 8 9 10; do
+        sleep 0.1
+        daemon_ready && break
       done
     fi
 
