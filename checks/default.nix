@@ -16,6 +16,7 @@
     self.nixosConfigurations.usb.config.home-manager.users.stefan.systemd.user.services.dms.Service.Environment
   );
   codexConfigPython = pkgs.python3.withPackages (ps: [ps.tomli-w]);
+  desktopNeovimInitFile = self.nixosConfigurations.desktop.config.home-manager.users.stefan.xdg.configFile."nvim/init.lua".source;
   neovimLangmapFile = builtins.toFile "neovim-langmap" self.nixosConfigurations.desktop.config.home-manager.users.stefan.programs.nixvim.opts.langmap;
   desktopHyprlandBindsFile = builtins.toFile "desktop-hyprland-binds" (
     builtins.concatStringsSep "\n"
@@ -305,6 +306,39 @@ in {
 
       touch "$out"
     '';
+  neovim-lsp-health = pkgs.runCommand "neovim-lsp-health-check" {} ''
+    set -euo pipefail
+
+    export HOME="$TMPDIR/home"
+    export XDG_CACHE_HOME="$TMPDIR/cache"
+    export XDG_CONFIG_HOME="$TMPDIR/config"
+    export XDG_STATE_HOME="$TMPDIR/state"
+    mkdir -p "$HOME" "$XDG_CACHE_HOME" "$XDG_CONFIG_HOME" "$XDG_STATE_HOME"
+
+    cat > check-lsp-health.lua <<'LUA'
+    vim.cmd("checkhealth vim.lsp")
+    local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+    local text = table.concat(lines, "\n")
+    local unknown = {}
+
+    for filetype in text:gmatch("Unknown filetype '([^']+)'") do
+      table.insert(unknown, filetype)
+    end
+
+    if #unknown > 0 then
+      io.stderr:write("Neovim LSP health reported unknown filetypes: " .. table.concat(unknown, ", ") .. "\n")
+      vim.cmd("cquit")
+    end
+
+    vim.cmd("qa!")
+    LUA
+
+    ${pkgs.coreutils}/bin/timeout 20s \
+      ${desktopHome}/bin/nvim --headless -n -i NONE -u ${desktopNeovimInitFile} \
+      +"lua dofile('$PWD/check-lsp-health.lua')"
+
+    touch "$out"
+  '';
   script-smoke =
     pkgs.runCommand "script-smoke-checks" {
       nativeBuildInputs = [

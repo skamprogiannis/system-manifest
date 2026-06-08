@@ -1,5 +1,6 @@
 {
   config,
+  lib,
   pkgs,
   ...
 }: {
@@ -224,6 +225,11 @@
       if vim.fn.exists("+winborder") == 1 then
         vim.o.winborder = "rounded"
       end
+      vim.filetype.add({
+        extension = {
+          gotmpl = "gotmpl",
+        },
+      })
       vim.diagnostic.config({
         float = {
           focusable = false,
@@ -284,7 +290,15 @@
         enable = true;
         servers = {
           gopls.enable = true;
-          ts_ls.enable = true;
+          ts_ls = {
+            enable = true;
+            filetypes = lib.mkForce [
+              "javascript"
+              "javascriptreact"
+              "typescript"
+              "typescriptreact"
+            ];
+          };
           rust_analyzer = {
             enable = true;
             installCargo = false;
