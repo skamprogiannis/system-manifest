@@ -6,6 +6,7 @@
     desktopHome
     desktopZellijDevLayoutFile
     pkgs
+    updateUsbSourceDir
     usbDmsServiceEnvironmentFile
     usbHome
     ;
@@ -21,6 +22,7 @@ in {
 
       desktop_home="${desktopHome}"
       desktop_activation="${desktopActivation}"
+      update_usb_source_dir="${updateUsbSourceDir}"
       usb_home="${usbHome}"
       export HOME="$TMPDIR/home"
       export XDG_RUNTIME_DIR="$TMPDIR/runtime"
@@ -64,33 +66,33 @@ in {
       run_expect 0 update-usb-help "$desktop_home/bin/update-usb" --help
       assert_log_contains "sudo update-usb [--mode prebuild|in-place] [--in-place] [--force] [path-to-flake-dir]"
 
-      if ! ${pkgs.gnugrep}/bin/grep -Fq "#/nix/store/}/init" "$desktop_home/bin/update-usb"; then
+      if ! ${pkgs.gnugrep}/bin/grep -Fq "#/nix/store/}/init" "$update_usb_source_dir/metadata.sh"; then
         echo "Expected update-usb to normalize squashfs verification paths relative to /nix/store." >&2
-        ${pkgs.gnused}/bin/sed -n '180,230p' "$desktop_home/bin/update-usb" >&2
+        ${pkgs.gnused}/bin/sed -n '1,120p' "$update_usb_source_dir/metadata.sh" >&2
         exit 1
       fi
 
-      if ! ${pkgs.gnugrep}/bin/grep -Fq "cryptsetup close --deferred" "$desktop_home/bin/update-usb"; then
+      if ! ${pkgs.gnugrep}/bin/grep -Fq "cryptsetup close --deferred" "$update_usb_source_dir/cleanup.sh"; then
         echo "Expected update-usb cleanup to defer LUKS close until nested mounts release." >&2
-        ${pkgs.gnused}/bin/sed -n '120,180p' "$desktop_home/bin/update-usb" >&2
+        ${pkgs.gnused}/bin/sed -n '1,140p' "$update_usb_source_dir/cleanup.sh" >&2
         exit 1
       fi
 
-      if ! ${pkgs.gnugrep}/bin/grep -Fq "findmnt -Rrn" "$desktop_home/bin/update-usb"; then
+      if ! ${pkgs.gnugrep}/bin/grep -Fq "findmnt -Rrn" "$update_usb_source_dir/cleanup.sh"; then
         echo "Expected update-usb cleanup to unmount nested filesystems deepest-first." >&2
-        ${pkgs.gnused}/bin/sed -n '110,170p' "$desktop_home/bin/update-usb" >&2
+        ${pkgs.gnused}/bin/sed -n '1,140p' "$update_usb_source_dir/cleanup.sh" >&2
         exit 1
       fi
 
-      if ! ${pkgs.gnugrep}/bin/grep -Fq "#nixosConfigurations.usb.config.system.build.toplevel" "$desktop_home/bin/update-usb"; then
+      if ! ${pkgs.gnugrep}/bin/grep -Fq "#nixosConfigurations.usb.config.system.build.toplevel" "$update_usb_source_dir/metadata.sh"; then
         echo "Expected update-usb to prebuild the USB system toplevel attribute directly." >&2
-        ${pkgs.gnused}/bin/sed -n '300,360p' "$desktop_home/bin/update-usb" >&2
+        ${pkgs.gnused}/bin/sed -n '1,80p' "$update_usb_source_dir/metadata.sh" >&2
         exit 1
       fi
 
-      if ! ${pkgs.gnugrep}/bin/grep -Fq "Existing USB squashfs already contains the desired system; skipping update." "$desktop_home/bin/update-usb"; then
+      if ! ${pkgs.gnugrep}/bin/grep -Fq "Existing USB squashfs already contains the desired system; skipping update." "$update_usb_source_dir/squashfs.sh"; then
         echo "Expected update-usb to skip duplicate squashfs copies when the desired system is already present." >&2
-        ${pkgs.gnused}/bin/sed -n '300,390p' "$desktop_home/bin/update-usb" >&2
+        ${pkgs.gnused}/bin/sed -n '1,120p' "$update_usb_source_dir/squashfs.sh" >&2
         exit 1
       fi
 

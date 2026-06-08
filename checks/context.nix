@@ -10,6 +10,7 @@
   desktopActivation = self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.activationPackage;
   desktopSkwdDmsSyncHook = self.nixosConfigurations.desktop.config.home-manager.users.stefan.xdg.configFile."skwd-wall/scripts/sync-dms-wallpaper.sh".source;
   desktopZellijDevLayoutFile = pkgs.writeText "desktop-zellij-dev-layout" self.nixosConfigurations.desktop.config.home-manager.users.stefan.xdg.configFile."zellij/layouts/dev.kdl".text;
+  updateUsbSourceDir = ../modules/home/scripts/usb/update-usb;
   usbHome = self.nixosConfigurations.usb.config.home-manager.users.stefan.home.path;
   usbInitrd = self.nixosConfigurations.usb.config.system.build.initialRamdisk;
   usbRamStoreInitrd = self.nixosConfigurations.usb.config.specialisation.ram-store.configuration.system.build.initialRamdisk;
@@ -39,6 +40,12 @@
     "${desktopHome}/bin/update-usb"
     "${desktopHome}/bin/zellij-sessionizer"
     "${desktopSkwdDmsSyncHook}"
+    "${updateUsbSourceDir}/args.sh"
+    "${updateUsbSourceDir}/cleanup.sh"
+    "${updateUsbSourceDir}/main.sh"
+    "${updateUsbSourceDir}/metadata.sh"
+    "${updateUsbSourceDir}/phases.sh"
+    "${updateUsbSourceDir}/squashfs.sh"
     "${usbHome}/bin/spotify_player"
     "${usbHome}/bin/setup-persistent-usb"
   ];

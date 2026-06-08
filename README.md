@@ -122,6 +122,8 @@ sudo update-usb /path/to/system-manifest/main
 
 `update-usb` defaults to `--mode prebuild`, which builds locally and syncs the final squashfs image to the USB. Always pass the worktree path that contains `flake.nix`, not the repo container root.
 
+The USB installer workflow is packaged from `modules/home/scripts/usb/`: Nix owns constants and host exposure, while the extracted `update-usb` shell fragments own runtime behavior.
+
 ```bash
 sudo update-usb --mode prebuild /path/to/system-manifest/<worktree>
 ```
