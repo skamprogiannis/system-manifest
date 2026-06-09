@@ -108,6 +108,8 @@ The script finds the USB automatically via the `NIXOS_USB_CRYPT` disk label, unl
 
 At the lab: `codex resume` to pick up synced sessions.
 
+Linear MCP auth is local to each machine. If Codex says Linear is not logged in, run `codex mcp login linear` once on that machine; do not sync the resulting auth state through `codex-state-sync`.
+
 **Zellij sessions** are process-based (in-RAM) and cannot be shared across machines — this is fundamental. Config is declarative and identical on both systems.
 
 ## Known Issues / Fixes

@@ -232,6 +232,7 @@
 
     [features]
     goals = true
+    experimental_use_rmcp_client = true
     multi_agent = true
     plugins = true
 

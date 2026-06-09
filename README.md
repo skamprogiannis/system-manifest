@@ -21,6 +21,7 @@ Managed via **Nix Flakes** and **Home Manager**.
 - **Vesktop:** Discord client with declarative Translucence theming and a wallpaper-aware QuickCSS bridge.
 - **Dev Ready:** Pre-configured environment for Node.js, Python, Go, Playwright, and Neovim (via nixvim), plus Clang build essentials. Neovim is also registered as the default text editor via an `nvim-text` desktop entry.
 - **AI Integrated:** Built-in configuration for **Codex CLI** with per-repo `AGENTS.md` instructions, global defaults in `~/.codex/AGENTS.md`, custom agents in `~/.codex/agents`, Linear/Context7/Etsy/OpenAI Docs MCP servers, and explicitly enabled curated skills in `~/.agents/skills` for visualization, browser automation, static analysis, frontend design, architecture review, diagnosis, TDD, issue triage, PRDs, prototyping, codebase zoom-out, and concise response modes.
+  Linear MCP auth is local per machine; after first enabling a host, run `codex mcp login linear` once if Codex reports that Linear is not logged in.
 - **Modular Architecture:** Configuration split across `hosts/` (system-level) and `modules/home/` (user-level) for maintainability.
 - **Voiden:** Declarative AppImage wrapper for the Voiden offline-first API client.
 - **Binary Caches:** Configured for `hyprland.cachix.org`, `nix-community.cachix.org`, and `ghostty.cachix.org`.

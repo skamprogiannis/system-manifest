@@ -145,6 +145,23 @@ in {
         exit 1
       fi
 
+      codex_seed_path="$(${pkgs.gnused}/bin/sed -n 's|.*merge-codex-config \(/nix/store/[^ ]*-codex-config.toml\) .*|\1|p' "$desktop_activation/activate" | head -n1)"
+      if [ -z "$codex_seed_path" ] || [ ! -f "$codex_seed_path" ]; then
+        echo "Expected Home Manager activation to reference the generated Codex seed config." >&2
+        ${pkgs.gnused}/bin/sed -n '/ensureWritableCodexConfig/,/Activating/p' "$desktop_activation/activate" >&2
+        exit 1
+      fi
+
+      assert_log_contains_file \
+        "experimental_use_rmcp_client = true" \
+        "$codex_seed_path" \
+        "Expected Codex config to enable the remote MCP client required by Linear OAuth."
+
+      assert_log_contains_file \
+        'url = "https://mcp.linear.app/mcp"' \
+        "$codex_seed_path" \
+        "Expected Codex config to include the Linear MCP server."
+
       codex_seed="$TMPDIR/codex-seed.toml"
       cat > "$codex_seed" <<'TOML'
       model = "gpt-5.5"
