@@ -115,9 +115,115 @@ in {
     vim.cmd("qa!")
     LUA
 
+    cat > check-clang-format-indent.lua <<'LUA'
+    local function fail(message)
+      io.stderr:write(message .. "\n")
+      vim.cmd("cquit")
+    end
+
+    local function write_file(path, text)
+      local file = assert(io.open(path, "w"))
+      file:write(text)
+      file:close()
+    end
+
+    local function assert_equal(actual, expected, label)
+      if actual ~= expected then
+        fail(string.format("%s: got %q, expected %q", label, tostring(actual), tostring(expected)))
+      end
+    end
+
+    local function assert_buffer_indent(expected)
+      assert_equal(vim.bo.shiftwidth, expected.shiftwidth, expected.label .. " shiftwidth")
+      assert_equal(vim.bo.tabstop, expected.tabstop, expected.label .. " tabstop")
+      assert_equal(vim.bo.expandtab, expected.expandtab, expected.label .. " expandtab")
+      assert_equal(vim.bo.softtabstop, expected.softtabstop, expected.label .. " softtabstop")
+      assert_equal(vim.bo.cindent, true, expected.label .. " cindent")
+    end
+
+    local function open_c_buffer(directory, filename)
+      local path = directory .. "/" .. filename
+      write_file(path, "int main() {\nreturn 0;\n}\n")
+      vim.cmd("edit " .. vim.fn.fnameescape(path))
+      if vim.bo.filetype ~= "c" then
+        fail("expected C filetype for " .. path .. ", got " .. vim.bo.filetype)
+      end
+      return path
+    end
+
+    local function assert_reindent(expected_prefix, label)
+      vim.api.nvim_win_set_cursor(0, { 2, 0 })
+      vim.cmd("normal! ==")
+      assert_equal(vim.api.nvim_buf_get_lines(0, 1, 2, false)[1], expected_prefix .. "return 0;", label)
+    end
+
+    local root = vim.fn.tempname()
+    vim.fn.mkdir(root, "p")
+
+    local fallback_dir = root .. "/fallback"
+    vim.fn.mkdir(fallback_dir, "p")
+    open_c_buffer(fallback_dir, "fallback.c")
+    assert_buffer_indent({
+      label = "LLVM fallback",
+      shiftwidth = 2,
+      tabstop = 8,
+      expandtab = true,
+      softtabstop = 2,
+    })
+    assert_reindent("  ", "LLVM fallback nested indentation")
+
+    local four_space_dir = root .. "/four-space"
+    vim.fn.mkdir(four_space_dir, "p")
+    write_file(four_space_dir .. "/.clang-format", table.concat({
+      "BasedOnStyle: LLVM",
+      "IndentWidth: 4",
+      "TabWidth: 4",
+      "UseTab: Never",
+      "",
+    }, "\n"))
+    open_c_buffer(four_space_dir, "four.c")
+    assert_buffer_indent({
+      label = "project four-space style",
+      shiftwidth = 4,
+      tabstop = 4,
+      expandtab = true,
+      softtabstop = 4,
+    })
+    assert_reindent("    ", "project four-space nested indentation")
+
+    local tabs_dir = root .. "/tabs"
+    vim.fn.mkdir(tabs_dir, "p")
+    write_file(tabs_dir .. "/.clang-format", table.concat({
+      "BasedOnStyle: LLVM",
+      "IndentWidth: 8",
+      "TabWidth: 8",
+      "UseTab: Always",
+      "",
+    }, "\n"))
+    open_c_buffer(tabs_dir, "tabs.c")
+    assert_buffer_indent({
+      label = "project tab style",
+      shiftwidth = 8,
+      tabstop = 8,
+      expandtab = false,
+      softtabstop = -1,
+    })
+    vim.api.nvim_buf_set_lines(0, 0, -1, false, { "int main() {", "", "}" })
+    vim.api.nvim_win_set_cursor(0, { 2, 0 })
+    local tab = vim.api.nvim_replace_termcodes("i<Tab><Esc>", true, false, true)
+    vim.api.nvim_feedkeys(tab, "xt", false)
+    assert_equal(vim.api.nvim_buf_get_lines(0, 1, 2, false)[1], "\t", "project tab style Tab key")
+
+    vim.cmd("qa!")
+    LUA
+
     ${pkgs.coreutils}/bin/timeout 20s \
       ${desktopHome}/bin/nvim --headless -n -i NONE -u ${desktopNeovimInitFile} \
       +"lua dofile('$PWD/check-lsp-health.lua')"
+
+    ${pkgs.coreutils}/bin/timeout 20s \
+      ${desktopHome}/bin/nvim --headless -n -i NONE -u ${desktopNeovimInitFile} \
+      +"lua dofile('$PWD/check-clang-format-indent.lua')"
 
     touch "$out"
   '';

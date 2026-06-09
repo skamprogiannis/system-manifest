@@ -56,7 +56,7 @@
       {
         event = "FileType";
         pattern = ["c" "cpp"];
-        command = "setlocal tabstop=4 shiftwidth=4 softtabstop=4 colorcolumn=100";
+        command = "setlocal colorcolumn=100";
       }
       {
         event = "FileType";
@@ -225,6 +225,62 @@
       if vim.fn.exists("+winborder") == 1 then
         vim.o.winborder = "rounded"
       end
+
+      do
+        local clang_format = "${pkgs.clang-tools}/bin/clang-format"
+
+        local function clang_format_style_for(bufnr)
+          local name = vim.api.nvim_buf_get_name(bufnr)
+          if name == "" then
+            name = "buffer.c"
+          end
+
+          local output = vim.fn.system({
+            clang_format,
+            "--style=file",
+            "--fallback-style=LLVM",
+            "--assume-filename=" .. name,
+            "--dump-config",
+          })
+
+          if vim.v.shell_error ~= 0 then
+            return {
+              indent_width = 2,
+              tab_width = 8,
+              use_tab = "Never",
+            }
+          end
+
+          return {
+            indent_width = tonumber(output:match("\nIndentWidth:%s*(%d+)")) or 2,
+            tab_width = tonumber(output:match("\nTabWidth:%s*(%d+)")) or 8,
+            use_tab = output:match("\nUseTab:%s*([%w_]+)") or "Never",
+          }
+        end
+
+        local function apply_clang_format_indent(bufnr)
+          local style = clang_format_style_for(bufnr)
+          local uses_tabs = style.use_tab ~= "Never"
+
+          vim.bo[bufnr].cindent = true
+          vim.bo[bufnr].shiftwidth = style.indent_width
+          vim.bo[bufnr].tabstop = style.tab_width
+          vim.bo[bufnr].expandtab = not uses_tabs
+          if uses_tabs then
+            vim.bo[bufnr].softtabstop = -1
+          else
+            vim.bo[bufnr].softtabstop = style.indent_width
+          end
+        end
+
+        vim.api.nvim_create_autocmd("FileType", {
+          pattern = { "c", "cpp" },
+          callback = function(event)
+            apply_clang_format_indent(event.buf)
+          end,
+        })
+      end
+
       vim.filetype.add({
         extension = {
           gotmpl = "gotmpl",
