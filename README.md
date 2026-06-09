@@ -111,7 +111,7 @@ The laptop host is intended for a UEFI dual-boot install with Secure Boot disabl
 nix flake check
 ```
 
-In this repo, `nix flake check` runs the host and support checks defined by the Check registry in `checks/registry.nix`. GitHub Actions keeps the same registry groups isolated, serializes full Nix builds to avoid upstream fetch throttling, and uses the configured Nix caches plus GitHub's Nix store cache. Deployment remains manual via `nixos-rebuild switch --flake .#desktop`, `nixos-rebuild switch --flake .#laptop`, or `update-usb`.
+In this repo, `nix flake check` runs the host and support checks defined by the Check registry in `checks/registry.nix`. GitHub Actions keeps the same registry groups isolated, serializes full Nix builds to avoid upstream fetch throttling, and uses the configured Nix caches plus GitHub's Nix store cache. The default desktop check builds the CUDA-light `desktop-ci` output so routine CI does not compile the full Ollama CUDA closure; run the manual **Validate Full Desktop** workflow when the production CUDA desktop closure needs GitHub validation. Deployment remains manual via `nixos-rebuild switch --flake .#desktop`, `nixos-rebuild switch --flake .#laptop`, or `update-usb`.
 
 For later shared-contract refactors, treat `nix flake check` plus `nixos-rebuild dry-build --flake .#desktop` as the minimum validation floor. Runtime wallpaper/DMS ownership changes still need a manual wallpaper-switch smoke test, and USB-only session changes still require `update-usb` plus a real boot on target hardware.
 

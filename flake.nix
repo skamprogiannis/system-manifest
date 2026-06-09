@@ -76,7 +76,36 @@
     ...
   } @ inputs: let
     system = "x86_64-linux";
+    lib = nixpkgs.lib;
     pkgs = nixpkgs.legacyPackages.${system};
+
+    desktopModules = [
+      ./hosts/desktop/default.nix
+      inputs.dms.nixosModules.greeter
+      home-manager.nixosModules.home-manager
+      {
+        home-manager.useGlobalPkgs = true;
+        home-manager.useUserPackages = true;
+        home-manager.backupFileExtension = "backup";
+        home-manager.extraSpecialArgs = {
+          # `hostType` is only a selector for lightweight shared-module
+          # branches (small flags, package toggles, minor defaults). If a
+          # branch starts needing host-owned services, session/runtime
+          # files, or heavier patching, move it into dedicated host imports
+          # instead of extending the shared contract here.
+          inherit inputs;
+          hostType = "desktop";
+        };
+        # sd-switch ensures user systemd services are properly enabled/started after activation
+        home-manager.users.stefan.systemd.user.startServices = "sd-switch";
+        home-manager.users.stefan = {
+          imports = [
+            ./hosts/desktop/home-manager.nix
+            inputs.nixvim.homeModules.nixvim
+          ];
+        };
+      }
+    ];
   in {
     formatter.${system} = pkgs.alejandra;
 
@@ -86,33 +115,22 @@
       desktop = nixpkgs.lib.nixosSystem {
         inherit system;
         specialArgs = {inherit inputs;};
-        modules = [
-          ./hosts/desktop/default.nix
-          inputs.dms.nixosModules.greeter
-          home-manager.nixosModules.home-manager
-          {
-            home-manager.useGlobalPkgs = true;
-            home-manager.useUserPackages = true;
-            home-manager.backupFileExtension = "backup";
-            home-manager.extraSpecialArgs = {
-              # `hostType` is only a selector for lightweight shared-module
-              # branches (small flags, package toggles, minor defaults). If a
-              # branch starts needing host-owned services, session/runtime
-              # files, or heavier patching, move it into dedicated host imports
-              # instead of extending the shared contract here.
-              inherit inputs;
-              hostType = "desktop";
-            };
-            # sd-switch ensures user systemd services are properly enabled/started after activation
-            home-manager.users.stefan.systemd.user.startServices = "sd-switch";
-            home-manager.users.stefan = {
-              imports = [
-                ./hosts/desktop/home-manager.nix
-                inputs.nixvim.homeModules.nixvim
-              ];
-            };
-          }
-        ];
+        modules = desktopModules;
+      };
+
+      desktop-ci = nixpkgs.lib.nixosSystem {
+        inherit system;
+        specialArgs = {inherit inputs;};
+        modules =
+          desktopModules
+          ++ [
+            {
+              # CI validates the desktop config without forcing GitHub runners
+              # to build desktop-only heavy closures on every push.
+              services.ollama.package = lib.mkForce pkgs.ollama;
+              specialisation = lib.mkForce {};
+            }
+          ];
       };
 
       usb = nixpkgs.lib.nixosSystem {

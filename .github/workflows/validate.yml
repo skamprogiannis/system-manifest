@@ -34,13 +34,18 @@ jobs:
             substituters = https://cache.nixos.org https://hyprland.cachix.org https://nix-community.cachix.org https://ghostty.cachix.org
             trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= hyprland.cachix.org-1:a7pgxzMz7+chwVL3/pzj6jIBMioiJM7ypFP8PwtkuGc= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= ghostty.cachix.org-1:QB389yTa6gTyneehvqG58y0WnHjQOqgnA+wBnpWWxns=
 
+      - name: Free runner disk
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo docker system prune --all --force || true
+          df -h
+
       - name: Restore Nix cache
         uses: nix-community/cache-nix-action@v7
         with:
-          primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.lock') }}-${{ matrix.host }}
+          primary-key: nix-${{ runner.os }}-host-${{ matrix.host }}-${{ hashFiles('flake.lock') }}
           restore-prefixes-first-match: |
-            nix-${{ runner.os }}-${{ hashFiles('flake.lock') }}-
-            nix-${{ runner.os }}-
+            nix-${{ runner.os }}-host-${{ matrix.host }}-
           gc-max-store-size-linux: 5G
 
       - name: Build host check
@@ -91,13 +96,18 @@ jobs:
             substituters = https://cache.nixos.org https://hyprland.cachix.org https://nix-community.cachix.org https://ghostty.cachix.org
             trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= hyprland.cachix.org-1:a7pgxzMz7+chwVL3/pzj6jIBMioiJM7ypFP8PwtkuGc= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= ghostty.cachix.org-1:QB389yTa6gTyneehvqG58y0WnHjQOqgnA+wBnpWWxns=
 
+      - name: Free runner disk
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo docker system prune --all --force || true
+          df -h
+
       - name: Restore Nix cache
         uses: nix-community/cache-nix-action@v7
         with:
-          primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.lock') }}-${{ matrix.check }}
+          primary-key: nix-${{ runner.os }}-support-${{ matrix.check }}-${{ hashFiles('flake.lock') }}
           restore-prefixes-first-match: |
-            nix-${{ runner.os }}-${{ hashFiles('flake.lock') }}-
-            nix-${{ runner.os }}-
+            nix-${{ runner.os }}-support-${{ matrix.check }}-
           gc-max-store-size-linux: 5G
 
       - name: Build support check
