@@ -68,6 +68,7 @@
             bind "Alt n" { NewTab; }
             bind "Alt f" { ToggleFloatingPanes; }
             bind "Alt x" { CloseFocus; }
+            bind "Alt z" { ToggleFocusFullscreen; }
             bind "Alt m" { SwitchToMode "Move"; }
             bind "Alt d" { Detach; }
 
@@ -350,6 +351,107 @@
         tab name="codex" {
             pane name="codex" command="${pkgs.bashInteractive}/bin/bash" {
                 args "-lc" "exec codex"
+            }
+        }
+
+        tab_template name="dev_chrome" {
+            pane size=1 borderless=true {
+                plugin location="zellij:tab-bar"
+            }
+            children
+            pane size=1 borderless=true {
+                plugin location="zellij:status-bar"
+            }
+        }
+
+        swap_tiled_layout name="vertical" {
+            dev_chrome max_panes=5 {
+                pane split_direction="vertical" {
+                    pane
+                    pane { children; }
+                }
+            }
+            dev_chrome max_panes=8 {
+                pane split_direction="vertical" {
+                    pane { children; }
+                    pane { pane; pane; pane; pane; }
+                }
+            }
+            dev_chrome max_panes=12 {
+                pane split_direction="vertical" {
+                    pane { children; }
+                    pane { pane; pane; pane; pane; }
+                    pane { pane; pane; pane; pane; }
+                }
+            }
+        }
+
+        swap_tiled_layout name="horizontal" {
+            dev_chrome max_panes=4 {
+                pane
+                pane
+            }
+            dev_chrome max_panes=8 {
+                pane {
+                    pane split_direction="vertical" { children; }
+                    pane split_direction="vertical" { pane; pane; pane; pane; }
+                }
+            }
+            dev_chrome max_panes=12 {
+                pane {
+                    pane split_direction="vertical" { children; }
+                    pane split_direction="vertical" { pane; pane; pane; pane; }
+                    pane split_direction="vertical" { pane; pane; pane; pane; }
+                }
+            }
+        }
+
+        swap_tiled_layout name="stacked" {
+            dev_chrome min_panes=5 {
+                pane split_direction="vertical" {
+                    pane
+                    pane stacked=true { children; }
+                }
+            }
+        }
+
+        swap_floating_layout name="staggered" {
+            floating_panes
+        }
+
+        swap_floating_layout name="enlarged" {
+            floating_panes max_panes=10 {
+                pane { x "5%"; y 1; width "90%"; height "90%"; }
+                pane { x "5%"; y 2; width "90%"; height "90%"; }
+                pane { x "5%"; y 3; width "90%"; height "90%"; }
+                pane { x "5%"; y 4; width "90%"; height "90%"; }
+                pane { x "5%"; y 5; width "90%"; height "90%"; }
+                pane { x "5%"; y 6; width "90%"; height "90%"; }
+                pane { x "5%"; y 7; width "90%"; height "90%"; }
+                pane { x "5%"; y 8; width "90%"; height "90%"; }
+                pane { x "5%"; y 9; width "90%"; height "90%"; }
+                pane { x 10; y 10; width "90%"; height "90%"; }
+            }
+        }
+
+        swap_floating_layout name="spread" {
+            floating_panes max_panes=1 {
+                pane { y "50%"; x "50%"; }
+            }
+            floating_panes max_panes=2 {
+                pane { x "1%"; y "25%"; width "45%"; }
+                pane { x "50%"; y "25%"; width "45%"; }
+            }
+            floating_panes max_panes=3 {
+                pane { y "55%"; width "45%"; height "45%"; }
+                pane { x "1%"; y "1%"; width "45%"; }
+                pane { x "50%"; y "1%"; width "45%"; }
+            }
+            floating_panes max_panes=4 {
+                pane { x "1%"; y "55%"; width "45%"; height "45%"; }
+                pane { x "50%"; y "55%"; width "45%"; height "45%"; }
+                pane { x "1%"; y "1%"; width "45%"; height "45%"; }
+                pane { x "50%"; y "1%"; width "45%"; height "45%"; }
             }
         }
     }
