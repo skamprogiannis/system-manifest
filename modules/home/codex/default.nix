@@ -224,7 +224,7 @@
     [tui]
     notifications = ["agent-turn-complete", "approval-requested"]
     notification_method = "bel"
-    notification_condition = "unfocused"
+    notification_condition = "always"
     vim_mode_default = true
 
     [projects."/home/stefan/system-manifest"]
