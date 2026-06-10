@@ -9,8 +9,11 @@
   programs.zellij.settings.default_layout = "dev";
 
   wayland.windowManager.hyprland.settings = {
-    monitor = [
-      ",preferred,auto,1"
-    ];
+    monitor = {
+      output = "";
+      mode = "preferred";
+      position = "auto";
+      scale = "1";
+    };
   };
 }

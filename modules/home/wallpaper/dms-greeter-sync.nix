@@ -413,6 +413,10 @@
         else
           echo "sync-dms-wallpaper: greeter cache dir not writable: $greeter_cache_dir" >&2
         fi
+
+        if [ -n "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && command -v hyprctl >/dev/null 2>&1; then
+          hyprctl reload >/dev/null 2>&1 || true
+        fi
   '';
 in {
   inherit skwdDmsSyncHook;

@@ -24,10 +24,14 @@
   codexConfigPython = pkgs.python3.withPackages (ps: [ps.tomli-w]);
   desktopNeovimInitFile = self.nixosConfigurations.desktop.config.home-manager.users.stefan.xdg.configFile."nvim/init.lua".source;
   neovimLangmapFile = builtins.toFile "neovim-langmap" self.nixosConfigurations.desktop.config.home-manager.users.stefan.programs.nixvim.opts.langmap;
-  desktopHyprlandBindsFile = builtins.toFile "desktop-hyprland-binds" (
-    builtins.concatStringsSep "\n"
-    self.nixosConfigurations.desktop.config.home-manager.users.stefan.wayland.windowManager.hyprland.settings.bind
-  );
+  desktopGreeterPackage = self.nixosConfigurations.desktop.config.programs.dank-material-shell.greeter.package;
+  desktopAccountsServiceAvatarScript = pkgs.writeText "desktop-accounts-service-avatar-script" self.nixosConfigurations.desktop.config.system.activationScripts.accountsServiceAvatar.text;
+  desktopHyprlandPackage = self.nixosConfigurations.desktop.config.home-manager.users.stefan.wayland.windowManager.hyprland.finalPackage;
+  desktopHyprlandLuaFile = pkgs.writeText "desktop-hyprland.lua" self.nixosConfigurations.desktop.config.home-manager.users.stefan.xdg.configFile."hypr/hyprland.lua".text;
+  desktopDmsOutputsFile = pkgs.writeText "desktop-dms-outputs.lua" self.nixosConfigurations.desktop.config.home-manager.users.stefan.xdg.configFile."hypr/dms/outputs.lua".text;
+  desktopDmsLegacyProfileFile = pkgs.writeText "desktop-dms-profile.conf" self.nixosConfigurations.desktop.config.home-manager.users.stefan.xdg.configFile."hypr/dms/profiles/desktop.conf".text;
+  laptopDmsOutputsFile = pkgs.writeText "laptop-dms-outputs.lua" self.nixosConfigurations.laptop.config.home-manager.users.stefan.xdg.configFile."hypr/dms/outputs.lua".text;
+  usbDmsOutputsFile = pkgs.writeText "usb-dms-outputs.lua" self.nixosConfigurations.usb.config.home-manager.users.stefan.xdg.configFile."hypr/dms/outputs.lua".text;
   shellcheckScripts = [
     "${desktopHome}/bin/codex-state-sync"
     "${desktopHome}/bin/gsr-record"

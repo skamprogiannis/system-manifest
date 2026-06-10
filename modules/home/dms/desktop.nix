@@ -5,11 +5,27 @@
     samsungOutput
     benqOutput
   ];
-  samsungMonitor = "desc:Samsung Electric Company S24E510C 0x3042524B, 1920x1080@60.000, 0x0, 1, vrr, 0";
-  benqMonitor = vrr: "desc:BNQ BenQ XL2411Z 54G01103SL0, 1920x1080@60.000, 1920x0, 1, vrr, ${toString vrr}";
-  mkProfileText = benqVrr: ''
-    monitor = ${samsungMonitor}
-    monitor = ${benqMonitor benqVrr}
+  samsungMonitor = {
+    output = "desc:Samsung Electric Company S24E510C 0x3042524B";
+    mode = "1920x1080@60.000";
+    position = "0x0";
+    vrr = 0;
+  };
+  benqMonitor = vrr: {
+    output = "desc:BNQ BenQ XL2411Z 54G01103SL0";
+    mode = "1920x1080@60.000";
+    position = "1920x0";
+    inherit vrr;
+  };
+  mkMonitorLua = monitor: ''hl.monitor({ output = "${monitor.output}", mode = "${monitor.mode}", position = "${monitor.position}", scale = "1", vrr = ${toString monitor.vrr} })'';
+  mkMonitorHyprlang = monitor: "monitor = ${monitor.output}, ${monitor.mode}, ${monitor.position}, 1, vrr, ${toString monitor.vrr}";
+  mkLuaProfileText = benqVrr: ''
+    ${mkMonitorLua samsungMonitor}
+    ${mkMonitorLua (benqMonitor benqVrr)}
+  '';
+  mkLegacyProfileText = benqVrr: ''
+    ${mkMonitorHyprlang samsungMonitor}
+    ${mkMonitorHyprlang (benqMonitor benqVrr)}
   '';
 in {
   programs.dank-material-shell.settings = {
@@ -35,13 +51,13 @@ in {
   };
 
   xdg.configFile = {
-    "hypr/dms/outputs.conf".text = ''
-      # Declarative DMS output profile (desktop baseline)
-      ${mkProfileText 0}
+    "hypr/dms/outputs.lua".text = ''
+      -- Declarative DMS output profile (desktop baseline)
+      ${mkLuaProfileText 0}
     '';
 
-    "hypr/dms/profiles/desktop.conf".text = mkProfileText 0;
+    "hypr/dms/profiles/desktop.conf".text = mkLegacyProfileText 0;
 
-    "hypr/dms/profiles/gaming.conf".text = mkProfileText 1;
+    "hypr/dms/profiles/gaming.conf".text = mkLegacyProfileText 1;
   };
 }

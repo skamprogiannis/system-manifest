@@ -12,6 +12,7 @@
   accountsServiceIconsDir = "${accountsServiceDir}/icons";
   greeterLogDir = "/var/lib/dms-greeter";
   greeterLogPath = "${greeterLogDir}/greeter.log";
+  greeterUsersCacheDir = "${greeterLogDir}/users";
   avatarSourceWebp = ./assets/stefan-avatar.webp;
 
   portalServicePatchScript = pkgs.writeText "patch-greeter-portal-service.py" ''
@@ -96,6 +97,70 @@
     )
   '';
 
+  greeterLauncherPatchScript = pkgs.writeText "patch-greeter-launcher.py" (lib.concatStringsSep "\n" [
+    "import sys"
+    "from pathlib import Path"
+    ""
+    "launcher = Path(sys.argv[1])"
+    "if not launcher.exists():"
+    "    sys.exit(0)"
+    ""
+    "text = launcher.read_text(encoding=\"utf-8\")"
+    "old = ("
+    "    '    if command -v systemd-cat >/dev/null 2>&1; then\\n'"
+    "    '        exec \"$@\" > >(systemd-cat -t \"dms-greeter/$log_tag\" -p info) 2>&1\\n'"
+    "    '    fi\\n'"
+    "    '\\n'"
+    "    '    exec \"$@\"\\n'"
+    ")"
+    "new = ("
+    "    '    if [[ \"$log_tag\" == \"hyprland\" ]]; then\\n'"
+    "    '        exec \"$@\" >> \"$CACHE_DIR/hyprland.log\" 2>&1\\n'"
+    "    '    fi\\n'"
+    "    '\\n'"
+    "    '    if command -v systemd-cat >/dev/null 2>&1; then\\n'"
+    "    '        exec \"$@\" > >(systemd-cat -t \"dms-greeter/$log_tag\" -p info) 2>&1\\n'"
+    "    '    fi\\n'"
+    "    '\\n'"
+    "    '    exec \"$@\"\\n'"
+    ")"
+    "if old not in text:"
+    "    raise RuntimeError(\"greeter compositor logging block not found\")"
+    ""
+    "text = text.replace(old, new, 1)"
+    ""
+    "old_check = ("
+    "    \"        if ! command -v start-hyprland >/dev/null 2>&1 && ! command -v Hyprland >/dev/null 2>&1; then\\n\""
+    "    \"            echo \\\"Error: neither 'start-hyprland' nor 'Hyprland' was found in PATH\\\" >&2\\n\""
+    "    \"            exit 1\\n\""
+    "    \"        fi\\n\""
+    ")"
+    "new_check = ("
+    "    \"        if ! command -v Hyprland >/dev/null 2>&1; then\\n\""
+    "    \"            echo \\\"Error: Hyprland was not found in PATH\\\" >&2\\n\""
+    "    \"            exit 1\\n\""
+    "    \"        fi\\n\""
+    ")"
+    "if old_check not in text:"
+    "    raise RuntimeError(\"greeter Hyprland availability check not found\")"
+    "text = text.replace(old_check, new_check, 1)"
+    ""
+    "old_launch = ("
+    "    '        if command -v start-hyprland >/dev/null 2>&1; then\\n'"
+    "    '            exec_compositor \"hyprland\" start-hyprland -- --config \"$COMPOSITOR_CONFIG\"\\n'"
+    "    '        else\\n'"
+    "    '            exec_compositor \"hyprland\" Hyprland -c \"$COMPOSITOR_CONFIG\"\\n'"
+    "    '        fi\\n'"
+    ")"
+    "new_launch = '        exec_compositor \"hyprland\" Hyprland -c \"$COMPOSITOR_CONFIG\"\\n'"
+    "if old_launch not in text:"
+    "    raise RuntimeError(\"greeter Hyprland launch block not found\")"
+    "text = text.replace(old_launch, new_launch, 1)"
+    ""
+    "launcher.write_text(text, encoding=\"utf-8\")"
+    ""
+  ]);
+
   greeterBasePackage = inputs.dms.packages.${pkgs.stdenv.hostPlatform.system}.dms-shell;
 
   greeterPatchedPackage = greeterBasePackage.overrideAttrs (old: {
@@ -107,6 +172,13 @@
           chmod u+w "$target_qml"
           ${pkgs.python3}/bin/python3 ${portalServicePatchScript} "$target_qml"
           chmod a-w "$target_qml"
+        fi
+
+        target_launcher="$out/share/quickshell/dms/Modules/Greetd/assets/dms-greeter"
+        if [ -f "$target_launcher" ]; then
+          chmod u+w "$target_launcher"
+          ${pkgs.python3}/bin/python3 ${greeterLauncherPatchScript} "$target_launcher"
+          chmod a-w "$target_launcher"
         fi
       '';
   });
@@ -129,10 +201,13 @@ in {
       customConfig = ''
         misc {
           disable_hyprland_logo = true
+          disable_splash_rendering = true
         }
 
         debug {
           disable_logs = true
+          enable_stdout_logs = false
+          disable_time = true
         }
       '';
     };
@@ -159,7 +234,7 @@ in {
 
   # Keep avatar files and AccountsService profile in sync for the greeter.
   system.activationScripts.accountsServiceAvatar = lib.stringAfter ["users"] ''
-    install -dm0755 ${accountsServiceUsersDir} ${accountsServiceIconsDir} ${greeterLogDir}
+    install -dm0755 ${accountsServiceUsersDir} ${accountsServiceIconsDir} ${greeterLogDir} ${greeterUsersCacheDir}/${greeterUser}
 
     cat > ${accountsServiceUsersDir}/${greeterUser} <<'EOF'
     [User]
@@ -170,9 +245,14 @@ in {
     chown root:root ${accountsServiceUsersDir}/${greeterUser}
 
     install -Dm0644 ${avatarSourceWebp} ${accountsServiceIconsDir}/${greeterUser}.webp
+    install -Dm0644 ${avatarPng}/${greeterUser}.png ${accountsServiceIconsDir}/${greeterUser}
     install -Dm0644 ${avatarPng}/${greeterUser}.png ${accountsServiceIconsDir}/${greeterUser}.png
-    chmod 0644 ${accountsServiceIconsDir}/${greeterUser}.webp ${accountsServiceIconsDir}/${greeterUser}.png
-    chown root:root ${accountsServiceIconsDir}/${greeterUser}.webp ${accountsServiceIconsDir}/${greeterUser}.png
+    chmod 0644 ${accountsServiceIconsDir}/${greeterUser} ${accountsServiceIconsDir}/${greeterUser}.webp ${accountsServiceIconsDir}/${greeterUser}.png
+    chown root:root ${accountsServiceIconsDir}/${greeterUser} ${accountsServiceIconsDir}/${greeterUser}.webp ${accountsServiceIconsDir}/${greeterUser}.png
+
+    install -Dm0644 ${avatarPng}/${greeterUser}.png ${greeterUsersCacheDir}/${greeterUser}/profile.png
+    chmod 0644 ${greeterUsersCacheDir}/${greeterUser}/profile.png
+    chown root:greeter ${greeterUsersCacheDir}/${greeterUser} ${greeterUsersCacheDir}/${greeterUser}/profile.png
   '';
 
   # System-wide cursor theme (needed for greeter and other non-HM contexts).

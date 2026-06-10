@@ -6,6 +6,58 @@
   ...
 }: let
   hyprland-pkg = inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
+  hyprlandLuaPkg = let
+    joined = pkgs.symlinkJoin {
+      name = "${hyprland-pkg.name}-lua-config";
+      paths = [hyprland-pkg];
+      passthru = hyprland-pkg.passthru or {};
+      meta =
+        (hyprland-pkg.meta or {})
+        // {
+          mainProgram = "Hyprland";
+          outputsToInstall = ["out"];
+        };
+      postBuild = ''
+        rm -f $out/bin/Hyprland $out/bin/hyprland $out/bin/start-hyprland
+
+        cat > $out/bin/Hyprland <<'EOF'
+        #!${pkgs.bash}/bin/bash
+        set -euo pipefail
+
+        has_config=0
+        for arg in "$@"; do
+          case "$arg" in
+            --config|-c|--config=*|-c=*)
+              has_config=1
+              break
+              ;;
+          esac
+        done
+
+        if [ "$has_config" -eq 1 ]; then
+          exec ${hyprland-pkg}/bin/Hyprland "$@"
+        fi
+
+        config_home="''${XDG_CONFIG_HOME:-$HOME/.config}"
+        exec ${hyprland-pkg}/bin/Hyprland --config "$config_home/hypr/hyprland.lua" "$@"
+        EOF
+        chmod +x $out/bin/Hyprland
+
+        ln -s Hyprland $out/bin/hyprland
+
+        cat > $out/bin/start-hyprland <<'EOF'
+        #!${pkgs.bash}/bin/bash
+        exec "$(dirname "$0")/Hyprland" "$@"
+        EOF
+        chmod +x $out/bin/start-hyprland
+      '';
+    };
+  in
+    joined
+    // {
+      inherit (hyprland-pkg) version;
+      override = _: joined;
+    };
   hyprglass-plugin = pkgs.stdenv.mkDerivation {
     pname = "hyprglass";
     version = "0.6.3";
@@ -55,7 +107,203 @@
     '';
   };
 
+  hyprglassPluginPath = "${hyprglass-plugin}/lib/hyprglass.so";
+  hyprglassSettings = [
+    {
+      key = "enabled";
+      value = "1";
+    }
+    {
+      key = "default_theme";
+      value = "light";
+    }
+    {
+      key = "default_preset";
+      value = "default";
+    }
+    {
+      key = "blur_strength";
+      value = "2.8";
+    }
+    {
+      key = "blur_iterations";
+      value = "4";
+    }
+    {
+      key = "tint_color";
+      value = "0xffffff08";
+    }
+    {
+      key = "specular_strength";
+      value = "0.6";
+    }
+    {
+      key = "edge_thickness";
+      value = "0.05";
+    }
+    {
+      key = "lens_distortion";
+      value = "0.14";
+    }
+    {
+      key = "refraction_strength";
+      value = "0.7";
+    }
+    {
+      key = "chromatic_aberration";
+      value = "0.6";
+    }
+    {
+      key = "fresnel_strength";
+      value = "0.7";
+    }
+    {
+      key = "brightness";
+      value = "1.02";
+    }
+    {
+      key = "contrast";
+      value = "0.95";
+    }
+    {
+      key = "saturation";
+      value = "1.0";
+    }
+    {
+      key = "vibrancy";
+      value = "0.05";
+    }
+  ];
+  hyprglassStartupCommand = lib.concatStringsSep " && " (
+    ["hyprctl plugin load ${hyprglassPluginPath}"]
+    ++ map (
+      setting: "hyprctl keyword plugin:hyprglass:${setting.key} ${setting.value}"
+    )
+    hyprglassSettings
+  );
+
   useHyprNav = config.system_manifest.navigation.wrapWorkspaces or false;
+  lua = lib.generators.mkLuaInline;
+  modKey = key: lua ''mod .. " + ${key}"'';
+  execCallback = command: lua "hl.dsp.exec_cmd(${builtins.toJSON command})";
+  bind = key: callback: {
+    _args = [key callback];
+  };
+  bindWith = key: callback: options: {
+    _args = [key callback options];
+  };
+  execBind = key: command: bind key (execCallback command);
+  execBindWith = key: command: options: bindWith key (execCallback command) options;
+  focusDirection = direction: lua ''hl.dsp.focus({ direction = ${builtins.toJSON direction} })'';
+  focusMonitor = monitor: lua ''hl.dsp.focus({ monitor = ${builtins.toJSON monitor} })'';
+  focusWorkspace = workspace: lua ''hl.dsp.focus({ workspace = ${builtins.toJSON workspace} })'';
+  moveWindowDirection = direction: lua ''hl.dsp.window.move({ direction = ${builtins.toJSON direction} })'';
+  moveWindowMonitor = monitor: lua ''hl.dsp.window.move({ monitor = ${builtins.toJSON monitor} })'';
+  moveWindowPosition = x: y: lua ''hl.dsp.window.move({ x = ${toString x}, y = ${toString y}, relative = true })'';
+  moveToWorkspace = workspace: follow: lua ''hl.dsp.window.move({ workspace = ${builtins.toJSON workspace}, follow = ${lib.boolToString follow} })'';
+  resizeWindow = x: y: lua ''hl.dsp.window.resize({ x = ${toString x}, y = ${toString y}, relative = true })'';
+  toggleSpecialWorkspace = name: lua ''hl.dsp.workspace.toggle_special(${builtins.toJSON name})'';
+  fullscreen = mode: lua ''hl.dsp.window.fullscreen({ mode = ${builtins.toJSON mode}, action = "toggle" })'';
+  workspaceKeys = [
+    {
+      key = "1";
+      workspace = "1";
+    }
+    {
+      key = "2";
+      workspace = "2";
+    }
+    {
+      key = "3";
+      workspace = "3";
+    }
+    {
+      key = "4";
+      workspace = "4";
+    }
+    {
+      key = "5";
+      workspace = "5";
+    }
+    {
+      key = "6";
+      workspace = "6";
+    }
+    {
+      key = "7";
+      workspace = "7";
+    }
+    {
+      key = "8";
+      workspace = "8";
+    }
+    {
+      key = "9";
+      workspace = "9";
+    }
+    {
+      key = "0";
+      workspace = "10";
+    }
+  ];
+  workspaceBinds = lib.flatten (
+    map (
+      entry: [
+        (bind (modKey entry.key) (focusWorkspace entry.workspace))
+        (bind (modKey "SHIFT + ${entry.key}") (moveToWorkspace entry.workspace true))
+        (bind (modKey "CTRL + ${entry.key}") (moveToWorkspace entry.workspace false))
+      ]
+    )
+    workspaceKeys
+  );
+  mediaBinds = [
+    (execBindWith "XF86AudioRaiseVolume" "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+" {
+      locked = true;
+      repeating = true;
+    })
+    (execBindWith "XF86AudioLowerVolume" "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-" {
+      locked = true;
+      repeating = true;
+    })
+    (execBindWith "XF86AudioMute" "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle" {
+      locked = true;
+      repeating = true;
+    })
+    (execBindWith "XF86AudioPrev" "dms ipc call mpris previous" {
+      locked = true;
+      repeating = true;
+    })
+    (execBindWith "XF86AudioPlay" "dms ipc call mpris playPause" {
+      locked = true;
+      repeating = true;
+    })
+    (execBindWith "XF86AudioNext" "dms ipc call mpris next" {
+      locked = true;
+      repeating = true;
+    })
+  ];
+  repeatBinds = [
+    (bindWith (modKey "CTRL + h") (resizeWindow (-30) 0) {repeating = true;})
+    (bindWith (modKey "CTRL + l") (resizeWindow 30 0) {repeating = true;})
+    (bindWith (modKey "CTRL + k") (resizeWindow 30 30) {repeating = true;})
+    (bindWith (modKey "CTRL + j") (resizeWindow (-30) (-30)) {repeating = true;})
+    (bindWith (modKey "CTRL + Left") (resizeWindow (-60) 0) {repeating = true;})
+    (bindWith (modKey "CTRL + Right") (resizeWindow 60 0) {repeating = true;})
+    (bindWith (modKey "CTRL + Up") (resizeWindow 60 60) {repeating = true;})
+    (bindWith (modKey "CTRL + Down") (resizeWindow (-60) (-60)) {repeating = true;})
+    (bindWith (modKey "ALT + h") (moveWindowPosition (-30) 0) {repeating = true;})
+    (bindWith (modKey "ALT + l") (moveWindowPosition 30 0) {repeating = true;})
+    (bindWith (modKey "ALT + k") (moveWindowPosition 0 (-30)) {repeating = true;})
+    (bindWith (modKey "ALT + j") (moveWindowPosition 0 30) {repeating = true;})
+    (bindWith (modKey "ALT + Left") (moveWindowPosition (-60) 0) {repeating = true;})
+    (bindWith (modKey "ALT + Right") (moveWindowPosition 60 0) {repeating = true;})
+    (bindWith (modKey "ALT + Up") (moveWindowPosition 0 (-60)) {repeating = true;})
+    (bindWith (modKey "ALT + Down") (moveWindowPosition 0 60) {repeating = true;})
+  ];
+  mouseBinds = [
+    (bind (modKey "mouse:272") (lua "hl.dsp.window.drag()"))
+    (bind (modKey "mouse:273") (lua "hl.dsp.window.resize()"))
+  ];
   dmsBlurNamespaces = lib.concatStringsSep "|" [
     "spotlight"
     "app-launcher"
@@ -95,12 +343,12 @@
 
   navL =
     if useHyprNav
-    then "exec, hypr-nav l"
-    else "movefocus, l";
+    then execCallback "hypr-nav l"
+    else focusDirection "left";
   navR =
     if useHyprNav
-    then "exec, hypr-nav r"
-    else "movefocus, r";
+    then execCallback "hypr-nav r"
+    else focusDirection "right";
 in {
   options.system_manifest.navigation.wrapWorkspaces = lib.mkOption {
     type = lib.types.bool;
@@ -119,7 +367,7 @@ in {
       fi
 
       mkdir -p "$HOME/.config/hypr/dms"
-      for f in colors.conf cursor.conf layout.conf outputs.conf binds.conf windowrules.conf; do
+      for f in colors.lua cursor.lua layout.lua binds.lua binds-user.lua windowrules.lua; do
         [ -f "$HOME/.config/hypr/dms/$f" ] || touch "$HOME/.config/hypr/dms/$f"
       done
     '';
@@ -155,327 +403,335 @@ in {
 
     wayland.windowManager.hyprland = {
       enable = true;
-      package = hyprland-pkg;
-      configType = "hyprlang";
+      package = hyprlandLuaPkg;
+      configType = "lua";
       systemd = {
         enable = true;
         variables = ["--all"];
       };
 
-      plugins = ["${hyprglass-plugin}/lib/hyprglass.so"];
-
       settings = {
-        source = [
-          "~/.config/hypr/dms/colors.conf"
-          "~/.config/hypr/dms/cursor.conf"
-          "~/.config/hypr/dms/layout.conf"
-          "~/.config/hypr/dms/outputs.conf"
-          "~/.config/hypr/dms/binds.conf"
-          "~/.config/hypr/dms/windowrules.conf"
-        ];
-        "$mod" = "SUPER";
+        mod = {
+          _var = "SUPER";
+        };
 
         env = [
-          "XCURSOR_SIZE,${toString config.home.pointerCursor.size}"
-          "XCURSOR_THEME,${config.home.pointerCursor.name}"
-          "GDK_BACKEND,wayland,x11"
-          "QT_QPA_PLATFORM,wayland;xcb"
-          "CLUTTER_BACKEND,wayland"
-          "ANKI_WAYLAND,1"
-          "MOZ_ENABLE_WAYLAND,1"
-          "XDG_CURRENT_DESKTOP,Hyprland"
-          "XDG_SESSION_TYPE,wayland"
-          "XDG_SESSION_DESKTOP,Hyprland"
+          {_args = ["XCURSOR_SIZE" (toString config.home.pointerCursor.size)];}
+          {_args = ["XCURSOR_THEME" config.home.pointerCursor.name];}
+          {_args = ["GDK_BACKEND" "wayland,x11"];}
+          {_args = ["QT_QPA_PLATFORM" "wayland;xcb"];}
+          {_args = ["CLUTTER_BACKEND" "wayland"];}
+          {_args = ["ANKI_WAYLAND" "1"];}
+          {_args = ["MOZ_ENABLE_WAYLAND" "1"];}
+          {_args = ["XDG_CURRENT_DESKTOP" "Hyprland"];}
+          {_args = ["XDG_SESSION_TYPE" "wayland"];}
+          {_args = ["XDG_SESSION_DESKTOP" "Hyprland"];}
         ];
 
-        exec-once = [
-          "hyprctl setcursor ${config.home.pointerCursor.name} ${toString config.home.pointerCursor.size}"
-          "${pkgs.hyprpolkitagent}/bin/hyprpolkitagent"
-          "systemctl --user start transmission-daemon.service"
-        ];
-
-        misc = {
-          disable_hyprland_logo = true;
-          disable_splash_rendering = true;
-          force_default_wallpaper = 0;
-          enable_anr_dialog = false;
-          anr_missed_pings = 20;
-          # Solid black background before wallpaper loads — avoids the
-          # default grey/teal flash during login transition.
-          background_color = "rgb(000000)";
-        };
-
-        ecosystem = {
-          no_update_news = true;
-          no_donation_nag = true;
-        };
-
-        debug = {
-          # Suppress the wall of debug text visible on the TTY during startup
-          disable_logs = true;
-          enable_stdout_logs = false;
-          disable_time = true;
-        };
-
-        input = {
-          kb_layout = "us,gr";
-          kb_variant = "altgr-intl,simple";
-          kb_options = "grp:win_space_toggle,caps:escape_shifted_capslock";
-          resolve_binds_by_sym = false;
-        };
-
-        # Nvidia hardware cursors can bypass hide-on-keypress/inactivity behavior.
-        # Force software cursors so Hyprland/DMS cursor-hide works consistently.
-        cursor = {
-          no_hardware_cursors = true;
-          hide_on_key_press = true;
-          inactive_timeout = 5;
-        };
-
-        general = {
-          gaps_in = 5;
-          gaps_out = 10;
-          border_size = 2;
-          layout = "dwindle";
-          # col.active_border and col.inactive_border set dynamically by matugen via colors.conf
-        };
-
-        decoration = {
-          rounding = 12;
-          active_opacity = 1.0;
-          inactive_opacity = 1.0;
-
-          dim_inactive = true;
-          dim_strength = 0.20;
-          blur = {
-            enabled = true;
-            size = 3;
-            passes = 2;
-            noise = 0.02;
-            contrast = 0.9;
-            xray = false;
-            new_optimizations = true;
-          };
-          shadow = {
-            enabled = true;
-            range = 10;
-            render_power = 2;
-            color = "rgba(0f1116aa)";
-          };
-        };
-
-        animations = {
-          enabled = true;
-          bezier = "myBezier, 0.05, 0.9, 0.1, 1.05";
-          animation = [
-            "windows, 1, 7, myBezier"
-            "windowsOut, 1, 7, default, popin 80%"
-            "border, 1, 10, default"
-            "fade, 1, 7, default"
-            "workspaces, 1, 6, default"
+        on = {
+          _args = [
+            "hyprland.start"
+            (lua ''
+              function()
+                hl.exec_cmd(${builtins.toJSON "hyprctl setcursor ${config.home.pointerCursor.name} ${toString config.home.pointerCursor.size}"})
+                hl.exec_cmd(${builtins.toJSON "${pkgs.hyprpolkitagent}/bin/hyprpolkitagent"})
+                hl.exec_cmd("systemctl --user start transmission-daemon.service")
+                hl.exec_cmd(${builtins.toJSON hyprglassStartupCommand})
+              end
+            '')
           ];
         };
 
-        dwindle = {
-          pseudotile = true;
+        config = {
+          misc = {
+            disable_hyprland_logo = true;
+            disable_splash_rendering = true;
+            force_default_wallpaper = 0;
+            enable_anr_dialog = false;
+            anr_missed_pings = 20;
+            # Solid black background before wallpaper loads - avoids the
+            # default grey/teal flash during login transition.
+            background_color = "rgb(000000)";
+          };
+
+          ecosystem = {
+            no_update_news = true;
+            no_donation_nag = true;
+          };
+
+          debug = {
+            # Suppress the wall of debug text visible on the TTY during startup
+            disable_logs = true;
+            enable_stdout_logs = false;
+            disable_time = true;
+          };
+
+          input = {
+            kb_layout = "us,gr";
+            kb_variant = "altgr-intl,simple";
+            kb_options = "grp:win_space_toggle,caps:escape_shifted_capslock";
+            resolve_binds_by_sym = false;
+          };
+
+          # Nvidia hardware cursors can bypass hide-on-keypress/inactivity behavior.
+          # Force software cursors so Hyprland/DMS cursor-hide works consistently.
+          cursor = {
+            no_hardware_cursors = true;
+            hide_on_key_press = true;
+            inactive_timeout = 5;
+          };
+
+          general = {
+            gaps_in = 5;
+            gaps_out = 10;
+            border_size = 2;
+            layout = "dwindle";
+            # col.active_border and col.inactive_border are set dynamically by dms.colors.
+          };
+
+          decoration = {
+            rounding = 12;
+            active_opacity = 1.0;
+            inactive_opacity = 1.0;
+
+            dim_inactive = true;
+            dim_strength = 0.20;
+            blur = {
+              enabled = true;
+              size = 3;
+              passes = 2;
+              noise = 0.02;
+              contrast = 0.9;
+              xray = false;
+              new_optimizations = true;
+            };
+            shadow = {
+              enabled = true;
+              range = 10;
+              render_power = 2;
+              color = "rgba(0f1116aa)";
+            };
+          };
+
+          animations = {
+            enabled = true;
+          };
         };
 
-        bindel = [
-          ", XF86AudioRaiseVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+"
-          ", XF86AudioLowerVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"
-          ", XF86AudioMute, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
-          ", XF86AudioPrev, exec, dms ipc call mpris previous"
-          ", XF86AudioPlay, exec, dms ipc call mpris playPause"
-          ", XF86AudioNext, exec, dms ipc call mpris next"
+        curve = {
+          _args = [
+            "myBezier"
+            {
+              type = "bezier";
+              points = [
+                [0.05 0.9]
+                [0.1 1.05]
+              ];
+            }
+          ];
+        };
+
+        animation = [
+          {
+            leaf = "windows";
+            enabled = true;
+            speed = 7;
+            bezier = "myBezier";
+          }
+          {
+            leaf = "windowsOut";
+            enabled = true;
+            speed = 7;
+            bezier = "default";
+            style = "popin 80%";
+          }
+          {
+            leaf = "border";
+            enabled = true;
+            speed = 10;
+            bezier = "default";
+          }
+          {
+            leaf = "fade";
+            enabled = true;
+            speed = 7;
+            bezier = "default";
+          }
+          {
+            leaf = "workspaces";
+            enabled = true;
+            speed = 6;
+            bezier = "default";
+          }
         ];
 
-        binde = [
-          "$mod CTRL, h, resizeactive, -30 0"
-          "$mod CTRL, l, resizeactive, 30 0"
-          "$mod CTRL, k, resizeactive, 30 30"
-          "$mod CTRL, j, resizeactive, -30 -30"
-          "$mod CTRL, Left, resizeactive, -60 0"
-          "$mod CTRL, Right, resizeactive, 60 0"
-          "$mod CTRL, Up, resizeactive, 60 60"
-          "$mod CTRL, Down, resizeactive, -60 -60"
-          "$mod ALT, h, moveactive, -30 0"
-          "$mod ALT, l, moveactive, 30 0"
-          "$mod ALT, k, moveactive, 0 -30"
-          "$mod ALT, j, moveactive, 0 30"
-          "$mod ALT, Left, moveactive, -60 0"
-          "$mod ALT, Right, moveactive, 60 0"
-          "$mod ALT, Up, moveactive, 0 -60"
-          "$mod ALT, Down, moveactive, 0 60"
-        ];
+        bind =
+          [
+            # --- System & Apps ---
+            (execBind (modKey "Return") "ghostty")
+            (execBind (modKey "b") "brave")
+            (bind (modKey "x") (lua "hl.dsp.window.close()"))
+            (execBind (modKey "SHIFT + x") "hypr-quit-active")
+            (execBind (modKey "m") "ghostty -e spotify_player")
+            (execBind (modKey "e") "ghostty -e yazi")
+            (bind (modKey "v") (lua ''hl.dsp.window.float({ action = "toggle" })''))
+            (bind (modKey "f") (fullscreen "maximized"))
+            (bind (modKey "SHIFT + f") (fullscreen "fullscreen"))
+            (execBind (modKey "d") "dms ipc call spotlight toggle")
+            (execBind (modKey "t") "dms ipc call notepad toggle")
+            (execBind (modKey "SHIFT + v") "dms ipc call clipboard toggle")
+            (bind (modKey "p") (lua "hl.dsp.window.pseudo()"))
+            (bind (modKey "backslash") (lua ''hl.dsp.layout("togglesplit")''))
+            (bind (modKey "g") (lua "hl.dsp.group.toggle()"))
+            (bind (modKey "Tab") (lua "hl.dsp.group.next()"))
 
-        bind = [
-          # --- System & Apps ---
-          "$mod, Return, exec, ghostty"
-          "$mod, b, exec, brave"
-          "$mod, x, killactive,"
-          "$mod SHIFT, x, exec, hypr-quit-active"
-          "$mod, m, exec, ghostty -e spotify_player"
-          "$mod, e, exec, ghostty -e yazi"
-          "$mod, v, togglefloating,"
-          "$mod, f, fullscreen, 0"
-          "$mod SHIFT, f, fullscreen, 1"
-          "$mod, d, exec, dms ipc call spotlight toggle"
-          "$mod, t, exec, dms ipc call notepad toggle"
-          "$mod SHIFT, v, exec, dms ipc call clipboard toggle"
-          "$mod, p, pseudo,"
-          "$mod, backslash, layoutmsg, togglesplit"
-          "$mod, g, togglegroup,"
-          "$mod, Tab, changegroupactive, f"
+            # --- Navigation ---
+            (bind (modKey "h") navL)
+            (bind (modKey "l") navR)
+            (bind (modKey "k") (focusDirection "up"))
+            (bind (modKey "j") (focusDirection "down"))
+            (bind (modKey "Left") (focusMonitor "l"))
+            (bind (modKey "Right") (focusMonitor "r"))
+            (bind (modKey "Up") (focusMonitor "u"))
+            (bind (modKey "Down") (focusMonitor "d"))
 
-          # --- Navigation ---
-          "$mod, h, ${navL}"
-          "$mod, l, ${navR}"
-          "$mod, k, movefocus, u"
-          "$mod, j, movefocus, d"
-          "$mod, Left, focusmonitor, l"
-          "$mod, Right, focusmonitor, r"
-          "$mod, Up, focusmonitor, u"
-          "$mod, Down, focusmonitor, d"
+            # --- Window Movement ---
+            (bind (modKey "SHIFT + h") (moveWindowDirection "left"))
+            (bind (modKey "SHIFT + l") (moveWindowDirection "right"))
+            (bind (modKey "SHIFT + k") (moveWindowDirection "up"))
+            (bind (modKey "SHIFT + j") (moveWindowDirection "down"))
+            (bind (modKey "SHIFT + Left") (moveWindowMonitor "l"))
+            (bind (modKey "SHIFT + Right") (moveWindowMonitor "r"))
+          ]
+          ++ workspaceBinds
+          ++ [
+            # --- Special Workspaces ---
+            (bind (modKey "grave") (toggleSpecialWorkspace "music"))
+            (bind (modKey "SHIFT + grave") (moveToWorkspace "special:music" true))
+            (bind (modKey "CTRL + grave") (moveToWorkspace "special:music" false))
 
-          # --- Window Movement ---
-          "$mod SHIFT, h, movewindow, l"
-          "$mod SHIFT, l, movewindow, r"
-          "$mod SHIFT, k, movewindow, u"
-          "$mod SHIFT, j, movewindow, d"
-          "$mod SHIFT, Left, movewindow, mon:-1"
-          "$mod SHIFT, Right, movewindow, mon:+1"
+            # --- Screenshots (image to clipboard) ---
+            (execBind "Print" "dms screenshot region --dir ~/pictures/screenshots")
+            (execBind "CONTROL + Print" "dms screenshot window --dir ~/pictures/screenshots")
+            (execBind "ALT + Print" "dms screenshot full --dir ~/pictures/screenshots")
 
-          # --- Workspaces ---
-          "$mod, 1, workspace, 1"
-          "$mod, 2, workspace, 2"
-          "$mod, 3, workspace, 3"
-          "$mod, 4, workspace, 4"
-          "$mod, 5, workspace, 5"
-          "$mod, 6, workspace, 6"
-          "$mod, 7, workspace, 7"
-          "$mod, 8, workspace, 8"
-          "$mod, 9, workspace, 9"
-          "$mod, 0, workspace, 10"
-          "$mod SHIFT, 1, movetoworkspace, 1"
-          "$mod SHIFT, 2, movetoworkspace, 2"
-          "$mod SHIFT, 3, movetoworkspace, 3"
-          "$mod SHIFT, 4, movetoworkspace, 4"
-          "$mod SHIFT, 5, movetoworkspace, 5"
-          "$mod SHIFT, 6, movetoworkspace, 6"
-          "$mod SHIFT, 7, movetoworkspace, 7"
-          "$mod SHIFT, 8, movetoworkspace, 8"
-          "$mod SHIFT, 9, movetoworkspace, 9"
-          "$mod SHIFT, 0, movetoworkspace, 10"
-          "$mod CTRL, 1, movetoworkspacesilent, 1"
-          "$mod CTRL, 2, movetoworkspacesilent, 2"
-          "$mod CTRL, 3, movetoworkspacesilent, 3"
-          "$mod CTRL, 4, movetoworkspacesilent, 4"
-          "$mod CTRL, 5, movetoworkspacesilent, 5"
-          "$mod CTRL, 6, movetoworkspacesilent, 6"
-          "$mod CTRL, 7, movetoworkspacesilent, 7"
-          "$mod CTRL, 8, movetoworkspacesilent, 8"
-          "$mod CTRL, 9, movetoworkspacesilent, 9"
-          "$mod CTRL, 0, movetoworkspacesilent, 10"
+            # --- Screenshots (file path to clipboard) ---
+            (execBind "SHIFT + Print" "screenshot-path-copy region")
+            (execBind "CONTROL + SHIFT + Print" "screenshot-path-copy window")
+            (execBind "ALT + SHIFT + Print" "screenshot-path-copy full")
 
-          # --- Special Workspaces ---
-          "$mod, grave, togglespecialworkspace, music"
-          "$mod SHIFT, grave, movetoworkspace, special:music"
-          "$mod CTRL, grave, movetoworkspacesilent, special:music"
+            # --- Screen Recording ---
+            (execBind (modKey "r") "gsr-record region")
+            (execBind (modKey "SHIFT + r") "gsr-record region --no-audio")
+            (execBind (modKey "ALT + r") "gsr-record fullscreen")
+            (execBind (modKey "ALT + SHIFT + r") "gsr-record fullscreen --no-audio")
+            (execBind (modKey "CTRL + r") "gsr-record window")
+            (execBind (modKey "CTRL + SHIFT + r") "gsr-record window --no-audio")
 
-          # --- Screenshots (image to clipboard) ---
-          ", Print, exec, dms screenshot region --dir ~/pictures/screenshots"
-          "CONTROL, Print, exec, dms screenshot window --dir ~/pictures/screenshots"
-          "ALT, Print, exec, dms screenshot full --dir ~/pictures/screenshots"
+            # --- DMS IPC Controls ---
+            (execBind (modKey "n") "dms ipc call notifications toggle")
+            (execBind (modKey "SHIFT + n") "dms ipc call notifications clearAll; dms ipc call notifications clearHistory")
+            (execBind (modKey "BackSpace") "dms ipc call notifications dismissAllPopups")
+            (execBind (modKey "o") "dms ipc call hypr toggleOverview")
+            (execBind (modKey "Escape") "dms ipc call lock lock")
+            (execBind (modKey "s") "dms ipc call settings toggle")
+            (execBind (modKey "q") "dms ipc call powermenu toggle")
+            (execBind (modKey "w") "skwd wall toggle")
+            (execBind (modKey "SHIFT + w") "dms ipc call dash toggle wallpaper")
+            (execBind (modKey "SHIFT + o") "dms ipc call dash toggle overview")
+            (execBind (modKey "SHIFT + m") "dms ipc call dash toggle media")
+            (execBind (modKey "ALT + w") "dms ipc call dash toggle weather")
+          ]
+          ++ mediaBinds
+          ++ repeatBinds
+          ++ mouseBinds;
 
-          # --- Screenshots (file path to clipboard) ---
-          "SHIFT, Print, exec, screenshot-path-copy region"
-          "CONTROL SHIFT, Print, exec, screenshot-path-copy window"
-          "ALT SHIFT, Print, exec, screenshot-path-copy full"
-
-          # --- Screen Recording ---
-          "$mod, r, exec, gsr-record region"
-          "$mod SHIFT, r, exec, gsr-record region --no-audio"
-          "$mod ALT, r, exec, gsr-record fullscreen"
-          "$mod ALT SHIFT, r, exec, gsr-record fullscreen --no-audio"
-          "$mod CTRL, r, exec, gsr-record window"
-          "$mod CTRL SHIFT, r, exec, gsr-record window --no-audio"
-
-          # --- DMS IPC Controls ---
-          "$mod, n, exec, dms ipc call notifications toggle"
-          "$mod SHIFT, n, exec, dms ipc call notifications clearAll; dms ipc call notifications clearHistory"
-          "$mod, BackSpace, exec, dms ipc call notifications dismissAllPopups"
-          "$mod, o, exec, dms ipc call hypr toggleOverview"
-          "$mod, Escape, exec, dms ipc call lock lock"
-          "$mod, s, exec, dms ipc call settings toggle"
-          "$mod, q, exec, dms ipc call powermenu toggle"
-          "$mod, w, exec, skwd wall toggle"
-          "$mod SHIFT, w, exec, dms ipc call dash toggle wallpaper"
-          "$mod SHIFT, o, exec, dms ipc call dash toggle overview"
-          "$mod SHIFT, m, exec, dms ipc call dash toggle media"
-          "$mod ALT, w, exec, dms ipc call dash toggle weather"
-        ];
-
-        windowrule = [
-          "opacity 1.0 override, match:class ^(mpv|vlc|imv|feh)$"
-          "opacity 1.0 override, match:title ^(Picture-in-Picture)$"
+        window_rule = [
+          {
+            name = "media-opaque";
+            match.class = "^(mpv|vlc|imv|feh)$";
+            opacity = "1.0 override";
+          }
+          {
+            name = "pip-opaque";
+            match.title = "^(Picture-in-Picture)$";
+            opacity = "1.0 override";
+          }
           # Keep real fullscreen windows at full brightness even when unfocused.
-          "no_dim 1, match:fullscreen_state_internal 2"
-          "no_dim 1, match:fullscreen_state_internal 3"
+          {
+            name = "fullscreen-internal-no-dim";
+            match.fullscreen_state_internal = 2;
+            no_dim = true;
+          }
+          {
+            name = "fullscreen-client-no-dim";
+            match.fullscreen_state_internal = 3;
+            no_dim = true;
+          }
           # Keep Vesktop fully opaque at compositor level; transparent UI
           # comes from Vesktop's native RGBA setting to preserve text opacity.
-          "opacity 1.0 override, match:class ^(vesktop)$"
+          {
+            name = "vesktop-opaque";
+            match.class = "^(vesktop)$";
+            opacity = "1.0 override";
+          }
           # Center credential/auth dialogs so they don't spawn between monitors
-          "float 1, match:class ^(pinentry|pinentry-gtk-2|pinentry-gnome3|ssh-askpass|git-askpass)$"
-          "center 1, match:class ^(pinentry|pinentry-gtk-2|pinentry-gnome3|ssh-askpass|git-askpass)$"
-          "size 400 200, match:class ^(pinentry|pinentry-gtk-2|pinentry-gnome3|ssh-askpass|git-askpass)$"
+          {
+            name = "auth-dialogs";
+            match.class = "^(pinentry|pinentry-gtk-2|pinentry-gnome3|ssh-askpass|git-askpass)$";
+            float = true;
+            center = true;
+            size = "400 200";
+          }
+          {
+            name = "pearpass-no-blur";
+            match.class = "^(pear-runtime)$";
+            no_blur = true;
+          }
         ];
 
-        bindm = [
-          "$mod, mouse:272, movewindow"
-          "$mod, mouse:273, resizewindow"
+        layer_rule = [
+          {
+            name = "dms-blur";
+            match.namespace = "^dms:(${dmsBlurNamespaces})$";
+            blur = true;
+          }
+          {
+            name = "dms-ignore-alpha";
+            match.namespace = "^dms:(${dmsBlurNamespaces})$";
+            ignore_alpha = 0.2;
+          }
+          {
+            name = "wallpaper-selector-blur";
+            match.namespace = "^wallpaper-selector-parallel$";
+            blur = true;
+          }
+          {
+            name = "wallpaper-selector-ignore-alpha";
+            match.namespace = "^wallpaper-selector-parallel$";
+            ignore_alpha = 0.2;
+          }
         ];
-
-        bindr = [];
       };
 
       extraConfig = ''
-        $terminal = ghostty
+        local hm_xdg_config_home = os.getenv("XDG_CONFIG_HOME") or (os.getenv("HOME") .. "/.config")
+        package.path = hm_xdg_config_home .. "/hypr/?.lua;" .. hm_xdg_config_home .. "/hypr/?/init.lua;" .. package.path
 
-        # Hyprland v0.54 window rules use `no_blur` in the block syntax.
-        windowrule {
-          name = pearpass-no-blur
-          match:class = ^(pear-runtime)$
-          no_blur = true
-        }
+        local function require_optional(module)
+          local ok, err = pcall(require, module)
+          if not ok then
+            print("failed to load " .. module .. ": " .. tostring(err))
+          end
+        end
 
-        plugin:hyprglass {
-          enabled = 1
-          default_theme = light
-          default_preset = default
-          blur_strength = 2.8
-          blur_iterations = 4
-          tint_color = 0xffffff08
-          specular_strength = 0.6
-          edge_thickness = 0.05
-          lens_distortion = 0.14
-          refraction_strength = 0.7
-          chromatic_aberration = 0.6
-          fresnel_strength = 0.7
-          light:brightness = 1.02
-          light:contrast = 0.95
-          light:saturation = 1.0
-          light:vibrancy = 0.05
-          light:adaptive_boost = 0.05
-          light:adaptive_dim = 0.0
-        }
-
-        # Give DMS overlays/popouts compositor blur, including the spotlight
-        # launcher, without increasing the global blur strength for every window.
-        layerrule = match:namespace ^dms:(${dmsBlurNamespaces})$, blur on
-        layerrule = match:namespace ^dms:(${dmsBlurNamespaces})$, ignore_alpha 0.2
-        layerrule = match:namespace ^wallpaper-selector-parallel$, blur on
-        layerrule = match:namespace ^wallpaper-selector-parallel$, ignore_alpha 0.2
-
+        require_optional("dms.colors")
+        require_optional("dms.cursor")
+        require_optional("dms.layout")
+        require_optional("dms.outputs")
+        require_optional("dms.binds")
+        require_optional("dms.binds-user")
+        require_optional("dms.windowrules")
       '';
     };
   };

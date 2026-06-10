@@ -27,8 +27,11 @@
   };
   # Auto-detect monitor (USB is portable across machines)
   wayland.windowManager.hyprland.settings = {
-    monitor = [
-      ",preferred,auto,1"
-    ];
+    monitor = {
+      output = "";
+      mode = "preferred";
+      position = "auto";
+      scale = "1";
+    };
   };
 }
