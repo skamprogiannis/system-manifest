@@ -38,6 +38,6 @@ in {
   };
 
   systemd.user.services.dms.Service.Environment = [
-    "DMS_FORCE_EXT_WORKSPACE=1"
+    "DMS_FORCE_EXTWS=1"
   ];
 }

@@ -2,14 +2,11 @@
   pkgs,
   skwdWallBase,
   skwdApplyStaticWallpaper,
-  skwdApplyWeStill,
   steamWorkshopDir,
   steamWeAssetsDir,
   skwdSecretsFile,
 }: let
-  qmlPatches = import ./qml-patches.nix {
-    inherit pkgs skwdApplyStaticWallpaper skwdApplyWeStill;
-  };
+  qmlPatches = import ./qml-patches.nix;
   inherit (qmlPatches) patchPython;
   qmlPatchScript = pkgs.writeText "skwd-wall-qml-patches.py" patchPython;
 in {
@@ -24,7 +21,7 @@ in {
         settingsToggleQml=$out/share/skwd-wall/qml/wallpaper/SettingsToggle.qml
         settingsInputQml=$out/share/skwd-wall/qml/wallpaper/SettingsInput.qml
         settingsComboQml=$out/share/skwd-wall/qml/wallpaper/SettingsCombo.qml
-        applyQml=$out/share/skwd-wall/qml/services/WallpaperApplyService.qml
+        keybindsQml=$out/share/skwd-wall/qml/wallpaper/settings/KeybindsSettings.qml
         selectorServiceQml=$out/share/skwd-wall/qml/wallpaper/WallpaperSelectorService.qml
         sliceDelegateQml=$out/share/skwd-wall/qml/wallpaper/SliceDelegate.qml
         hexDelegateQml=$out/share/skwd-wall/qml/wallpaper/HexDelegate.qml
@@ -343,7 +340,7 @@ in {
         export SETTINGS_TOGGLE_QML="$settingsToggleQml"
         export SETTINGS_INPUT_QML="$settingsInputQml"
         export SETTINGS_COMBO_QML="$settingsComboQml"
-        export APPLY_QML="$applyQml"
+        export KEYBINDS_QML="$keybindsQml"
         export SELECTOR_SERVICE_QML="$selectorServiceQml"
         export SLICE_DELEGATE_QML="$sliceDelegateQml"
         export HEX_DELEGATE_QML="$hexDelegateQml"

@@ -152,15 +152,6 @@
     ],
   '';
 
-  dmsService = ''
-    root / "Services/DMSService.qml": [
-        (
-            "    readonly property bool forceExtWorkspace: false",
-            '    readonly property bool forceExtWorkspace: Quickshell.env("DMS_FORCE_EXT_WORKSPACE") === "1"',
-        ),
-    ],
-  '';
-
   dankPopoutBase = ''
     (
         "targetColor: Theme.withAlpha(Theme.surfaceContainer, Theme.popupTransparency)",
@@ -276,7 +267,6 @@ in {
     # The built-in clearAll IPC only calls clearAllNotifications(); this adds
     # a sibling function that delegates to NotificationService.clearHistory().
     ${notificationModal}
-    ${dmsService}
   '';
 
   # USB keeps the same settings-adjacent transparency patches because upstream
@@ -309,7 +299,6 @@ in {
     ${calendarOverviewCard}
     ${appSearchService}
     ${launcherSourceClassifier}
-    ${dmsService}
     root / "Widgets/CachingImage.qml": [
         (
             "        cacheProbe.running = false;\n        cacheProbe.cachePath = cPath;\n        cacheProbe.fallbackSource = encoded;\n        cacheProbe.running = true;",

@@ -7,10 +7,20 @@ pkgs.rustPlatform.buildRustPackage {
   version = "unstable";
   src = inputs.skwd-wall.inputs.skwd-daemon.outPath;
 
-  cargoHash = "sha256-+go8PEM9X4C/+3wSNoEEdn8vkVV/S9NmqS66d0mD6pk=";
+  cargoHash = "sha256-jAP1R2BV3uuNbTHZFsZ8KmvjRDiCpD9oPsD/XOIpN6o=";
 
-  nativeBuildInputs = with pkgs; [pkg-config];
-  buildInputs = with pkgs; [imagemagick];
+  nativeBuildInputs = with pkgs; [
+    pkg-config
+    rustPlatform.bindgenHook
+  ];
+  buildInputs = with pkgs; [
+    alsa-lib.dev
+    ffmpeg.dev
+    imagemagick
+    libglvnd.dev
+    libpulseaudio
+    wayland.dev
+  ];
 
   postInstall = ''
     install -Dm644 data/skwd-daemon.service $out/lib/systemd/user/skwd-daemon.service

@@ -24,9 +24,9 @@
   dmsWallpaperSessionSyncJson = builtins.toJSON dmsWallpaperSessionSync;
 
   applyHelpers = import ./wallpaper/apply-helpers.nix {
-    inherit pkgs steamWorkshopDir defaultWallpaperTransition;
+    inherit pkgs defaultWallpaperTransition;
   };
-  inherit (applyHelpers) skwdApplyStaticWallpaper skwdApplyWeStill;
+  inherit (applyHelpers) skwdApplyStaticWallpaper;
 
   skwdWeCaptureStill =
     (
@@ -43,7 +43,6 @@
           pkgs
           skwdWallBase
           skwdApplyStaticWallpaper
-          skwdApplyWeStill
           steamWorkshopDir
           steamWeAssetsDir
           skwdSecretsFile

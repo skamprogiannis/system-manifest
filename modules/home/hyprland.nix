@@ -8,12 +8,12 @@
   hyprland-pkg = inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
   hyprglass-plugin = pkgs.stdenv.mkDerivation {
     pname = "hyprglass";
-    version = "0.2.4";
+    version = "0.6.3";
     src = pkgs.fetchFromGitHub {
       owner = "hyprnux";
       repo = "hyprglass";
-      rev = "0e82595ec5c1b04e30b559fe689f3ceae24bc3ef";
-      hash = "sha256-i2NXWuvVM+n6m4kwfqVTUOpinNWJHhSQdzMPbMR/Bn8=";
+      rev = "16553225226cd15b2b0e5c7319e5242b427df1b2";
+      hash = "sha256-UeAnHPGBW+2iKbPZ0xWp1VPRI18SuEYRSUCFfn3OKrU=";
     };
     nativeBuildInputs = with pkgs; [pkg-config];
     buildInputs = [
@@ -32,48 +32,22 @@
       pkgs.pixman
       pkgs.cairo
       pkgs.glslang
+      pkgs.lua
       pkgs.libxcb
       pkgs.libxcb-wm
       pkgs.libxcb-errors
     ];
     postPatch = ''
+      substituteInPlace \
+        src/Globals.hpp \
+        src/GlassDecoration.hpp \
+        src/GlassLayerSurface.hpp \
+        src/GlassRenderer.hpp \
+        --replace-fail '<hyprland/src/render/Framebuffer.hpp>' '<hyprland/src/render/gl/GLFramebuffer.hpp>'
       substituteInPlace src/Globals.hpp \
-        --replace-fail '<hyprland/src/render/Framebuffer.hpp>' '<hyprland/src/render/gl/GLFramebuffer.hpp>' \
-        --replace-fail 'CFramebuffer blurTempFramebuffer;' 'Render::GL::CGLFramebuffer blurTempFramebuffer;'
-
-      substituteInPlace src/GlassDecoration.hpp \
-        --replace-fail '<hyprland/src/render/Framebuffer.hpp>' '<hyprland/src/render/gl/GLFramebuffer.hpp>' \
-        --replace-fail 'CFramebuffer m_sampleFramebuffer;' 'Render::GL::CGLFramebuffer m_sampleFramebuffer;' \
-        --replace-fail 'void sampleBackground(CFramebuffer& sourceFramebuffer, CBox box);' 'void sampleBackground(Render::IFramebuffer& sourceFramebuffer, CBox box);' \
-        --replace-fail 'void applyGlassEffect(CFramebuffer& sourceFramebuffer, CFramebuffer& targetFramebuffer,' 'void applyGlassEffect(Render::GL::CGLFramebuffer& sourceFramebuffer, Render::IFramebuffer& targetFramebuffer,'
-
-      substituteInPlace src/GlassDecoration.cpp \
-        --replace-fail 'void CGlassDecoration::sampleBackground(CFramebuffer& sourceFramebuffer, CBox box) {' $'void CGlassDecoration::sampleBackground(Render::IFramebuffer& sourceFramebuffer, CBox box) {\n    auto* srcGLFramebuffer = dynamic_cast<Render::GL::CGLFramebuffer*>(&sourceFramebuffer);\n    if (!srcGLFramebuffer)\n        return;' \
-        --replace-fail 'glBindFramebuffer(GL_READ_FRAMEBUFFER, sourceFramebuffer.getFBID());' 'glBindFramebuffer(GL_READ_FRAMEBUFFER, srcGLFramebuffer->getFBID());' \
-        --replace-fail 'void CGlassDecoration::applyGlassEffect(CFramebuffer& sourceFramebuffer, CFramebuffer& targetFramebuffer,' 'void CGlassDecoration::applyGlassEffect(Render::GL::CGLFramebuffer& sourceFramebuffer, Render::IFramebuffer& targetFramebuffer,' \
-        --replace-fail 'glBindFramebuffer(GL_FRAMEBUFFER, targetFramebuffer.getFBID());' $'    auto* targetGLFramebuffer = dynamic_cast<Render::GL::CGLFramebuffer*>(&targetFramebuffer);\n    if (!targetGLFramebuffer)\n        return;\n\n    glBindFramebuffer(GL_FRAMEBUFFER, targetGLFramebuffer->getFBID());' \
-        --replace-fail 'blurBackground(blurRadius, blurIterations, source->getFBID(), viewportWidth, viewportHeight);' $'        auto* sourceGLFramebuffer = dynamic_cast<Render::GL::CGLFramebuffer*>(source.get());\n        if (!sourceGLFramebuffer)\n            return;\n\n        blurBackground(blurRadius, blurIterations, sourceGLFramebuffer->getFBID(), viewportWidth, viewportHeight);'
-
-      substituteInPlace Makefile \
-        --replace-fail 'SOURCES = src/main.cpp src/GlassDecoration.cpp src/GlassPassElement.cpp src/PluginConfig.cpp src/ShaderManager.cpp' 'SOURCES = src/main.cpp src/GlassDecoration.cpp src/PluginConfig.cpp src/ShaderManager.cpp'
-
-      # Remove g_pConfigManager code and GlassPassElement code
-      sed -i '/Shadows must be enabled for the glass effect/,/^    }$/d' src/main.cpp
-      sed -i '/g_pHyprRenderer->m_renderPass.removeAllOfType("CGlassPassElement");/d' src/main.cpp
-
-      substituteInPlace src/GlassDecoration.cpp \
-        --replace-fail '#include "GlassPassElement.hpp"' "" \
-        --replace-fail '    CGlassPassElement::SGlassPassData data{this, alpha};' "" \
-        --replace-fail '    g_pHyprRenderer->m_renderPass.add(makeUnique<CGlassPassElement>(data));' '    renderPass(monitor, alpha);' \
-        --replace-fail 'g_pHyprOpenGL->m_renderData' 'g_pHyprRenderer->m_renderData' \
-        --replace-fail 'g_pHyprOpenGL->' 'Render::GL::g_pHyprOpenGL->' \
-        --replace-fail 'g_pHyprRenderer->m_renderData.monitorProjection.projectBox(rawBox, transform, rawBox.rot)' 'g_pHyprRenderer->getBoxProjection(rawBox, transform)' \
-        --replace-fail 'g_pHyprRenderer->m_renderData.projection.copy().multiply(matrix)' 'g_pHyprRenderer->projectBoxToTarget(rawBox, transform)'
-
-      substituteInPlace src/ShaderManager.cpp \
-        --replace-fail 'g_pHyprOpenGL->' 'Render::GL::g_pHyprOpenGL->'
+        --replace-fail 'CMonitor*' 'Monitor::CMonitor*'
     '';
-    NIX_CFLAGS_COMPILE = "-I${hyprland-pkg.dev}/include/hyprland/src -I${hyprland-pkg.dev}/include/hyprland/protocols -I${pkgs.libdrm.dev}/include/libdrm";
+    NIX_CFLAGS_COMPILE = "-I${hyprland-pkg.dev}/include/hyprland/src -I${hyprland-pkg.dev}/include/hyprland/protocols -I${pkgs.libdrm.dev}/include/libdrm -I${pkgs.lua}/include";
     buildPhase = "make all";
     installPhase = ''
       mkdir -p $out/lib
@@ -182,6 +156,7 @@ in {
     wayland.windowManager.hyprland = {
       enable = true;
       package = hyprland-pkg;
+      configType = "hyprlang";
       systemd = {
         enable = true;
         variables = ["--all"];

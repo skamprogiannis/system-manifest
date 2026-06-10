@@ -46,6 +46,7 @@ in {
 
       skwd_bin="$(readlink -f "${desktopHome}/bin/skwd")"
       skwd_pkg="$(dirname "$(dirname "$skwd_bin")")"
+      skwd_keybinds_qml="$skwd_pkg/share/skwd-wall/qml/wallpaper/settings/KeybindsSettings.qml"
       assert_executable "$skwd_pkg/libexec/skwd-wall/awww" "skwd-wall awww helper"
       assert_executable "$skwd_pkg/libexec/skwd-wall/linux-wallpaperengine" "skwd-wall Wallpaper Engine helper"
       skwd_apply_static="$(sed -n 's/^apply_static="\([^"]*\)"$/\1/p' "$skwd_pkg/libexec/skwd-wall/awww")"
@@ -63,10 +64,26 @@ in {
       assert_contains "# filter bar keyboard" ${../modules/home/wallpaper/qml-patches.nix} "skwd-wall QML patch module"
       assert_contains "# tag cloud keyboard" ${../modules/home/wallpaper/qml-patches.nix} "skwd-wall QML patch module"
       assert_contains "# settings keyboard" ${../modules/home/wallpaper/qml-patches.nix} "skwd-wall QML patch module"
-      assert_contains "# apply-service backends" ${../modules/home/wallpaper/qml-patches.nix} "skwd-wall QML patch module"
+      assert_contains "# keybind help" ${../modules/home/wallpaper/qml-patches.nix} "skwd-wall QML patch module"
+      assert_contains "KeybindsSettings.qml" ${../modules/home/wallpaper/patched-package.nix} "skwd-wall patched package"
+      assert_contains "H / J / K / L" ${../modules/home/wallpaper/qml-patches.nix} "skwd-wall QML patch module"
+      assert_contains "B then W / S" ${../modules/home/wallpaper/qml-patches.nix} "skwd-wall QML patch module"
+      assert_contains '{ key: "Ctrl + S / H / W", action: "Switch Slices / Hex / Wall view" },' "$skwd_keybinds_qml" "patched skwd-wall keybind settings"
+      assert_contains '{ key: "B then W / S",  action: "Open Wallhaven / Steam browser" },' "$skwd_keybinds_qml" "patched skwd-wall keybind settings"
+      assert_contains "DaemonClient.applyVideo(path, outputs, neighbors, screens, audioMap, volumeMap)" ${../modules/home/wallpaper/qml-patches.nix} "skwd-wall QML patch module"
 
       if grep -Fq "'} else if (event.key === Qt.Key_Right) {'," ${../modules/home/wallpaper/qml-patches.nix}; then
         echo "skwd-wall QML patch module still contains the confirmed no-op Qt.Key_Right replacement." >&2
+        exit 1
+      fi
+
+      if grep -Fq "# apply-service backends" ${../modules/home/wallpaper/qml-patches.nix}; then
+        echo "skwd-wall QML patch module should rely on upstream daemon-backed apply methods instead of restoring the old apply-service backend patch." >&2
+        exit 1
+      fi
+
+      if grep -Fq "WallpaperApplyService" ${../modules/home/wallpaper/qml-patches.nix}; then
+        echo "skwd-wall QML patch module should not reference the removed upstream WallpaperApplyService file." >&2
         exit 1
       fi
 

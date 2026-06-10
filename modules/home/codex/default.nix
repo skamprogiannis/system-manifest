@@ -4,13 +4,13 @@
   inputs,
   ...
 }: let
-  codexVersion = "0.137.0";
+  codexVersion = "0.139.0";
   codexUpstream = pkgs.stdenvNoCC.mkDerivation {
     pname = "codex-cli";
     version = codexVersion;
     src = pkgs.fetchurl {
       url = "https://github.com/openai/codex/releases/download/rust-v${codexVersion}/codex-x86_64-unknown-linux-musl.tar.gz";
-      hash = "sha256-2W6IMTuVWX6cu4cE9tsW27gcBxQrCM+2KEeatDNpaTE=";
+      hash = "sha256-Euv3DfQdyDEGGGKRKrXn6s3RErsX6M6bIJjLPZIYAIE=";
     };
     dontUnpack = true;
     installPhase = ''
@@ -58,7 +58,7 @@
       chmod +x "$out/bin/codex"
     '';
   };
-  pinchtabVersion = "0.8.6";
+  pinchtabVersion = "0.13.2";
   skillDir = source: {
     inherit source;
     force = true;
@@ -67,6 +67,9 @@
     pkgs.runCommand "codex-skill-${skillName}" {} ''
             cp -r ${source} "$out"
             chmod -R u+w "$out"
+            if [ ! -f "$out/SKILL.md" ] && [ -f "$out/SKILL.src.md" ]; then
+              cp "$out/SKILL.src.md" "$out/SKILL.md"
+            fi
             ${pkgs.python3}/bin/python3 - "$out/SKILL.md" ${lib.escapeShellArg skillName} ${lib.escapeShellArg description} <<'PY'
       from pathlib import Path
       import json
@@ -131,7 +134,7 @@
     version = pinchtabVersion;
     src = pkgs.fetchurl {
       url = "https://github.com/pinchtab/pinchtab/releases/download/v${pinchtabVersion}/pinchtab-linux-amd64";
-      sha256 = "1pmp2j8k0vzq8ml3bq0z7gfhcxx68qys5sb98d692xbn72r2c5sm";
+      hash = "sha256-ystOX/baA5hjvAG7bG8gvLJnDLCaGHCmZwKbZ+W+z50=";
     };
     dontUnpack = true;
     installPhase = ''
@@ -197,7 +200,7 @@
     (mkSkill "caveman" "${inputs.caveman}/skills/caveman" "Use terse caveman-mode responses with technical accuracy and minimal filler.")
     (mkSkill "caveman-commit" "${inputs.caveman}/skills/caveman-commit" "Generate terse Conventional Commit messages in caveman style.")
     (mkSkill "caveman-review" "${inputs.caveman}/skills/caveman-review" "Produce compact code review findings in caveman style.")
-    (mkSkill "caveman-compress" "${inputs.caveman}/caveman-compress" "Compress text aggressively while preserving technical meaning.")
+    (mkSkill "caveman-compress" "${inputs.caveman}/skills/caveman-compress" "Compress text aggressively while preserving technical meaning.")
     (mkSkill "diagnose" "${inputs.mattpocock-skills}/skills/engineering/diagnose" "Use a disciplined reproduce-minimize-hypothesize-instrument-fix loop for bugs and regressions.")
     (mkSkill "grill-with-docs" "${inputs.mattpocock-skills}/skills/engineering/grill-with-docs" "Stress-test a plan against project docs, domain language, and recorded decisions.")
     (mkSkill "triage" "${inputs.mattpocock-skills}/skills/engineering/triage" "Triage issues through the configured issue tracker and triage role workflow.")

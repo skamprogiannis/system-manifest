@@ -16,6 +16,12 @@
         // {
           providedSessions = ["hyprland"];
         };
+      meta =
+        (hyprlandBase.meta or {})
+        // {
+          mainProgram = "Hyprland";
+          outputsToInstall = ["out"];
+        };
       postBuild = ''
         rm -f $out/share/wayland-sessions/hyprland-uwsm.desktop
 
@@ -39,10 +45,9 @@
   in
     joined
     // {
-      # Forward attributes the NixOS hyprland module accesses on cfg.package
+      # Forward attributes the NixOS hyprland module accesses on cfg.package.
       inherit (hyprlandBase) version;
-      # The NixOS hyprland module probes pkg.override for enableXWayland;
-      # provide a no-op so the probe succeeds without triggering a rebuild.
+      # genFinalPackage only inspects override arguments here; no rebuild is needed.
       override = _: joined;
     };
 in {

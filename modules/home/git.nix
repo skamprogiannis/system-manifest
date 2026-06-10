@@ -45,12 +45,11 @@
   programs.ssh = {
     enable = true;
     enableDefaultConfig = false;
-    matchBlocks = {
+    settings = {
       "github.com" = {
-        host = "github.com";
-        identityFile = "~/.ssh/id_ed25519_github";
-        addKeysToAgent = "yes";
-        identitiesOnly = true;
+        AddKeysToAgent = "yes";
+        IdentityFile = ["~/.ssh/id_ed25519_github"];
+        IdentitiesOnly = true;
       };
     };
   };

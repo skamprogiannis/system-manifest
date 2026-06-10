@@ -135,7 +135,7 @@ in {
       }
 
       assert_log_contains_file \
-        "DMS_FORCE_EXT_WORKSPACE=1" \
+        "DMS_FORCE_EXTWS=1" \
         ${usbDmsServiceEnvironmentFile} \
         "Expected USB DMS service to force ext-workspace state instead of the fragile Hyprland event socket."
 

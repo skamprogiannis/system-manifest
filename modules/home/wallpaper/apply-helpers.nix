@@ -1,6 +1,5 @@
 {
   pkgs,
-  steamWorkshopDir,
   defaultWallpaperTransition,
 }: let
   skwdApplyStaticWallpaper = pkgs.writeShellScript "apply-static-wallpaper.sh" ''
@@ -110,51 +109,6 @@
 
     exec "''${cmd[@]}"
   '';
-  skwdApplyWeStill = pkgs.writeShellScript "apply-we-still.sh" ''
-    set -euo pipefail
-
-    we_id="$1"
-    outputs_csv="''${2:-}"
-    cache_dir="$HOME/.cache/skwd-wall/wallpaper"
-    capture_path="$cache_dir/we-captures/$we_id.jpg"
-    live_path="$cache_dir/we-live-$we_id.jpg"
-    workshop_dir="${steamWorkshopDir}"
-    still_path=""
-
-    if [ -f "$capture_path" ]; then
-      still_path="$capture_path"
-    elif [ -f "$live_path" ]; then
-      still_path="$live_path"
-    else
-      for preview_path in \
-        "$workshop_dir/$we_id/preview.jpg" \
-        "$workshop_dir/$we_id/preview.png" \
-        "$workshop_dir/$we_id/preview.webp" \
-        "$workshop_dir/$we_id/preview.bmp" \
-        "$workshop_dir/$we_id/preview.gif"; do
-        if [ -f "$preview_path" ]; then
-          still_path="$preview_path"
-          break
-        fi
-      done
-    fi
-
-    [ -n "$still_path" ] || exit 0
-
-    daemon_ready() {
-      ${pkgs.awww}/bin/awww query >/dev/null 2>&1
-    }
-
-    if ! daemon_ready; then
-      setsid ${pkgs.awww}/bin/awww-daemon >/dev/null 2>&1 &
-      for _ in 1 2 3 4 5 6 7 8 9 10; do
-        sleep 0.1
-        daemon_ready && break
-      done
-    fi
-
-    exec ${skwdApplyStaticWallpaper} "$still_path" "$outputs_csv"
-  '';
 in {
-  inherit skwdApplyStaticWallpaper skwdApplyWeStill;
+  inherit skwdApplyStaticWallpaper;
 }

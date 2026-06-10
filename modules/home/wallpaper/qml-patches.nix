@@ -1,8 +1,4 @@
 {
-  pkgs,
-  skwdApplyStaticWallpaper,
-  skwdApplyWeStill,
-}: {
   patchPython = ''
     from pathlib import Path
     import os
@@ -11,6 +7,21 @@
         if old not in text:
             raise SystemExit(f"pattern not found: {old[:80]!r}")
         return text.replace(old, new)
+
+    def insert_after(text: str, anchor: str, addition: str) -> str:
+        if anchor not in text:
+            raise SystemExit(f"anchor not found: {anchor[:80]!r}")
+        if addition in text:
+            return text
+        return text.replace(anchor, anchor + addition, 1)
+
+    def append_before_final_closing(text: str, addition: str) -> str:
+        suffix = "\n}\n"
+        if not text.endswith(suffix):
+            raise SystemExit("expected QML file to end with a single closing brace")
+        if addition in text:
+            return text
+        return text[:-len(suffix)] + "\n" + addition + suffix
 
     out = Path(os.environ["OUT_PATH"])
     base = Path(os.environ["BASE_PATH"])
@@ -22,7 +33,7 @@
     settings_toggle_qml = Path(os.environ["SETTINGS_TOGGLE_QML"])
     settings_input_qml = Path(os.environ["SETTINGS_INPUT_QML"])
     settings_combo_qml = Path(os.environ["SETTINGS_COMBO_QML"])
-    apply_qml = Path(os.environ["APPLY_QML"])
+    keybinds_qml = Path(os.environ["KEYBINDS_QML"])
     selector_service_qml = Path(os.environ["SELECTOR_SERVICE_QML"])
     slice_delegate_qml = Path(os.environ["SLICE_DELEGATE_QML"])
     hex_delegate_qml = Path(os.environ["HEX_DELEGATE_QML"])
@@ -49,21 +60,16 @@
     )
     selector_text = replace_all(
         selector_text,
-        '    if (item.type === "we") service.applyWE(item.weId)\n',
-        '    if (item.type === "we") service.applyWE(item.weId, outputs)\n',
-    )
-    selector_text = replace_all(
-        selector_text,
-        """  function _doApply(item, outputs) {
-        if (item.type === "we") service.applyWE(item.weId, outputs)
-        else if (item.type === "video") service.applyVideo(item.path, outputs)
+        """  function _doApply(item, outputs, audioMap, volumeMap) {
+        if (item.type === "we") service.applyWE(item.weId, outputs, audioMap, volumeMap)
+        else if (item.type === "video") service.applyVideo(item.path, outputs, audioMap, volumeMap)
         else service.applyStatic(item.path, outputs)
       }
 
       function resetScroll() {""",
-        """  function _doApply(item, outputs) {
-        if (item.type === "we") service.applyWE(item.weId, outputs)
-        else if (item.type === "video") service.applyVideo(item.path, outputs)
+        """  function _doApply(item, outputs, audioMap, volumeMap) {
+        if (item.type === "we") service.applyWE(item.weId, outputs, audioMap, volumeMap)
+        else if (item.type === "video") service.applyVideo(item.path, outputs, audioMap, volumeMap)
         else service.applyStatic(item.path, outputs)
       }
 
@@ -146,6 +152,7 @@
       }
 
       function _toggleSettings() {
+        effectsOpen = false
         settingsOpen = !settingsOpen
         if (settingsOpen)
           Qt.callLater(function() { _focusSettingsPanel() })
@@ -175,7 +182,7 @@
         if (Config.matugenMode === mode)
           return false
         Config.saveKey("matugen.mode", mode)
-        DaemonClient.retheme(Config.matugenScheme, mode)
+        DaemonClient.retheme(Config.matugenScheme, mode, Config.matugenColorIndex)
         Quickshell.execDetached([Config.scriptsDir + "/sync-dms-wallpaper.sh"])
         return true
       }
@@ -447,36 +454,6 @@
     )
     selector_text = replace_all(
         selector_text,
-        """      delegate: SliceDelegate {
-            colors: wallpaperSelector.colors
-            expandedWidth: wallpaperSelector.expandedWidth
-            sliceWidth: wallpaperSelector.sliceWidth
-            skewOffset: wallpaperSelector.skewOffset
-            service: wallpaperSelector.selectorService
-            suppressWidthAnim: wallpaperSelector.suppressWidthAnim
-          }""",
-        """      delegate: SliceDelegate {
-            colors: wallpaperSelector.colors
-            expandedWidth: wallpaperSelector.expandedWidth
-            sliceWidth: wallpaperSelector.sliceWidth
-            skewOffset: wallpaperSelector.skewOffset
-            service: wallpaperSelector.selectorService
-            applyItem: function(item) { wallpaperSelector._applyItem(item) }
-            suppressWidthAnim: wallpaperSelector.suppressWidthAnim
-          }""",
-    )
-    selector_text = replace_all(
-        selector_text,
-        """            pulledOut: hexBackOverlay.overlayItemKey !== "" && hexBackOverlay.overlayItemKey === ((itemData && ((itemData.weId || "") !== "")) ? itemData.weId : (itemData ? itemData.name : ""))
-
-                onFlipRequested: function(data, gx, gy, sourceItem) {""",
-        """            pulledOut: hexBackOverlay.overlayItemKey !== "" && hexBackOverlay.overlayItemKey === ((itemData && ((itemData.weId || "") !== "")) ? itemData.weId : (itemData ? itemData.name : ""))
-                applyItem: function(item) { wallpaperSelector._applyItem(item) }
-
-                onFlipRequested: function(data, gx, gy, sourceItem) {""",
-    )
-    selector_text = replace_all(
-        selector_text,
         """  property bool tagCloudVisible: false
       property bool _filterBarManuallyShown: Config.filterBarAlwaysVisible
       property bool _filterBarHoverRevealed: false
@@ -511,7 +488,7 @@
           }
           onModeToggled: function(mode) {
             Config.saveKey("matugen.mode", mode)
-            DaemonClient.retheme(Config.matugenScheme, mode)
+            DaemonClient.retheme(Config.matugenScheme, mode, Config.matugenColorIndex)
           }""",
         """      onWallhavenToggled: wallpaperSelector._toggleWallhavenBrowser()
           onSteamWorkshopToggled: wallpaperSelector._toggleSteamWorkshopBrowser()
@@ -652,7 +629,7 @@
     )
     selector_text = replace_all(
         selector_text,
-        '      onSettingsToggled: { wallpaperSelector.settingsOpen = !wallpaperSelector.settingsOpen; if (!wallpaperSelector.settingsOpen) wallpaperSelector._focusActiveList() }',
+        '      onSettingsToggled: { wallpaperSelector.effectsOpen = false; wallpaperSelector.settingsOpen = !wallpaperSelector.settingsOpen; if (!wallpaperSelector.settingsOpen) wallpaperSelector._focusActiveList() }',
         '      onSettingsToggled: wallpaperSelector._toggleSettings()',
     )
     selector_text = replace_all(
@@ -669,42 +646,15 @@
     selector_service_text = selector_service_qml.read_text()
     selector_service_text = replace_all(
         selector_service_text,
-        """  function applyStatic(path, outputs) {
-        DaemonClient.applyStatic(path, outputs)
-        service.wallpaperApplied()
-      }
-
-      function applyWE(id) {
+        """  function applyVideo(path, outputs, audioMap, volumeMap) {
+        var neighbors = _collectNeighbors(path)
         var screens = Quickshell.screens.map(function(s) { return s.name })
-        DaemonClient.applyWE(id, screens)
-      }
-
-      function applyVideo(path, outputs) {
-        DaemonClient.applyVideo(path, outputs)
+        DaemonClient.applyVideo(path, outputs, neighbors, screens, audioMap, volumeMap)
       }""",
-        """  function applyStatic(path, outputs) {
-        WallpaperApplyService.applyStatic(path, outputs)
-        service.wallpaperApplied()
-      }
-
-      function applyWE(id, screens) {
-        var targetScreens = (screens && screens.length > 0)
-          ? screens
-          : Quickshell.screens.map(function(s) { return s.name })
-        WallpaperApplyService.applyWE(id, targetScreens)
-      }
-
-      function applyVideo(path, outputs) {
-        WallpaperApplyService.applyVideo(path, outputs)
-      }""",
-    )
-    selector_service_text = replace_all(
-        selector_service_text,
-        """  function applyVideo(path, outputs) {
-        WallpaperApplyService.applyVideo(path, outputs)
-      }""",
-        """  function applyVideo(path, outputs) {
-        WallpaperApplyService.applyVideo(path, outputs)
+        """  function applyVideo(path, outputs, audioMap, volumeMap) {
+        var neighbors = _collectNeighbors(path)
+        var screens = Quickshell.screens.map(function(s) { return s.name })
+        DaemonClient.applyVideo(path, outputs, neighbors, screens, audioMap, volumeMap)
       }
 
       property var _pendingRename: null
@@ -738,7 +688,7 @@
               path: type === "static" ? service.wallpaperDir + "/" + name
                   : (type === "video" ? (videoFile || service.videoDir + "/" + name) : ""),
               weId: weId, videoFile: videoFile,
-              mtime: mtime, hue: hue, saturation: sat,
+              mtime: mtime, hue: hue, saturation: sat, richness: richness, applyCount: applyCount,
               placeholder: false
             })""",
         """        items.push({
@@ -746,7 +696,7 @@
               path: type === "static" ? service.wallpaperDir + "/" + name
                   : (type === "video" ? (videoFile || service.videoDir + "/" + name) : ""),
               weId: weId, videoFile: videoFile,
-              mtime: mtime, hue: hue, saturation: sat,
+              mtime: mtime, hue: hue, saturation: sat, richness: richness, applyCount: applyCount,
               favourite: r.favourite === 1,
               placeholder: false
             })""",
@@ -755,18 +705,16 @@
         selector_service_text,
         """      var item = {
             name: name, type: type, thumb: thumb,
-            path: type === "static" ? service.wallpaperDir + "/" + name
-                : (type === "video" ? service.videoDir + "/" + name : ""),
+            path: path,
             weId: weId, videoFile: videoFile,
-            mtime: mtime, hue: hue, saturation: sat,
+            mtime: mtime, hue: hue, saturation: sat, richness: richness, applyCount: applyCount,
             placeholder: false
           }""",
         """      var item = {
             name: name, type: type, thumb: thumb,
-            path: type === "static" ? service.wallpaperDir + "/" + name
-                : (type === "video" ? service.videoDir + "/" + name : ""),
+            path: path,
             weId: weId, videoFile: videoFile,
-            mtime: mtime, hue: hue, saturation: sat,
+            mtime: mtime, hue: hue, saturation: sat, richness: richness, applyCount: applyCount,
             favourite: isFavourite(name, weId),
             placeholder: false
           }""",
@@ -832,12 +780,16 @@
             name: item.name, type: item.type, thumb: item.thumb, path: item.path,
             weId: item.weId, videoFile: item.videoFile, mtime: item.mtime,
             hue: hue, saturation: saturation,
+            richness: (item.richness != null ? item.richness : 0),
+            applyCount: (item.applyCount != null ? item.applyCount : 0),
             placeholder: !!item.placeholder
           })""",
         """      items.push({
             name: item.name, type: item.type, thumb: item.thumb, path: item.path,
             weId: item.weId, videoFile: item.videoFile, mtime: item.mtime,
             hue: hue, saturation: saturation,
+            richness: (item.richness != null ? item.richness : 0),
+            applyCount: (item.applyCount != null ? item.applyCount : 0),
             favourite: !!item.favourite,
             placeholder: !!item.placeholder
           })""",
@@ -913,6 +865,16 @@
           service.colorsDb[key] = colors
           if (weather && weather.length > 0) service.weatherDb[key] = weather
           service._analysisItemsDirty = true
+          if (!WallpaperAnalysisService.running) {
+            service._analysisItemsDirty = false
+            var tcopy = {}
+            for (var tk in service.tagsDb) tcopy[tk] = service.tagsDb[tk]
+            service.tagsDb = tcopy
+            var ccopy = {}
+            for (var ck in service.colorsDb) ccopy[ck] = service.colorsDb[ck]
+            service.colorsDb = ccopy
+            service._rebuildPopularTags()
+          }
         }""",
         """    function onItemAnalyzed(key, tags, colors, weather) {
           service.tagsDb[key] = tags
@@ -921,6 +883,16 @@
           else delete service.weatherDb[key]
           service._syncWeatherMetadataState()
           service._analysisItemsDirty = true
+          if (!WallpaperAnalysisService.running) {
+            service._analysisItemsDirty = false
+            var tcopy = {}
+            for (var tk in service.tagsDb) tcopy[tk] = service.tagsDb[tk]
+            service.tagsDb = tcopy
+            var ccopy = {}
+            for (var ck in service.colorsDb) ccopy[ck] = service.colorsDb[ck]
+            service.colorsDb = ccopy
+            service._rebuildPopularTags()
+          }
         }""",
     )
     selector_service_text = replace_all(
@@ -1652,69 +1624,10 @@
                         event.accepted = true
                     }""",
     )
-    tag_cloud_text = replace_all(
-        tag_cloud_text,
-        """                Item {
-                        id: tagParaChip
-                        property bool isSelected: modelData.selected
-                        property bool isHovered: tagParaMouse.containsMouse
-                        property int skew: 10 * Config.uiScale
-                        width: tagParaText.implicitWidth + 24 * Config.uiScale + skew
-                        height: 24 * Config.uiScale
-                        z: isSelected ? 10 : (isHovered ? 5 : 1)""",
-        """                Item {
-                        id: tagParaChip
-                        property bool isSelected: modelData.selected
-                        property bool isHovered: tagParaMouse.containsMouse
-                        property bool isKeyboardFocused: tagCloud._focusedChipIndex === index && chipFocusScope.activeFocus
-                        property bool _isTagChip: true
-                        property int chipIndex: index
-                        property int skew: 10 * Config.uiScale
-                        width: tagParaText.implicitWidth + 24 * Config.uiScale + skew
-                        height: 24 * Config.uiScale
-                        z: isSelected ? 10 : ((isKeyboardFocused || isHovered) ? 5 : 1)
-                        scale: isSelected ? 1.15 : (isKeyboardFocused ? 1.08 : 1.0)""",
-    )
-    tag_cloud_text = replace_all(
-        tag_cloud_text,
-        """                        property color strokeColor: tagParaChip.isSelected
-                                ? Qt.rgba(tagParaChip._resolvedActiveColor.r, tagParaChip._resolvedActiveColor.g, tagParaChip._resolvedActiveColor.b, 0.6)
-                                : (tagCloud.colors ? Qt.rgba(tagCloud.colors.primary.r, tagCloud.colors.primary.g, tagCloud.colors.primary.b, 0.15) : Qt.rgba(1, 1, 1, 0.08))""",
-        """                        property color strokeColor: tagParaChip.isKeyboardFocused
-                                ? (tagCloud.colors ? Qt.rgba(tagCloud.colors.primary.r, tagCloud.colors.primary.g, tagCloud.colors.primary.b, 0.85) : Qt.rgba(1, 1, 1, 0.45))
-                                : (tagParaChip.isSelected
-                                    ? Qt.rgba(tagParaChip._resolvedActiveColor.r, tagParaChip._resolvedActiveColor.g, tagParaChip._resolvedActiveColor.b, 0.6)
-                                    : (tagCloud.colors ? Qt.rgba(tagCloud.colors.primary.r, tagCloud.colors.primary.g, tagCloud.colors.primary.b, 0.15) : Qt.rgba(1, 1, 1, 0.08)))""",
-    )
-    import re as _re
-    _ma_orig = tag_cloud_text
-    _ma_pat = _re.compile(
-        r'(                    MouseArea \{\n                        id: tagParaMouse\n'
-        r'                        anchors\.fill: parent\n'
-        r'                        hoverEnabled: true\n'
-        r'                        cursorShape: Qt\.PointingHandCursor\n)'
-        r'                        onClicked: \{.*?'
-        r'(\n                    \})',
-        _re.DOTALL
-    )
-    tag_cloud_text = _ma_pat.sub(
-        r'\g<1>'
-        r'                        onClicked: tagCloud._toggleTag(modelData.tag, false)'
-        r'\g<2>',
-        tag_cloud_text,
-        count=1
-    )
-    if tag_cloud_text == _ma_orig:
-        raise SystemExit('pattern not found: tagParaMouse onClicked handler')
     tag_cloud_qml.write_text(tag_cloud_text)
     selector_service_qml.write_text(selector_service_text)
 
     slice_delegate_text = slice_delegate_qml.read_text()
-    slice_delegate_text = replace_all(
-        slice_delegate_text,
-        '    property var service\n',
-        '    property var service\n    property var applyItem\n',
-    )
     slice_delegate_text = replace_all(
         slice_delegate_text,
         '    readonly property var _listView: ListView.view\n',
@@ -1786,31 +1699,8 @@
     )
     slice_delegate_text = replace_all(
         slice_delegate_text,
-        """        Text {
-                anchors.centerIn: parent
-                anchors.horizontalCenterOffset: 1
-                text: "▶"
-                font.pixelSize: 9
-                color: delegateItem.videoActive
-                    ? (delegateItem.colors ? delegateItem.colors.primaryText : "#000")
-                    : (delegateItem.colors ? delegateItem.colors.primary : Style.fallbackAccent)
-            }
-        }
-
-        Item {
-            id: typeBadge""",
-        """        Text {
-                anchors.centerIn: parent
-                anchors.horizontalCenterOffset: 1
-                text: "▶"
-                font.pixelSize: 9
-                color: delegateItem.videoActive
-                    ? (delegateItem.colors ? delegateItem.colors.primaryText : "#000")
-                    : (delegateItem.colors ? delegateItem.colors.primary : Style.fallbackAccent)
-            }
-        }
-
-        Text {
+        "    Rectangle {\n        id: typeBadge",
+        """    Text {
             id: favouriteBadge
             y: 8
             x: delegateItem.skewOffset >= 0 ? delegateItem._topLeft + 12 : parent.width - delegateItem._skAbs - width - 12
@@ -1825,27 +1715,8 @@
             styleColor: Qt.rgba(0, 0, 0, 0.45)
         }
 
-        Item {
-            id: typeBadge""",
-    )
-    slice_delegate_text = replace_all(
-        slice_delegate_text,
-        """                    if (delegateItem.model.type === "we") {
-                            delegateItem.service.applyWE(delegateItem.model.weId)
-                        } else if (delegateItem.model.type === "video") {
-                            delegateItem.service.applyVideo(delegateItem.model.path)
-                        } else {
-                            delegateItem.service.applyStatic(delegateItem.model.path)
-                        }""",
-        """                    if (delegateItem.applyItem) {
-                            delegateItem.applyItem(delegateItem.model)
-                        } else if (delegateItem.model.type === "we") {
-                            delegateItem.service.applyWE(delegateItem.model.weId)
-                        } else if (delegateItem.model.type === "video") {
-                            delegateItem.service.applyVideo(delegateItem.model.path)
-                        } else {
-                            delegateItem.service.applyStatic(delegateItem.model.path)
-                        }""",
+        Rectangle {
+        id: typeBadge""",
     )
     slice_delegate_text = replace_all(
         slice_delegate_text,
@@ -1861,41 +1732,23 @@
     )
     slice_delegate_text = replace_all(
         slice_delegate_text,
-        """    onFlippedChanged: {
-            if (flipped && delegateItem.model.type !== "we") {
-                var key = ImageService.thumbKey(delegateItem.model.thumb, delegateItem.model.name)
-                _backMeta = FileMetadataService.getMetadata(key)
-                if (!_backMeta)
-                    FileMetadataService.probeIfNeeded(key, delegateItem.model.path, delegateItem.model.type === "video" ? "video" : "image")
-            }
-            if (!flipped) {
-                addTagField._syncing = true; addTagField.text = ""; addTagField._sessionTags = []; addTagField._syncing = false
-            }
-        }""",
-        """    onFlippedChanged: {
-            if (flipped && delegateItem.model.type !== "we") {
-                var key = ImageService.thumbKey(delegateItem.model.thumb, delegateItem.model.name)
-                _backMeta = FileMetadataService.getMetadata(key)
-                if (!_backMeta)
-                    FileMetadataService.probeIfNeeded(key, delegateItem.model.path, delegateItem.model.type === "video" ? "video" : "image")
-            }
-            delegateItem._resetRenameInput()
-            if (!flipped) {
-                addTagField._syncing = true; addTagField.text = ""; addTagField._sessionTags = []; addTagField._syncing = false
-            }
-        }""",
-    )
-    slice_delegate_text = replace_all(
-        slice_delegate_text,
         """    Timer {
-            id: videoDelayTimer
-            interval: 300
-            onTriggered: delegateItem.videoActive = true
+            id: _preheatTimer
+            interval: 120
+            repeat: false
+            onTriggered: {
+                if (delegateItem.model && delegateItem.model.path)
+                    DaemonClient.preheat(delegateItem.model.path)
+            }
         }""",
         """    Timer {
-            id: videoDelayTimer
-            interval: 300
-            onTriggered: delegateItem.videoActive = true
+            id: _preheatTimer
+            interval: 120
+            repeat: false
+            onTriggered: {
+                if (delegateItem.model && delegateItem.model.path)
+                    DaemonClient.preheat(delegateItem.model.path)
+            }
         }
 
         Timer {
@@ -2019,11 +1872,6 @@
     hex_delegate_text = hex_delegate_qml.read_text()
     hex_delegate_text = replace_all(
         hex_delegate_text,
-        '    property var service\n',
-        '    property var service\n    property var applyItem\n',
-    )
-    hex_delegate_text = replace_all(
-        hex_delegate_text,
         """        Text {
                 anchors.centerIn: parent; anchors.horizontalCenterOffset: 1
                 text: "▶"; font.pixelSize: 8
@@ -2058,25 +1906,6 @@
         }
 
         MouseArea {""",
-    )
-    hex_delegate_text = replace_all(
-        hex_delegate_text,
-        """                if (hexItem.itemData.type === "we") {
-                        hexItem.service.applyWE(hexItem.itemData.weId)
-                    } else if (hexItem.itemData.type === "video") {
-                        hexItem.service.applyVideo(hexItem.itemData.path)
-                    } else {
-                        hexItem.service.applyStatic(hexItem.itemData.path)
-                    }""",
-        """                if (hexItem.applyItem) {
-                        hexItem.applyItem(hexItem.itemData)
-                    } else if (hexItem.itemData.type === "we") {
-                        hexItem.service.applyWE(hexItem.itemData.weId)
-                    } else if (hexItem.itemData.type === "video") {
-                        hexItem.service.applyVideo(hexItem.itemData.path)
-                    } else {
-                        hexItem.service.applyStatic(hexItem.itemData.path)
-                    }""",
     )
     hex_delegate_text = replace_all(
         hex_delegate_text,
@@ -2359,32 +2188,65 @@
     )
     settings_combo_qml.write_text(settings_combo_text)
 
+    # keybind help
+    keybinds_text = keybinds_qml.read_text()
+    keybinds_text = insert_after(
+        keybinds_text,
+        '                { key: "↑ / ↓",      action: "Navigate rows (hex/grid)" },',
+        '\n                { key: "H / J / K / L", action: "Navigate with vim-style movement" },',
+    )
+    keybinds_text = insert_after(
+        keybinds_text,
+        '                { key: "Right-click", action: "Flip card (details)" },',
+        (
+            '\n                { key: "Space / Alt", action: "Toggle current wallpaper details" },'
+            '\n                { key: "F",          action: "Toggle current wallpaper favourite" },'
+            '\n                { key: "A",          action: "Focus current wallpaper tag editor" },'
+            '\n                { key: "Ctrl + S / H / W", action: "Switch Slices / Hex / Wall view" },'
+        ),
+    )
+    keybinds_text = insert_after(
+        keybinds_text,
+        '                { key: "Shift + ↓",     action: "Toggle tag cloud" },',
+        (
+            '\n                { key: "S / T",         action: "Toggle settings / tag cloud" },'
+            '\n                { key: "1 / 2 / 3 / 4", action: "Filter all / static / video / Wallpaper Engine" },'
+            '\n                { key: "P / V / E",     action: "Filter static / video / Wallpaper Engine" },'
+            '\n                { key: "N / C",         action: "Sort newest / colour" },'
+            '\n                { key: "Shift + F / C", action: "Toggle favourites filter / clear colour filter" },'
+            '\n                { key: "Shift + L / D", action: "Set light / dark Matugen mode" },'
+            '\n                { key: "W",             action: "Toggle weather filter when available" },'
+            '\n                { key: "B then W / S",  action: "Open Wallhaven / Steam browser" },'
+        ),
+    )
+    keybinds_text = append_before_final_closing(
+        keybinds_text,
+        (
+            '    SettingsCard {\n'
+            '        colors: root.colors\n'
+            '        title: "Settings controls"\n'
+            '        width: (parent.width - parent.spacing) / 2\n'
+            '\n'
+            '        Repeater {\n'
+            '            model: [\n'
+            '                { key: "Tab / Shift + Tab", action: "Move focus between controls" },\n'
+            '                { key: "H / L",             action: "Switch tabs, toggles, and option rows" },\n'
+            '                { key: "J / ↓",             action: "Move from tabs into settings controls" },\n'
+            '                { key: "↑ / ↓",             action: "Adjust numeric inputs" },\n'
+            '                { key: "S / Escape",        action: "Close settings" }\n'
+            '            ]\n'
+            '            delegate: SettingsRow {\n'
+            '                colors: root.colors\n'
+            '                title: modelData.key\n'
+            '                description: modelData.action\n'
+            '            }\n'
+            '        }\n'
+            '    }'
+        ),
+    )
+    keybinds_qml.write_text(keybinds_text)
+
     settings_text = settings_qml.read_text()
-    settings_text = replace_all(
-        settings_text,
-        '_selectorConfigFile.setText(JSON.stringify(data, null, 2) + "\\n")',
-        '_selectorConfigFile.setText(JSON.stringify(data, null, 2) + "\\n")\n    Config._configFile.reload()',
-    )
-    settings_text = replace_all(
-        settings_text,
-        """              MouseArea {
-                    anchors.fill: parent; acceptedButtons: Qt.RightButton
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: settingsPanel._saveCustomPreset(modelData)
-                  }""",
-        """              MouseArea {
-                    anchors.fill: parent
-                    acceptedButtons: Qt.RightButton
-                    preventStealing: true
-                    cursorShape: Qt.PointingHandCursor
-                    onPressed: function(mouse) {
-                      if (mouse.button !== Qt.RightButton)
-                        return
-                      settingsPanel._saveCustomPreset(modelData)
-                      mouse.accepted = true
-                    }
-                  }""",
-    )
     settings_text = replace_all(
         settings_text,
         """  signal closeRequested()
@@ -2503,294 +2365,7 @@
             }
           }""",
     )
-    settings_text = replace_all(
-        settings_text,
-        '          text: "WIP Video and WE support coming."',
-        '          text: "Choose target outputs before applying a wallpaper."',
-    )
-    settings_text = replace_all(
-        settings_text,
-        '          label: "Locale (weather filter)"',
-        '          label: "Weather location"',
-    )
-    settings_text = replace_all(
-        settings_text,
-        '          placeholder: "e.g. London"',
-        '          placeholder: "Used by the weather filter, e.g. Athens"',
-    )
-    settings_text = replace_all(
-        settings_text,
-        '        text: "Shell commands to run after every wallpaper change. The pills filter by type ALL fires for every change.\\n" +\n              "Placeholders:  %path%  =  wallpaper file or WE folder    •    %thumb%  =  always an image    •    %type%  =  image / video / we    •    %name%  =  basename"',
-        '        text: "Built-in actions already run on every wallpaper change: apply the wallpaper, sync DMS state, and refresh matugen outputs. Add extra shell commands here if you want more hooks. Use %type% (static/video/we), %name%, and %path% as placeholders."',
-    )
-    settings_text = replace_all(
-        settings_text,
-        '{ key: "← / →",         action: "Navigate items" },',
-        '{ key: "h / l / ← / →", action: "Navigate items" },',
-    )
-    settings_text = replace_all(
-        settings_text,
-        '{ key: "↑ / ↓",         action: "Navigate rows (hex/grid)" },',
-        '{ key: "j / k / ↑ / ↓", action: "Navigate rows (hex/grid)" },',
-    )
-    settings_text = replace_all(
-        settings_text,
-        """          model: [
-                { key: "Shift + ← / →",  action: "Cycle colour filters" },
-                { key: "Shift + ↑",      action: "Toggle filter bar" },
-                { key: "Shift + ↓",      action: "Toggle tag cloud" },
-                { key: "Tab",            action: "Auto-complete tag" },
-                { key: "Enter",          action: "Add tag (in tag input)" },
-                { key: "Escape",         action: "Clear search / close" }
-              ]""",
-        """          model: [
-                { key: "- / 1",                       action: "Set ALL filter" },
-                { key: "p / 2",                       action: "Set PIC filter" },
-                { key: "v / 3",                       action: "Set VID filter" },
-                { key: "e / 4",                       action: "Set WE filter" },
-                { key: "Tab / Shift + Tab",           action: "Focus the filter bar" },
-                { key: "w",                           action: "Toggle weather-tag filter" },
-                { key: "b then w / s",                action: "Open Wallhaven / Steam browser" },
-                { key: "Ctrl + s / h / w",            action: "Switch slices / hex / wall mode" },
-                { key: "Shift + F",                   action: "Toggle favourites filter" },
-                { key: "Shift + C",                   action: "Clear colour filter" },
-                { key: "Shift + L / D",               action: "Set light / dark mode" },
-                { key: "n / c",                       action: "Newest / colour sort" },
-                { key: "t",                           action: "Toggle tag cloud" },
-                { key: "s",                           action: "Toggle settings" },
-                { key: "Space / Alt",                 action: "Toggle current item / close details" },
-                { key: "f",                           action: "Toggle favourite for current item" },
-                { key: "a",                           action: "Focus add-tag input (details open)" },
-                { key: "Shift + ← / →",               action: "Cycle colour filters" },
-                { key: "Shift + j / ↓",               action: "Toggle tag cloud" },
-                 { key: "Tag cloud: Tab / Shift + Tab", action: "Move between search, tags, and wallpapers" },
-                { key: "Tag cloud: h / l / ← / →",    action: "Move focused tag" },
-                { key: "Tag cloud: j / k / ↑ / ↓",    action: "Move between tag rows" },
-                { key: "Tag cloud: Enter / Space",    action: "Toggle focused tag" },
-                { key: "Enter",                       action: "Apply current item / add tag in input" },
-                 { key: "Escape",                      action: "Close / back out" },
-                { key: "Settings: Tab / Shift + Tab", action: "Move between settings controls" },
-                { key: "Settings: Enter / Space",     action: "Activate focused button or toggle" },
-                { key: "Settings: ← / → / h / l",     action: "Change focused option values" },
-                { key: "Settings: ↑ / ↓",             action: "Step focused numeric inputs" }
-              ]""",
-    )
     settings_qml.write_text(settings_text)
-
-    # apply-service backends
-    apply_text = apply_qml.read_text()
-    apply_text = replace_all(
-        apply_text,
-        '    function applyStatic(path) {',
-        '    function applyStatic(path, outputs) {',
-    )
-    apply_text = replace_all(
-        apply_text,
-        '                "awww img " + JSON.stringify(path) +\n                " --transition-type wipe --transition-angle 45 --transition-duration 0.5"]',
-        '                ${builtins.toJSON "${skwdApplyStaticWallpaper}"} + " " + JSON.stringify(path) +\n                ((outputs && outputs.length > 0) ? (" " + JSON.stringify(outputs.join(","))) : "")]',
-    )
-    apply_text = replace_all(
-        apply_text,
-        """    function applyVideo(path) {
-            _saveState("video", path, "")
-            _videoCtxPath = path
-            _videoCtxName = _basename(path)
-            if (Config.pickOnlyMode || Config.externalWallpaperCommand) {
-                mpvProcess.command = ["sh", "-c",
-                    _killBackends +
-                    "rm -f " + JSON.stringify(videoDir + "/lockscreen-video.mp4")]
-                mpvProcess.running = true
-            } else if (Config.isKDE) {
-                _applyKdeVideo(path)
-            } else {
-                mpvProcess.command = ["sh", "-c",
-                    "pkill awww 2>/dev/null; pkill awww-daemon 2>/dev/null; " +
-                    "pkill mpvpaper 2>/dev/null; " +
-                    "pkill -9 -f '[l]inux-wallpaperengine' 2>/dev/null; " +
-                    "rm -f " + JSON.stringify(videoDir + "/lockscreen-video.mp4") + "; " +
-                    "nohup setsid mpvpaper -o " + (wallpaperMute ? "'loop --mute=yes'" : "'loop'") + " '*' " + JSON.stringify(path) + " </dev/null >/dev/null 2>&1 &"]
-                mpvProcess.running = true
-            }
-            _extractVideoThumb(path)
-            wallpaperApplied("video", _basename(path), path)
-        }
-
-        function _applyKdeVideo(path) {""",
-        """    function applyVideo(path, outputs) {
-            _saveState("video", path, "")
-            _videoCtxPath = path
-            _videoCtxName = _basename(path)
-            if (Config.pickOnlyMode || Config.externalWallpaperCommand) {
-                mpvProcess.command = ["sh", "-c",
-                    _killBackends +
-                    "rm -f " + JSON.stringify(videoDir + "/lockscreen-video.mp4")]
-                mpvProcess.running = true
-            } else if (Config.isKDE) {
-                _applyKdeVideo(path)
-            } else {
-                mpvProcess.command = ["sh", "-c",
-                    "pkill awww 2>/dev/null; pkill awww-daemon 2>/dev/null; " +
-                    "pkill mpvpaper 2>/dev/null; " +
-                    "pkill -9 -f '[l]inux-wallpaperengine' 2>/dev/null; " +
-                    "rm -f " + JSON.stringify(videoDir + "/lockscreen-video.mp4") + "; " +
-                    _mpvpaperLaunchCmd(path, outputs)]
-                mpvProcess.running = true
-            }
-            _extractVideoThumb(path)
-            wallpaperApplied("video", _basename(path), path)
-        }
-
-        function _mpvpaperLaunchCmd(path, outputs) {
-            var targets = (outputs && outputs.length > 0) ? outputs : ["*"]
-            var opts = wallpaperMute ? "'loop --mute=yes'" : "'loop'"
-            var cmd = ""
-            for (var i = 0; i < targets.length; i++)
-                cmd += "nohup setsid mpvpaper -o " + opts + " " + JSON.stringify(targets[i]) + " " + JSON.stringify(path) + " </dev/null >/dev/null 2>&1 & "
-            return cmd
-        }
-
-        function _showWEStill(weId) {
-            if (Config.isKDE)
-                return
-            awwwProcess.command = ["sh", "-c",
-                ${builtins.toJSON "${skwdApplyWeStill}"} + " " + JSON.stringify(weId) +
-                ((service._pendingWeOutputs && service._pendingWeOutputs.length > 0)
-                    ? (" " + JSON.stringify(service._pendingWeOutputs.join(",")))
-                    : "")]
-            awwwProcess.running = true
-        }
-
-        function _weLaunchCmd(weId) {
-            var targets = (service._pendingWeOutputs && service._pendingWeOutputs.length > 0)
-                ? service._pendingWeOutputs
-                : Quickshell.screens.map(function(s) { return s.name })
-            var cmd = ""
-            for (var i = 0; i < targets.length; i++) {
-                cmd += "nohup setsid linux-wallpaperengine" +
-                    (service.wallpaperMute ? " --silent" : "") +
-                    " --screen-root " + JSON.stringify(targets[i]) +
-                    (service.weAssetsDir ? " --assets-dir " + JSON.stringify(service.weAssetsDir) : "") +
-                    " " + JSON.stringify(service.weDir + "/" + weId) +
-                    " </dev/null >/dev/null 2>&1 & "
-            }
-            return cmd
-        }
-
-        function _applyKdeVideo(path) {""",
-    )
-    apply_text = replace_all(
-        apply_text,
-        """    function applyWE(weId) {
-            _saveState("we", "", weId)
-            _reclaimOllamaVram()""",
-        """    function applyWE(weId, outputs) {
-            _saveState("we", "", weId)
-            _pendingWeOutputs = outputs || []
-            _reclaimOllamaVram()""",
-    )
-    apply_text = replace_all(
-        apply_text,
-        """                _launchWE(weId)""",
-        """                _showWEStill(weId)
-                _launchWE(weId)""",
-    )
-    apply_text = replace_all(
-        apply_text,
-        '    property string _pendingWeId: ""\n    property var _weProjectStdout: []',
-        '    property string _pendingWeId: ""\n    property var _pendingWeOutputs: []\n    property var _weProjectStdout: []',
-    )
-    apply_text = replace_all(
-        apply_text,
-        """                        var opts = "loop"
-                            if (service.wallpaperMute) opts = "loop --mute=yes"
-                            weProcess.command = ["sh", "-c",
-                                "pkill mpvpaper 2>/dev/null; " +
-                                "nohup setsid mpvpaper -o '" + opts + "' '*' " + JSON.stringify(videoPath) + " </dev/null >/dev/null 2>&1 &"]
-                            weProcess.running = true""",
-        """                        weProcess.command = ["sh", "-c", service._mpvpaperLaunchCmd(videoPath, service._pendingWeOutputs)]
-                            weProcess.running = true""",
-    )
-    apply_text = replace_all(
-        apply_text,
-        '        var mons = Quickshell.screens.map(function(s) { return s.name })',
-        '        var mons = (service._pendingWeOutputs && service._pendingWeOutputs.length > 0)\n            ? service._pendingWeOutputs\n            : Quickshell.screens.map(function(s) { return s.name })',
-    )
-    apply_text = replace_all(
-        apply_text,
-        '            screenArgs += " --screen-root " + mons[i] + " --scaling fill"',
-        '            screenArgs += " --screen-root " + mons[i]',
-    )
-    apply_text = replace_all(
-        apply_text,
-        '        var audioFlag = service.wallpaperMute ? "--silent" : ""',
-        '        var audioFlag = service.wallpaperMute ? " --silent" : ""',
-    )
-    apply_text = replace_all(
-        apply_text,
-        '            " --no-fullscreen-pause --noautomute" + screenArgs +',
-        '            screenArgs +',
-    )
-    apply_text = replace_all(
-        apply_text,
-        '            " --clamp border" +',
-        "",
-    )
-    apply_text = replace_all(
-        apply_text,
-        """    function _launchWEScene(weId) {
-            var mons = (service._pendingWeOutputs && service._pendingWeOutputs.length > 0)
-                ? service._pendingWeOutputs
-                : Quickshell.screens.map(function(s) { return s.name })
-            var screenArgs = ""
-            for (var i = 0; i < mons.length; i++)
-                screenArgs += " --screen-root " + mons[i]
-            var audioFlag = service.wallpaperMute ? " --silent" : ""
-            var assetsArg = service.weAssetsDir ? " --assets-dir " + JSON.stringify(service.weAssetsDir) : ""
-            var cmd = "nohup setsid linux-wallpaperengine " + audioFlag +
-                screenArgs +
-
-                assetsArg + " " + JSON.stringify(service.weDir + "/" + weId) +
-                " </dev/null >/dev/null 2>&1 &"
-            console.log("WallpaperApplyService: launching WE scene:", cmd)
-            weProcess.command = ["sh", "-c", cmd]
-            weProcess.running = true
-        }""",
-        """    function _launchWEScene(weId) {
-            var cmd = service._weLaunchCmd(weId)
-            console.log("WallpaperApplyService: launching WE scene:", cmd)
-            weProcess.command = ["sh", "-c", cmd]
-            weProcess.running = true
-        }""",
-    )
-    apply_text = replace_all(
-        apply_text,
-        '"cp " + JSON.stringify(path) + " " + JSON.stringify(cacheDir + "/wallpaper/current.jpg") + " 2>/dev/null; " +',
-        '"${pkgs.imagemagick}/bin/magick " + JSON.stringify(path) + " -auto-orient -strip -background black -alpha remove -alpha off -quality 92 " + JSON.stringify("jpg:" + cacheDir + "/wallpaper/current.jpg.tmp") + " 2>/dev/null && mv -f " + JSON.stringify(cacheDir + "/wallpaper/current.jpg.tmp") + " " + JSON.stringify(cacheDir + "/wallpaper/current.jpg") + "; " +',
-    )
-    apply_text = replace_all(
-        apply_text,
-        '"cp " + JSON.stringify(thumbPath) + " " + JSON.stringify(cacheDir + "/wallpaper/current.jpg") + " 2>/dev/null; " +',
-        '"${pkgs.imagemagick}/bin/magick " + JSON.stringify(thumbPath) + " -auto-orient -strip -background black -alpha remove -alpha off -quality 92 " + JSON.stringify("jpg:" + cacheDir + "/wallpaper/current.jpg.tmp") + " 2>/dev/null && mv -f " + JSON.stringify(cacheDir + "/wallpaper/current.jpg.tmp") + " " + JSON.stringify(cacheDir + "/wallpaper/current.jpg") + "; " +',
-    )
-    apply_text = replace_all(
-        apply_text,
-        '"cp " + JSON.stringify(preview) + " " + JSON.stringify(service.cacheDir + "/wallpaper/current.jpg") + " 2>/dev/null; " +',
-        '"${pkgs.imagemagick}/bin/magick " + JSON.stringify(preview) + " -auto-orient -strip -background black -alpha remove -alpha off -quality 92 " + JSON.stringify("jpg:" + service.cacheDir + "/wallpaper/current.jpg.tmp") + " 2>/dev/null && mv -f " + JSON.stringify(service.cacheDir + "/wallpaper/current.jpg.tmp") + " " + JSON.stringify(service.cacheDir + "/wallpaper/current.jpg") + "; " +',
-    )
-    apply_text = replace_all(
-        apply_text,
-        '            if (code === 2) { console.log("WallpaperApplyService: matugen output unchanged, skipping reloads"); return }',
-        '            if (code === 2)\n                console.log("WallpaperApplyService: matugen output unchanged; still running reload hooks")',
-    )
-    apply_text = replace_all(
-        apply_text,
-        """    function _propagateColors() {
-            if (!Config.matugenEnabled) return
-            var integrations = Config.integrations""",
-        """    function _propagateColors() {
-            var integrations = Config.integrations""",
-    )
-    apply_qml.write_text(apply_text)
 
     for name in ("skwd", "skwd-daemon", "skwd-wall"):
         wrapper = out / "bin" / name
