@@ -123,7 +123,7 @@
     }
     {
       key = "blur_strength";
-      value = "2.2";
+      value = "1.8";
     }
     {
       key = "blur_iterations";
@@ -131,47 +131,47 @@
     }
     {
       key = "tint_color";
-      value = "0xffffff0c";
+      value = "0xffffff06";
     }
     {
       key = "specular_strength";
-      value = "0.45";
+      value = "0.24";
     }
     {
       key = "edge_thickness";
-      value = "0.035";
+      value = "0.014";
     }
     {
       key = "lens_distortion";
-      value = "0.02";
+      value = "0";
     }
     {
       key = "refraction_strength";
-      value = "0.18";
+      value = "0.03";
     }
     {
       key = "chromatic_aberration";
-      value = "0.04";
+      value = "0";
     }
     {
       key = "fresnel_strength";
-      value = "0.45";
+      value = "0.20";
     }
     {
       key = "brightness";
-      value = "1.06";
+      value = "1.01";
     }
     {
       key = "contrast";
-      value = "1.03";
+      value = "1.10";
     }
     {
       key = "saturation";
-      value = "1.03";
+      value = "1.08";
     }
     {
       key = "vibrancy";
-      value = "0.06";
+      value = "0.05";
     }
   ];
   hyprglassLuaValue = value:
