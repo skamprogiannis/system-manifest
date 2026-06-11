@@ -603,7 +603,7 @@ in {
             (execBind (modKey "b") "brave")
             (bind (modKey "x") (lua "hl.dsp.window.close()"))
             (execBind (modKey "SHIFT + x") "hypr-quit-active")
-            (execBind (modKey "m") "ghostty -e spotify_player")
+            (execBind (modKey "m") "spotify")
             (execBind (modKey "e") "ghostty -e yazi")
             (bind (modKey "v") (lua ''hl.dsp.window.float({ action = "toggle" })''))
             (bind (modKey "f") (fullscreen "fullscreen"))

@@ -39,6 +39,7 @@
     pkgs.mailspring
     obsidian
     proton-vpn
+    spotify
 
     # CLI / Tools
     alejandra

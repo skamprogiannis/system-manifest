@@ -64,6 +64,7 @@ in {
       assert_contains 'mod .. " + grave"'
       assert_contains 'mod .. " + KP_Enter"'
       assert_contains 'hl.dsp.window.close()'
+      assert_contains 'hl.bind((mod .. " + m"), (hl.dsp.exec_cmd("spotify")))'
       assert_contains 'hl.bind((mod .. " + f"), (hl.dsp.window.fullscreen({ mode = "fullscreen", action = "toggle" })))'
       assert_contains 'hl.bind((mod .. " + SHIFT + f"), (hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" })))'
       assert_contains 'hl.dsp.focus({ workspace = "1" })'
@@ -87,6 +88,7 @@ in {
       assert_not_contains '["hyprglass"] = {'
       assert_not_contains '["pseudotile"]'
       assert_not_contains '["tint_color"] = "0xffffff0c"'
+      assert_not_contains 'ghostty -e spotify_player'
       assert_not_contains 'hyprctl plugin load'
       assert_contains 'apply-hyprglass-settings'
 
