@@ -84,13 +84,39 @@ in {
       assert_not_contains 'plugin:hyprglass:light:'
       assert_not_contains '["hyprglass"] = {'
       assert_not_contains '["pseudotile"]'
-      assert_not_contains '["tint_color"] = "0xffffff08"'
-      assert_contains 'hyprctl plugin load'
-      assert_contains 'hyprctl keyword plugin:hyprglass:tint_color 0xffffff08'
-      assert_contains 'hyprctl keyword plugin:hyprglass:brightness 1.02'
-      assert_contains 'hyprctl keyword plugin:hyprglass:contrast 0.95'
-      assert_contains 'hyprctl keyword plugin:hyprglass:saturation 1.0'
-      assert_contains 'hyprctl keyword plugin:hyprglass:vibrancy 0.05'
+      assert_not_contains '["tint_color"] = "0xffffff0c"'
+      assert_not_contains 'hyprctl plugin load'
+      assert_contains 'apply-hyprglass-settings'
+
+      hyprglass_helper_ref_count="$(grep -Fo 'apply-hyprglass-settings' ${desktopHyprlandLuaFile} | wc -l)"
+      if [ "$hyprglass_helper_ref_count" -lt 2 ]; then
+        echo "Expected generated Hyprland Lua config to call apply-hyprglass-settings from startup and reload paths" >&2
+        sed 's/^/  /' ${desktopHyprlandLuaFile} >&2
+        exit 1
+      fi
+
+      hyprglass_helper="$(grep -o '/nix/store/[^"]*apply-hyprglass-settings' ${desktopHyprlandLuaFile} | head -n1)"
+      if [ -z "$hyprglass_helper" ] || [ ! -x "$hyprglass_helper" ]; then
+        echo "Expected generated Hyprland Lua config to reference an executable apply-hyprglass-settings helper" >&2
+        sed 's/^/  /' ${desktopHyprlandLuaFile} >&2
+        exit 1
+      fi
+
+      assert_file_contains "$hyprglass_helper" 'plugin list'
+      assert_file_contains "$hyprglass_helper" 'plugin load "$plugin_path"'
+      assert_file_contains "$hyprglass_helper" 'eval'
+      assert_file_contains "$hyprglass_helper" 'hl.config({'
+      assert_file_contains "$hyprglass_helper" 'hyprglass = {'
+      assert_file_not_contains "$hyprglass_helper" 'plugin load "$plugin_path" &&'
+      assert_file_not_contains "$hyprglass_helper" 'keyword plugin:hyprglass:'
+      assert_file_contains "$hyprglass_helper" 'tint_color = 0xffffff0c'
+      assert_file_contains "$hyprglass_helper" 'lens_distortion = 0.02'
+      assert_file_contains "$hyprglass_helper" 'refraction_strength = 0.18'
+      assert_file_contains "$hyprglass_helper" 'chromatic_aberration = 0.04'
+      assert_file_contains "$hyprglass_helper" 'brightness = 1.06'
+      assert_file_contains "$hyprglass_helper" 'contrast = 1.03'
+      assert_file_contains "$hyprglass_helper" 'saturation = 1.03'
+      assert_file_contains "$hyprglass_helper" 'vibrancy = 0.06'
 
       assert_file_contains ${desktopHyprlandPackage}/bin/Hyprland '--config'
       assert_file_contains ${desktopHyprlandPackage}/bin/Hyprland 'hyprland.lua'

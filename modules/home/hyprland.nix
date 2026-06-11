@@ -123,7 +123,7 @@
     }
     {
       key = "blur_strength";
-      value = "2.8";
+      value = "2.2";
     }
     {
       key = "blur_iterations";
@@ -131,47 +131,47 @@
     }
     {
       key = "tint_color";
-      value = "0xffffff08";
+      value = "0xffffff0c";
     }
     {
       key = "specular_strength";
-      value = "0.6";
+      value = "0.45";
     }
     {
       key = "edge_thickness";
-      value = "0.05";
+      value = "0.035";
     }
     {
       key = "lens_distortion";
-      value = "0.14";
+      value = "0.02";
     }
     {
       key = "refraction_strength";
-      value = "0.7";
+      value = "0.18";
     }
     {
       key = "chromatic_aberration";
-      value = "0.6";
+      value = "0.04";
     }
     {
       key = "fresnel_strength";
-      value = "0.7";
+      value = "0.45";
     }
     {
       key = "brightness";
-      value = "1.02";
+      value = "1.06";
     }
     {
       key = "contrast";
-      value = "0.95";
+      value = "1.03";
     }
     {
       key = "saturation";
-      value = "1.0";
+      value = "1.03";
     }
     {
       key = "vibrancy";
-      value = "0.05";
+      value = "0.06";
     }
   ];
   hyprglassStartupCommand = lib.concatStringsSep " && " (
@@ -501,8 +501,8 @@ in {
               size = 3;
               passes = 2;
               noise = 0.02;
-              contrast = 0.9;
-              xray = false;
+              contrast = 1.0;
+              xray = true;
               new_optimizations = true;
             };
             shadow = {
