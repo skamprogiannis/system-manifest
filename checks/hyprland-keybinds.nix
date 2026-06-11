@@ -64,6 +64,8 @@ in {
       assert_contains 'mod .. " + grave"'
       assert_contains 'mod .. " + KP_Enter"'
       assert_contains 'hl.dsp.window.close()'
+      assert_contains 'hl.bind((mod .. " + f"), (hl.dsp.window.fullscreen({ mode = "fullscreen", action = "toggle" })))'
+      assert_contains 'hl.bind((mod .. " + SHIFT + f"), (hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" })))'
       assert_contains 'hl.dsp.focus({ workspace = "1" })'
       assert_contains 'hl.dsp.window.move({ workspace = "1", follow = true })'
       assert_contains 'hl.dsp.window.move({ workspace = "1", follow = false })'
