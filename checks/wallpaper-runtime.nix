@@ -4,6 +4,7 @@
     desktopDmsSettingsFile
     desktopHome
     desktopSkwdDmsSyncHook
+    desktopTmpfilesRulesFile
     pkgs
     ;
 in {
@@ -94,6 +95,10 @@ in {
       assert_contains '"muxType":"zellij"' ${desktopDmsSettingsFile} "desktop DMS settings"
       assert_contains "function _toggleEffects()" "$skwd_selector_qml" "patched skwd-wall selector"
       assert_contains "onEffectsToggled: wallpaperSelector._toggleEffects()" "$skwd_selector_qml" "patched skwd-wall selector"
+      assert_contains "function _scheduleDmsWallpaperSync()" "$skwd_pkg/share/skwd-wall/qml/wallpaper/WallpaperSelectorService.qml" "patched skwd-wall selector service"
+      assert_contains "service._scheduleDmsWallpaperSync()" "$skwd_pkg/share/skwd-wall/qml/wallpaper/WallpaperSelectorService.qml" "patched skwd-wall selector service"
+      assert_contains 'Quickshell.execDetached([Config.scriptsDir + "/sync-dms-wallpaper.sh"])' "$skwd_pkg/share/skwd-wall/qml/wallpaper/WallpaperSelectorService.qml" "patched skwd-wall selector service"
+      assert_contains "z /var/cache/dms-greeter 2775 root greeter - -" ${desktopTmpfilesRulesFile} "desktop tmpfiles rules"
       assert_contains "title: \"Settings controls\"" "$skwd_keybinds_qml" "patched skwd-wall keybind settings"
       assert_contains "title: \"Tags & browsers\"" "$skwd_keybinds_qml" "patched skwd-wall keybind settings"
       assert_contains '{ key: "Ctrl + S / H / W", action: "Switch Slices / Hex / Wall view" },' "$skwd_keybinds_qml" "patched skwd-wall keybind settings"

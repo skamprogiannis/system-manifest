@@ -230,6 +230,7 @@ in {
   users.users.${greeterUser}.extraGroups = lib.mkAfter ["greeter"];
   systemd.tmpfiles.rules = [
     "d /var/cache/dms-greeter 2775 root greeter - -"
+    "z /var/cache/dms-greeter 2775 root greeter - -"
   ];
 
   # Keep avatar files and AccountsService profile in sync for the greeter.

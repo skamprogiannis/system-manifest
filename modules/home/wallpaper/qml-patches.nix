@@ -714,6 +714,37 @@
         }
       }""",
     )
+    dms_sync_addition = (
+        "\n"
+        "  function _scheduleDmsWallpaperSync() {\n"
+        "    dmsWallpaperSyncTimer.restart()\n"
+        "  }\n"
+        "\n"
+        "  property var dmsWallpaperSyncTimer: Timer {\n"
+        "    interval: 750\n"
+        "    repeat: false\n"
+        "    onTriggered: Quickshell.execDetached([Config.scriptsDir + \"/sync-dms-wallpaper.sh\"])\n"
+        "  }\n"
+    )
+    if dms_sync_addition not in selector_service_text:
+        refresh_start = selector_service_text.find("  function refreshFromDb() {")
+        if refresh_start < 0:
+            raise SystemExit("refreshFromDb function not found in WallpaperSelectorService.qml")
+        refresh_end = selector_service_text.find("\n  }\n", refresh_start)
+        if refresh_end < 0:
+            raise SystemExit("refreshFromDb function end not found in WallpaperSelectorService.qml")
+        refresh_end += len("\n  }\n")
+        selector_service_text = selector_service_text[:refresh_end] + dms_sync_addition + selector_service_text[refresh_end:]
+
+    wallpaper_applied_marker = "    function onWallpaperApplied(type, name, path, weId, key) {\n"
+    if "service._scheduleDmsWallpaperSync()" not in selector_service_text:
+        if wallpaper_applied_marker not in selector_service_text:
+            raise SystemExit("onWallpaperApplied function not found in WallpaperSelectorService.qml")
+        selector_service_text = selector_service_text.replace(
+            wallpaper_applied_marker,
+            wallpaper_applied_marker + "      service._scheduleDmsWallpaperSync()\n",
+            1,
+        )
     selector_service_text = replace_all(
         selector_service_text,
         """        items.push({
