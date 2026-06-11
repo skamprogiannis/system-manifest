@@ -9,6 +9,7 @@
   desktopHome = self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.path;
   desktopActivation = self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.activationPackage;
   desktopSkwdDmsSyncHook = self.nixosConfigurations.desktop.config.home-manager.users.stefan.xdg.configFile."skwd-wall/scripts/sync-dms-wallpaper.sh".source;
+  desktopDmsSettingsFile = pkgs.writeText "desktop-dms-settings.json" (builtins.toJSON self.nixosConfigurations.desktop.config.home-manager.users.stefan.programs.dank-material-shell.settings);
   desktopZellijDevLayoutFile = pkgs.writeText "desktop-zellij-dev-layout" self.nixosConfigurations.desktop.config.home-manager.users.stefan.xdg.configFile."zellij/layouts/dev.kdl".text;
   updateUsbSourceDir = ../modules/home/scripts/usb/update-usb;
   usbHome = self.nixosConfigurations.usb.config.home-manager.users.stefan.home.path;

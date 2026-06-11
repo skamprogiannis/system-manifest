@@ -569,6 +569,7 @@ in {
           [
             # --- System & Apps ---
             (execBind (modKey "Return") "ghostty")
+            (execBind (modKey "KP_Enter") "ghostty")
             (execBind (modKey "b") "brave")
             (bind (modKey "x") (lua "hl.dsp.window.close()"))
             (execBind (modKey "SHIFT + x") "hypr-quit-active")

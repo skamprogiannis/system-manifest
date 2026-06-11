@@ -72,6 +72,7 @@
 in {
   programs.dank-material-shell.settings = {
     configVersion = 11;
+    muxType = "zellij";
 
     # Keep settings declarative while removing setup prompts in DMS UI.
     barConfigs = [

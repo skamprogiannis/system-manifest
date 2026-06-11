@@ -262,6 +262,12 @@
       };
     };
     wallpaperMute = true;
+    weRender = {
+      fps = 30;
+      noAudioProcessing = true;
+      disableMouse = true;
+      disableParallax = true;
+    };
     performance = {
       imageOptimizePreset = "balanced";
       imageOptimizeResolution = "2k";

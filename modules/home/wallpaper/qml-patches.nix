@@ -1,5 +1,6 @@
 {
-  patchPython = ''
+  patchPython = let
+    raw = ''
     from pathlib import Path
     import os
 
@@ -115,6 +116,7 @@
         if (tagCloudVisible)
           return false
         settingsOpen = false
+        effectsOpen = false
         wallhavenBrowserOpen = false
         steamWorkshopBrowserOpen = false
         tagCloudVisible = true
@@ -130,6 +132,7 @@
       function _setDisplayMode(mode) {
         if (Config.displayMode === mode)
           return false
+        effectsOpen = false
         if (gridBackOverlay.overlayOpen)
           gridBackOverlay.hide()
         if (hexBackOverlay.overlayOpen)
@@ -153,6 +156,10 @@
 
       function _toggleSettings() {
         effectsOpen = false
+        wallhavenBrowserOpen = false
+        steamWorkshopBrowserOpen = false
+        if (tagCloudVisible)
+          _closeTagCloud()
         settingsOpen = !settingsOpen
         if (settingsOpen)
           Qt.callLater(function() { _focusSettingsPanel() })
@@ -160,8 +167,26 @@
           _focusActiveList()
       }
 
+      function _toggleEffects() {
+        settingsOpen = false
+        wallhavenBrowserOpen = false
+        steamWorkshopBrowserOpen = false
+        if (tagCloudVisible)
+          _closeTagCloud()
+        if (gridBackOverlay.overlayOpen)
+          gridBackOverlay.hide()
+        if (hexBackOverlay.overlayOpen)
+          hexBackOverlay.hide()
+        effectsOpen = !effectsOpen
+        if (!effectsOpen)
+          _focusActiveList()
+      }
+
       function _toggleWallhavenBrowser() {
         settingsOpen = false
+        effectsOpen = false
+        if (tagCloudVisible)
+          _closeTagCloud()
         steamWorkshopBrowserOpen = false
         wallhavenBrowserOpen = !wallhavenBrowserOpen
         if (!wallhavenBrowserOpen)
@@ -171,6 +196,9 @@
 
       function _toggleSteamWorkshopBrowser() {
         settingsOpen = false
+        effectsOpen = false
+        if (tagCloudVisible)
+          _closeTagCloud()
         wallhavenBrowserOpen = false
         steamWorkshopBrowserOpen = !steamWorkshopBrowserOpen
         if (!steamWorkshopBrowserOpen)
@@ -631,6 +659,11 @@
         selector_text,
         '      onSettingsToggled: { wallpaperSelector.effectsOpen = false; wallpaperSelector.settingsOpen = !wallpaperSelector.settingsOpen; if (!wallpaperSelector.settingsOpen) wallpaperSelector._focusActiveList() }',
         '      onSettingsToggled: wallpaperSelector._toggleSettings()',
+    )
+    selector_text = replace_all(
+        selector_text,
+        '      onEffectsToggled: { wallpaperSelector.settingsOpen = false; wallpaperSelector.effectsOpen = !wallpaperSelector.effectsOpen; if (!wallpaperSelector.effectsOpen) wallpaperSelector._focusActiveList() }',
+        '      onEffectsToggled: wallpaperSelector._toggleEffects()',
     )
     selector_text = replace_all(
         selector_text,
@@ -2189,61 +2222,112 @@
     settings_combo_qml.write_text(settings_combo_text)
 
     # keybind help
-    keybinds_text = keybinds_qml.read_text()
-    keybinds_text = insert_after(
-        keybinds_text,
-        '                { key: "↑ / ↓",      action: "Navigate rows (hex/grid)" },',
-        '\n                { key: "H / J / K / L", action: "Navigate with vim-style movement" },',
-    )
-    keybinds_text = insert_after(
-        keybinds_text,
-        '                { key: "Right-click", action: "Flip card (details)" },',
-        (
-            '\n                { key: "Space / Alt", action: "Toggle current wallpaper details" },'
-            '\n                { key: "F",          action: "Toggle current wallpaper favourite" },'
-            '\n                { key: "A",          action: "Focus current wallpaper tag editor" },'
-            '\n                { key: "Ctrl + S / H / W", action: "Switch Slices / Hex / Wall view" },'
-        ),
-    )
-    keybinds_text = insert_after(
-        keybinds_text,
-        '                { key: "Shift + ↓",     action: "Toggle tag cloud" },',
-        (
-            '\n                { key: "S / T",         action: "Toggle settings / tag cloud" },'
-            '\n                { key: "1 / 2 / 3 / 4", action: "Filter all / static / video / Wallpaper Engine" },'
-            '\n                { key: "P / V / E",     action: "Filter static / video / Wallpaper Engine" },'
-            '\n                { key: "N / C",         action: "Sort newest / colour" },'
-            '\n                { key: "Shift + F / C", action: "Toggle favourites filter / clear colour filter" },'
-            '\n                { key: "Shift + L / D", action: "Set light / dark Matugen mode" },'
-            '\n                { key: "W",             action: "Toggle weather filter when available" },'
-            '\n                { key: "B then W / S",  action: "Open Wallhaven / Steam browser" },'
-        ),
-    )
-    keybinds_text = append_before_final_closing(
-        keybinds_text,
-        (
-            '    SettingsCard {\n'
-            '        colors: root.colors\n'
-            '        title: "Settings controls"\n'
-            '        width: (parent.width - parent.spacing) / 2\n'
-            '\n'
-            '        Repeater {\n'
-            '            model: [\n'
-            '                { key: "Tab / Shift + Tab", action: "Move focus between controls" },\n'
-            '                { key: "H / L",             action: "Switch tabs, toggles, and option rows" },\n'
-            '                { key: "J / ↓",             action: "Move from tabs into settings controls" },\n'
-            '                { key: "↑ / ↓",             action: "Adjust numeric inputs" },\n'
-            '                { key: "S / Escape",        action: "Close settings" }\n'
-            '            ]\n'
-            '            delegate: SettingsRow {\n'
-            '                colors: root.colors\n'
-            '                title: modelData.key\n'
-            '                description: modelData.action\n'
-            '            }\n'
-            '        }\n'
-            '    }'
-        ),
-    )
+    keybinds_text = """import QtQuick
+import "../.."
+import "../../components"
+
+Flow {
+    id: root
+    property var colors
+
+    width: parent ? parent.width : 0
+    spacing: 12
+
+    SettingsCard {
+        colors: root.colors
+        title: "Navigation"
+        width: (parent.width - parent.spacing) / 2
+
+        Repeater {
+            model: [
+                { key: "← / →",      action: "Navigate items" },
+                { key: "↑ / ↓",      action: "Navigate rows (hex/grid)" },
+                { key: "H / J / K / L", action: "Navigate with vim-style movement" },
+                { key: "Enter",      action: "Apply wallpaper" },
+                { key: "Escape",     action: "Close panel / overlay" },
+                { key: "Right-click", action: "Flip card (details)" },
+                { key: "Space / Alt", action: "Toggle current wallpaper details" },
+                { key: "F",          action: "Toggle current wallpaper favourite" },
+                { key: "A",          action: "Focus current wallpaper tag editor" },
+                { key: "Ctrl + S / H / W", action: "Switch Slices / Hex / Wall view" },
+                { key: "Scroll",     action: "Browse wallpapers" }
+            ]
+            delegate: SettingsRow {
+                colors: root.colors
+                title: modelData.key
+                description: modelData.action
+            }
+        }
+    }
+
+    SettingsCard {
+        colors: root.colors
+        title: "Settings controls"
+        width: (parent.width - parent.spacing) / 2
+
+        Repeater {
+            model: [
+                { key: "Tab / Shift + Tab", action: "Move focus between controls" },
+                { key: "H / L",             action: "Switch tabs, toggles, and option rows" },
+                { key: "J / ↓",             action: "Move from tabs into settings controls" },
+                { key: "↑ / ↓",             action: "Adjust numeric inputs" },
+                { key: "S / Escape",        action: "Close settings" }
+            ]
+            delegate: SettingsRow {
+                colors: root.colors
+                title: modelData.key
+                description: modelData.action
+            }
+        }
+    }
+
+    SettingsCard {
+        colors: root.colors
+        title: "Filters"
+        width: (parent.width - parent.spacing) / 2
+
+        Repeater {
+            model: [
+                { key: "Shift + ← / →", action: "Cycle colour filters" },
+                { key: "Shift + ↑",     action: "Toggle filter bar" },
+                { key: "Shift + ↓",     action: "Toggle tag cloud" },
+                { key: "S / T",         action: "Toggle settings / tag cloud" },
+                { key: "1 / 2 / 3 / 4", action: "Filter all / static / video / Wallpaper Engine" },
+                { key: "P / V / E",     action: "Filter static / video / Wallpaper Engine" },
+                { key: "N / C",         action: "Sort newest / colour" },
+                { key: "Shift + F / C", action: "Toggle favourites filter / clear colour filter" },
+                { key: "W",             action: "Toggle weather filter when available" }
+            ]
+            delegate: SettingsRow {
+                colors: root.colors
+                title: modelData.key
+                description: modelData.action
+            }
+        }
+    }
+
+    SettingsCard {
+        colors: root.colors
+        title: "Tags & browsers"
+        width: (parent.width - parent.spacing) / 2
+
+        Repeater {
+            model: [
+                { key: "Shift + L / D", action: "Set light / dark Matugen mode" },
+                { key: "B then W / S",  action: "Open Wallhaven / Steam browser" },
+                { key: "Tab",           action: "Auto-complete tag" },
+                { key: "Enter",         action: "Add tag (in tag input)" },
+                { key: "Escape",        action: "Clear search / close" }
+            ]
+            delegate: SettingsRow {
+                colors: root.colors
+                title: modelData.key
+                description: modelData.action
+            }
+        }
+    }
+}
+"""
     keybinds_qml.write_text(keybinds_text)
 
     settings_text = settings_qml.read_text()
@@ -2387,5 +2471,7 @@
             1,
         )
         wrapper.write_text(text)
-  '';
+    '';
+  in
+    builtins.substring 1 (builtins.stringLength raw) (builtins.replaceStrings ["\n    "] ["\n"] ("\n" + raw));
 }

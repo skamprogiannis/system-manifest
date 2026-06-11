@@ -62,6 +62,7 @@ in {
 
       assert_contains 'local mod = "SUPER"'
       assert_contains 'mod .. " + grave"'
+      assert_contains 'mod .. " + KP_Enter"'
       assert_contains 'hl.dsp.window.close()'
       assert_contains 'hl.dsp.focus({ workspace = "1" })'
       assert_contains 'hl.dsp.window.move({ workspace = "1", follow = true })'
