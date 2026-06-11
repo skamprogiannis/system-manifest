@@ -174,13 +174,43 @@
       value = "0.06";
     }
   ];
-  hyprglassStartupCommand = lib.concatStringsSep " && " (
-    ["hyprctl plugin load ${hyprglassPluginPath}"]
-    ++ map (
-      setting: "hyprctl keyword plugin:hyprglass:${setting.key} ${setting.value}"
-    )
-    hyprglassSettings
-  );
+  hyprglassLuaValue = value:
+    if lib.hasPrefix "0x" value
+    then value
+    else if builtins.match "^-?[0-9]+(\\.[0-9]+)?$" value != null
+    then value
+    else builtins.toJSON value;
+  hyprglassLuaConfig = ''
+    hl.config({
+      plugin = {
+        hyprglass = {
+          ${lib.concatStringsSep ",\n          " (
+      map (
+        setting: "${setting.key} = ${hyprglassLuaValue setting.value}"
+      )
+      hyprglassSettings
+    )}
+        }
+      }
+    })
+  '';
+  applyHyprglassSettings = pkgs.writeShellScript "apply-hyprglass-settings" ''
+    set -u
+
+    hyprctl=${lib.escapeShellArg "${hyprland-pkg}/bin/hyprctl"}
+    plugin_path=${lib.escapeShellArg hyprglassPluginPath}
+
+    if ! plugin_list="$("$hyprctl" plugin list 2>/dev/null)"; then
+      exit 0
+    fi
+
+    case "$plugin_list" in
+      *"$plugin_path"*|*"hyprglass"*) ;;
+      *) "$hyprctl" plugin load "$plugin_path" >/dev/null 2>&1 || true ;;
+    esac
+
+    "$hyprctl" eval ${lib.escapeShellArg hyprglassLuaConfig} >/dev/null 2>&1 || true
+  '';
 
   useHyprNav = config.system_manifest.navigation.wrapWorkspaces or false;
   lua = lib.generators.mkLuaInline;
@@ -436,7 +466,7 @@ in {
                 hl.exec_cmd(${builtins.toJSON "hyprctl setcursor ${config.home.pointerCursor.name} ${toString config.home.pointerCursor.size}"})
                 hl.exec_cmd(${builtins.toJSON "${pkgs.hyprpolkitagent}/bin/hyprpolkitagent"})
                 hl.exec_cmd("systemctl --user start transmission-daemon.service")
-                hl.exec_cmd(${builtins.toJSON hyprglassStartupCommand})
+                hl.exec_cmd(${builtins.toJSON "${applyHyprglassSettings}"})
               end
             '')
           ];
@@ -725,6 +755,8 @@ in {
             print("failed to load " .. module .. ": " .. tostring(err))
           end
         end
+
+        hl.exec_cmd(${builtins.toJSON "${applyHyprglassSettings}"})
 
         require_optional("dms.colors")
         require_optional("dms.cursor")
