@@ -106,29 +106,6 @@
     "    sys.exit(0)"
     ""
     "text = launcher.read_text(encoding=\"utf-8\")"
-    "old = ("
-    "    '    if command -v systemd-cat >/dev/null 2>&1; then\\n'"
-    "    '        exec \"$@\" > >(systemd-cat -t \"dms-greeter/$log_tag\" -p info) 2>&1\\n'"
-    "    '    fi\\n'"
-    "    '\\n'"
-    "    '    exec \"$@\"\\n'"
-    ")"
-    "new = ("
-    "    '    if [[ \"$log_tag\" == \"hyprland\" ]]; then\\n'"
-    "    '        exec \"$@\" >> \"$CACHE_DIR/hyprland.log\" 2>&1\\n'"
-    "    '    fi\\n'"
-    "    '\\n'"
-    "    '    if command -v systemd-cat >/dev/null 2>&1; then\\n'"
-    "    '        exec \"$@\" > >(systemd-cat -t \"dms-greeter/$log_tag\" -p info) 2>&1\\n'"
-    "    '    fi\\n'"
-    "    '\\n'"
-    "    '    exec \"$@\"\\n'"
-    ")"
-    "if old not in text:"
-    "    raise RuntimeError(\"greeter compositor logging block not found\")"
-    ""
-    "text = text.replace(old, new, 1)"
-    ""
     "old_check = ("
     "    \"        if ! command -v start-hyprland >/dev/null 2>&1 && ! command -v Hyprland >/dev/null 2>&1; then\\n\""
     "    \"            echo \\\"Error: neither 'start-hyprland' nor 'Hyprland' was found in PATH\\\" >&2\\n\""
@@ -201,13 +178,6 @@ in {
       customConfig = ''
         misc {
           disable_hyprland_logo = true
-          disable_splash_rendering = true
-        }
-
-        debug {
-          disable_logs = true
-          enable_stdout_logs = false
-          disable_time = true
         }
       '';
     };

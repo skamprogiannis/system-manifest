@@ -531,8 +531,8 @@ in {
               size = 3;
               passes = 2;
               noise = 0.02;
-              contrast = 1.0;
-              xray = true;
+              contrast = 0.9;
+              xray = false;
               new_optimizations = true;
             };
             shadow = {

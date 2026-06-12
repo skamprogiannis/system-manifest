@@ -125,10 +125,12 @@ in {
       assert_file_contains "$hyprglass_helper" 'contrast = 1.10'
       assert_file_contains "$hyprglass_helper" 'saturation = 1.08'
       assert_file_contains "$hyprglass_helper" 'vibrancy = 0.05'
+      assert_file_contains ${desktopHyprlandLuaFile} '["contrast"] = 0.9'
+      assert_file_contains ${desktopHyprlandLuaFile} '["xray"] = false'
 
       assert_file_contains ${desktopHyprlandPackage}/bin/Hyprland '--config'
       assert_file_contains ${desktopHyprlandPackage}/bin/Hyprland 'hyprland.lua'
-      assert_file_contains ${desktopGreeterPackage}/share/quickshell/dms/Modules/Greetd/assets/dms-greeter '$CACHE_DIR/hyprland.log'
+      assert_file_not_contains ${desktopGreeterPackage}/share/quickshell/dms/Modules/Greetd/assets/dms-greeter '$CACHE_DIR/hyprland.log'
       assert_file_contains ${desktopGreeterPackage}/share/quickshell/dms/Modules/Greetd/assets/dms-greeter 'exec_compositor "hyprland" Hyprland -c "$COMPOSITOR_CONFIG"'
       assert_file_not_contains ${desktopGreeterPackage}/share/quickshell/dms/Modules/Greetd/assets/dms-greeter 'start-hyprland -- --config'
       assert_file_contains ${desktopAccountsServiceAvatarScript} '/var/lib/AccountsService/icons/stefan'
