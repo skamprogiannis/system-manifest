@@ -14,7 +14,7 @@
     spacing = 4;
     innerPadding = 4;
     bottomGap = 1;
-    transparency = 0.55;
+    transparency = 0.20;
     widgetTransparency = 0.6;
     squareCorners = false;
     noBackground = true;
