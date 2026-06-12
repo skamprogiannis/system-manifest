@@ -706,6 +706,13 @@ in {
             match.class = "^(vesktop)$";
             opacity = "1.0 override";
           }
+          # Ghostty is a single large native-alpha surface. Hyprglass refraction
+          # makes that rectangle look milky; keep only Ghostty's own opacity.
+          {
+            name = "ghostty-no-hyprglass";
+            match.class = "^(com\\.mitchellh\\.ghostty)$";
+            tag = "+hyprglass_disabled";
+          }
           # Center credential/auth dialogs so they don't spawn between monitors
           {
             name = "auth-dialogs";
