@@ -98,6 +98,8 @@
         --replace-fail '<hyprland/src/render/Framebuffer.hpp>' '<hyprland/src/render/gl/GLFramebuffer.hpp>'
       substituteInPlace src/Globals.hpp \
         --replace-fail 'CMonitor*' 'Monitor::CMonitor*'
+      ${pkgs.perl}/bin/perl -0pi -e 's/if \(result\.error\)\n\s+return luaL_error\(L, "%s", result\.getError\(\)\);\n\s+return 0;/if (result.error)\n            return luaL_error(L, "%s", result.getError());\n        commitPendingPresets();\n        return 0;/s or die "failed to patch string preset commit\n"' src/PluginConfig.cpp
+      ${pkgs.perl}/bin/perl -0pi -e 's/\n        return 0;\n    }\n\n    return luaL_error\(L, "hyprglass\.preset: expected \(string\) or \(name, table\)"\);/\n        commitPendingPresets();\n        return 0;\n    }\n\n    return luaL_error(L, "hyprglass.preset: expected (string) or (name, table)");/s or die "failed to patch table preset commit\n"' src/PluginConfig.cpp
     '';
     NIX_CFLAGS_COMPILE = "-I${hyprland-pkg.dev}/include/hyprland/src -I${hyprland-pkg.dev}/include/hyprland/protocols -I${pkgs.libdrm.dev}/include/libdrm -I${pkgs.lua}/include";
     buildPhase = "make all";
@@ -174,6 +176,12 @@
       value = "0.05";
     }
   ];
+  hyprglassGhosttyPreset = ''
+    if hl.plugin and hl.plugin.hyprglass then
+      local hg = hl.plugin.hyprglass
+      hg.preset("name:ghostty_terminal, inherits:subtle, blur_strength:0.35, blur_iterations:1, refraction_strength:0.005, lens_distortion:0, chromatic_aberration:0, fresnel_strength:0.10, specular_strength:0.14, edge_thickness:0.008, adaptive_boost:0, adaptive_dim:0, tint_color:0x080a0f16, brightness:0.99, contrast:1.20, saturation:1.06, vibrancy:0")
+    end
+  '';
   hyprglassLuaValue = value:
     if lib.hasPrefix "0x" value
     then value
@@ -181,6 +189,8 @@
     then value
     else builtins.toJSON value;
   hyprglassLuaConfig = ''
+    ${hyprglassGhosttyPreset}
+
     hl.config({
       plugin = {
         hyprglass = {
@@ -706,12 +716,11 @@ in {
             match.class = "^(vesktop)$";
             opacity = "1.0 override";
           }
-          # Ghostty is a single large native-alpha surface. Hyprglass refraction
-          # makes that rectangle look milky; keep only Ghostty's own opacity.
           {
-            name = "ghostty-no-hyprglass";
+            name = "ghostty-terminal-glass";
             match.class = "^(com\\.mitchellh\\.ghostty)$";
-            tag = "+hyprglass_disabled";
+            no_blur = true;
+            tag = "+hyprglass_preset_ghostty_terminal";
           }
           # Center credential/auth dialogs so they don't spawn between monitors
           {

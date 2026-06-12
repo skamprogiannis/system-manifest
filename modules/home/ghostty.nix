@@ -10,7 +10,7 @@
     enableBashIntegration = false;
     settings = {
       theme = "Catppuccin Mocha";
-      background-opacity = 0.60;
+      background-opacity = 0.40;
       background-opacity-cells = true;
       background = "000000";
       selection-foreground = "cdd6f4";
