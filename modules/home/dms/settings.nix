@@ -13,11 +13,11 @@
   commonBarStyle = {
     spacing = 4;
     innerPadding = 4;
-    bottomGap = -2;
+    bottomGap = 1;
     transparency = 0.55;
     widgetTransparency = 0.6;
     squareCorners = false;
-    noBackground = false;
+    noBackground = true;
     maximizeWidgetIcons = false;
     maximizeWidgetText = false;
     removeWidgetPadding = false;
