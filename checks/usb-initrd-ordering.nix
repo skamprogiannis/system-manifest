@@ -87,6 +87,35 @@ in {
         fi
       }
 
+      assert_contains_once() {
+        local needle="$1"
+        local file="$2"
+        local label="$3"
+        local count
+
+        count="$(grep -oF "$needle" "$file" | wc -l)"
+        if [ "$count" -ne 1 ]; then
+          echo "Expected $label to contain exactly once: $needle" >&2
+          sed 's/^/  /' "$file" >&2
+          exit 1
+        fi
+      }
+
+      assert_static_unit_count() {
+        local initrd_dir="$1"
+        local pattern="$2"
+        local expected="$3"
+        local label="$4"
+        local count
+
+        count="$(find "$initrd_dir" -type f -name "$pattern" | wc -l)"
+        if [ "$count" -ne "$expected" ]; then
+          echo "Expected $label count to be $expected, found $count." >&2
+          find "$initrd_dir" -type f -name "$pattern" -print >&2
+          exit 1
+        fi
+      }
+
       assert_default_units() {
         local generated_dir="$1"
         local ro_unit rw_unit store_unit
@@ -135,20 +164,26 @@ in {
       assert_host_auto_units() {
         local initrd_dir="$1"
         local generated_dir="$2"
-        local ro_unit rw_unit prep_unit
+        local ro_unit rw_unit store_unit prep_unit
 
         ro_unit="$(find_unit "$generated_dir" 'sysroot-nix-.ro*store.mount')"
         rw_unit="$(find_unit "$generated_dir" 'sysroot-nix-.rw*store.mount')"
+        store_unit="$(find_unit "$generated_dir" 'sysroot-nix-store.mount')"
         prep_unit="$(find_static_unit "$initrd_dir" 'initrd-usb-host-auto-store-prepare.service')"
 
+        assert_static_unit_count "$initrd_dir" '*host-auto-store-prepare.service' 1 "host-auto prepare service"
         assert_contains "What=/sysroot/nix/.host-store/.nixos-usb/store/nix-store.squashfs" "$ro_unit" "host-auto /nix/.ro-store unit"
         assert_contains "What=/sysroot/nix/.host-store/.nixos-usb/store/rw" "$rw_unit" "host-auto /nix/.rw-store unit"
         assert_contains "Type=none" "$rw_unit" "host-auto /nix/.rw-store unit"
         assert_contains "bind" "$rw_unit" "host-auto /nix/.rw-store unit"
+        assert_contains_once "lowerdir=/sysroot/nix/.ro-store" "$store_unit" "host-auto /nix/store unit"
+        assert_contains_once "upperdir=/sysroot/nix/.rw-store/store" "$store_unit" "host-auto /nix/store unit"
+        assert_contains_once "workdir=/sysroot/nix/.rw-store/work" "$store_unit" "host-auto /nix/store unit"
         assert_contains "find_host_store_candidates" ${usbHostAutoStorePrepareScript} "host-auto prep script"
         assert_contains "${pkgs.util-linux}/bin/lsblk" ${usbHostAutoStorePrepareScript} "host-auto prep script"
         assert_contains "${pkgs.util-linux}/bin/mountpoint -q" ${usbHostAutoStorePrepareScript} "host-auto prep script"
         assert_contains "${pkgs.util-linux}/bin/mount -o rw,noatime" ${usbHostAutoStorePrepareScript} "host-auto prep script"
+        assert_contains "${pkgs.coreutils}/bin/mkdir -m 0755 -p" ${usbHostAutoStorePrepareScript} "host-auto prep script"
         assert_contains ".nixos-usb/store" ${usbHostAutoStorePrepareScript} "host-auto prep script"
         assert_contains "writable-host-auto-overlay" ${usbHostAutoStorePrepareScript} "host-auto prep script"
         assert_contains "writable-overlay-host-auto-usb-fallback" ${usbHostAutoStorePrepareScript} "host-auto prep script"

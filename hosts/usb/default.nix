@@ -31,7 +31,6 @@
 
   specialisation = {
     host-auto-store.configuration = {
-      imports = [./host-auto-store.nix];
       boot.loader.grub.configurationName = "host-auto-store";
       system.nixos.tags = ["host-auto-store"];
       systemManifest.usb.store.mode = "host-auto";

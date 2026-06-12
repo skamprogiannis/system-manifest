@@ -285,6 +285,11 @@ in {
                 ${coreutils}/sort -nr
             }
 
+            prepare_rw_dirs() {
+              ${coreutils}/rm -rf "$host_rw_root/store" "$host_rw_root/work"
+              ${coreutils}/mkdir -m 0755 -p "$host_rw_root/store" "$host_rw_root/work"
+            }
+
             prepare_usb_fallback() {
               if ${utilLinux}/mountpoint -q "$host_store_mount"; then
                 ${utilLinux}/umount "$host_store_mount" || true
@@ -292,7 +297,7 @@ in {
               ${coreutils}/rm -rf "$host_store_mount"
               ${coreutils}/mkdir -p "$host_store_root" "$host_rw_root"
               ${coreutils}/ln -sfn "$lower_store_image" "$host_store_image"
-              ${coreutils}/rm -rf "$host_rw_root/store" "$host_rw_root/work"
+              prepare_rw_dirs
               printf '%s\n' "writable-overlay-host-auto-usb-fallback" > /run/nixos-usb-store-mode
             }
 
@@ -315,7 +320,7 @@ in {
               ${coreutils}/rm -f "$host_store_image.tmp"
 
               if ${coreutils}/cp "$lower_store_image" "$host_store_image.tmp" && ${coreutils}/mv "$host_store_image.tmp" "$host_store_image"; then
-                ${coreutils}/rm -rf "$host_rw_root/store" "$host_rw_root/work"
+                prepare_rw_dirs
                 printf '%s\n' "writable-host-auto-overlay" > /run/nixos-usb-store-mode
                 exit 0
               fi
