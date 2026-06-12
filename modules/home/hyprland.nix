@@ -123,7 +123,7 @@
     }
     {
       key = "blur_strength";
-      value = "1.8";
+      value = "1.2";
     }
     {
       key = "blur_iterations";
@@ -147,7 +147,7 @@
     }
     {
       key = "refraction_strength";
-      value = "0.03";
+      value = "0.01";
     }
     {
       key = "chromatic_aberration";

@@ -5,6 +5,7 @@
     desktopDmsLegacyProfileFile
     desktopDmsOutputsFile
     desktopGreeterPackage
+    desktopGhosttySettingsFile
     desktopHyprlandLuaFile
     desktopHyprlandPackage
     laptopDmsOutputsFile
@@ -113,12 +114,12 @@ in {
       assert_file_contains "$hyprglass_helper" 'hyprglass = {'
       assert_file_not_contains "$hyprglass_helper" 'plugin load "$plugin_path" &&'
       assert_file_not_contains "$hyprglass_helper" 'keyword plugin:hyprglass:'
-      assert_file_contains "$hyprglass_helper" 'blur_strength = 1.8'
+      assert_file_contains "$hyprglass_helper" 'blur_strength = 1.2'
       assert_file_contains "$hyprglass_helper" 'tint_color = 0xffffff06'
       assert_file_contains "$hyprglass_helper" 'specular_strength = 0.24'
       assert_file_contains "$hyprglass_helper" 'edge_thickness = 0.014'
       assert_file_contains "$hyprglass_helper" 'lens_distortion = 0'
-      assert_file_contains "$hyprglass_helper" 'refraction_strength = 0.03'
+      assert_file_contains "$hyprglass_helper" 'refraction_strength = 0.01'
       assert_file_contains "$hyprglass_helper" 'chromatic_aberration = 0'
       assert_file_contains "$hyprglass_helper" 'fresnel_strength = 0.20'
       assert_file_contains "$hyprglass_helper" 'brightness = 1.01'
@@ -127,6 +128,8 @@ in {
       assert_file_contains "$hyprglass_helper" 'vibrancy = 0.05'
       assert_file_contains ${desktopHyprlandLuaFile} '["contrast"] = 0.9'
       assert_file_contains ${desktopHyprlandLuaFile} '["xray"] = false'
+      assert_file_contains ${desktopGhosttySettingsFile} '"background-opacity":[0.6]'
+      assert_file_contains ${desktopGhosttySettingsFile} '"background-opacity-cells":[true]'
 
       assert_file_contains ${desktopHyprlandPackage}/bin/Hyprland '--config'
       assert_file_contains ${desktopHyprlandPackage}/bin/Hyprland 'hyprland.lua'
