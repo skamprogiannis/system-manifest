@@ -3,15 +3,18 @@
   pkgs,
   inputs,
   ...
-}: {
+}: let
+  glass = import ./glass.nix;
+in {
   programs.ghostty = {
     enable = true;
     package = inputs.ghostty.packages.${pkgs.stdenv.hostPlatform.system}.ghostty;
     enableBashIntegration = false;
     settings = {
       theme = "Catppuccin Mocha";
-      background-opacity = 0.40;
+      background-opacity = glass.ghostty.backgroundOpacity;
       background-opacity-cells = true;
+      background-blur = glass.ghostty.backgroundBlur;
       background = "000000";
       selection-foreground = "cdd6f4";
       selection-background = "313244";
@@ -22,7 +25,7 @@
       # Keep translucent glyph edges stable on the glass background.
       alpha-blending = "linear-corrected";
       # Boost contrast ratio threshold so text stays readable on bright wallpapers.
-      minimum-contrast = 1.1;
+      minimum-contrast = glass.ghostty.minimumContrast;
       # Codex uses BEL for "needs input"; attention maps it to Hyprland urgency.
       bell-features = "no-system,no-audio,attention,title,no-border";
       cursor-style = "block";

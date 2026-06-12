@@ -12,6 +12,8 @@
     ./hosts.nix
     ./usb-initrd-ordering.nix
     ./hyprland-keybinds.nix
+    ./desktop-glass.nix
+    ./desktop-runtime-config.nix
     ./neovim.nix
     ./wallpaper-runtime.nix
     ./script-smoke.nix

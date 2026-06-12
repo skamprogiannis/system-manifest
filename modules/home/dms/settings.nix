@@ -1,4 +1,5 @@
 {config, ...}: let
+  glass = import ../glass.nix;
   wallpaperContracts = import ../wallpaper/contracts.nix;
   monitorIdentity = wallpaperContracts.dmsMonitorIdentity;
   sessionDefaults = wallpaperContracts.dmsSessionDefaults;
@@ -14,8 +15,8 @@
     spacing = 4;
     innerPadding = 4;
     bottomGap = 1;
-    transparency = 0.20;
-    widgetTransparency = 0.6;
+    transparency = glass.dms.barTransparency;
+    widgetTransparency = glass.dms.barWidgetTransparency;
     squareCorners = false;
     noBackground = true;
     maximizeWidgetIcons = false;
@@ -239,9 +240,9 @@ in {
     blurEnabled = true;
     blurBorderColor = "primary";
     blurBorderOpacity = 0.60;
-    popupTransparency = 0.60;
-    notepadTransparencyOverride = 0.70;
-    systemMonitorTransparency = 0.70;
+    popupTransparency = glass.dms.popupTransparency;
+    notepadTransparencyOverride = glass.dms.notepadTransparency;
+    systemMonitorTransparency = glass.dms.systemMonitorTransparency;
 
     # --- WORKSPACES ---
     showWorkspaceIndex = true;

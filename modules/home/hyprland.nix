@@ -5,6 +5,7 @@
   inputs,
   ...
 }: let
+  glass = import ./glass.nix;
   hyprland-pkg = inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
   hyprlandLuaPkg = let
     joined = pkgs.symlinkJoin {
@@ -58,170 +59,6 @@
       inherit (hyprland-pkg) version;
       override = _: joined;
     };
-  hyprglass-plugin = pkgs.stdenv.mkDerivation {
-    pname = "hyprglass";
-    version = "0.6.3";
-    src = pkgs.fetchFromGitHub {
-      owner = "hyprnux";
-      repo = "hyprglass";
-      rev = "16553225226cd15b2b0e5c7319e5242b427df1b2";
-      hash = "sha256-UeAnHPGBW+2iKbPZ0xWp1VPRI18SuEYRSUCFfn3OKrU=";
-    };
-    nativeBuildInputs = with pkgs; [pkg-config];
-    buildInputs = [
-      hyprland-pkg
-      pkgs.aquamarine.dev
-      pkgs.hyprutils.dev
-      pkgs.hyprgraphics.dev
-      pkgs.hyprlang.dev
-      pkgs.hyprcursor.dev
-      pkgs.libdrm.dev
-      pkgs.libGL.dev
-      pkgs.libinput.dev
-      pkgs.wayland.dev
-      pkgs.wayland-protocols
-      pkgs.libxkbcommon.dev
-      pkgs.pixman
-      pkgs.cairo
-      pkgs.glslang
-      pkgs.lua
-      pkgs.libxcb
-      pkgs.libxcb-wm
-      pkgs.libxcb-errors
-    ];
-    postPatch = ''
-      substituteInPlace \
-        src/Globals.hpp \
-        src/GlassDecoration.hpp \
-        src/GlassLayerSurface.hpp \
-        src/GlassRenderer.hpp \
-        --replace-fail '<hyprland/src/render/Framebuffer.hpp>' '<hyprland/src/render/gl/GLFramebuffer.hpp>'
-      substituteInPlace src/Globals.hpp \
-        --replace-fail 'CMonitor*' 'Monitor::CMonitor*'
-      ${pkgs.perl}/bin/perl -0pi -e 's/if \(result\.error\)\n\s+return luaL_error\(L, "%s", result\.getError\(\)\);\n\s+return 0;/if (result.error)\n            return luaL_error(L, "%s", result.getError());\n        commitPendingPresets();\n        return 0;/s or die "failed to patch string preset commit\n"' src/PluginConfig.cpp
-      ${pkgs.perl}/bin/perl -0pi -e 's/\n        return 0;\n    }\n\n    return luaL_error\(L, "hyprglass\.preset: expected \(string\) or \(name, table\)"\);/\n        commitPendingPresets();\n        return 0;\n    }\n\n    return luaL_error(L, "hyprglass.preset: expected (string) or (name, table)");/s or die "failed to patch table preset commit\n"' src/PluginConfig.cpp
-    '';
-    NIX_CFLAGS_COMPILE = "-I${hyprland-pkg.dev}/include/hyprland/src -I${hyprland-pkg.dev}/include/hyprland/protocols -I${pkgs.libdrm.dev}/include/libdrm -I${pkgs.lua}/include";
-    buildPhase = "make all";
-    installPhase = ''
-      mkdir -p $out/lib
-      cp hyprglass.so $out/lib/hyprglass.so
-    '';
-  };
-
-  hyprglassPluginPath = "${hyprglass-plugin}/lib/hyprglass.so";
-  hyprglassSettings = [
-    {
-      key = "enabled";
-      value = "1";
-    }
-    {
-      key = "default_theme";
-      value = "light";
-    }
-    {
-      key = "default_preset";
-      value = "default";
-    }
-    {
-      key = "blur_strength";
-      value = "1.2";
-    }
-    {
-      key = "blur_iterations";
-      value = "4";
-    }
-    {
-      key = "tint_color";
-      value = "0xffffff06";
-    }
-    {
-      key = "specular_strength";
-      value = "0.24";
-    }
-    {
-      key = "edge_thickness";
-      value = "0.014";
-    }
-    {
-      key = "lens_distortion";
-      value = "0";
-    }
-    {
-      key = "refraction_strength";
-      value = "0.01";
-    }
-    {
-      key = "chromatic_aberration";
-      value = "0";
-    }
-    {
-      key = "fresnel_strength";
-      value = "0.20";
-    }
-    {
-      key = "brightness";
-      value = "1.01";
-    }
-    {
-      key = "contrast";
-      value = "1.10";
-    }
-    {
-      key = "saturation";
-      value = "1.08";
-    }
-    {
-      key = "vibrancy";
-      value = "0.05";
-    }
-  ];
-  hyprglassGhosttyPreset = ''
-    if hl.plugin and hl.plugin.hyprglass then
-      local hg = hl.plugin.hyprglass
-      hg.preset("name:ghostty_terminal, inherits:subtle, blur_strength:0.35, blur_iterations:1, refraction_strength:0.005, lens_distortion:0, chromatic_aberration:0, fresnel_strength:0.10, specular_strength:0.14, edge_thickness:0.008, adaptive_boost:0, adaptive_dim:0, tint_color:0x080a0f16, brightness:0.99, contrast:1.20, saturation:1.06, vibrancy:0")
-    end
-  '';
-  hyprglassLuaValue = value:
-    if lib.hasPrefix "0x" value
-    then value
-    else if builtins.match "^-?[0-9]+(\\.[0-9]+)?$" value != null
-    then value
-    else builtins.toJSON value;
-  hyprglassLuaConfig = ''
-    ${hyprglassGhosttyPreset}
-
-    hl.config({
-      plugin = {
-        hyprglass = {
-          ${lib.concatStringsSep ",\n          " (
-      map (
-        setting: "${setting.key} = ${hyprglassLuaValue setting.value}"
-      )
-      hyprglassSettings
-    )}
-        }
-      }
-    })
-  '';
-  applyHyprglassSettings = pkgs.writeShellScript "apply-hyprglass-settings" ''
-    set -u
-
-    hyprctl=${lib.escapeShellArg "${hyprland-pkg}/bin/hyprctl"}
-    plugin_path=${lib.escapeShellArg hyprglassPluginPath}
-
-    if ! plugin_list="$("$hyprctl" plugin list 2>/dev/null)"; then
-      exit 0
-    fi
-
-    case "$plugin_list" in
-      *"$plugin_path"*|*"hyprglass"*) ;;
-      *) "$hyprctl" plugin load "$plugin_path" >/dev/null 2>&1 || true ;;
-    esac
-
-    "$hyprctl" eval ${lib.escapeShellArg hyprglassLuaConfig} >/dev/null 2>&1 || true
-  '';
-
   useHyprNav = config.system_manifest.navigation.wrapWorkspaces or false;
   lua = lib.generators.mkLuaInline;
   modKey = key: lua ''mod .. " + ${key}"'';
@@ -344,42 +181,7 @@
     (bind (modKey "mouse:272") (lua "hl.dsp.window.drag()"))
     (bind (modKey "mouse:273") (lua "hl.dsp.window.resize()"))
   ];
-  dmsBlurNamespaces = lib.concatStringsSep "|" [
-    "spotlight"
-    "app-launcher"
-    "notification-popup"
-    "toast"
-    "osd"
-    "control-center"
-    "notification-center-popout"
-    "notification-center-modal"
-    "clipboard-popout"
-    "clipboard-context-menu"
-    "dash"
-    "process-list-popout"
-    "workspace-overview"
-    "niri-overview-spotlight"
-    "power-menu"
-    "wifi-qrcode"
-    "color-picker"
-    "layout"
-    "system-update"
-    "battery"
-    "vpn"
-    "bluetooth-pairing"
-    "input-modal"
-    "confirm-modal"
-    "mux"
-    "filebrowser"
-    "network-info"
-    "keybinds"
-    "dock-context-menu"
-    "tray-overflow-menu"
-    "tray-menu-window"
-    "notepad-context-menu"
-    "modal"
-    "slideout"
-  ];
+  dmsBlurNamespaces = lib.concatStringsSep "|" glass.dms.blurNamespaces;
 
   navL =
     if useHyprNav
@@ -476,7 +278,6 @@ in {
                 hl.exec_cmd(${builtins.toJSON "hyprctl setcursor ${config.home.pointerCursor.name} ${toString config.home.pointerCursor.size}"})
                 hl.exec_cmd(${builtins.toJSON "${pkgs.hyprpolkitagent}/bin/hyprpolkitagent"})
                 hl.exec_cmd("systemctl --user start transmission-daemon.service")
-                hl.exec_cmd(${builtins.toJSON "${applyHyprglassSettings}"})
               end
             '')
           ];
@@ -538,12 +339,15 @@ in {
             dim_strength = 0.20;
             blur = {
               enabled = true;
-              size = 3;
-              passes = 2;
-              noise = 0.02;
-              contrast = 0.9;
-              xray = false;
-              new_optimizations = true;
+              size = glass.hyprland.blur.size;
+              passes = glass.hyprland.blur.passes;
+              noise = glass.hyprland.blur.noise;
+              contrast = glass.hyprland.blur.contrast;
+              ignore_opacity = glass.hyprland.blur.ignoreOpacity;
+              xray = glass.hyprland.blur.xray;
+              new_optimizations = glass.hyprland.blur.newOptimizations;
+              popups = glass.hyprland.blur.popups;
+              popups_ignorealpha = glass.hyprland.blur.popupsIgnoreAlpha;
             };
             shadow = {
               enabled = true;
@@ -709,18 +513,15 @@ in {
             match.fullscreen_state_internal = 3;
             no_dim = true;
           }
-          # Keep Vesktop fully opaque at compositor level; transparent UI
-          # comes from Vesktop's native RGBA setting to preserve text opacity.
           {
             name = "vesktop-opaque";
             match.class = "^(vesktop)$";
             opacity = "1.0 override";
           }
           {
-            name = "ghostty-terminal-glass";
+            name = "ghostty-native-glass";
             match.class = "^(com\\.mitchellh\\.ghostty)$";
-            no_blur = true;
-            tag = "+hyprglass_preset_ghostty_terminal";
+            opacity = "1.0 override";
           }
           # Center credential/auth dialogs so they don't spawn between monitors
           {
@@ -746,7 +547,7 @@ in {
           {
             name = "dms-ignore-alpha";
             match.namespace = "^dms:(${dmsBlurNamespaces})$";
-            ignore_alpha = 0.2;
+            ignore_alpha = glass.dms.layerIgnoreAlpha;
           }
           {
             name = "wallpaper-selector-blur";
@@ -771,8 +572,6 @@ in {
             print("failed to load " .. module .. ": " .. tostring(err))
           end
         end
-
-        hl.exec_cmd(${builtins.toJSON "${applyHyprglassSettings}"})
 
         require_optional("dms.colors")
         require_optional("dms.cursor")

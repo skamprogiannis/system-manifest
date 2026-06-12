@@ -6,6 +6,7 @@
   ...
 }:
 assert lib.assertMsg (builtins.elem hostType ["desktop" "usb" "laptop"]) "hostType must be \"desktop\", \"usb\", or \"laptop\"."; let
+  glass = import ./glass.nix;
   wallpaperContracts = import ./wallpaper/contracts.nix;
   skwdColorContract = wallpaperContracts.skwdColorContract;
   translucenceThemeName = "Translucence.theme.css";
@@ -24,6 +25,46 @@ assert lib.assertMsg (builtins.elem hostType ["desktop" "usb" "laptop"]) "hostTy
     transparent = true;
   };
   vesktopLauncherIcon = "${pkgs.vesktop}/share/icons/hicolor/256x256/apps/vesktop.png";
+  vesktopGlassOverrides = pkgs.writeText "vesktop-glass-overrides.css" ''
+    :root {
+      --sidebar-color: color-mix(in srgb, var(--bg-2, #292a2e) ${toString glass.vesktop.sidebarSurfacePercent}%, transparent);
+      --main-content-color: color-mix(in srgb, var(--bg-3, #1a1b20) ${toString glass.vesktop.mainSurfacePercent}%, transparent);
+      --message-color: color-mix(in srgb, var(--bg-2, #292a2e) ${toString glass.vesktop.messageSurfacePercent}%, transparent);
+      --card-color: color-mix(in srgb, var(--bg-2, #292a2e) ${toString glass.vesktop.cardSurfacePercent}%, transparent);
+      --card-color-hover: color-mix(in srgb, var(--bg-2, #292a2e) ${toString glass.vesktop.cardHoverSurfacePercent}%, transparent);
+      --card-color-select: color-mix(in srgb, var(--bg-2, #292a2e) ${toString glass.vesktop.cardSelectSurfacePercent}%, transparent);
+      --textarea-color: ${glass.vesktop.textareaRgb};
+      --textarea-alpha: ${glass.vesktop.textareaAlpha};
+      --textarea-alpha-focus: ${glass.vesktop.textareaFocusAlpha};
+    }
+
+    div[class*="standardSidebarView_"],
+    div[class*="sidebarRegion_"],
+    div[class*="sidebarRegionScroller_"],
+    div[class*="contentRegion_"],
+    div[class*="contentRegionScroller_"] {
+      background-color: color-mix(in srgb, var(--bg-2, #292a2e) ${toString glass.vesktop.settingsSurfacePercent}%, transparent) !important;
+      backdrop-filter: blur(${toString glass.vesktop.settingsBlurPx}px) saturate(${glass.vesktop.settingsSaturate}) !important;
+      -webkit-backdrop-filter: blur(${toString glass.vesktop.settingsBlurPx}px) saturate(${glass.vesktop.settingsSaturate}) !important;
+      border: 1px solid color-mix(in srgb, var(--accent-2, #b0c6ff) ${toString glass.vesktop.settingsBorderPercent}%, transparent) !important;
+    }
+
+    div[class*="menu_"],
+    div[class*="popout_"],
+    div[class*="userPopout"],
+    div[class*="accountProfileCard_"] {
+      background-color: color-mix(in srgb, var(--bg-2, #292a2e) ${toString glass.vesktop.popoutSurfacePercent}%, transparent) !important;
+      backdrop-filter: blur(${toString glass.vesktop.popoutBlurPx}px) saturate(${glass.vesktop.popoutSaturate}) !important;
+      -webkit-backdrop-filter: blur(${toString glass.vesktop.popoutBlurPx}px) saturate(${glass.vesktop.popoutSaturate}) !important;
+      border: 1px solid color-mix(in srgb, var(--accent-2, #b0c6ff) ${toString glass.vesktop.popoutBorderPercent}%, transparent) !important;
+    }
+
+    div[class*="message_"][class*="mentioned_"],
+    li[class*="messageListItem_"] div[class*="mentioned_"] {
+      background-color: color-mix(in srgb, var(--accent-4, #38393e) ${toString glass.vesktop.mentionSurfacePercent}%, transparent) !important;
+      border-left: 2px solid var(--accent-2, #b0c6ff) !important;
+    }
+  '';
 
   regenTransluenceTheme = pkgs.writeShellScriptBin "regen-vesktop-transluence-theme" ''
         set -euo pipefail
@@ -191,6 +232,8 @@ assert lib.assertMsg (builtins.elem hostType ["desktop" "usb" "laptop"]) "hostTy
         render_theme_bridge_root >> "$theme_tmp"
         printf '\n/* ----- Transluence overlay ----- */\n' >> "$theme_tmp"
         cat "$OVERLAY_STORE" >> "$theme_tmp"
+        printf '\n/* ----- Glass token overrides ----- */\n' >> "$theme_tmp"
+        cat ${vesktopGlassOverrides} >> "$theme_tmp"
 
         cat > "$quickcss_tmp" <<EOF
     /* Source hash: $src_hash (~/.cache/skwd-wall/colors.json, skwd-wall Vesktop token mapping) */

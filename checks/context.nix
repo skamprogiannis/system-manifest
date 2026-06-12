@@ -10,6 +10,10 @@
   desktopActivation = self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.activationPackage;
   desktopSkwdDmsSyncHook = self.nixosConfigurations.desktop.config.home-manager.users.stefan.xdg.configFile."skwd-wall/scripts/sync-dms-wallpaper.sh".source;
   desktopDmsSettingsFile = pkgs.writeText "desktop-dms-settings.json" (builtins.toJSON self.nixosConfigurations.desktop.config.home-manager.users.stefan.programs.dank-material-shell.settings);
+  desktopGtk4ExtraCssFile = pkgs.writeText "desktop-gtk4-extra.css" self.nixosConfigurations.desktop.config.home-manager.users.stefan.gtk.gtk4.extraCss;
+  desktopSpicetifyAdditionalCssFile = pkgs.writeText "desktop-spicetify-additional.css" self.nixosConfigurations.desktop.config.home-manager.users.stefan.programs.spicetify.theme.additionalCss;
+  desktopSpicetifyExtraCommandsFile = pkgs.writeText "desktop-spicetify-extra-commands" self.nixosConfigurations.desktop.config.home-manager.users.stefan.programs.spicetify.extraCommands;
+  desktopSpicetifyInjectThemeJsFile = pkgs.writeText "desktop-spicetify-inject-theme-js" (builtins.toJSON self.nixosConfigurations.desktop.config.home-manager.users.stefan.programs.spicetify.theme.injectThemeJs);
   desktopTmpfilesRulesFile = pkgs.writeText "desktop-tmpfiles-rules" (builtins.concatStringsSep "\n" self.nixosConfigurations.desktop.config.systemd.tmpfiles.rules);
   desktopZellijDevLayoutFile = pkgs.writeText "desktop-zellij-dev-layout" self.nixosConfigurations.desktop.config.home-manager.users.stefan.xdg.configFile."zellij/layouts/dev.kdl".text;
   updateUsbSourceDir = ../modules/home/scripts/usb/update-usb;

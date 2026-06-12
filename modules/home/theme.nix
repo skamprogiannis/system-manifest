@@ -3,6 +3,7 @@
   pkgs,
   ...
 }: let
+  glass = import ./glass.nix;
   firefoxDesktopFile = pkgs.runCommand "firefox-desktop-with-comment" {} ''
     cp ${(config.programs.firefox.package or pkgs.firefox)}/share/applications/firefox.desktop $out
     ${pkgs.gnused}/bin/sed -i '/^GenericName=/a Comment=Fast, standards-focused web browser' $out
@@ -26,10 +27,10 @@ in {
       popover.background,
       menu {
         background-image: none;
-        background-color: alpha(#11111b, 0.80);
-        border: 1px solid alpha(#cdd6f4, 0.05);
+        background-color: alpha(${glass.gtk.popoverBackground}, ${glass.gtk.popoverAlpha});
+        border: 1px solid alpha(${glass.gtk.popoverBorder}, ${glass.gtk.popoverBorderAlpha});
         border-radius: 14px;
-        box-shadow: 0 10px 28px alpha(#000000, 0.32);
+        box-shadow: 0 10px 28px alpha(${glass.gtk.popoverShadow}, ${glass.gtk.popoverShadowAlpha});
       }
 
       popover.background > contents,
