@@ -3,6 +3,7 @@
   lib,
   skwdWallPkg,
   skwdWeCaptureStill,
+  dmsPackage,
   dmsWallpaperSessionSyncJson,
   allowedWallpaperTransitionsJson,
   includedWallpaperTransitionsJson,
@@ -23,6 +24,7 @@
         greeter_cache_dir="/var/cache/dms-greeter"
         greeter_override="$greeter_cache_dir/greeter_wallpaper_override.jpg"
         greeter_settings="$greeter_cache_dir/settings.json"
+        dms_bin="${dmsPackage}/bin/dms"
 
         if [ ! -f "$current_wallpaper" ] && [ ! -f "$last_wallpaper_state" ]; then
           echo "sync-dms-wallpaper: missing both $current_wallpaper and $last_wallpaper_state" >&2
@@ -311,7 +313,28 @@
         fi
         export LIVE_WALLPAPER_PATH="$live_wallpaper"
 
-        ${pkgs.python3}/bin/python3 <<'PY'
+        mode="$(${pkgs.python3}/bin/python3 <<'PY'
+    from pathlib import Path
+    import json
+    import os
+    import sys
+
+    config_file = Path(os.path.expanduser("~/.config/skwd-wall/config.json"))
+    mode = "dark"
+    if config_file.exists():
+        try:
+            config = json.loads(config_file.read_text())
+            configured = config.get("matugen", {}).get("mode")
+            if configured in ("light", "dark"):
+                mode = configured
+        except json.JSONDecodeError as exc:
+            print(f"sync-dms-wallpaper: failed to parse {config_file}: {exc}", file=sys.stderr)
+    print(mode)
+    PY
+        )"
+
+        if ! "$dms_bin" ipc wallpaper externalSet "$live_wallpaper" "$mode" >/dev/null 2>&1; then
+          if ! ${pkgs.python3}/bin/python3 <<'PY'
     from pathlib import Path
     import json
     import os
@@ -371,6 +394,10 @@
     else:
         print("unchanged")
     PY
+          then
+            echo "sync-dms-wallpaper: DMS IPC unavailable and session fallback failed" >&2
+          fi
+        fi
 
         export GREETER_OVERRIDE_PATH="$greeter_override"
         if [ ! -f "$live_wallpaper" ]; then

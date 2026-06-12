@@ -225,6 +225,15 @@
         "            border.width: win.connectedFrameMode ? 0 : (BlurService.enabled ? BlurService.borderWidth : 1)",
     ),
   '';
+
+  sessionDataExternalWallpaper = ''
+    root / "Common/SessionData.qml": [
+        (
+            "        function clear(): string {\n            root.setWallpaper(\"\");",
+            "        function externalSet(path: string, mode: string): string {\n            if (!path) {\n                return \"ERROR: No path provided\";\n            }\n\n            root.wallpaperCyclingEnabled = false;\n            root.perMonitorWallpaper = false;\n            root.perModeWallpaper = false;\n            root.monitorWallpapers = ({});\n            root.monitorWallpapersLight = ({});\n            root.monitorWallpapersDark = ({});\n            root.monitorCyclingSettings = ({});\n            root.isLightMode = mode === \"light\";\n            root.wallpaperPathLight = path;\n            root.wallpaperPathDark = path;\n            root.setWallpaper(path);\n\n            return \"SUCCESS: External wallpaper set to \" + path;\n        }\n\n        function clear(): string {\n            root.setWallpaper(\"\");",
+        ),
+    ],
+  '';
 in {
   pythonPrelude = ''
     settings_shell_alpha = "Math.min(1.0, Theme.popupTransparency + 0.08)"
@@ -263,6 +272,7 @@ in {
     ${launcherSourceClassifier}
     ${commonLists}
     ${clockWidget}
+    ${sessionDataExternalWallpaper}
     # Expose a clearHistory IPC command so keybinds can wipe the History tab.
     # The built-in clearAll IPC only calls clearAllNotifications(); this adds
     # a sibling function that delegates to NotificationService.clearHistory().
@@ -397,6 +407,10 @@ in {
         (
             "    Process {\n        id: sessionWritableCheckProcess",
             "    Process {\n        id: _skwdWallApplyProcess\n        running: false\n    }\n    Process {\n        id: sessionWritableCheckProcess",
+        ),
+        (
+            "        function clear(): string {\n            root.setWallpaper(\"\");",
+            "        function externalSet(path: string, mode: string): string {\n            if (!path) {\n                return \"ERROR: No path provided\";\n            }\n\n            root.wallpaperCyclingEnabled = false;\n            root.perMonitorWallpaper = false;\n            root.perModeWallpaper = false;\n            root.monitorWallpapers = ({});\n            root.monitorWallpapersLight = ({});\n            root.monitorWallpapersDark = ({});\n            root.monitorCyclingSettings = ({});\n            root.isLightMode = mode === \"light\";\n            root.wallpaperPathLight = path;\n            root.wallpaperPathDark = path;\n            root.setWallpaper(path);\n\n            return \"SUCCESS: External wallpaper set to \" + path;\n        }\n\n        function clear(): string {\n            root.setWallpaper(\"\");",
         ),
         (
             "        saveSettings();\n\n        if (typeof Theme !== \"undefined\") {\n            Theme.generateSystemThemesFromCurrentTheme();\n        }\n    }\n\n    function setWallpaperColor",

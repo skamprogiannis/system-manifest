@@ -82,6 +82,7 @@
           includedWallpaperTransitionsJson
           defaultWallpaperTransition
           ;
+        dmsPackage = config.programs.dank-material-shell.package;
       }
     )
     .skwdDmsSyncHook;

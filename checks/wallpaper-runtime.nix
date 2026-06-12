@@ -79,6 +79,7 @@ in {
       fi
 
       assert_contains "sync-dms-wallpaper: missing both" "${desktopSkwdDmsSyncHook}" "DMS wallpaper sync hook"
+      assert_contains '"$dms_bin" ipc wallpaper externalSet "$live_wallpaper" "$mode"' "${desktopSkwdDmsSyncHook}" "DMS wallpaper sync hook"
       assert_contains "skwd-we-capture-still" "${desktopHome}/bin/skwd-we-capture-still" "Wallpaper Engine capture helper"
       assert_contains "# selector navigation" ${../modules/home/wallpaper/qml-patches.nix} "skwd-wall QML patch module"
       assert_contains "# filter bar keyboard" ${../modules/home/wallpaper/qml-patches.nix} "skwd-wall QML patch module"
@@ -105,6 +106,11 @@ in {
       assert_contains '{ key: "B then W / S",  action: "Open Wallhaven / Steam browser" },' "$skwd_keybinds_qml" "patched skwd-wall keybind settings"
       assert_before 'title: "Settings controls"' 'title: "Filters"' "$skwd_keybinds_qml" "patched skwd-wall keybind settings"
       assert_contains "DaemonClient.applyVideo(path, outputs, neighbors, screens, audioMap, volumeMap)" ${../modules/home/wallpaper/qml-patches.nix} "skwd-wall QML patch module"
+
+      dms_bin="$(readlink -f "${desktopHome}/bin/dms")"
+      dms_pkg="$(dirname "$(dirname "$dms_bin")")"
+      assert_contains 'function externalSet(path: string, mode: string): string' "$dms_pkg/share/quickshell/dms/Common/SessionData.qml" "patched DMS SessionData"
+      assert_contains 'target: "wallpaper"' "$dms_pkg/share/quickshell/dms/Common/SessionData.qml" "patched DMS SessionData"
 
       if grep -Fq "'} else if (event.key === Qt.Key_Right) {'," ${../modules/home/wallpaper/qml-patches.nix}; then
         echo "skwd-wall QML patch module still contains the confirmed no-op Qt.Key_Right replacement." >&2
