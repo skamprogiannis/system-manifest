@@ -12,6 +12,7 @@ Managed via **Nix Flakes** and **Home Manager**.
 - **Laptop: Dual-Boot Hyprland** — Laptop host keeps the full desktop muscle-memory workflow with portable display detection, encrypted-root install labels, Caps-to-Escape, Greek/US layouts, Zellij, Neovim, Codex, and browser setup.
 - **Gaming Mode:** A dedicated specialisation (`gaming-box`) that boots directly into Steam Big Picture Mode with Gamescope.
 - **Media & Productivity:**
+  - **Spotify GUI:** Official Spotify client wrapped with Spicetify and the Hazy translucent theme, with local CSS polish for the system glass aesthetic.
   - **Spotify Player:** Terminal-based Spotify client (`spotify_player`) with streaming support. The wrapper authenticates interactively before bootstrapping the background daemon so the login callback port is not stolen by a headless service on fresh setups, it does one safe re-auth pass when Spotify later rejects a cached refresh token, and it can read a personal Spotify app client ID from `~/.config/spotify-player/client_id` so Web API auth does not depend on a shared client ID when Spotify rate-limits it.
   - **Transmission:** BitTorrent daemon with `tremc` TUI frontend.
   - **Mailspring:** Email client; credentials stored via GNOME Keyring (runs standalone, no GNOME shell required).
@@ -36,6 +37,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 | `ghostty` | `github:ghostty-org/ghostty` | Stays on latest release; uses `ghostty.cachix.org` for fast installs |
 | `home-manager` | `github:nix-community/home-manager` | Tracks nixpkgs-unstable |
 | `nixvim` | `github:nix-community/nixvim` | Full Neovim config in Nix |
+| `spicetify-nix` | `github:Gerg-L/spicetify-nix` | Declarative Spicetify wrapper for the themed Spotify GUI |
 | `skwd-wall` | `github:liixini/skwd-wall` | Quickshell wallpaper selector with built-in matugen, Wallhaven, Steam Workshop, and color sorting |
 | `pearpass-app-desktop` | `github:tetherto/pearpass-app-desktop` | PearPass AppImage source for NixOS wrapper |
 | `visual-explainer` | `github:nicobailon/visual-explainer` | HTML visualization generator for architecture diagrams and code explanations |
@@ -49,7 +51,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 ## Workflow & UI
 
 - **Glassmorphism Aesthetics:** Ghostty uses `background-opacity = 0.40` (native RGBA) and applies it to colored cells too, so the terminal background and Codex color blocks stay translucent while text remains fully opaque. GTK4 popover styling also softens the Ghostty context menu with a lighter outer border and more translucency. The hyprglass Hyprland plugin is active for blur/tint/refraction effects on transparent surfaces.
-- **Dynamic Theming:** Wallpaper-driven Matugen theming via [skwd-wall](https://github.com/liixini/skwd-wall) keeps Hyprland, Zathura, Vesktop, and DMS visually in sync. Vesktop consumes the generated palette through `Translucence.theme.css` plus `~/.config/vesktop/settings/quickCss.css`, while the current wallpaper cache is reused to keep DMS and the greeter aligned during switches. For Wallpaper Engine scenes with weak workshop previews, `skwd-we-capture-still --current-live` can save a faithful live still into the transition cache.
+- **Dynamic Theming:** Wallpaper-driven Matugen theming via [skwd-wall](https://github.com/liixini/skwd-wall) keeps Hyprland, Zathura, Vesktop, Spotify, and DMS visually in sync. Vesktop consumes the generated palette through `Translucence.theme.css` plus `~/.config/vesktop/settings/quickCss.css`, Spotify uses a Spicetify Hazy theme with local glass polish, and the current wallpaper cache is reused to keep DMS and the greeter aligned during switches. For Wallpaper Engine scenes with weak workshop previews, `skwd-we-capture-still --current-live` can save a faithful live still into the transition cache.
 - **Wallpaper Integration:** `modules/home/wallpaper/` is the shared wallpaper entrypoint. `skwd-wall` owns wallpaper selection plus `~/.cache/skwd-wall/*`; `modules/home/dms/session-state.nix` owns the baseline `~/.local/state/DankMaterialShell/session.json`; and the sync hook in `modules/home/skwd-wall.nix` mirrors the selected wallpaper into DMS runtime state and the greeter cache. Hyprland stays a downstream consumer of that state.
 - **skwd-wall State:** `skwd-wall` UI settings write to `~/.config/skwd-wall/config.json`, but each Home Manager activation resets that file back to the declarative defaults from Nix. Local API keys can live outside git in `~/.config/skwd-wall/secrets.env`.
 - **Malformed JSON Policy:** Activation-owned JSON (`~/.config/skwd-wall/config.json`, `~/.local/state/DankMaterialShell/session.json`) is healed/reset to declarative defaults during activation. Runtime sync code fails closed before overwriting malformed authoritative targets, but only warns and continues for optional/cache-like inputs.

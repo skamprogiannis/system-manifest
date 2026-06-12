@@ -746,6 +746,7 @@
         "nixvim": "nixvim",
         "pearpass-app-desktop": "pearpass-app-desktop",
         "skwd-wall": "skwd-wall",
+        "spicetify-nix": "spicetify-nix",
         "trailofbits-skills": "trailofbits-skills",
         "ui-ux-pro-max": "ui-ux-pro-max",
         "visual-explainer": "visual-explainer"
@@ -786,6 +787,27 @@
       "original": {
         "owner": "liixini",
         "repo": "skwd-wall",
+        "type": "github"
+      }
+    },
+    "spicetify-nix": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "systems": "systems_4"
+      },
+      "locked": {
+        "lastModified": 1781101834,
+        "narHash": "sha256-gNVY6SYglFe37FpD+NnOjTipsqvVMM2vh/uc22KDEsA=",
+        "owner": "Gerg-L",
+        "repo": "spicetify-nix",
+        "rev": "0243dd6707c969fc8440216c811b3f2e4a4cceb7",
+        "type": "github"
+      },
+      "original": {
+        "owner": "Gerg-L",
+        "repo": "spicetify-nix",
         "type": "github"
       }
     },
@@ -832,6 +854,21 @@
       "original": {
         "owner": "nix-systems",
         "ref": "future-26.11",
+        "repo": "default",
+        "type": "github"
+      }
+    },
+    "systems_4": {
+      "locked": {
+        "lastModified": 1681028828,
+        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
+        "owner": "nix-systems",
+        "repo": "default",
+        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-systems",
         "repo": "default",
         "type": "github"
       }
