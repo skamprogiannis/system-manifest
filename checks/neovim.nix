@@ -112,6 +112,27 @@ in {
       vim.cmd("cquit")
     end
 
+    local _, hover_win = vim.lsp.util.open_floating_preview(
+      { "[Scanner](file:///tmp/scan.go)" },
+      "markdown",
+      { focusable = true }
+    )
+
+    if not vim.api.nvim_win_is_valid(hover_win) then
+      io.stderr:write("Neovim LSP hover float was not created\n")
+      vim.cmd("cquit")
+    end
+
+    if vim.wo[hover_win].wrap then
+      io.stderr:write("Neovim LSP hover floats must not wrap concealed markdown links\n")
+      vim.cmd("cquit")
+    end
+
+    if vim.wo[hover_win].concealcursor ~= "n" or vim.wo[hover_win].conceallevel ~= 3 then
+      io.stderr:write("Neovim LSP hover markdown conceal options regressed\n")
+      vim.cmd("cquit")
+    end
+
     vim.cmd("qa!")
     LUA
 

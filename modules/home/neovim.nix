@@ -228,6 +228,24 @@
       end
 
       do
+        local open_floating_preview = vim.lsp.util.open_floating_preview
+
+        vim.lsp.util.open_floating_preview = function(contents, syntax, opts, ...)
+          opts = opts or {}
+          opts.wrap = false
+
+          local bufnr, winid = open_floating_preview(contents, syntax, opts, ...)
+
+          if syntax == "markdown" and vim.api.nvim_win_is_valid(winid) then
+            vim.wo[winid].concealcursor = "n"
+            vim.wo[winid].conceallevel = 3
+          end
+
+          return bufnr, winid
+        end
+      end
+
+      do
         local clang_format = "${pkgs.clang-tools}/bin/clang-format"
 
         local function clang_format_style_for(bufnr)
