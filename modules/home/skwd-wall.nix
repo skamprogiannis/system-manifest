@@ -69,27 +69,25 @@
     )
     .skwdPrepareState;
 
-  skwdDmsSyncHook =
-    (
-      import ./wallpaper/dms-greeter-sync.nix {
-        inherit
-          pkgs
-          lib
-          skwdWallPkg
-          skwdWeCaptureStill
-          dmsWallpaperSessionSyncJson
-          allowedWallpaperTransitionsJson
-          includedWallpaperTransitionsJson
-          defaultWallpaperTransition
-          ;
-        dmsPackage = config.programs.dank-material-shell.package;
-      }
-    )
-    .skwdDmsSyncHook;
+  skwdDmsHooks = import ./wallpaper/dms-greeter-sync.nix {
+    inherit
+      pkgs
+      lib
+      skwdWallPkg
+      skwdWeCaptureStill
+      dmsWallpaperSessionSyncJson
+      allowedWallpaperTransitionsJson
+      includedWallpaperTransitionsJson
+      defaultWallpaperTransition
+      ;
+    dmsPackage = config.programs.dank-material-shell.package;
+  };
+  inherit (skwdDmsHooks) skwdDmsScheduleHook skwdDmsSyncHook;
 in {
   home.packages = [skwdWallPkg skwdWeCaptureStill];
 
   xdg.configFile."skwd-wall/scripts/sync-dms-wallpaper.sh".source = skwdDmsSyncHook;
+  xdg.configFile."skwd-wall/scripts/schedule-dms-wallpaper-sync.sh".source = skwdDmsScheduleHook;
 
   home.activation.ensureWritableSkwdConfig = lib.hm.dag.entryAfter ["writeBoundary"] ''
     run ${skwdPrepareState}

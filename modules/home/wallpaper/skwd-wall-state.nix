@@ -239,7 +239,7 @@
         name = "hyprland-dms";
         template = "hyprland-dms-colors.lua";
         output = "~/.config/hypr/dms/colors.lua";
-        reload = "${skwdScriptDir}/sync-dms-wallpaper.sh";
+        reload = "${skwdScriptDir}/schedule-dms-wallpaper-sync.sh";
       }
       {
         name = "zathura";

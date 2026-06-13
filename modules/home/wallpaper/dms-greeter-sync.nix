@@ -9,6 +9,99 @@
   includedWallpaperTransitionsJson,
   defaultWallpaperTransition,
 }: let
+  skwdDmsScheduleHook = pkgs.writeShellScript "schedule-dms-wallpaper-sync.sh" ''
+        set -euo pipefail
+
+        runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/skwd"
+        request_file="$runtime_dir/dms-wallpaper-sync.request"
+        lock_file="$runtime_dir/dms-wallpaper-sync.lock"
+        sync_hook="@syncHook@"
+
+        mkdir -p "$runtime_dir"
+        ${pkgs.coreutils}/bin/date +%s%N > "$request_file"
+
+        run_worker() {
+          exec 9>"$lock_file"
+          if ! ${pkgs.util-linux}/bin/flock -n 9; then
+            exit 0
+          fi
+
+          last_request=""
+          while true; do
+            request_stamp="$(${pkgs.coreutils}/bin/cat "$request_file" 2>/dev/null || printf '0\n')"
+            if [ "$request_stamp" = "$last_request" ]; then
+              break
+            fi
+            last_request="$request_stamp"
+
+            # Debounce bursts from skwd matugen reloads and QML apply events.
+            sleep 0.25
+            if [ "$request_stamp" != "$(${pkgs.coreutils}/bin/cat "$request_file" 2>/dev/null || printf '0\n')" ]; then
+              continue
+            fi
+
+            for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+              if REQUEST_FILE="$request_file" ${pkgs.python3}/bin/python3 <<'PY'
+    from pathlib import Path
+    import json
+    import os
+    import sys
+
+    request = Path(os.environ["REQUEST_FILE"])
+    state = Path.home() / ".cache/skwd-wall/last-wallpaper.json"
+    current = Path.home() / ".cache/skwd-wall/wallpaper/current.jpg"
+
+    try:
+        request_time = int(request.read_text().strip()) / 1_000_000_000
+    except (OSError, ValueError):
+        request_time = 0
+
+    if not state.is_file():
+        sys.exit(1)
+
+    try:
+        data = json.loads(state.read_text())
+    except json.JSONDecodeError:
+        sys.exit(1)
+
+    def is_jpeg(path):
+        try:
+            with path.open("rb") as handle:
+                return handle.read(2) == b"\xff\xd8"
+        except OSError:
+            return False
+
+    recent_state = state.stat().st_mtime + 5 >= request_time
+    recent_current = current.is_file() and current.stat().st_mtime + 5 >= request_time
+    candidate_raw = data.get("path")
+    candidate = Path(candidate_raw).expanduser() if isinstance(candidate_raw, str) and candidate_raw else None
+    has_source = bool(candidate and candidate.exists())
+    has_we_id = isinstance(data.get("we_id"), str) and bool(data["we_id"])
+    current_ready = is_jpeg(current)
+
+    if recent_state and (has_source or has_we_id or current_ready):
+        sys.exit(0)
+    if recent_current and current_ready:
+        sys.exit(0)
+    sys.exit(1)
+    PY
+              then
+                break
+              fi
+              sleep 0.15
+            done
+
+            "$sync_hook"
+          done
+        }
+
+        if [ "''${SKWD_DMS_SYNC_FOREGROUND:-0}" = "1" ]; then
+          run_worker
+        else
+          run_worker >/dev/null 2>&1 &
+        fi
+  '';
+
   skwdDmsSyncHook = pkgs.writeShellScript "sync-dms-wallpaper.sh" ''
         set -euo pipefail
 
@@ -21,10 +114,10 @@
         current_wallpaper="$HOME/.cache/skwd-wall/wallpaper/current.jpg"
         last_wallpaper_state="$HOME/.cache/skwd-wall/last-wallpaper.json"
         session_dir="$HOME/.local/state/DankMaterialShell"
-        greeter_cache_dir="/var/cache/dms-greeter"
+        greeter_cache_dir="''${DMS_GREETER_CACHE_DIR:-/var/cache/dms-greeter}"
         greeter_override="$greeter_cache_dir/greeter_wallpaper_override.jpg"
         greeter_settings="$greeter_cache_dir/settings.json"
-        dms_bin="${dmsPackage}/bin/dms"
+        dms_bin="''${DMS_BIN:-${dmsPackage}/bin/dms}"
 
         if [ ! -f "$current_wallpaper" ] && [ ! -f "$last_wallpaper_state" ]; then
           echo "sync-dms-wallpaper: missing both $current_wallpaper and $last_wallpaper_state" >&2
@@ -333,7 +426,57 @@
     PY
         )"
 
-        if ! "$dms_bin" ipc wallpaper externalSet "$live_wallpaper" "$mode" >/dev/null 2>&1; then
+        export DMS_WALLPAPER_MODE="$mode"
+        should_call_dms="$(${pkgs.python3}/bin/python3 <<'PY'
+    from pathlib import Path
+    import json
+    import os
+    import sys
+
+    session_file = Path(os.path.expanduser("~/.local/state/DankMaterialShell/session.json"))
+    wallpaper_path = os.environ["LIVE_WALLPAPER_PATH"]
+    mode = os.environ["DMS_WALLPAPER_MODE"]
+
+    if not session_file.exists():
+        print("yes")
+        sys.exit(0)
+
+    try:
+        data = json.loads(session_file.read_text())
+    except json.JSONDecodeError:
+        print("yes")
+        sys.exit(0)
+
+    if not isinstance(data, dict):
+        print("yes")
+        sys.exit(0)
+
+    sync_contract = json.loads(${lib.escapeShellArg dmsWallpaperSessionSyncJson})
+
+    def matches():
+        for key, value in sync_contract["forcedFlags"].items():
+            if key == "isLightMode":
+                continue
+            if data.get(key) != value:
+                return False
+        if data.get("isLightMode") != (mode == "light"):
+            return False
+        for key in sync_contract["wallpaperPathKeys"]:
+            if data.get(key) != wallpaper_path:
+                return False
+        for key in sync_contract["monitorWallpaperKeys"]:
+            if data.get(key) != {}:
+                return False
+        monitor_key = sync_contract["monitorCyclingSettingsKey"]
+        if monitor_key in data and data.get(monitor_key) != {}:
+            return False
+        return True
+
+    print("no" if matches() else "yes")
+    PY
+        )"
+
+        if [ "$should_call_dms" = "yes" ] && ! "$dms_bin" ipc wallpaper externalSet "$live_wallpaper" "$mode" >/dev/null 2>&1; then
           if ! ${pkgs.python3}/bin/python3 <<'PY'
     from pathlib import Path
     import json
@@ -400,6 +543,7 @@
         fi
 
         export GREETER_OVERRIDE_PATH="$greeter_override"
+        export GREETER_SETTINGS_PATH="$greeter_settings"
         if [ ! -f "$live_wallpaper" ]; then
           echo "sync-dms-wallpaper: missing live wallpaper still for greeter" >&2
         elif [ -d "$greeter_cache_dir" ] && [ -w "$greeter_cache_dir" ]; then
@@ -413,7 +557,7 @@
     import os
     import sys
 
-    settings_file = Path("/var/cache/dms-greeter/settings.json")
+    settings_file = Path(os.environ["GREETER_SETTINGS_PATH"])
     wallpaper = Path(os.environ["GREETER_OVERRIDE_PATH"])
 
     if settings_file.exists():
@@ -446,5 +590,10 @@
         fi
   '';
 in {
+  skwdDmsScheduleHook = pkgs.runCommand "schedule-dms-wallpaper-sync.sh" {} ''
+    substitute ${skwdDmsScheduleHook} $out \
+      --replace-fail '@syncHook@' '${skwdDmsSyncHook}'
+    chmod +x $out
+  '';
   inherit skwdDmsSyncHook;
 }
