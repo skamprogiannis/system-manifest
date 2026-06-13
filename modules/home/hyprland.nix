@@ -75,7 +75,18 @@
   focusMonitor = monitor: lua ''hl.dsp.focus({ monitor = ${builtins.toJSON monitor} })'';
   focusWorkspace = workspace: lua ''hl.dsp.focus({ workspace = ${builtins.toJSON workspace} })'';
   moveWindowDirection = direction: lua ''hl.dsp.window.move({ direction = ${builtins.toJSON direction} })'';
-  moveWindowMonitor = monitor: lua ''hl.dsp.window.move({ monitor = ${builtins.toJSON monitor} })'';
+  moveWindowMonitor = monitor:
+    lua ''
+      function()
+        if hl.get_monitor(${builtins.toJSON monitor}) == nil then
+          return
+        end
+
+        pcall(function()
+          hl.dispatch(hl.dsp.window.move({ monitor = ${builtins.toJSON monitor} }))
+        end)
+      end
+    '';
   moveWindowPosition = x: y: lua ''hl.dsp.window.move({ x = ${toString x}, y = ${toString y}, relative = true })'';
   moveToWorkspace = workspace: follow: lua ''hl.dsp.window.move({ workspace = ${builtins.toJSON workspace}, follow = ${lib.boolToString follow} })'';
   resizeWindow = x: y: lua ''hl.dsp.window.resize({ x = ${toString x}, y = ${toString y}, relative = true })'';
