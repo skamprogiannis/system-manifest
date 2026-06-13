@@ -150,4 +150,18 @@ in {
         const homeEdit = new Spicetify.Topbar.Button("Hazy Settings", "edit", () => {'
     '';
   };
+
+  xdg.desktopEntries.spotify = {
+    name = "Spotify";
+    genericName = "Music Player";
+    comment = "Music and podcast streaming client";
+    exec = "spotify %U";
+    icon = "spotify-client";
+    terminal = false;
+    categories = ["Audio" "Music" "Player" "AudioVideo"];
+    mimeType = ["x-scheme-handler/spotify"];
+    settings = {
+      StartupWMClass = "spotify";
+    };
+  };
 }
