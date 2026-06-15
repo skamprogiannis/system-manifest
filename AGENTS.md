@@ -48,7 +48,7 @@
 - **Comments**: Keep comments focused on "why" or "what" (e.g., "# Wrapper for native messaging"). Do NOT add meta-comments about your actions (e.g., "# I added this because user asked").
 - **No Commented-Out Code**: Do not leave commented-out code blocks. Use git history if you need to revert or reference old code.
 
-- **Subagent Rebuilds:** Use a subagent (task tool) to handle `nixos-rebuild` commands (dry-run and switch) to keep the main context clean and handle potential long output.
+- **Subagent Rebuilds:** Agents are authorized to use subagents for `nixos-rebuild dry-build` validation without asking first. Use a subagent (task tool) to handle `nixos-rebuild` commands (dry-run and switch) to keep the main context clean and handle potential long output.
 - **Bug Reporting:** When a bug is reported, prioritize writing a reproduction test before attempting a fix. Use subagents to implement the fix and verify it with the passing test.
 - **Pre-Completion Dry Build:** After any config/code change and before reporting "done," run `nixos-rebuild dry-build --flake .#desktop` yourself and fix any failures before handing back to the user.
 - **CI Shape:** GitHub Actions mirrors the Check registry groups in `checks/registry.nix` with separate host and support jobs so failures stay isolated. CI serializes full Nix builds and uses configured Nix caches plus GitHub's Nix store cache to reduce upstream fetch throttling.
