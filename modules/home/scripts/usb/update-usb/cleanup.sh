@@ -21,14 +21,16 @@ run_cleanup_step() {
 cleanup_mount_tree() {
   local target mount_targets
 
-  if ! mount_targets="$(findmnt -Rrn --target "$MOUNT_POINT" -o TARGET 2>/dev/null)"; then
+  if ! mount_targets="$(findmnt -Rrn --mountpoint "$MOUNT_POINT" -o TARGET 2>/dev/null)"; then
     return 0
   fi
 
   while IFS= read -r target; do
-    if [ -n "$target" ]; then
-      printf '%s\n' "$target"
-    fi
+    case "$target" in
+      "$MOUNT_POINT"|"$MOUNT_POINT"/*)
+        printf '%s\n' "$target"
+        ;;
+    esac
   done <<<"$mount_targets" | sort -r | while IFS= read -r target; do
     if mountpoint -q "$target"; then
       run_cleanup_step "failed to unmount $target" umount "$target"

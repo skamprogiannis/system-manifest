@@ -78,11 +78,63 @@ in {
         exit 1
       fi
 
-      if ! ${pkgs.gnugrep}/bin/grep -Fq "findmnt -Rrn" "$update_usb_source_dir/cleanup.sh"; then
+      if ! ${pkgs.gnugrep}/bin/grep -Fq "findmnt -Rrn --mountpoint" "$update_usb_source_dir/cleanup.sh"; then
         echo "Expected update-usb cleanup to unmount nested filesystems deepest-first." >&2
         ${pkgs.gnused}/bin/sed -n '1,140p' "$update_usb_source_dir/cleanup.sh" >&2
         exit 1
       fi
+
+      cleanup_test="$TMPDIR/update-usb-cleanup"
+      mkdir -p "$cleanup_test/bin"
+      {
+        printf '%s\n' '#!${pkgs.bash}/bin/bash'
+        printf '%s\n' "printf '%s\\n' / /sys /run /nix/store /home/stefan/games /mnt /mnt/boot /mnt/nix/store"
+      } > "$cleanup_test/bin/findmnt"
+      chmod +x "$cleanup_test/bin/findmnt"
+
+      {
+        printf '%s\n' '#!${pkgs.bash}/bin/bash'
+        printf '%s\n' '[ "$1" = "-q" ]'
+      } > "$cleanup_test/bin/mountpoint"
+      chmod +x "$cleanup_test/bin/mountpoint"
+
+      {
+        printf '%s\n' '#!${pkgs.bash}/bin/bash'
+        printf '%s\n' 'echo "$1" >> "$CLEANUP_UMOUNT_LOG"'
+      } > "$cleanup_test/bin/umount"
+      chmod +x "$cleanup_test/bin/umount"
+
+      export CLEANUP_UMOUNT_LOG="$cleanup_test/umount.log"
+      : > "$CLEANUP_UMOUNT_LOG"
+      (
+        export PATH="$cleanup_test/bin:$PATH"
+        MOUNT_POINT=/mnt
+        # shellcheck disable=SC1091
+        . "$update_usb_source_dir/cleanup.sh"
+        cleanup_mount_tree
+      )
+
+      cat > "$cleanup_test/expected-umounts" <<'EOF'
+      /mnt/nix/store
+      /mnt/boot
+      /mnt
+      EOF
+      if ! cmp -s "$cleanup_test/expected-umounts" "$CLEANUP_UMOUNT_LOG"; then
+        echo "Expected update-usb cleanup to unmount only the /mnt mount tree." >&2
+        echo "Expected:" >&2
+        ${pkgs.gnused}/bin/sed 's/^/  /' "$cleanup_test/expected-umounts" >&2
+        echo "Actual:" >&2
+        ${pkgs.gnused}/bin/sed 's/^/  /' "$CLEANUP_UMOUNT_LOG" >&2
+        exit 1
+      fi
+
+      for forbidden_cleanup_target in / /sys /run /nix/store /home/stefan/games; do
+        if ${pkgs.gnugrep}/bin/grep -Fxq "$forbidden_cleanup_target" "$CLEANUP_UMOUNT_LOG"; then
+          echo "update-usb cleanup attempted to unmount host path: $forbidden_cleanup_target" >&2
+          ${pkgs.gnused}/bin/sed 's/^/  /' "$CLEANUP_UMOUNT_LOG" >&2
+          exit 1
+        fi
+      done
 
       if ! ${pkgs.gnugrep}/bin/grep -Fq "#nixosConfigurations.usb.config.system.build.toplevel" "$update_usb_source_dir/metadata.sh"; then
         echo "Expected update-usb to prebuild the USB system toplevel attribute directly." >&2
