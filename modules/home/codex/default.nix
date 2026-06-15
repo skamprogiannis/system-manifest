@@ -302,7 +302,20 @@ in {
       ".codex/agents/security-reviewer.toml".text = builtins.readFile ./agents/security-reviewer.toml;
     };
 
-  home.activation.ensureWritableCodexConfig = lib.hm.dag.entryAfter ["writeBoundary"] ''
+  home.activation.ensureWritableCodexDirectory = lib.hm.dag.entryBefore ["checkLinkTargets"] ''
+    codex_dir="$HOME/.codex"
+    if [ -L "$codex_dir" ]; then
+      codex_target="$(readlink -f "$codex_dir" 2>/dev/null || true)"
+      case "$codex_target" in
+        "" | /nix/store/*)
+          run rm -f "$codex_dir"
+          ;;
+      esac
+    fi
+    run mkdir -p "$codex_dir"
+  '';
+
+  home.activation.ensureWritableCodexConfig = lib.hm.dag.entryAfter ["linkGeneration"] ''
     run mkdir -p "$HOME/.codex"
     run ${codexConfigMerger}/bin/merge-codex-config ${codexConfigSeed} "$HOME/.codex/config.toml"
   '';

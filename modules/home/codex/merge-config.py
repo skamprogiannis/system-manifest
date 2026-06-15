@@ -39,6 +39,8 @@ def load_current_config(config_path):
         backup_path = config_path.with_name(f"{config_path.name}.invalid-{stamp}")
         backup_path.write_bytes(config_path.read_bytes())
         return {}
+    except OSError:
+        return {}
 
 
 def atomic_write(path, text):

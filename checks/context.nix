@@ -20,6 +20,7 @@
   desktopZellijDevLayoutFile = pkgs.writeText "desktop-zellij-dev-layout" self.nixosConfigurations.desktop.config.home-manager.users.stefan.xdg.configFile."zellij/layouts/dev.kdl".text;
   updateUsbSourceDir = ../modules/home/scripts/usb/update-usb;
   usbHome = self.nixosConfigurations.usb.config.home-manager.users.stefan.home.path;
+  usbActivation = self.nixosConfigurations.usb.config.home-manager.users.stefan.home.activationPackage;
   usbInitrd = self.nixosConfigurations.usb.config.system.build.initialRamdisk;
   usbRamStoreInitrd = self.nixosConfigurations.usb.config.specialisation.ram-store.configuration.system.build.initialRamdisk;
   usbRamStorePrepareScript = pkgs.writeText "usb-ram-store-prepare-script" self.nixosConfigurations.usb.config.specialisation.ram-store.configuration.boot.initrd.systemd.services.initrd-usb-ram-store-prepare.script;

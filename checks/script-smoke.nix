@@ -7,6 +7,7 @@
     desktopZellijDevLayoutFile
     pkgs
     updateUsbSourceDir
+    usbActivation
     usbDmsServiceEnvironmentFile
     usbHome
     ;
@@ -23,6 +24,7 @@ in {
       desktop_home="${desktopHome}"
       desktop_activation="${desktopActivation}"
       update_usb_source_dir="${updateUsbSourceDir}"
+      usb_activation="${usbActivation}"
       usb_home="${usbHome}"
       export HOME="$TMPDIR/home"
       export XDG_RUNTIME_DIR="$TMPDIR/runtime"
@@ -197,6 +199,25 @@ in {
         exit 1
       fi
 
+      if ! ${pkgs.gnugrep}/bin/grep -Fq "ensureWritableCodexDirectory" "$usb_activation/activate"; then
+        echo "Expected USB Home Manager activation to repair a stale symlinked ~/.codex before link checks." >&2
+        ${pkgs.gnused}/bin/sed -n '/ensureWritableCodexDirectory/,/Activating/p' "$usb_activation/activate" >&2
+        exit 1
+      fi
+
+      codex_dir_line="$(${pkgs.gnugrep}/bin/grep -n 'Activating %s" "ensureWritableCodexDirectory' "$usb_activation/activate" | cut -d: -f1 | head -n1)"
+      check_links_line="$(${pkgs.gnugrep}/bin/grep -n 'Activating %s" "checkLinkTargets' "$usb_activation/activate" | cut -d: -f1 | head -n1)"
+      link_generation_line="$(${pkgs.gnugrep}/bin/grep -n 'Activating %s" "linkGeneration' "$usb_activation/activate" | cut -d: -f1 | head -n1)"
+      codex_config_line="$(${pkgs.gnugrep}/bin/grep -n 'Activating %s" "ensureWritableCodexConfig' "$usb_activation/activate" | cut -d: -f1 | head -n1)"
+      if [ -z "$codex_dir_line" ] || [ -z "$check_links_line" ] || [ "$codex_dir_line" -ge "$check_links_line" ]; then
+        echo "Expected Codex directory repair to run before Home Manager link collision checks." >&2
+        exit 1
+      fi
+      if [ -z "$link_generation_line" ] || [ -z "$codex_config_line" ] || [ "$codex_config_line" -le "$link_generation_line" ]; then
+        echo "Expected Codex config merge to run after Home Manager creates declarative file links." >&2
+        exit 1
+      fi
+
       codex_seed_path="$(${pkgs.gnused}/bin/sed -n 's|.*merge-codex-config \(/nix/store/[^ ]*-codex-config.toml\) .*|\1|p' "$desktop_activation/activate" | head -n1)"
       if [ -z "$codex_seed_path" ] || [ ! -f "$codex_seed_path" ]; then
         echo "Expected Home Manager activation to reference the generated Codex seed config." >&2
@@ -283,6 +304,44 @@ in {
       assert data["features"]["local_flag"] is True
       assert data["projects"]["/home/stefan/system-manifest"]["trust_level"] == "trusted"
       assert data["projects"]["/tmp/other"]["trust_level"] == "trusted"
+      PY
+
+      symlink_dir="$TMPDIR/codex/symlink"
+      symlink_config="$symlink_dir/config.toml"
+      mkdir -p "$symlink_dir"
+      ln -s "$codex_seed_path" "$symlink_config"
+      run_codex_merge "$symlink_config"
+      ${codexConfigPython}/bin/python3 - "$symlink_config" <<'PY'
+      import os
+      from pathlib import Path
+      import stat
+      import sys
+      import tomllib
+
+      path = Path(sys.argv[1])
+      assert not path.is_symlink()
+      assert stat.S_IMODE(os.stat(path).st_mode) == 0o600
+      with path.open("rb") as f:
+          data = tomllib.load(f)
+      assert data["model"] == "gpt-5.5"
+      assert data["projects"]["/home/stefan/system-manifest"]["trust_level"] == "trusted"
+      PY
+
+      broken_symlink_dir="$TMPDIR/codex/broken-symlink"
+      broken_symlink="$broken_symlink_dir/config.toml"
+      mkdir -p "$broken_symlink_dir"
+      ln -s "$TMPDIR/codex/missing-config.toml" "$broken_symlink"
+      run_codex_merge "$broken_symlink"
+      ${codexConfigPython}/bin/python3 - "$broken_symlink" <<'PY'
+      from pathlib import Path
+      import sys
+      import tomllib
+
+      path = Path(sys.argv[1])
+      assert not path.is_symlink()
+      with path.open("rb") as f:
+          data = tomllib.load(f)
+      assert data["model"] == "gpt-5.5"
       PY
 
       malformed_dir="$TMPDIR/codex/malformed"
