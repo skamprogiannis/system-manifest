@@ -22,7 +22,10 @@ in {
   };
 
   config.home.packages =
-    lib.optionals cfg.enableSetupPersistentUsb [
+    [
+      (import ./store-status.nix {inherit pkgs;})
+    ]
+    ++ lib.optionals cfg.enableSetupPersistentUsb [
       (import ./setup-persistent-usb.nix {inherit pkgs usb;})
     ]
     ++ lib.optionals cfg.enableUpdateUsb [
