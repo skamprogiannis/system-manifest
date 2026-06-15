@@ -97,47 +97,6 @@
     )
   '';
 
-  greeterLauncherPatchScript = pkgs.writeText "patch-greeter-launcher.py" (lib.concatStringsSep "\n" [
-    "import sys"
-    "from pathlib import Path"
-    ""
-    "launcher = Path(sys.argv[1])"
-    "if not launcher.exists():"
-    "    sys.exit(0)"
-    ""
-    "text = launcher.read_text(encoding=\"utf-8\")"
-    "old_check = ("
-    "    \"        if ! command -v start-hyprland >/dev/null 2>&1 && ! command -v Hyprland >/dev/null 2>&1; then\\n\""
-    "    \"            echo \\\"Error: neither 'start-hyprland' nor 'Hyprland' was found in PATH\\\" >&2\\n\""
-    "    \"            exit 1\\n\""
-    "    \"        fi\\n\""
-    ")"
-    "new_check = ("
-    "    \"        if ! command -v Hyprland >/dev/null 2>&1; then\\n\""
-    "    \"            echo \\\"Error: Hyprland was not found in PATH\\\" >&2\\n\""
-    "    \"            exit 1\\n\""
-    "    \"        fi\\n\""
-    ")"
-    "if old_check not in text:"
-    "    raise RuntimeError(\"greeter Hyprland availability check not found\")"
-    "text = text.replace(old_check, new_check, 1)"
-    ""
-    "old_launch = ("
-    "    '        if command -v start-hyprland >/dev/null 2>&1; then\\n'"
-    "    '            exec_compositor \"hyprland\" start-hyprland -- --config \"$COMPOSITOR_CONFIG\"\\n'"
-    "    '        else\\n'"
-    "    '            exec_compositor \"hyprland\" Hyprland -c \"$COMPOSITOR_CONFIG\"\\n'"
-    "    '        fi\\n'"
-    ")"
-    "new_launch = '        exec_compositor \"hyprland\" Hyprland -c \"$COMPOSITOR_CONFIG\"\\n'"
-    "if old_launch not in text:"
-    "    raise RuntimeError(\"greeter Hyprland launch block not found\")"
-    "text = text.replace(old_launch, new_launch, 1)"
-    ""
-    "launcher.write_text(text, encoding=\"utf-8\")"
-    ""
-  ]);
-
   greeterBasePackage = inputs.dms.packages.${pkgs.stdenv.hostPlatform.system}.dms-shell;
 
   greeterPatchedPackage = greeterBasePackage.overrideAttrs (old: {
@@ -151,12 +110,6 @@
           chmod a-w "$target_qml"
         fi
 
-        target_launcher="$out/share/quickshell/dms/Modules/Greetd/assets/dms-greeter"
-        if [ -f "$target_launcher" ]; then
-          chmod u+w "$target_launcher"
-          ${pkgs.python3}/bin/python3 ${greeterLauncherPatchScript} "$target_launcher"
-          chmod a-w "$target_launcher"
-        fi
       '';
   });
 

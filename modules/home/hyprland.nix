@@ -46,9 +46,11 @@
 
         ln -s Hyprland $out/bin/hyprland
 
-        cat > $out/bin/start-hyprland <<'EOF'
+        cat > $out/bin/start-hyprland <<EOF
         #!${pkgs.bash}/bin/bash
-        exec "$(dirname "$0")/Hyprland" "$@"
+        set -euo pipefail
+
+        exec ${hyprland-pkg}/bin/start-hyprland --path "$out/bin/Hyprland" "\$@"
         EOF
         chmod +x $out/bin/start-hyprland
       '';
