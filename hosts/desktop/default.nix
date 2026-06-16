@@ -125,7 +125,6 @@
     package = pkgs.ollama-cuda;
     loadModels = [
       "qwen2.5-coder:14b"
-      "llama3.2-vision"
       "gemma3:4b"
     ];
   };
