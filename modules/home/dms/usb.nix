@@ -37,10 +37,6 @@ in {
     };
   };
 
-  systemd.user.services.dms.Service.Environment = [
-    "DMS_FORCE_EXTWS=1"
-  ];
-
   xdg.configFile."hypr/dms/outputs.lua".text = ''
     -- USB displays are hardware-specific; let Hyprland auto-select the panel.
     hl.monitor({ output = "", mode = "preferred", position = "auto", scale = "1" })

@@ -188,10 +188,11 @@ in {
         fi
       }
 
-      assert_log_contains_file \
-        "DMS_FORCE_EXTWS=1" \
-        ${usbDmsServiceEnvironmentFile} \
-        "Expected USB DMS service to force ext-workspace state instead of the fragile Hyprland event socket."
+      if ${pkgs.gnugrep}/bin/grep -Fq "DMS_FORCE_EXTWS=1" ${usbDmsServiceEnvironmentFile}; then
+        echo "Expected USB DMS service to use Hyprland-native workspace state instead of forcing ext-workspace." >&2
+        ${pkgs.gnused}/bin/sed 's/^/  /' ${usbDmsServiceEnvironmentFile} >&2
+        exit 1
+      fi
 
       if ! ${pkgs.gnugrep}/bin/grep -Fq "/bin/merge-codex-config" "$desktop_activation/activate"; then
         echo "Expected Home Manager activation to call the generated Codex config merger." >&2
