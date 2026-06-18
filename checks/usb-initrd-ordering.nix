@@ -116,6 +116,20 @@ in {
         fi
       }
 
+      assert_initrd_bins() {
+        local initrd_dir="$1"
+        local label="$2"
+        shift 2
+
+        for name in "$@"; do
+          if [ ! -e "$initrd_dir/bin/$name" ]; then
+            echo "Expected $label initrd to contain /bin/$name." >&2
+            find "$initrd_dir/bin" -maxdepth 1 \( -type f -o -type l \) | sort >&2
+            exit 1
+          fi
+        done
+      }
+
       assert_default_units() {
         local generated_dir="$1"
         local ro_unit rw_unit store_unit
@@ -154,9 +168,9 @@ in {
         assert_contains "Type=none" "$rw_unit" "ram-store /nix/.rw-store unit"
         assert_contains "bind" "$rw_unit" "ram-store /nix/.rw-store unit"
         assert_contains "Before=sysroot-nix-.ro\\x2dstore.mount sysroot-nix-.rw\\x2dstore.mount" "$prep_unit" "ram-store prep unit"
-        assert_contains "${pkgs.util-linux}/bin/mountpoint -q" ${usbRamStorePrepareScript} "ram-store prep script"
-        assert_contains "${pkgs.util-linux}/bin/mount -t tmpfs" ${usbRamStorePrepareScript} "ram-store prep script"
-        assert_contains "${pkgs.coreutils}/bin/cp" ${usbRamStorePrepareScript} "ram-store prep script"
+        assert_contains "/bin/mountpoint -q" ${usbRamStorePrepareScript} "ram-store prep script"
+        assert_contains "/bin/mount -t tmpfs" ${usbRamStorePrepareScript} "ram-store prep script"
+        assert_contains "/bin/cp" ${usbRamStorePrepareScript} "ram-store prep script"
         assert_contains "nixos-usb-store-diagnostics" ${usbRamStorePrepareScript} "ram-store prep script"
         assert_contains "image_bytes" ${usbRamStorePrepareScript} "ram-store prep script"
         assert_contains "required_bytes" ${usbRamStorePrepareScript} "ram-store prep script"
@@ -184,18 +198,18 @@ in {
         assert_contains_once "upperdir=/sysroot/nix/.rw-store/store" "$store_unit" "host-auto /nix/store unit"
         assert_contains_once "workdir=/sysroot/nix/.rw-store/work" "$store_unit" "host-auto /nix/store unit"
         assert_contains "find_host_store_candidates" ${usbHostAutoStorePrepareScript} "host-auto prep script"
-        assert_contains "${pkgs.util-linux}/bin/lsblk" ${usbHostAutoStorePrepareScript} "host-auto prep script"
-        assert_contains "${pkgs.util-linux}/bin/mountpoint -q" ${usbHostAutoStorePrepareScript} "host-auto prep script"
-        assert_contains '${pkgs.util-linux}/bin/mount -t "$mount_type" -o rw,noatime' ${usbHostAutoStorePrepareScript} "host-auto prep script"
-        assert_contains "${pkgs.coreutils}/bin/mkdir -m 0755 -p" ${usbHostAutoStorePrepareScript} "host-auto prep script"
+        assert_contains "/bin/lsblk" ${usbHostAutoStorePrepareScript} "host-auto prep script"
+        assert_contains "/bin/mountpoint -q" ${usbHostAutoStorePrepareScript} "host-auto prep script"
+        assert_contains '/bin/mount -t "$mount_type" -o rw,noatime' ${usbHostAutoStorePrepareScript} "host-auto prep script"
+        assert_contains "/bin/mkdir -m 0755 -p" ${usbHostAutoStorePrepareScript} "host-auto prep script"
         assert_contains ".nixos-usb/store" ${usbHostAutoStorePrepareScript} "host-auto prep script"
         assert_contains "part:0:ntfs)" ${usbHostAutoStorePrepareScript} "host-auto prep script"
         assert_contains "part:0:exfat)" ${usbHostAutoStorePrepareScript} "host-auto prep script"
         assert_contains "host-rw" ${usbHostAutoStorePrepareScript} "host-auto prep script"
         assert_contains "usb-rw" ${usbHostAutoStorePrepareScript} "host-auto prep script"
-        assert_contains "${pkgs.util-linux}/bin/mount --bind" ${usbHostAutoStorePrepareScript} "host-auto prep script"
+        assert_contains "/bin/mount --bind" ${usbHostAutoStorePrepareScript} "host-auto prep script"
         assert_contains "writable-host-lower-usb-rw-overlay" ${usbHostAutoStorePrepareScript} "host-auto prep script"
-        assert_contains "sort -k1,1n -k2,2nr" ${usbHostAutoStorePrepareScript} "host-auto prep script"
+        assert_contains "/bin/sort -k1,1n -k2,2nr" ${usbHostAutoStorePrepareScript} "host-auto prep script"
         assert_contains "nixos-usb-store-diagnostics" ${usbHostAutoStorePrepareScript} "host-auto prep script"
         assert_contains "candidate_count" ${usbHostAutoStorePrepareScript} "host-auto prep script"
         assert_contains "fallback_reason" ${usbHostAutoStorePrepareScript} "host-auto prep script"
@@ -212,10 +226,12 @@ in {
 
       unpack_initrd ${usbRamStoreInitrd} ram-initrd
       generate_mount_units ram-initrd ram-generated
+      assert_initrd_bins ram-initrd ram-store cat cp ln lsblk mkdir mount mountpoint mv rm sort stat umount wc
       assert_ram_units ram-initrd ram-generated
 
       unpack_initrd ${usbHostAutoStoreInitrd} host-auto-initrd
       generate_mount_units host-auto-initrd host-auto-generated
+      assert_initrd_bins host-auto-initrd host-auto cat cp ln lsblk mkdir mount mountpoint mv rm sort stat umount wc
       assert_host_auto_units host-auto-initrd host-auto-generated
 
       touch "$out"

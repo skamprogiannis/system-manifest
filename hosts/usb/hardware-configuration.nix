@@ -8,8 +8,6 @@
 }: let
   usb = import ../../modules/shared/usb-constants.nix;
   usbStore = config.systemManifest.usb.store;
-  coreutils = "${pkgs.coreutils}/bin";
-  utilLinux = "${pkgs.util-linux}/bin";
   roStoreDevice =
     if usbStore.mode == "ram-backed"
     then "/sysroot/nix/.ram-store-image/nix-store.squashfs"
@@ -95,6 +93,21 @@ in {
       "exfat"
     ];
     boot.initrd.systemd.emergencyAccess = true;
+    boot.initrd.systemd.extraBin = lib.mkIf (usbStore.mode == "ram-backed" || usbStore.mode == "host-auto") {
+      cat = "${pkgs.coreutils}/bin/cat";
+      cp = "${pkgs.coreutils}/bin/cp";
+      ln = "${pkgs.coreutils}/bin/ln";
+      lsblk = "${pkgs.util-linux}/bin/lsblk";
+      mkdir = "${pkgs.coreutils}/bin/mkdir";
+      mount = "${pkgs.util-linux}/bin/mount";
+      mountpoint = "${pkgs.util-linux}/bin/mountpoint";
+      mv = "${pkgs.coreutils}/bin/mv";
+      rm = "${pkgs.coreutils}/bin/rm";
+      sort = "${pkgs.coreutils}/bin/sort";
+      stat = "${pkgs.coreutils}/bin/stat";
+      umount = "${pkgs.util-linux}/bin/umount";
+      wc = "${pkgs.coreutils}/bin/wc";
+    };
     hardware.enableAllFirmware = true;
 
     # Enable LUKS support
@@ -212,25 +225,25 @@ in {
 
             fall_back_to_usb_image() {
               reason="$1"
-              if ${utilLinux}/mountpoint -q "$ram_store_dir"; then
-                ${utilLinux}/umount "$ram_store_dir" || true
+              if /bin/mountpoint -q "$ram_store_dir"; then
+                /bin/umount "$ram_store_dir" || true
               fi
-              ${coreutils}/rm -rf "$ram_store_dir"
-              ${coreutils}/mkdir -p "$ram_store_dir"
-              ${coreutils}/ln -sfn "$lower_store_image" "$ram_store_image"
+              /bin/rm -rf "$ram_store_dir"
+              /bin/mkdir -p "$ram_store_dir"
+              /bin/ln -sfn "$lower_store_image" "$ram_store_image"
               printf '%s\n' "writable-scratch-overlay-usb-lower" > /run/nixos-usb-store-mode
               write_diag fallback_reason "$reason"
               write_diag selected_lower usb
               write_diag selected_rw usb-root-scratch
             }
 
-            ${coreutils}/mkdir -p /run "$ram_store_dir" "$scratch_store_dir"
-            ${coreutils}/rm -rf "$scratch_store_dir/store" "$scratch_store_dir/work"
+            /bin/mkdir -p /run "$ram_store_dir" "$scratch_store_dir"
+            /bin/rm -rf "$scratch_store_dir/store" "$scratch_store_dir/work"
             : > "$diagnostics_file"
             write_diag requested_mode ram-backed
             write_diag store_image "$lower_store_image"
 
-            image_bytes="$(${coreutils}/stat -c %s "$lower_store_image")"
+            image_bytes="$(/bin/stat -c %s "$lower_store_image")"
             mem_available_kib="$(read_meminfo_kib MemAvailable || read_meminfo_kib MemTotal)"
             available_bytes=$((mem_available_kib * 1024))
             required_bytes=$((image_bytes + ${toString usbStore.ramModeSafetyMiB} * 1024 * 1024))
@@ -247,8 +260,8 @@ in {
               exit 0
             fi
 
-            if ${utilLinux}/mount -t tmpfs -o mode=0755,size=${toString usbStore.ramImageTmpfsPercent}% tmpfs "$ram_store_dir" \
-              && ${coreutils}/cp "$lower_store_image" "$ram_store_image"; then
+            if /bin/mount -t tmpfs -o mode=0755,size=${toString usbStore.ramImageTmpfsPercent}% tmpfs "$ram_store_dir" \
+              && /bin/cp "$lower_store_image" "$ram_store_image"; then
               printf '%s\n' "writable-scratch-overlay-ram-lower" > /run/nixos-usb-store-mode
               write_diag selected_lower ram
               write_diag selected_rw usb-root-scratch
@@ -304,7 +317,7 @@ in {
             find_host_store_candidates() {
               min_bytes="$1"
 
-              ${utilLinux}/lsblk -pnrbo PATH,TYPE,RM,FSTYPE,SIZE |
+              /bin/lsblk -pnrbo PATH,TYPE,RM,FSTYPE,SIZE |
                 while IFS=' ' read -r path type removable fstype size; do
                   case "$type:$removable:$fstype" in
                     part:0:ext4 | part:0:ext3 | part:0:ext2 | part:0:xfs | part:0:btrfs)
@@ -324,40 +337,40 @@ in {
                       ;;
                   esac
                 done |
-                ${coreutils}/sort -k1,1n -k2,2nr
+                /bin/sort -k1,1n -k2,2nr
             }
 
             prepare_rw_dirs() {
               rw_root="$1"
-              ${coreutils}/rm -rf "$rw_root/store" "$rw_root/work"
-              ${coreutils}/mkdir -m 0755 -p "$rw_root/store" "$rw_root/work"
+              /bin/rm -rf "$rw_root/store" "$rw_root/work"
+              /bin/mkdir -m 0755 -p "$rw_root/store" "$rw_root/work"
             }
 
             prepare_host_rw() {
               prepare_rw_dirs "$host_rw_root"
-              ${coreutils}/mkdir -p "$rw_store_root"
-              if ${utilLinux}/mountpoint -q "$rw_store_root"; then
-                ${utilLinux}/umount "$rw_store_root" || true
+              /bin/mkdir -p "$rw_store_root"
+              if /bin/mountpoint -q "$rw_store_root"; then
+                /bin/umount "$rw_store_root" || true
               fi
-              ${utilLinux}/mount --bind "$host_rw_root" "$rw_store_root"
+              /bin/mount --bind "$host_rw_root" "$rw_store_root"
             }
 
             prepare_usb_rw() {
-              if ${utilLinux}/mountpoint -q "$rw_store_root"; then
-                ${utilLinux}/umount "$rw_store_root" || true
+              if /bin/mountpoint -q "$rw_store_root"; then
+                /bin/umount "$rw_store_root" || true
               fi
-              ${coreutils}/mkdir -p "$rw_store_root"
+              /bin/mkdir -p "$rw_store_root"
               prepare_rw_dirs "$rw_store_root"
             }
 
             prepare_usb_fallback() {
               reason="$1"
-              if ${utilLinux}/mountpoint -q "$host_store_mount"; then
-                ${utilLinux}/umount "$host_store_mount" || true
+              if /bin/mountpoint -q "$host_store_mount"; then
+                /bin/umount "$host_store_mount" || true
               fi
-              ${coreutils}/rm -rf "$host_store_mount"
-              ${coreutils}/mkdir -p "$host_store_root" "$host_rw_root"
-              ${coreutils}/ln -sfn "$lower_store_image" "$host_store_image"
+              /bin/rm -rf "$host_store_mount"
+              /bin/mkdir -p "$host_store_root" "$host_rw_root"
+              /bin/ln -sfn "$lower_store_image" "$host_store_image"
               prepare_usb_rw
               printf '%s\n' "writable-overlay-host-auto-usb-fallback" > /run/nixos-usb-store-mode
               write_diag fallback_reason "$reason"
@@ -365,11 +378,11 @@ in {
               write_diag selected_rw usb-root-scratch
             }
 
-            image_bytes="$(${coreutils}/stat -c %s "$lower_store_image")"
+            image_bytes="$(/bin/stat -c %s "$lower_store_image")"
             min_bytes=$((image_bytes + (upper_size_mib + 1024) * 1024 * 1024))
             candidate_file=/run/nixos-usb-host-store-candidates
 
-            ${coreutils}/mkdir -p /run "$host_store_mount" "$rw_store_root"
+            /bin/mkdir -p /run "$host_store_mount" "$rw_store_root"
             : > "$diagnostics_file"
             : > "$mount_error"
             write_diag requested_mode host-auto
@@ -378,7 +391,7 @@ in {
             write_diag upper_size_mib "$upper_size_mib"
             write_diag min_candidate_bytes "$min_bytes"
             find_host_store_candidates "$min_bytes" > "$candidate_file"
-            write_diag candidate_count "$(${coreutils}/wc -l < "$candidate_file")"
+            write_diag candidate_count "$(/bin/wc -l < "$candidate_file")"
 
             if [ ! -s "$candidate_file" ]; then
               echo "initrd-usb-host-auto-store-prepare: no host store candidates found" >&2
@@ -393,22 +406,22 @@ in {
               write_diag attempted_mount_type "$mount_type"
               write_diag attempted_rw_policy "$rw_policy"
 
-              if ! ${utilLinux}/mount -t "$mount_type" -o rw,noatime "$device" "$host_store_mount" 2>"$mount_error"; then
+              if ! /bin/mount -t "$mount_type" -o rw,noatime "$device" "$host_store_mount" 2>"$mount_error"; then
                 echo "initrd-usb-host-auto-store-prepare: failed to mount $device ($fstype)" >&2
                 if [ -s "$mount_error" ]; then
-                  ${coreutils}/cat "$mount_error" >&2
+                  /bin/cat "$mount_error" >&2
                 fi
                 continue
               fi
 
-              ${coreutils}/mkdir -p "$host_store_root" "$host_rw_root"
-              ${coreutils}/rm -f "$host_store_image.tmp"
+              /bin/mkdir -p "$host_store_root" "$host_rw_root"
+              /bin/rm -f "$host_store_image.tmp"
 
-              if ${coreutils}/cp "$lower_store_image" "$host_store_image.tmp" && ${coreutils}/mv "$host_store_image.tmp" "$host_store_image"; then
+              if /bin/cp "$lower_store_image" "$host_store_image.tmp" && /bin/mv "$host_store_image.tmp" "$host_store_image"; then
                 if [ "$rw_policy" = "host-rw" ]; then
                   if ! prepare_host_rw; then
                     echo "initrd-usb-host-auto-store-prepare: failed to prepare host rw overlay on $device ($fstype)" >&2
-                    ${utilLinux}/umount "$host_store_mount" || true
+                    /bin/umount "$host_store_mount" || true
                     continue
                   fi
                   printf '%s\n' "writable-host-auto-overlay" > /run/nixos-usb-store-mode
@@ -416,7 +429,7 @@ in {
                 else
                   if ! prepare_usb_rw; then
                     echo "initrd-usb-host-auto-store-prepare: failed to prepare USB rw overlay for $device ($fstype)" >&2
-                    ${utilLinux}/umount "$host_store_mount" || true
+                    /bin/umount "$host_store_mount" || true
                     continue
                   fi
                   printf '%s\n' "writable-host-lower-usb-rw-overlay" > /run/nixos-usb-store-mode
@@ -430,8 +443,8 @@ in {
               fi
 
               echo "initrd-usb-host-auto-store-prepare: failed to copy squashfs to $device ($fstype)" >&2
-              ${coreutils}/rm -f "$host_store_image.tmp"
-              ${utilLinux}/umount "$host_store_mount" || true
+              /bin/rm -f "$host_store_image.tmp"
+              /bin/umount "$host_store_mount" || true
             done < "$candidate_file"
 
             echo "initrd-usb-host-auto-store-prepare: using USB-root fallback" >&2
