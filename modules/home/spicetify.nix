@@ -41,9 +41,8 @@
     }
 
     .main-contextMenu-menu,
-    .main-contextMenu-tippy > div,
-    ul > div[data-tippy-root],
     .Dropdown-menu,
+    [data-tippy-root] [role="menu"],
     .marketplace-code-editor,
     .main-trackCreditsModal-mainSection,
     .main-trackCreditsModal-originalCredits,
@@ -52,7 +51,8 @@
     #recent-searches-dropdown > div,
     #search-dropdown > div,
     #search-suggestions-loading-dropdown > div,
-    .CqXpLitKxRFvrULhC2kW.CJCWzxw0S_yJx0wDlvPQ.BGJFigbt4tZ2RFINF8Xu,
+    [role="dialog"]:has(input[placeholder="What do you want to play?"]),
+    [role="dialog"]:has(.search-modal-listbox),
     .encore-announcement-set {
       backdrop-filter: blur(${toString hazy.popoverBlurPx}px) !important;
       -webkit-backdrop-filter: blur(${toString hazy.popoverBlurPx}px) !important;
@@ -68,28 +68,48 @@
       -webkit-backdrop-filter: none !important;
       background: none !important;
       mask-image: none !important;
+      pointer-events: none !important;
+    }
+
+    .main-contextMenu-tippy,
+    .main-contextMenu-tippy > div,
+    [data-tippy-root] {
+      background: transparent !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      overflow: visible !important;
     }
 
     .main-contextMenu-menu,
-    .main-contextMenu-tippy > div,
-    ul > div[data-tippy-root],
-    .Dropdown-menu {
+    .Dropdown-menu,
+    [data-tippy-root] [role="menu"] {
       background-color: rgba(var(--spice-rgb-card), ${hazy.cardOpacity}) !important;
-      overflow: hidden;
+      overflow: visible !important;
     }
 
-    .main-contextMenu-menuItem > div {
+    .main-contextMenu-menuItem > div,
+    .main-contextMenu-menuItemButton {
       backdrop-filter: none !important;
       -webkit-backdrop-filter: none !important;
     }
 
+    [data-tippy-root] [role="menu"] button,
+    .main-contextMenu-menu button,
+    .Dropdown-menu button {
+      pointer-events: auto !important;
+    }
+
+    [role="dialog"]:has(input[placeholder="What do you want to play?"]),
+    [role="dialog"]:has(.search-modal-listbox),
     .search-modal-listbox,
     .search-modal-keyboard-accessibility-bar,
-    .VZpSxFV1mVKehHTF1r9W > div {
+    [role="dialog"]:has(.search-modal-listbox) > div,
+    [role="dialog"]:has(input[placeholder="What do you want to play?"]) > div {
       background-color: rgba(var(--spice-rgb-card), ${hazy.cardOpacity}) !important;
     }
 
-    div.ZuOMABESRg0Bpv8S9642 > div {
+    [role="dialog"]:has(.search-modal-listbox) input,
+    [role="dialog"]:has(input[placeholder="What do you want to play?"]) input {
       background-color: rgba(var(--spice-rgb-card), ${hazy.cardOpacity}) !important;
     }
   '';
