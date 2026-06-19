@@ -86,6 +86,47 @@ in {
         exit 1
       fi
 
+      metadata_test="$TMPDIR/update-usb-metadata"
+      mkdir -p "$metadata_test/bin"
+      {
+        printf '%s\n' '#!${pkgs.bash}/bin/bash'
+        printf '%s\n' 'echo "simulated nix eval failure" >&2'
+        printf '%s\n' 'exit 42'
+      } > "$metadata_test/bin/nix"
+      chmod +x "$metadata_test/bin/nix"
+
+      set +e
+      (
+        export PATH="$metadata_test/bin:$PATH"
+        FLAKE_DIR=/fake-flake
+        # shellcheck disable=SC1091
+        . "$update_usb_source_dir/metadata.sh"
+        capture_desired_system_metadata
+      ) > "$metadata_test/capture.out" 2>"$metadata_test/capture.err"
+      metadata_status=$?
+      set -e
+
+      if [ "$metadata_status" -eq 0 ]; then
+        echo "Expected desired USB metadata capture to fail when toplevel evaluation fails." >&2
+        ${pkgs.gnused}/bin/sed 's/^/  /' "$metadata_test/capture.out" >&2
+        ${pkgs.gnused}/bin/sed 's/^/  /' "$metadata_test/capture.err" >&2
+        exit 1
+      fi
+
+      if ! ${pkgs.gnugrep}/bin/grep -Fq "refusing to update USB before touching it" "$update_usb_source_dir/main.sh"; then
+        echo "Expected update-usb to abort before touching the USB when desired toplevel evaluation fails." >&2
+        ${pkgs.gnused}/bin/sed -n '80,120p' "$update_usb_source_dir/main.sh" >&2
+        exit 1
+      fi
+
+      capture_line="$(${pkgs.gnugrep}/bin/grep -n 'capture_desired_system_metadata' "$update_usb_source_dir/main.sh" | ${pkgs.coreutils}/bin/cut -d: -f1 | ${pkgs.coreutils}/bin/head -n1)"
+      luks_line="$(${pkgs.gnugrep}/bin/grep -n 'phase_begin "opening-luks"' "$update_usb_source_dir/main.sh" | ${pkgs.coreutils}/bin/cut -d: -f1 | ${pkgs.coreutils}/bin/head -n1)"
+      if [ -z "$capture_line" ] || [ -z "$luks_line" ] || [ "$capture_line" -ge "$luks_line" ]; then
+        echo "Expected update-usb to capture desired metadata before opening LUKS." >&2
+        ${pkgs.gnused}/bin/sed -n '80,140p' "$update_usb_source_dir/main.sh" >&2
+        exit 1
+      fi
+
       cleanup_test="$TMPDIR/update-usb-cleanup"
       mkdir -p "$cleanup_test/bin"
       {

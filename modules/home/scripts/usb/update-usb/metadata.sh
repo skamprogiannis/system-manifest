@@ -41,9 +41,11 @@ capture_desired_system_metadata() {
   DESIRED_SYSTEM_TOPLEVEL=""
   DESIRED_INIT_RELATIVE=""
 
-  if DESIRED_SYSTEM_TOPLEVEL="$(read_desired_system_toplevel)"; then
-    DESIRED_INIT_RELATIVE="${DESIRED_SYSTEM_TOPLEVEL#/nix/store/}/init"
+  if ! DESIRED_SYSTEM_TOPLEVEL="$(read_desired_system_toplevel)"; then
+    return 1
   fi
+
+  DESIRED_INIT_RELATIVE="${DESIRED_SYSTEM_TOPLEVEL#/nix/store/}/init"
 }
 
 version_json_field() {

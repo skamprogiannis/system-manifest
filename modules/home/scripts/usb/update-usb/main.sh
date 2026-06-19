@@ -90,7 +90,10 @@ if [ ! -d "$FLAKE_DIR" ] || [ ! -f "$FLAKE_DIR/flake.nix" ]; then
 fi
 
 EXPECTED_CONFIG_REVISION="$(read_expected_config_revision || true)"
-capture_desired_system_metadata
+if ! capture_desired_system_metadata; then
+  echo "Error: refusing to update USB before touching it because the desired USB system path could not be evaluated." >&2
+  exit 1
+fi
 echo "Source flake dir: $FLAKE_DIR"
 if [ -n "$EXPECTED_CONFIG_REVISION" ]; then
   echo "Source USB revision: $EXPECTED_CONFIG_REVISION"
