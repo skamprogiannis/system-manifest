@@ -257,6 +257,58 @@ in {
     vim.cmd("qa!")
     LUA
 
+    cat > check-go-format.lua <<'LUA'
+    local function fail(message)
+      io.stderr:write(message .. "\n")
+      vim.cmd("cquit")
+    end
+
+    local function write_file(path, text)
+      local file = assert(io.open(path, "w"))
+      file:write(text)
+      file:close()
+    end
+
+    local root = vim.fn.tempname()
+    vim.fn.mkdir(root, "p")
+    local path = root .. "/main.go"
+    write_file(path, table.concat({
+      "package main",
+      "",
+      "import \"fmt\"",
+      "",
+      "func main() {",
+      "if true {",
+      "fmt.Println(\"ok\")",
+      "}",
+      "}",
+      "",
+    }, "\n"))
+
+    vim.cmd("edit " .. vim.fn.fnameescape(path))
+    if vim.bo.filetype ~= "go" then
+      fail("expected Go filetype for " .. path .. ", got " .. vim.bo.filetype)
+    end
+
+    local ok, conform = pcall(require, "conform")
+    if not ok then
+      fail("conform.nvim must be available")
+    end
+
+    local attempted = conform.format({ async = false, timeout_ms = 2000 })
+    if attempted ~= true then
+      fail("conform did not attempt Go formatting")
+    end
+
+    local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+    local text = table.concat(lines, "\n")
+    if not text:find("\tif true {", 1, true) or not text:find("\t\tfmt.Println(\"ok\")", 1, true) then
+      fail("gofmt did not apply canonical tab indentation")
+    end
+
+    vim.cmd("qa!")
+    LUA
+
     ${pkgs.coreutils}/bin/timeout 20s \
       ${desktopHome}/bin/nvim --headless -n -i NONE -u ${desktopNeovimInitFile} \
       +"lua dofile('$PWD/check-lsp-health.lua')"
@@ -264,6 +316,10 @@ in {
     ${pkgs.coreutils}/bin/timeout 20s \
       ${desktopHome}/bin/nvim --headless -n -i NONE -u ${desktopNeovimInitFile} \
       +"lua dofile('$PWD/check-clang-format-indent.lua')"
+
+    ${pkgs.coreutils}/bin/timeout 20s \
+      ${desktopHome}/bin/nvim --headless -n -i NONE -u ${desktopNeovimInitFile} \
+      +"lua dofile('$PWD/check-go-format.lua')"
 
     touch "$out"
   '';

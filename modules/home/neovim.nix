@@ -447,6 +447,7 @@ in {
             nix = ["alejandra"];
             c = ["clang_format"];
             cpp = ["clang_format"];
+            go = ["gofmt"];
           };
         };
       };
