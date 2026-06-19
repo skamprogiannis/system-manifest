@@ -119,12 +119,31 @@ in {
       assert_initrd_bins() {
         local initrd_dir="$1"
         local label="$2"
+        local bin_dir
         shift 2
 
+        bin_dir="$initrd_dir/bin"
+        if [ -L "$bin_dir" ]; then
+          bin_dir="$initrd_dir$(readlink "$bin_dir")"
+        fi
+
         for name in "$@"; do
-          if [ ! -e "$initrd_dir/bin/$name" ]; then
+          local bin_path="$bin_dir/$name"
+          local target_path="$bin_path"
+
+          if [ -L "$bin_path" ]; then
+            local link_target
+            link_target="$(readlink "$bin_path")"
+            case "$link_target" in
+              /nix/store/*)
+                target_path="$initrd_dir$link_target"
+                ;;
+            esac
+          fi
+
+          if [ ! -e "$target_path" ]; then
             echo "Expected $label initrd to contain /bin/$name." >&2
-            find "$initrd_dir/bin" -maxdepth 1 \( -type f -o -type l \) | sort >&2
+            find "$bin_dir" -maxdepth 1 \( -type f -o -type l \) | sort >&2
             exit 1
           fi
         done

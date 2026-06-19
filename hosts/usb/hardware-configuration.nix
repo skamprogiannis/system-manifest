@@ -93,7 +93,7 @@ in {
       "exfat"
     ];
     boot.initrd.systemd.emergencyAccess = true;
-    boot.initrd.systemd.extraBin = lib.mkIf (usbStore.mode == "ram-backed" || usbStore.mode == "host-auto") {
+    boot.initrd.systemd.extraBin = lib.mkIf (usbStore.mode == "ram-backed" || usbStore.mode == "host-auto") (lib.mapAttrs (_: lib.mkDefault) {
       cat = "${pkgs.coreutils}/bin/cat";
       cp = "${pkgs.coreutils}/bin/cp";
       ln = "${pkgs.coreutils}/bin/ln";
@@ -107,7 +107,7 @@ in {
       stat = "${pkgs.coreutils}/bin/stat";
       umount = "${pkgs.util-linux}/bin/umount";
       wc = "${pkgs.coreutils}/bin/wc";
-    };
+    });
     hardware.enableAllFirmware = true;
 
     # Enable LUKS support
