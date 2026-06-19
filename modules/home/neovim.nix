@@ -3,7 +3,18 @@
   lib,
   pkgs,
   ...
-}: {
+}: let
+  pretty-hover = pkgs.vimUtils.buildVimPlugin {
+    pname = "pretty-hover";
+    version = "2026-05-22";
+    src = pkgs.fetchFromGitHub {
+      owner = "Fildo7525";
+      repo = "pretty_hover";
+      rev = "934df974ef6158b100fe910e8556e6c4a66614c2";
+      sha256 = "1yqpvqmn71b4jga1b9sf0h4rknydv1xsgqqzyqg7famxg952rg72";
+    };
+  };
+in {
   programs.nixvim = {
     enable = true;
     nixpkgs.source = pkgs.path;
@@ -227,23 +238,12 @@
         vim.o.winborder = "rounded"
       end
 
-      do
-        local open_floating_preview = vim.lsp.util.open_floating_preview
+      require("pretty_hover").setup({
+        border = "rounded",
+        wrap = true,
+        toggle = true,
+      })
 
-        vim.lsp.util.open_floating_preview = function(contents, syntax, opts, ...)
-          opts = opts or {}
-          opts.wrap = false
-
-          local bufnr, winid = open_floating_preview(contents, syntax, opts, ...)
-
-          if syntax == "markdown" and vim.api.nvim_win_is_valid(winid) then
-            vim.wo[winid].concealcursor = "n"
-            vim.wo[winid].conceallevel = 3
-          end
-
-          return bufnr, winid
-        end
-      end
 
       do
         local clang_format = "${pkgs.clang-tools}/bin/clang-format"
@@ -388,7 +388,6 @@
           lspBuf = {
             "gd" = "definition";
             "gr" = "references";
-            "K" = "hover";
             "<leader>rn" = "rename";
             "<leader>ca" = "code_action";
           };
@@ -524,10 +523,17 @@
     extraPlugins = with pkgs.vimPlugins; [
       vim-be-good
       git-worktree-nvim
+      pretty-hover
     ];
 
     keymaps = [
       # --- Clipboard (system) ---
+      {
+        mode = "n";
+        key = "K";
+        action = "<cmd>lua require('pretty_hover').hover()<CR>";
+        options.desc = "LSP hover";
+      }
       {
         mode = ["n" "v"];
         key = "<leader>y";
