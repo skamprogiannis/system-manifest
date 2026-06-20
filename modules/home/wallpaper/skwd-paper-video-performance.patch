@@ -1,0 +1,83 @@
+--- a/crates/paper/src/video_source.rs
++++ b/crates/paper/src/video_source.rs
+@@ -25,6 +25,10 @@
+     Ok(())
+ }
+ 
++fn even_dimension(value: u32) -> u32 {
++    value.max(2) & !1
++}
++
+ pub struct VideoSource {
+     pub fbo: u32,
+     pub fbo_texture: u32,
+@@ -84,9 +88,12 @@
+             let parameters = stream.parameters();
+             let mut ctx = ff::codec::context::Context::from_parameters(parameters)
+                 .with_context(|| "decoder context from parameters")?;
++            let thread_count = std::thread::available_parallelism()
++                .map(|n| n.get().clamp(2, 8))
++                .unwrap_or(4);
+             ctx.set_threading(ff::codec::threading::Config {
+-                kind: ff::codec::threading::Type::None,
+-                count: 1,
++                kind: ff::codec::threading::Type::Frame,
++                count: thread_count,
+             });
+             let decoder = ctx
+                 .decoder()
+@@ -97,25 +104,25 @@
+ 
+         let src_w = decoder.width().max(2);
+         let src_h = decoder.height().max(2);
+-        let fbo_w = src_w.min(max_w).max(2);
+-        let fbo_h = src_h.min(max_h).max(2);
++        let fbo_w = even_dimension(src_w.min(max_w));
++        let fbo_h = even_dimension(src_h.min(max_h));
+ 
+         let scaler = Scaler::get(
+             decoder.format(),
+             src_w,
+             src_h,
+             Pixel::NV12,
+-            src_w,
+-            src_h,
++            fbo_w,
++            fbo_h,
+             Flags::FAST_BILINEAR,
+         )
+         .map_err(|e| anyhow!("sws_scale init: {e}"))?;
+ 
+-        let nv12 = ff::frame::Video::new(Pixel::NV12, src_w, src_h);
++        let nv12 = ff::frame::Video::new(Pixel::NV12, fbo_w, fbo_h);
+ 
+         let (fbo, fbo_texture) = create_color_fbo(fbo_w, fbo_h)?;
+-        let tex_y = create_plane_texture(gl::R8, gl::RED, src_w, src_h);
+-        let tex_uv = create_plane_texture(gl::RG8, gl::RG, src_w / 2, src_h / 2);
++        let tex_y = create_plane_texture(gl::R8, gl::RED, fbo_w, fbo_h);
++        let tex_uv = create_plane_texture(gl::RG8, gl::RG, fbo_w / 2, fbo_h / 2);
+         let yuv_program = compile_yuv_program()?;
+         let (yuv_vao, yuv_vbo) = create_quad_vao();
+         let (loc_y, loc_uv) = unsafe {
+@@ -344,8 +351,8 @@
+                 0,
+                 0,
+                 0,
+-                self.src_w as i32,
+-                self.src_h as i32,
++                self.fbo_w as i32,
++                self.fbo_h as i32,
+                 gl::RED,
+                 gl::UNSIGNED_BYTE,
+                 y_data.cast(),
+@@ -358,8 +365,8 @@
+                 0,
+                 0,
+                 0,
+-                (self.src_w / 2) as i32,
+-                (self.src_h / 2) as i32,
++                (self.fbo_w / 2) as i32,
++                (self.fbo_h / 2) as i32,
+                 gl::RG,
+                 gl::UNSIGNED_BYTE,
+                 uv_data.cast(),

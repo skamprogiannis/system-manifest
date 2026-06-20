@@ -190,6 +190,11 @@
       locale = "";
       closeOnSelection = false;
       reopenAtLastSelection = true;
+      randomInterval = 300;
+      randomIncludeStatic = true;
+      randomIncludeVideo = true;
+      randomIncludeWE = true;
+      randomIncludeFavourites = true;
     };
     paths = {
       wallpaper = "~/wallpapers";

@@ -8,6 +8,9 @@ pkgs.rustPlatform.buildRustPackage {
   src = inputs.skwd-wall.inputs.skwd-daemon.outPath;
 
   cargoHash = "sha256-jAP1R2BV3uuNbTHZFsZ8KmvjRDiCpD9oPsD/XOIpN6o=";
+  patches = [
+    ./wallpaper/skwd-paper-video-performance.patch
+  ];
 
   nativeBuildInputs = with pkgs; [
     pkg-config

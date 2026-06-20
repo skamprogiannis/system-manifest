@@ -62,15 +62,18 @@ in
 
       makeWrapper ${quickshellWithModules}/bin/quickshell $out/bin/skwd-wall \
         --prefix PATH : ${pkgs.lib.makeBinPath runtimeDeps} \
+        --set-default QSG_RHI_BACKEND vulkan \
         --add-flags "-p $out/share/skwd-wall/shell.qml"
 
       makeWrapper ${daemon}/bin/skwd $out/bin/skwd \
         --prefix PATH : ${pkgs.lib.makeBinPath daemonDeps} \
+        --set-default QSG_RHI_BACKEND vulkan \
         --set SKWD_SHELL_QML "$out/share/skwd-wall/shell.qml" \
         --set SKWD_DATA_DIR "$out/share/skwd-wall/data"
 
       makeWrapper ${daemon}/bin/skwd-daemon $out/bin/skwd-daemon \
         --prefix PATH : ${pkgs.lib.makeBinPath daemonDeps} \
+        --set-default QSG_RHI_BACKEND vulkan \
         --set SKWD_SHELL_QML "$out/share/skwd-wall/shell.qml" \
         --set SKWD_DATA_DIR "$out/share/skwd-wall/data"
 
