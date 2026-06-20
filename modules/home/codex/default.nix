@@ -148,6 +148,106 @@
       platforms = ["x86_64-linux"];
     };
   };
+  pinchtabConfigSeed = pkgs.writeText "pinchtab-config.json" (builtins.toJSON {
+    configVersion = "0.8.0";
+    server = {
+      port = "";
+      bind = "";
+      token = "";
+      stateDir = "/home/stefan/.pinchtab";
+      engine = "full";
+    };
+    browser = {
+      version = "";
+      binary = "${pkgs.brave}/bin/brave";
+      extraFlags = "";
+      extensionPaths = [];
+    };
+    instanceDefaults = {
+      mode = "headless";
+      noRestore = false;
+      timezone = "";
+      blockImages = null;
+      blockMedia = null;
+      blockAds = null;
+      maxTabs = 20;
+      maxParallelTabs = null;
+      userAgent = "";
+      noAnimations = null;
+      stealthLevel = "light";
+      tabEvictionPolicy = "close_lru";
+    };
+    security = {
+      allowEvaluate = true;
+      allowMacro = null;
+      allowScreencast = null;
+      allowDownload = null;
+      downloadAllowedDomains = [];
+      downloadMaxBytes = null;
+      allowUpload = true;
+      allowClipboard = null;
+      uploadMaxRequestBytes = null;
+      uploadMaxFiles = null;
+      uploadMaxFileBytes = null;
+      uploadMaxTotalBytes = null;
+      maxRedirects = null;
+      trustedProxyCIDRs = [];
+      attach = {
+        enabled = null;
+        allowHosts = [];
+        allowSchemes = [];
+      };
+      idpi = {
+        enabled = false;
+        allowedDomains = [];
+        strictMode = false;
+        scanContent = false;
+        wrapContent = false;
+        customPatterns = [];
+        scanTimeoutSec = 0;
+        shieldThreshold = 0;
+      };
+    };
+    profiles = {
+      baseDir = "/home/stefan/.pinchtab/profiles";
+      defaultProfile = "default";
+    };
+    multiInstance = {
+      strategy = "always-on";
+      allocationPolicy = "fcfs";
+      instancePortStart = null;
+      instancePortEnd = null;
+      restart = {
+        maxRestarts = null;
+        initBackoffSec = null;
+        maxBackoffSec = null;
+        stableAfterSec = null;
+      };
+    };
+    timeouts = {
+      actionSec = 0;
+      navigateSec = 0;
+      shutdownSec = 0;
+      waitNavMs = 0;
+    };
+    scheduler = {
+      enabled = null;
+      strategy = "";
+      maxQueueSize = null;
+      maxPerAgent = null;
+      maxInflight = null;
+      maxPerAgentInflight = null;
+      resultTTLSec = null;
+      workerCount = null;
+    };
+    observability = {
+      activity = {
+        enabled = null;
+        sessionIdleSec = null;
+        retentionDays = null;
+      };
+    };
+  });
   staticAnalysisSkill = pkgs.runCommand "codex-static-analysis-skill" {} ''
     mkdir -p "$out/references"
     cp ${./skills/static-analysis/SKILL.md} "$out/SKILL.md"
@@ -318,5 +418,35 @@ in {
   home.activation.ensureWritableCodexConfig = lib.hm.dag.entryAfter ["linkGeneration"] ''
     run mkdir -p "$HOME/.codex"
     run ${codexConfigMerger}/bin/merge-codex-config ${codexConfigSeed} "$HOME/.codex/config.toml"
+  '';
+
+  home.activation.ensurePinchTabConfig = lib.hm.dag.entryAfter ["linkGeneration"] ''
+    pinchtab_dir="$HOME/.pinchtab"
+    pinchtab_config="$pinchtab_dir/config.json"
+    legacy_current_tab="$HOME/.local/state/pinchtab/current-tab"
+
+    run mkdir -p "$pinchtab_dir"
+
+    existing_token=""
+    if [ -f "$pinchtab_config" ]; then
+      existing_token="$(${pkgs.jq}/bin/jq -r '.server.token // ""' "$pinchtab_config" 2>/dev/null || true)"
+    fi
+
+    tmp_file="$(mktemp)"
+    cp ${pinchtabConfigSeed} "$tmp_file"
+    if [ -n "$existing_token" ]; then
+      tmp_patch="$(mktemp)"
+      ${pkgs.jq}/bin/jq --arg token "$existing_token" '.server.token = $token' "$tmp_file" > "$tmp_patch"
+      mv "$tmp_patch" "$tmp_file"
+    fi
+    run install -m 600 "$tmp_file" "$pinchtab_config"
+    rm -f "$tmp_file"
+
+    if [ -f "$legacy_current_tab" ]; then
+      current_tab="$(sed -n '1p' "$legacy_current_tab" 2>/dev/null || true)"
+      case "$current_tab" in
+        lite-*) run rm -f "$legacy_current_tab" ;;
+      esac
+    fi
   '';
 }
