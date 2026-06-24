@@ -59,7 +59,6 @@ in {
   systemd.user.services.dms-hyprland-event-watchdog = {
     Unit = {
       Description = "Restart DMS if its Hyprland event socket disconnects";
-      After = ["dms.service"];
       PartOf = ["hyprland-session.target"];
     };
     Service = {
