@@ -52,12 +52,12 @@
     '')
     (pkgs.writeShellScriptBin "hypr-nav" ''
       DIRECTION=$1
-      BEFORE=$(hyprctl activewindow -j | jq -r '.address')
+      BEFORE=$(hyprctl -j activewindow | jq -r '.address')
       hyprctl dispatch movefocus $DIRECTION
-      AFTER=$(hyprctl activewindow -j | jq -r '.address')
+      AFTER=$(hyprctl -j activewindow | jq -r '.address')
 
       if [ "$BEFORE" == "$AFTER" ] || [ "$BEFORE" == "null" ]; then
-          CURR=$(hyprctl activeworkspace -j | jq '.id')
+          CURR=$(hyprctl -j activeworkspace | jq '.id')
           if [ "$DIRECTION" == "r" ]; then
               NEXT=$(( (CURR % 10) + 1 ))
               hyprctl dispatch workspace $NEXT
@@ -71,7 +71,7 @@
     (pkgs.writeShellScriptBin "hypr-quit-active" ''
       set -euo pipefail
 
-      active=$(hyprctl activewindow -j 2>/dev/null || true)
+      active=$(hyprctl -j activewindow 2>/dev/null || true)
       pid=$(printf '%s' "$active" | ${pkgs.jq}/bin/jq -r '.pid // empty')
       app_class=$(printf '%s' "$active" | ${pkgs.jq}/bin/jq -r '.class // empty')
       app_title=$(printf '%s' "$active" | ${pkgs.jq}/bin/jq -r '.title // empty')
@@ -146,13 +146,13 @@
       }
 
       focused_monitor() {
-        hyprctl monitors -j | ${pkgs.jq}/bin/jq -r '
+        hyprctl -j monitors | ${pkgs.jq}/bin/jq -r '
           (first(.[] | select(.focused == true)).name) // .[0].name // empty
         '
       }
 
       region_from_active_window() {
-        hyprctl activewindow -j | ${pkgs.jq}/bin/jq -r '
+        hyprctl -j activewindow | ${pkgs.jq}/bin/jq -r '
           .at as $at
           | .size as $size
           | if ($at | length) >= 2 and ($size | length) >= 2 then

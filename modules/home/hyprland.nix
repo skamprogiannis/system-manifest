@@ -448,10 +448,10 @@ in {
             (bind (modKey "l") navR)
             (bind (modKey "k") (focusDirection "up"))
             (bind (modKey "j") (focusDirection "down"))
-            (bind (modKey "Left") (focusMonitor "l"))
-            (bind (modKey "Right") (focusMonitor "r"))
-            (bind (modKey "Up") (focusMonitor "u"))
-            (bind (modKey "Down") (focusMonitor "d"))
+            (bind (modKey "Left") (focusDirection "left"))
+            (bind (modKey "Right") (focusDirection "right"))
+            (bind (modKey "Up") (focusDirection "up"))
+            (bind (modKey "Down") (focusDirection "down"))
 
             # --- Window Movement ---
             (bind (modKey "SHIFT + h") (moveWindowDirection "left"))

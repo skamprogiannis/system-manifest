@@ -90,7 +90,7 @@
 
         capture_live_monitor() {
           local monitor_name=""
-          monitor_name=$(hyprctl monitors -j 2>/dev/null \
+          monitor_name=$(hyprctl -j monitors 2>/dev/null \
             | ${pkgs.jq}/bin/jq -r '.[] | select(.focused == true) | .name' \
             | ${pkgs.coreutils}/bin/head -n 1)
           echo "Capturing live monitor in 2 seconds..." >&2
