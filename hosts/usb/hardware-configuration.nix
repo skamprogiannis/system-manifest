@@ -354,7 +354,7 @@ in {
                   case "$type:$removable:$fstype" in
                     part:0:ext4 | part:0:ext3 | part:0:ext2 | part:0:xfs | part:0:btrfs)
                       if [ "$size" -ge "$min_bytes" ]; then
-                        printf '10\t%s\t%s\t%s\n' "$size" "$path" "$fstype" "$fstype"
+                        printf '10\t%s\t%s\t%s\t%s\n' "$size" "$path" "$fstype" "$fstype"
                       fi
                       ;;
                     part:0:ntfs | part:0:ntfs3)

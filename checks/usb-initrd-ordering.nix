@@ -218,6 +218,7 @@ in {
         assert_contains_once "workdir=/sysroot/nix/.rw-store/work" "$store_unit" "host-auto /nix/store unit"
         assert_contains "find_host_store_candidates" ${usbHostAutoStorePrepareScript} "host-auto prep script"
         assert_contains "/bin/lsblk" ${usbHostAutoStorePrepareScript} "host-auto prep script"
+        assert_contains "printf '10\\t%s\\t%s\\t%s\\t%s\\n'" ${usbHostAutoStorePrepareScript} "host-auto prep script"
         assert_contains "/bin/stat -f -c '%a %S'" ${usbHostAutoStorePrepareScript} "host-auto prep script"
         assert_contains "/bin/mountpoint -q" ${usbHostAutoStorePrepareScript} "host-auto prep script"
         assert_contains '/bin/mount -t "$mount_type" -o rw,noatime' ${usbHostAutoStorePrepareScript} "host-auto prep script"
