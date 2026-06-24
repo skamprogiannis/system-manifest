@@ -8,7 +8,7 @@ Managed via **Nix Flakes** and **Home Manager**.
 
 - **Multi-Host Configuration:** Shared common configuration with host-specific overrides for `desktop`, `usb` (live/portable system), and `laptop` (dual-boot/mobile workstation). `hostType` is intentionally kept to lightweight shared-module branches; host-owned runtime/session behavior stays in dedicated host modules.
 - **Hyprland Desktop:** Wayland tiling compositor with glassmorphism aesthetics powered by Hyprland's native blur and app-native transparency. Ghostty uses native `background-opacity` for glass-like terminal surfaces with fully opaque text.
-- **USB: Portable Hyprland** — USB host boots through the same DMS greeter path as desktop and keeps the portable Hyprland session lean for lab machines. By default it uses a **hybrid squashfs** Nix store mounted by NixOS fileSystems (compressed read-only image + tmpfs overlay) for near-ISO boot performance on slow USB media; only new `/nix/store` writes use the tmpfs upper layer, while `/home` stays on the persistent encrypted USB root filesystem. Manual `ram-store` and `host-auto-store` boot specialisations use small initrd preparation units before the same native mount path to move store pressure into host RAM or an automatically selected host partition. Docker's heavy writable state is routed to ephemeral host-local scratch storage when available, falling back to tmpfs when no suitable host partition can be mounted.
+- **USB: Portable Hyprland** — USB host boots through the same DMS greeter path as desktop and keeps the portable Hyprland session lean for lab machines. By default it uses a **hybrid squashfs** Nix store mounted by NixOS fileSystems (compressed read-only image + tmpfs overlay) for near-ISO boot performance on slow USB media; only new `/nix/store` writes use the tmpfs upper layer, while `/home` stays on the persistent encrypted USB root filesystem. Manual `ram-store` and `host-auto-store` boot specialisations use small initrd preparation units before the same native mount path to move store pressure into host RAM or an automatically selected host partition. Host-auto routes the copied store image, writable store overlay, Docker state, local cache, Codex state, Brave profile, and scratch `repositories` directory through encrypted host-local scratch when available.
 - **Laptop: Dual-Boot Hyprland** — Laptop host keeps the full desktop muscle-memory workflow with portable display detection, encrypted-root install labels, Caps-to-Escape, Greek/US layouts, Zellij, Neovim, Codex, and browser setup.
 - **Gaming Mode:** A dedicated specialisation (`gaming-box`) that boots directly into Steam Big Picture Mode with Gamescope.
 - **Media & Productivity:**
@@ -81,8 +81,10 @@ Packages tracked independently of nixpkgs for tighter version control:
 | `skwd-we-capture-still` | Captures a Wallpaper Engine still image into `~/.cache/skwd-wall/wallpaper/we-captures/`, with `--current-live` for a faithful live-screen fallback |
 | `transmission-port-sync` | Syncs Transmission's configured peer port (for example after a VPN-forwarded port change) |
 | `codex-state-sync` | Syncs resumable Codex state between desktop and USB (`to-usb` / `from-usb`) while leaving auth/config/cache local |
+| `nixos-usb-host-scratch-status` | Shows whether encrypted host scratch is active and which user/cache/Docker paths are bound to it |
 | `specify` | Spec Kit CLI wrapper — scaffolds spec-driven development for new projects |
 | `setup-persistent-usb` | Initialises a fresh LUKS-encrypted persistent NixOS USB drive |
+| `usb-host-scratch` | Prints the active encrypted host scratch `repositories` path for fast temporary clones |
 | `update-usb` | Updates the USB image using prebuild mode by default, with `--in-place` as a lower-disk-space fallback |
 
 ## Usage
@@ -149,16 +151,26 @@ That mode improves steady-state store reads after boot, uses an encrypted USB-ro
 
 ### USB Host Auto Store Mode
 
-Choose the USB **`host-auto-store` specialisation** on lab machines where it is acceptable to use a writable host partition as temporary scratch storage. The USB scans non-removable Linux filesystems first (`ext2`, `ext3`, `ext4`, `xfs`, and `btrfs`), then tries `ntfs`/`ntfs3` and `exfat` as lower-priority fallbacks. Linux filesystems can back both the copied `nix-store.squashfs` lower image and writable overlay layer. NTFS/exFAT are only used for the copied lower image; the writable overlay layer stays on encrypted USB-root scratch so OverlayFS does not depend on non-Linux upperdir semantics.
+Choose the USB **`host-auto-store` specialisation** on lab machines where it is acceptable to use a writable host partition as temporary scratch storage. The USB scans non-removable Linux filesystems first (`ext2`, `ext3`, `ext4`, `xfs`, and `btrfs`), then tries `ntfs`/`ntfs3` and `exfat` as lower-priority fallbacks. A per-boot encrypted sparse image is created under `.nixos-usb/session/<boot-id>/` on the selected host filesystem, and only that encrypted image is used for the copied `nix-store.squashfs`, writable store overlay, Docker state, local cache, Codex state, Brave profile, and temporary `repositories` directory.
 
 After boot, check which path was used:
 
 ```bash
 cat /run/nixos-usb-store-mode
 nixos-usb-store-status
+nixos-usb-host-scratch-status
 ```
 
-`writable-host-auto-overlay` means both store reads and writes are backed by a Linux host partition. `writable-host-lower-usb-rw-overlay` means the squashfs lower image is on a host partition, while overlay writes stay on USB-root scratch. If no suitable partition can be mounted or copied to, the specialisation falls back to the USB-backed squashfs and an encrypted USB-root scratch writable layer. `nixos-usb-store-status` prints the selected mode, host candidates, mount diagnostics, and the relevant initrd service logs. This mode can leave `.nixos-usb/store` behind on the selected host partition until that machine's own cleanup policy removes it.
+`writable-encrypted-host-auto-overlay` means store reads and writes are backed by the encrypted host scratch image. If no suitable partition can be mounted or copied to, the specialisation falls back to the USB-backed squashfs and encrypted USB-root scratch writable layer. `nixos-usb-store-status` prints the selected store mode, host candidates, mount diagnostics, and relevant initrd service logs. `nixos-usb-host-scratch-status` shows Docker/cache/Codex/Brave bind mounts and the active repositories path.
+
+For fast temporary clones:
+
+```bash
+cd "$(usb-host-scratch)"
+git clone https://github.com/OWNER/REPO.git
+```
+
+On clean shutdown, the USB syncs `~/.cache`, `~/.codex`, and `~/.config/BraveSoftware` back to the USB root, then removes host-side encrypted session files. If power is cut, the host may retain ciphertext under `.nixos-usb/session/`, but the key only lived in RAM and stale session files are removed on the next successful host-auto boot.
 
 ### Initialize / Reformat Persistent USB
 
