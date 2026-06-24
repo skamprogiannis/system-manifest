@@ -60,6 +60,7 @@
     "${updateUsbSourceDir}/metadata.sh"
     "${updateUsbSourceDir}/phases.sh"
     "${updateUsbSourceDir}/squashfs.sh"
+    "${usbHome}/bin/usb-host-scratch"
     "${usbHome}/bin/nixos-usb-store-status"
     "${usbHome}/bin/spotify_player"
     "${usbHome}/bin/setup-persistent-usb"

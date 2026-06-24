@@ -41,6 +41,7 @@ pkgs.writeShellScriptBin "nixos-usb-store-status" ''
   print_mount /nix/.rw-store
   print_mount /nix/store
   print_mount /nix/.host-store
+  print_mount /nix/.host-scratch
   print_mount /nix/.host-store-rw
   printf '\n'
 

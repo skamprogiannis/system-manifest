@@ -12,7 +12,7 @@
     if usbStore.mode == "ram-backed"
     then "/sysroot/nix/.ram-store-image/nix-store.squashfs"
     else if usbStore.mode == "host-auto"
-    then "/sysroot/nix/.host-store/.nixos-usb/store/nix-store.squashfs"
+    then "/sysroot/nix/.host-scratch/store/nix-store.squashfs"
     else "/sysroot/nix-store.squashfs";
   roStoreMountUnit = "${utils.escapeSystemdPath "/sysroot/nix/.ro-store"}.mount";
   rwStoreMountUnit = "${utils.escapeSystemdPath "/sysroot/nix/.rw-store"}.mount";
@@ -57,6 +57,22 @@ in {
         the squashfs image into RAM.
       '';
     };
+
+    hostScratchMinFreeMiB = lib.mkOption {
+      type = lib.types.ints.positive;
+      default = 8192;
+      description = ''
+        Extra host partition capacity required before host-auto creates an
+        encrypted scratch image for the copied squashfs, writable store overlay,
+        Docker state, local caches, Codex state, Brave profile, and repositories.
+      '';
+    };
+
+    hostScratchMaxSizeMiB = lib.mkOption {
+      type = lib.types.ints.positive;
+      default = 65536;
+      description = "Maximum size of the sparse encrypted host scratch image created by host-auto mode.";
+    };
   };
 
   config = {
@@ -95,16 +111,22 @@ in {
     boot.initrd.systemd.emergencyAccess = true;
     boot.initrd.systemd.extraBin = lib.mkIf (usbStore.mode == "ram-backed" || usbStore.mode == "host-auto") (lib.mapAttrs (_: lib.mkDefault) {
       cat = "${pkgs.coreutils}/bin/cat";
+      chmod = "${pkgs.coreutils}/bin/chmod";
+      cryptsetup = "${pkgs.cryptsetup}/bin/cryptsetup";
       cp = "${pkgs.coreutils}/bin/cp";
+      dd = "${pkgs.coreutils}/bin/dd";
       ln = "${pkgs.coreutils}/bin/ln";
       lsblk = "${pkgs.util-linux}/bin/lsblk";
       mkdir = "${pkgs.coreutils}/bin/mkdir";
+      "mkfs.ext4" = "${pkgs.e2fsprogs}/bin/mkfs.ext4";
       mount = "${pkgs.util-linux}/bin/mount";
       mountpoint = "${pkgs.util-linux}/bin/mountpoint";
       mv = "${pkgs.coreutils}/bin/mv";
       rm = "${pkgs.coreutils}/bin/rm";
       sort = "${pkgs.coreutils}/bin/sort";
       stat = "${pkgs.coreutils}/bin/stat";
+      sync = "${pkgs.coreutils}/bin/sync";
+      truncate = "${pkgs.coreutils}/bin/truncate";
       umount = "${pkgs.util-linux}/bin/umount";
       wc = "${pkgs.coreutils}/bin/wc";
     });
@@ -297,11 +319,21 @@ in {
 
             lower_store_image=/sysroot/nix-store.squashfs
             host_store_mount=/sysroot/nix/.host-store
-            host_store_root="$host_store_mount/.nixos-usb/store"
+            host_scratch_mount=/sysroot/nix/.host-scratch
+            host_session_root="$host_store_mount/.nixos-usb/session"
+            boot_id="$(/bin/cat /proc/sys/kernel/random/boot_id)"
+            host_boot_root="$host_session_root/$boot_id"
+            host_scratch_image="$host_boot_root/scratch.img"
+            host_scratch_key=/run/nixos-usb-host-scratch.key
+            host_scratch_mapper=nixos-usb-host-scratch
+            host_scratch_device="/dev/mapper/$host_scratch_mapper"
+            host_store_root="$host_scratch_mount/store"
             host_store_image="$host_store_root/nix-store.squashfs"
             host_rw_root="$host_store_root/rw"
             rw_store_root=/sysroot/nix/.host-store-rw
             upper_size_mib=${toString usbStore.upperSizeMiB}
+            scratch_min_free_mib=${toString usbStore.hostScratchMinFreeMiB}
+            scratch_max_size_mib=${toString usbStore.hostScratchMaxSizeMiB}
             diagnostics_file=/run/nixos-usb-store-diagnostics
             mount_error=/run/nixos-usb-host-store-mount.err
 
@@ -322,17 +354,17 @@ in {
                   case "$type:$removable:$fstype" in
                     part:0:ext4 | part:0:ext3 | part:0:ext2 | part:0:xfs | part:0:btrfs)
                       if [ "$size" -ge "$min_bytes" ]; then
-                        printf '10\t%s\t%s\t%s\t%s\thost-rw\n' "$size" "$path" "$fstype" "$fstype"
+                        printf '10\t%s\t%s\t%s\n' "$size" "$path" "$fstype" "$fstype"
                       fi
                       ;;
-                    part:0:ntfs)
+                    part:0:ntfs | part:0:ntfs3)
                       if [ "$size" -ge "$min_bytes" ]; then
-                        printf '20\t%s\t%s\t%s\tntfs3\tusb-rw\n' "$size" "$path" "$fstype"
+                        printf '20\t%s\t%s\t%s\tntfs3\n' "$size" "$path" "$fstype"
                       fi
                       ;;
                     part:0:exfat)
                       if [ "$size" -ge "$min_bytes" ]; then
-                        printf '30\t%s\t%s\t%s\texfat\tusb-rw\n' "$size" "$path" "$fstype"
+                        printf '30\t%s\t%s\t%s\texfat\n' "$size" "$path" "$fstype"
                       fi
                       ;;
                   esac
@@ -355,6 +387,44 @@ in {
               /bin/mount --bind "$host_rw_root" "$rw_store_root"
             }
 
+            read_host_available_bytes() {
+              stat_output="$(/bin/stat -f -c '%a %S' "$host_store_mount")" || return 1
+              set -- $stat_output
+              printf '%s\n' "$(($1 * $2))"
+            }
+
+            prepare_encrypted_host_scratch() {
+              available_bytes="$(read_host_available_bytes)" || return 1
+              write_diag attempted_available_bytes "$available_bytes"
+              if [ "$available_bytes" -lt "$min_bytes" ]; then
+                return 1
+              fi
+
+              /bin/rm -rf "$host_session_root" "$host_store_mount/.nixos-usb/store" "$host_store_mount/.nixos-usb/docker" "$host_store_mount/.nixos-usb/cache" "$host_store_mount/.nixos-usb/codex" "$host_store_mount/.nixos-usb/brave" "$host_store_mount/.nixos-usb/repositories"
+              /bin/mkdir -p "$host_boot_root" "$host_scratch_mount"
+
+              scratch_size_mib=$((available_bytes / 1024 / 1024 - 1024))
+              if [ "$scratch_size_mib" -gt "$scratch_max_size_mib" ]; then
+                scratch_size_mib="$scratch_max_size_mib"
+              fi
+              if [ "$scratch_size_mib" -lt "$scratch_min_free_mib" ]; then
+                return 1
+              fi
+
+              /bin/dd if=/dev/urandom of="$host_scratch_key" bs=64 count=1 || return 1
+              /bin/chmod 0400 "$host_scratch_key" || return 1
+              /bin/truncate -s "$scratch_size_mib"M "$host_scratch_image" || return 1
+              /bin/cryptsetup --batch-mode --key-file "$host_scratch_key" luksFormat "$host_scratch_image" || return 1
+              /bin/cryptsetup open --key-file "$host_scratch_key" "$host_scratch_image" "$host_scratch_mapper" || return 1
+              /bin/mkfs.ext4 -F -q "$host_scratch_device" || return 1
+              /bin/mount -t ext4 -o rw,noatime "$host_scratch_device" "$host_scratch_mount" || return 1
+              /bin/mkdir -p "$host_store_root" || return 1
+
+              write_diag encrypted_scratch_image "$host_scratch_image"
+              write_diag encrypted_scratch_size_mib "$scratch_size_mib"
+              write_diag encrypted_scratch_mapper "$host_scratch_mapper"
+            }
+
             prepare_usb_rw() {
               if /bin/mountpoint -q "$rw_store_root"; then
                 /bin/umount "$rw_store_root" || true
@@ -365,10 +435,16 @@ in {
 
             prepare_usb_fallback() {
               reason="$1"
+              if /bin/mountpoint -q "$host_scratch_mount"; then
+                /bin/umount "$host_scratch_mount" || true
+              fi
+              if [ -e "$host_scratch_device" ]; then
+                /bin/cryptsetup close "$host_scratch_mapper" || true
+              fi
               if /bin/mountpoint -q "$host_store_mount"; then
                 /bin/umount "$host_store_mount" || true
               fi
-              /bin/rm -rf "$host_store_mount"
+              /bin/rm -rf "$host_store_mount" "$host_scratch_mount"
               /bin/mkdir -p "$host_store_root" "$host_rw_root"
               /bin/ln -sfn "$lower_store_image" "$host_store_image"
               prepare_usb_rw
@@ -379,16 +455,18 @@ in {
             }
 
             image_bytes="$(/bin/stat -c %s "$lower_store_image")"
-            min_bytes=$((image_bytes + (upper_size_mib + 1024) * 1024 * 1024))
+            min_bytes=$((image_bytes + (upper_size_mib + scratch_min_free_mib + 1024) * 1024 * 1024))
             candidate_file=/run/nixos-usb-host-store-candidates
 
-            /bin/mkdir -p /run "$host_store_mount" "$rw_store_root"
+            /bin/mkdir -p /run "$host_store_mount" "$host_scratch_mount" "$rw_store_root"
             : > "$diagnostics_file"
             : > "$mount_error"
             write_diag requested_mode host-auto
             write_diag store_image "$lower_store_image"
             write_diag image_bytes "$image_bytes"
             write_diag upper_size_mib "$upper_size_mib"
+            write_diag scratch_min_free_mib "$scratch_min_free_mib"
+            write_diag scratch_max_size_mib "$scratch_max_size_mib"
             write_diag min_candidate_bytes "$min_bytes"
             find_host_store_candidates "$min_bytes" > "$candidate_file"
             write_diag candidate_count "$(/bin/wc -l < "$candidate_file")"
@@ -399,12 +477,11 @@ in {
               exit 0
             fi
 
-            while IFS='	' read -r _priority _size device fstype mount_type rw_policy; do
+            while IFS='	' read -r _priority size device fstype mount_type; do
               [ -n "$device" ] || continue
               write_diag attempted_device "$device"
               write_diag attempted_fstype "$fstype"
               write_diag attempted_mount_type "$mount_type"
-              write_diag attempted_rw_policy "$rw_policy"
 
               if ! /bin/mount -t "$mount_type" -o rw,noatime "$device" "$host_store_mount" 2>"$mount_error"; then
                 echo "initrd-usb-host-auto-store-prepare: failed to mount $device ($fstype)" >&2
@@ -414,36 +491,45 @@ in {
                 continue
               fi
 
+              if ! prepare_encrypted_host_scratch "$size"; then
+                echo "initrd-usb-host-auto-store-prepare: failed to prepare encrypted host scratch on $device ($fstype)" >&2
+                if /bin/mountpoint -q "$host_scratch_mount"; then
+                  /bin/umount "$host_scratch_mount" || true
+                fi
+                if [ -e "$host_scratch_device" ]; then
+                  /bin/cryptsetup close "$host_scratch_mapper" || true
+                fi
+                /bin/rm -f "$host_scratch_image"
+                /bin/umount "$host_store_mount" || true
+                continue
+              fi
+
               /bin/mkdir -p "$host_store_root" "$host_rw_root"
               /bin/rm -f "$host_store_image.tmp"
 
               if /bin/cp "$lower_store_image" "$host_store_image.tmp" && /bin/mv "$host_store_image.tmp" "$host_store_image"; then
-                if [ "$rw_policy" = "host-rw" ]; then
-                  if ! prepare_host_rw; then
-                    echo "initrd-usb-host-auto-store-prepare: failed to prepare host rw overlay on $device ($fstype)" >&2
-                    /bin/umount "$host_store_mount" || true
-                    continue
-                  fi
-                  printf '%s\n' "writable-host-auto-overlay" > /run/nixos-usb-store-mode
-                  write_diag selected_rw host
-                else
-                  if ! prepare_usb_rw; then
-                    echo "initrd-usb-host-auto-store-prepare: failed to prepare USB rw overlay for $device ($fstype)" >&2
-                    /bin/umount "$host_store_mount" || true
-                    continue
-                  fi
-                  printf '%s\n' "writable-host-lower-usb-rw-overlay" > /run/nixos-usb-store-mode
-                  write_diag selected_rw usb-root-scratch
+                if ! prepare_host_rw; then
+                  echo "initrd-usb-host-auto-store-prepare: failed to prepare encrypted host rw overlay on $device ($fstype)" >&2
+                  /bin/umount "$host_scratch_mount" || true
+                  /bin/cryptsetup close "$host_scratch_mapper" || true
+                  /bin/rm -f "$host_scratch_image"
+                  /bin/umount "$host_store_mount" || true
+                  continue
                 fi
+                printf '%s\n' "writable-encrypted-host-auto-overlay" > /run/nixos-usb-store-mode
+                write_diag selected_rw encrypted-host
                 write_diag selected_device "$device"
                 write_diag selected_fstype "$fstype"
                 write_diag selected_mount_type "$mount_type"
-                write_diag selected_lower host
+                write_diag selected_lower encrypted-host
                 exit 0
               fi
 
               echo "initrd-usb-host-auto-store-prepare: failed to copy squashfs to $device ($fstype)" >&2
               /bin/rm -f "$host_store_image.tmp"
+              /bin/umount "$host_scratch_mount" || true
+              /bin/cryptsetup close "$host_scratch_mapper" || true
+              /bin/rm -f "$host_scratch_image"
               /bin/umount "$host_store_mount" || true
             done < "$candidate_file"
 

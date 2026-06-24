@@ -6,7 +6,7 @@
 }: {
   imports = [
     ../common/default.nix
-    ./docker-scratch.nix
+    ./host-scratch.nix
     ../../modules/desktop-enviroments/hyprland.nix
     ../desktop/dms-greeter.nix
     ./hardware-configuration.nix

@@ -209,7 +209,7 @@ in {
         prep_unit="$(find_static_unit "$initrd_dir" 'initrd-usb-host-auto-store-prepare.service')"
 
         assert_static_unit_count "$initrd_dir" '*host-auto-store-prepare.service' 1 "host-auto prepare service"
-        assert_contains "What=/sysroot/nix/.host-store/.nixos-usb/store/nix-store.squashfs" "$ro_unit" "host-auto /nix/.ro-store unit"
+        assert_contains "What=/sysroot/nix/.host-scratch/store/nix-store.squashfs" "$ro_unit" "host-auto /nix/.ro-store unit"
         assert_contains "What=/sysroot/nix/.host-store-rw" "$rw_unit" "host-auto /nix/.rw-store unit"
         assert_contains "Type=none" "$rw_unit" "host-auto /nix/.rw-store unit"
         assert_contains "bind" "$rw_unit" "host-auto /nix/.rw-store unit"
@@ -218,21 +218,21 @@ in {
         assert_contains_once "workdir=/sysroot/nix/.rw-store/work" "$store_unit" "host-auto /nix/store unit"
         assert_contains "find_host_store_candidates" ${usbHostAutoStorePrepareScript} "host-auto prep script"
         assert_contains "/bin/lsblk" ${usbHostAutoStorePrepareScript} "host-auto prep script"
+        assert_contains "/bin/stat -f -c '%a %S'" ${usbHostAutoStorePrepareScript} "host-auto prep script"
         assert_contains "/bin/mountpoint -q" ${usbHostAutoStorePrepareScript} "host-auto prep script"
         assert_contains '/bin/mount -t "$mount_type" -o rw,noatime' ${usbHostAutoStorePrepareScript} "host-auto prep script"
         assert_contains "/bin/mkdir -m 0755 -p" ${usbHostAutoStorePrepareScript} "host-auto prep script"
-        assert_contains ".nixos-usb/store" ${usbHostAutoStorePrepareScript} "host-auto prep script"
-        assert_contains "part:0:ntfs)" ${usbHostAutoStorePrepareScript} "host-auto prep script"
+        assert_contains ".nixos-usb/session" ${usbHostAutoStorePrepareScript} "host-auto prep script"
+        assert_contains "luksFormat" ${usbHostAutoStorePrepareScript} "host-auto prep script"
+        assert_contains "writable-encrypted-host-auto-overlay" ${usbHostAutoStorePrepareScript} "host-auto prep script"
+        assert_contains "part:0:ntfs | part:0:ntfs3)" ${usbHostAutoStorePrepareScript} "host-auto prep script"
         assert_contains "part:0:exfat)" ${usbHostAutoStorePrepareScript} "host-auto prep script"
-        assert_contains "host-rw" ${usbHostAutoStorePrepareScript} "host-auto prep script"
-        assert_contains "usb-rw" ${usbHostAutoStorePrepareScript} "host-auto prep script"
         assert_contains "/bin/mount --bind" ${usbHostAutoStorePrepareScript} "host-auto prep script"
-        assert_contains "writable-host-lower-usb-rw-overlay" ${usbHostAutoStorePrepareScript} "host-auto prep script"
         assert_contains "/bin/sort -k1,1n -k2,2nr" ${usbHostAutoStorePrepareScript} "host-auto prep script"
         assert_contains "nixos-usb-store-diagnostics" ${usbHostAutoStorePrepareScript} "host-auto prep script"
         assert_contains "candidate_count" ${usbHostAutoStorePrepareScript} "host-auto prep script"
+        assert_contains "attempted_available_bytes" ${usbHostAutoStorePrepareScript} "host-auto prep script"
         assert_contains "fallback_reason" ${usbHostAutoStorePrepareScript} "host-auto prep script"
-        assert_contains "writable-host-auto-overlay" ${usbHostAutoStorePrepareScript} "host-auto prep script"
         assert_contains "writable-overlay-host-auto-usb-fallback" ${usbHostAutoStorePrepareScript} "host-auto prep script"
       }
 
@@ -250,7 +250,7 @@ in {
 
       unpack_initrd ${usbHostAutoStoreInitrd} host-auto-initrd
       generate_mount_units host-auto-initrd host-auto-generated
-      assert_initrd_bins host-auto-initrd host-auto cat cp ln lsblk mkdir mount mountpoint mv rm sort stat umount wc
+      assert_initrd_bins host-auto-initrd host-auto cat chmod cryptsetup cp dd ln lsblk mkdir mkfs.ext4 mount mountpoint mv rm sort stat sync truncate umount wc
       assert_host_auto_units host-auto-initrd host-auto-generated
 
       touch "$out"

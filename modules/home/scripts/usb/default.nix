@@ -23,6 +23,7 @@ in {
 
   config.home.packages =
     [
+      (import ./host-scratch.nix {inherit pkgs;})
       (import ./store-status.nix {inherit pkgs;})
     ]
     ++ lib.optionals cfg.enableSetupPersistentUsb [
