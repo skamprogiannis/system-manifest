@@ -481,7 +481,7 @@ in {
             # --- Screen Recording ---
             (execBind (modKey "r") "gsr-record region")
             (execBind (modKey "SHIFT + r") "gsr-record region --no-audio")
-            (execBind (modKey "ALT + r") "gsr-record fullscreen")
+            (execBind (modKey "ALT + r") "gsr-record fullscreen --mic")
             (execBind (modKey "ALT + SHIFT + r") "gsr-record fullscreen --no-audio")
             (execBind (modKey "CTRL + r") "gsr-record window")
             (execBind (modKey "CTRL + SHIFT + r") "gsr-record window --no-audio")

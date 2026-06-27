@@ -136,13 +136,21 @@
 
       usage() {
         cat <<'EOF'
-      Usage: gsr-record [region|fullscreen|window] [--no-audio]
+      Usage: gsr-record [region|fullscreen|window] [--no-audio] [--mic]
 
       Toggles screen recording with gpu-screen-recorder.
         region      interactively select an area to record
         fullscreen  record the focused monitor
         window      record the active window bounds
+        --mic       include the default microphone with desktop audio
       EOF
+      }
+
+      notify_recording() {
+        local urgency="$1"
+        local message="$2"
+        printf 'Screen Recording: %s\n' "$message" >&2
+        ${pkgs.libnotify}/bin/notify-send -u "$urgency" "Screen Recording" "$message" >/dev/null 2>&1 || true
       }
 
       focused_monitor() {
@@ -170,13 +178,17 @@
           | ${pkgs.gnused}/bin/sed 's/[[:space:]]\+/ /g; s/[[:space:]]*$//'
       }
 
-      MODE="''${1:-region}"
+      MODE="region"
       AUDIO=1
-      if [ "$MODE" = "--help" ] || [ "$MODE" = "-h" ]; then
+      MIC=0
+      if [ "''${1:-}" = "--help" ] || [ "''${1:-}" = "-h" ]; then
         usage
         exit 0
       fi
-      [ "''${2:-}" = "--no-audio" ] && AUDIO=0
+      if [ "$#" -gt 0 ] && [ "''${1#--}" = "$1" ]; then
+        MODE="$1"
+        shift
+      fi
 
       case "$MODE" in
         region|fullscreen|window) ;;
@@ -187,23 +199,54 @@
           ;;
       esac
 
-      if [ "''${2:-}" != "" ] && [ "''${2:-}" != "--no-audio" ]; then
-        echo "Error: unknown option ''${2}." >&2
-        usage >&2
-        exit 1
-      fi
+      while [ "$#" -gt 0 ]; do
+        case "$1" in
+          --no-audio)
+            AUDIO=0
+            MIC=0
+            ;;
+          --mic)
+            MIC=1
+            ;;
+          --help|-h)
+            usage
+            exit 0
+            ;;
+          *)
+            echo "Error: unknown option $1." >&2
+            usage >&2
+            exit 1
+            ;;
+        esac
+        shift
+      done
 
       STATE_DIR="''${XDG_RUNTIME_DIR:-/tmp}/gsr-record"
       PIDFILE="$STATE_DIR/pid"
+      STATUSFILE="$STATE_DIR/status"
       OUTFILE_STATE="$STATE_DIR/outfile"
       LOGFILE="$STATE_DIR/log"
+      LOCKFILE="$STATE_DIR/lock"
       OUTDIR="$HOME/videos/screencasts"
       mkdir -p "$STATE_DIR"
       mkdir -p "$OUTDIR"
 
+      exec 9>"$LOCKFILE"
+      if ! ${pkgs.util-linux}/bin/flock -n 9; then
+        notify_recording normal "Selection or recorder state change already in progress. If selecting a region, press Escape to cancel it."
+        exit 1
+      fi
+
+      is_recorder_pid() {
+        local candidate="$1"
+        local exe
+        exe=$(readlink -f "/proc/$candidate/exe" 2>/dev/null || true)
+        [ "''${exe##*/}" = "gpu-screen-recorder" ]
+      }
+
       if [ -f "$PIDFILE" ]; then
         PID=$(cat "$PIDFILE")
-        if [[ "$PID" =~ ^[0-9]+$ ]] && kill -0 "$PID" 2>/dev/null; then
+        if [[ "$PID" =~ ^[0-9]+$ ]] && kill -0 "$PID" 2>/dev/null && is_recorder_pid "$PID"; then
           kill -INT "$PID"
 
           for _ in $(${pkgs.coreutils}/bin/seq 1 100); do
@@ -214,39 +257,42 @@
           done
 
           if kill -0 "$PID" 2>/dev/null; then
-            ${pkgs.libnotify}/bin/notify-send -u normal "Screen Recording" "Stop requested, but gpu-screen-recorder is still shutting down."
+            notify_recording normal "Stop requested, but gpu-screen-recorder is still shutting down."
             exit 1
           fi
 
           if [ -f "$OUTFILE_STATE" ]; then
             OUTFILE=$(cat "$OUTFILE_STATE")
             if [ -s "$OUTFILE" ]; then
-              ${pkgs.libnotify}/bin/notify-send -u low "Screen Recording" "Saved: $OUTFILE"
+              notify_recording low "Saved: $OUTFILE"
             else
               DETAIL=$(summarize_log || true)
               if [ -n "$DETAIL" ]; then
-                ${pkgs.libnotify}/bin/notify-send -u normal "Screen Recording" "Recorder stopped, but no file was saved. $DETAIL"
+                notify_recording normal "Recorder stopped, but no file was saved. $DETAIL"
               else
-                ${pkgs.libnotify}/bin/notify-send -u normal "Screen Recording" "Recorder stopped, but no file was saved."
+                notify_recording normal "Recorder stopped, but no file was saved."
               fi
             fi
           else
-            ${pkgs.libnotify}/bin/notify-send -u normal "Screen Recording" "Recorder stopped, but the output path was unknown."
+            notify_recording normal "Recorder stopped, but the output path was unknown."
           fi
 
-          rm -f "$PIDFILE" "$OUTFILE_STATE"
+          rm -f "$PIDFILE" "$OUTFILE_STATE" "$STATUSFILE"
           exit 0
         fi
-        rm -f "$PIDFILE" "$OUTFILE_STATE"
+        rm -f "$PIDFILE" "$OUTFILE_STATE" "$STATUSFILE"
       fi
 
       OUTFILE="$OUTDIR/screencast_$(date +%Y-%m-%d_%H-%M-%S).mp4"
 
       case "$MODE" in
         region)
+          printf '%s\n' "selecting" > "$STATUSFILE"
+          notify_recording low "Select a region. Escape cancels without saving."
           REGION=$(${pkgs.slurp}/bin/slurp -f '%wx%h+%x+%y' 2>/dev/null || true)
           if [ -z "$REGION" ]; then
-            ${pkgs.libnotify}/bin/notify-send -u low "Screen Recording" "Recording cancelled."
+            rm -f "$STATUSFILE"
+            notify_recording low "Recording cancelled."
             exit 1
           fi
           WINDOW=region
@@ -255,7 +301,7 @@
         fullscreen)
           WINDOW=$(focused_monitor)
           if [ -z "$WINDOW" ]; then
-            ${pkgs.libnotify}/bin/notify-send -u normal "Screen Recording" "No monitor found to record."
+            notify_recording normal "No monitor found to record."
             exit 1
           fi
           TARGET_ARGS=()
@@ -263,7 +309,7 @@
         window)
           REGION=$(region_from_active_window)
           if [ -z "$REGION" ]; then
-            ${pkgs.libnotify}/bin/notify-send -u normal "Screen Recording" "No active window found to record."
+            notify_recording normal "No active window found to record."
             exit 1
           fi
           WINDOW=region
@@ -272,9 +318,16 @@
       esac
 
       AUDIO_ARGS=()
-      [ "$AUDIO" -eq 1 ] && AUDIO_ARGS=(-a default_output)
+      if [ "$AUDIO" -eq 1 ]; then
+        if [ "$MIC" -eq 1 ]; then
+          AUDIO_ARGS=(-a "default_output|default_input")
+        else
+          AUDIO_ARGS=(-a default_output)
+        fi
+      fi
 
       printf '%s\n' "$OUTFILE" > "$OUTFILE_STATE"
+      printf '%s\n' "recording" > "$STATUSFILE"
       : > "$LOGFILE"
 
       gpu-screen-recorder \
@@ -292,16 +345,16 @@
 
       if ! kill -0 "$PID" 2>/dev/null; then
         DETAIL=$(summarize_log || true)
-        rm -f "$PIDFILE" "$OUTFILE_STATE"
+        rm -f "$PIDFILE" "$OUTFILE_STATE" "$STATUSFILE"
         if [ -n "$DETAIL" ]; then
-          ${pkgs.libnotify}/bin/notify-send -u normal "Screen Recording" "Failed to start: $DETAIL"
+          notify_recording normal "Failed to start: $DETAIL"
         else
-          ${pkgs.libnotify}/bin/notify-send -u normal "Screen Recording" "Failed to start recording."
+          notify_recording normal "Failed to start recording."
         fi
         exit 1
       fi
 
-      ${pkgs.libnotify}/bin/notify-send -u low "Screen Recording" "Recording started (press again to stop)"
+      notify_recording low "Recording started (press the same shortcut again to stop). Saving to $OUTDIR"
     '')
   ];
 }

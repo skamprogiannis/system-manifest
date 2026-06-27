@@ -52,7 +52,7 @@ in {
 
       assert_log_contains() {
         local needle="$1"
-        if ! ${pkgs.gnugrep}/bin/grep -Fq "$needle" "$LAST_LOG"; then
+        if ! ${pkgs.gnugrep}/bin/grep -Fq -- "$needle" "$LAST_LOG"; then
           echo "Expected to find '$needle' in $LAST_LOG" >&2
           ${pkgs.gnused}/bin/sed 's/^/  /' "$LAST_LOG" >&2
           exit 1
@@ -193,9 +193,27 @@ in {
 
       run_expect 0 gsr-record-help "$desktop_home/bin/gsr-record" --help
       assert_log_contains "Usage: gsr-record"
+      assert_log_contains "--mic"
 
       run_expect 1 gsr-record-invalid-mode "$desktop_home/bin/gsr-record" nope
       assert_log_contains "Error: unknown mode 'nope'."
+
+      run_expect 1 gsr-record-invalid-option "$desktop_home/bin/gsr-record" fullscreen --bogus
+      assert_log_contains "Error: unknown option --bogus."
+
+      locked_runtime="$TMPDIR/gsr-locked-runtime"
+      mkdir -p "$locked_runtime/gsr-record"
+      exec 8>"$locked_runtime/gsr-record/lock"
+      ${pkgs.util-linux}/bin/flock -n 8
+      run_expect 1 gsr-record-selection-lock env XDG_RUNTIME_DIR="$locked_runtime" HOME="$TMPDIR/gsr-home" "$desktop_home/bin/gsr-record" region
+      assert_log_contains "Selection or recorder state change already in progress."
+      ${pkgs.util-linux}/bin/flock -u 8
+
+      if ! ${pkgs.gnugrep}/bin/grep -Fq 'default_output|default_input' "$desktop_home/bin/gsr-record"; then
+        echo "Expected gsr-record to support combined desktop and microphone audio." >&2
+        ${pkgs.gnused}/bin/sed -n '1,240p' "$desktop_home/bin/gsr-record" >&2
+        exit 1
+      fi
 
       run_expect 1 transmission-port-sync-invalid-port "$desktop_home/bin/transmission-port-sync" 0
       assert_log_contains "Error: port must be an integer between 1 and 65535."
