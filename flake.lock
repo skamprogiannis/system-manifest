@@ -36,11 +36,11 @@
     "caveman": {
       "flake": false,
       "locked": {
-        "lastModified": 1779273824,
-        "narHash": "sha256-BydREt/vai3j7kO5+e1OxsjXf6Vy+jSY1yA/yyxjHbI=",
+        "lastModified": 1781272264,
+        "narHash": "sha256-FbmfhFaPs/SnSZdfNdErdIUHXt1FfBzErpPpLy8kdIc=",
         "owner": "JuliusBrussee",
         "repo": "caveman",
-        "rev": "655b7d9c5431f822264b7732e9901c5578ac84cf",
+        "rev": "25d22f864ad68cc447a4cb93aefde918aa4aec9f",
         "type": "github"
       },
       "original": {
@@ -549,11 +549,11 @@
     "impeccable": {
       "flake": false,
       "locked": {
-        "lastModified": 1781050079,
-        "narHash": "sha256-tIZdChx0Ia/bdT5xVHPHQ7neBVW4ru8AdxpHlRbgelA=",
+        "lastModified": 1782435061,
+        "narHash": "sha256-oFe0qTRqxj+OSaO/5VREGga6Kc1xt411inhkmin+e3I=",
         "owner": "pbakaus",
         "repo": "impeccable",
-        "rev": "1863a44b23bfcf28e5990c0068a0603995ab1e29",
+        "rev": "3590bf9e37c84ecbc92f9c205ce1aebf2185a971",
         "type": "github"
       },
       "original": {
@@ -876,11 +876,11 @@
     "trailofbits-skills": {
       "flake": false,
       "locked": {
-        "lastModified": 1780676921,
-        "narHash": "sha256-VCIy7AaKLHD4paZUDpuAKkchRbGyaw3KY/khS55ypw0=",
+        "lastModified": 1782324052,
+        "narHash": "sha256-TLdWAXq9PYv/bC/Mh0d0pXshFcboI+tgxztuAszliv4=",
         "owner": "trailofbits",
         "repo": "skills",
-        "rev": "d5fe2e6a7896236c3102fd5477e833623ad70298",
+        "rev": "39e10bd31e808e4dbf50588dd023fa6197b6b0cc",
         "type": "github"
       },
       "original": {
@@ -892,11 +892,11 @@
     "ui-ux-pro-max": {
       "flake": false,
       "locked": {
-        "lastModified": 1775192899,
-        "narHash": "sha256-tgGnZt6ITH8IDPqglNDC1JCt5ZkVMGcET9IbP0vITjo=",
+        "lastModified": 1782518134,
+        "narHash": "sha256-QWX0yoNwUh2ruyt119QgHwRPSL5F1ov8ez5gKB/Uci0=",
         "owner": "nextlevelbuilder",
         "repo": "ui-ux-pro-max-skill",
-        "rev": "b7e3af80f6e331f6fb456667b82b12cade7c9d35",
+        "rev": "65e23199492fa911af32d9078e627ab4de01f4c8",
         "type": "github"
       },
       "original": {
@@ -908,11 +908,11 @@
     "visual-explainer": {
       "flake": false,
       "locked": {
-        "lastModified": 1777310126,
-        "narHash": "sha256-82RYY9txFLhj24oVyvvcXEm6F1RRyRTIXXf8vAJzeoE=",
+        "lastModified": 1782373596,
+        "narHash": "sha256-LBqLqz7Irc8nSHuUUB25Nqn5qQa/ItgpojR/U+RVimc=",
         "owner": "nicobailon",
         "repo": "visual-explainer",
-        "rev": "8f1d0e38ab0f265632a31d2fd032f7b730c98c15",
+        "rev": "528b71feb85dab5d92b82c3554880826f50a75da",
         "type": "github"
       },
       "original": {
