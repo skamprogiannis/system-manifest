@@ -241,7 +241,7 @@ in {
       require("pretty_hover").setup({
         border = "rounded",
         wrap = true,
-        toggle = true,
+        toggle = false,
       })
 
 

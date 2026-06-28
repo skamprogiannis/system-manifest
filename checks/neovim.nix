@@ -119,7 +119,7 @@ in {
     end
 
     local hover_config = pretty_hover.get_config()
-    if hover_config.border ~= "rounded" or hover_config.wrap ~= true or hover_config.toggle ~= true then
+    if hover_config.border ~= "rounded" or hover_config.wrap ~= true or hover_config.toggle ~= false then
       io.stderr:write("pretty_hover configuration regressed\n")
       vim.cmd("cquit")
     end
