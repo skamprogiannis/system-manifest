@@ -1,4 +1,5 @@
 {
+  config,
   pkgs,
   lib,
   hostType ? "desktop",
@@ -128,10 +129,10 @@ assert lib.assertMsg (builtins.elem hostType ["desktop" "usb" "laptop"]) "hostTy
 
   braveCommandLineArgs =
     [
-      "--test-type"
       "--extensions-on-chrome-urls"
       "--ozone-platform-hint=auto"
       "--force-dark-mode"
+      "--user-data-dir=${config.xdg.configHome}/BraveSoftware/Brave-Browser"
       "--disable-features=${lib.concatStringsSep "," braveDisabledFeatures}"
       "--enable-features=${lib.concatStringsSep "," braveEnabledFeatures}"
     ]
@@ -230,7 +231,7 @@ in {
   # Hide the duplicate Brave entry
   xdg.desktopEntries."com.brave.Browser" = {
     name = "Brave Web Browser";
-    exec = "brave";
+    exec = "brave %U";
     noDisplay = true;
   };
 }

@@ -5,6 +5,7 @@
     desktopDmsLegacyProfileFile
     desktopDmsOutputsFile
     desktopGreeterPackage
+    desktopHome
     desktopHyprlandPackage
     laptopDmsOutputsFile
     pkgs
@@ -44,6 +45,9 @@ in {
       assert_file_contains ${desktopHyprlandPackage}/bin/Hyprland 'hyprland.lua'
       assert_file_contains ${desktopHyprlandPackage}/bin/start-hyprland '/bin/start-hyprland --path'
       assert_file_contains ${desktopHyprlandPackage}/bin/start-hyprland '/bin/Hyprland" "$@"'
+      assert_file_not_contains ${desktopHome}/bin/brave '--test-type'
+      assert_file_contains ${desktopHome}/bin/brave '--user-data-dir=/home/stefan/.config/BraveSoftware/Brave-Browser'
+      assert_file_contains ${desktopHome}/share/applications/com.brave.Browser.desktop 'Exec=brave %U'
       assert_file_not_contains ${desktopGreeterPackage}/share/quickshell/dms/Modules/Greetd/assets/dms-greeter '$CACHE_DIR/hyprland.log'
       assert_file_contains ${desktopGreeterPackage}/share/quickshell/dms/Modules/Greetd/assets/dms-greeter "neither 'start-hyprland' nor 'Hyprland' was found in PATH"
       assert_file_contains ${desktopGreeterPackage}/share/quickshell/dms/Modules/Greetd/assets/dms-greeter 'exec_compositor "hyprland" start-hyprland -- --config "$COMPOSITOR_CONFIG"'
