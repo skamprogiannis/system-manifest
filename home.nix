@@ -34,13 +34,14 @@
   # --- PACKAGES ---
   home.packages = with pkgs; [
     # GUI
+    gpu-screen-recorder-gtk
     imv
-    mpv
     linux-wallpaperengine
-    vesktop
+    mpv
     pkgs.mailspring
     obsidian
     proton-vpn
+    vesktop
 
     # CLI / Tools
     alejandra

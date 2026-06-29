@@ -193,10 +193,59 @@ in {
 
       run_expect 0 gsr-record-help "$desktop_home/bin/gsr-record" --help
       assert_log_contains "Usage: gsr-record"
+      assert_log_contains "stop"
       assert_log_contains "--mic"
 
       run_expect 1 gsr-record-invalid-mode "$desktop_home/bin/gsr-record" nope
       assert_log_contains "Error: unknown mode 'nope'."
+
+      stop_runtime="$TMPDIR/gsr-stop-runtime"
+      run_expect 0 gsr-record-stop-empty env XDG_RUNTIME_DIR="$stop_runtime" HOME="$TMPDIR/gsr-stop-home" "$desktop_home/bin/gsr-record" stop
+      assert_log_contains "No active recording."
+
+      fake_runtime="$TMPDIR/gsr-fake-runtime"
+      fake_home="$TMPDIR/gsr-fake-home"
+      fake_bin="$TMPDIR/gsr-fake-bin"
+      fake_log="$TMPDIR/gsr-fake-signal.log"
+      mkdir -p "$fake_runtime/gsr-record" "$fake_home/videos/screencasts" "$fake_bin"
+      cat > "$fake_bin/kill" <<SH
+      #!${pkgs.bash}/bin/bash
+      set -euo pipefail
+      if [ "\$1" = "-INT" ]; then
+        echo INT > "\$GSR_FAKE_SIGNAL_LOG"
+        shift
+        exec ${pkgs.procps}/bin/kill -INT "\$@"
+      fi
+      if [ "\$1" = "-0" ] && [ -f "\$GSR_FAKE_SIGNAL_LOG" ]; then
+        exit 1
+      fi
+      exec ${pkgs.procps}/bin/kill "\$@"
+      SH
+      chmod +x "$fake_bin/kill"
+      cat > "$fake_bin/gpu-screen-recorder" <<SH
+      #!${pkgs.python3}/bin/python3
+      import time
+
+      while True:
+          time.sleep(1)
+      SH
+      chmod +x "$fake_bin/gpu-screen-recorder"
+      "$fake_bin/gpu-screen-recorder" &
+      fake_pid=$!
+      echo "$fake_pid" > "$fake_runtime/gsr-record/pid"
+      echo "$fake_home/videos/screencasts/fake.mp4" > "$fake_runtime/gsr-record/outfile"
+      echo recording > "$fake_runtime/gsr-record/status"
+      run_expect 0 gsr-record-stop-fake env XDG_RUNTIME_DIR="$fake_runtime" HOME="$fake_home" GSR_RECORD_KILL="$fake_bin/kill" GSR_FAKE_SIGNAL_LOG="$fake_log" "$desktop_home/bin/gsr-record" stop
+      assert_log_contains "Recorder stopped, but no file was saved."
+      if [ "$(cat "$fake_log")" != "INT" ]; then
+        echo "Expected gsr-record stop to send SIGINT to the active recorder." >&2
+        exit 1
+      fi
+      if [ -e "$fake_runtime/gsr-record/pid" ] || [ -e "$fake_runtime/gsr-record/outfile" ] || [ -e "$fake_runtime/gsr-record/status" ]; then
+        echo "Expected gsr-record stop to clear recorder state files." >&2
+        find "$fake_runtime/gsr-record" -maxdepth 1 -type f -print >&2
+        exit 1
+      fi
 
       run_expect 1 gsr-record-invalid-option "$desktop_home/bin/gsr-record" fullscreen --bogus
       assert_log_contains "Error: unknown option --bogus."

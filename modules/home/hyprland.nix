@@ -479,12 +479,8 @@ in {
             (execBind "ALT + SHIFT + Print" "screenshot-path-copy full")
 
             # --- Screen Recording ---
-            (execBind (modKey "r") "gsr-record region")
-            (execBind (modKey "SHIFT + r") "gsr-record region --no-audio")
-            (execBind (modKey "ALT + r") "gsr-record fullscreen --mic")
-            (execBind (modKey "ALT + SHIFT + r") "gsr-record fullscreen --no-audio")
-            (execBind (modKey "CTRL + r") "gsr-record window")
-            (execBind (modKey "CTRL + SHIFT + r") "gsr-record window --no-audio")
+            (execBind (modKey "r") "gpu-screen-recorder-gtk")
+            (execBind (modKey "SHIFT + r") "gsr-record stop")
 
             # --- DMS IPC Controls ---
             (execBind (modKey "n") "dms ipc call notifications toggle")

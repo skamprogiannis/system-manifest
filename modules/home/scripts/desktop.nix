@@ -136,12 +136,13 @@
 
       usage() {
         cat <<'EOF'
-      Usage: gsr-record [region|fullscreen|window] [--no-audio] [--mic]
+      Usage: gsr-record [region|fullscreen|window|stop] [--no-audio] [--mic]
 
-      Toggles screen recording with gpu-screen-recorder.
+      Starts or stops screen recording with gpu-screen-recorder.
         region      interactively select an area to record
         fullscreen  record the focused monitor
         window      record the active window bounds
+        stop        stop any active recording without starting a new one
         --mic       include the default microphone with desktop audio
       EOF
       }
@@ -178,6 +179,93 @@
           | ${pkgs.gnused}/bin/sed 's/[[:space:]]\+/ /g; s/[[:space:]]*$//'
       }
 
+      recorder_pid_matches() {
+        local candidate="$1"
+        local exe
+        local cmdline
+        exe=$(readlink -f "/proc/$candidate/exe" 2>/dev/null || true)
+        [ "''${exe##*/}" = "gpu-screen-recorder" ] && return 0
+
+        cmdline=$(${pkgs.coreutils}/bin/tr '\0' ' ' <"/proc/$candidate/cmdline" 2>/dev/null || true)
+        [[ "$cmdline" == *gpu-screen-recorder* ]]
+      }
+
+      process_active() {
+        local candidate="$1"
+        local stat
+        "$KILL_BIN" -0 "$candidate" 2>/dev/null || return 1
+        stat=$(${pkgs.procps}/bin/ps -o stat= -p "$candidate" 2>/dev/null | ${pkgs.coreutils}/bin/tr -d '[:space:]')
+        [ -n "$stat" ] || return 1
+        [[ "$stat" != Z* ]]
+      }
+
+      find_recorder_pid() {
+        if [ -f "$PIDFILE" ]; then
+          local pid
+          pid=$(cat "$PIDFILE" 2>/dev/null || true)
+          if [[ "$pid" =~ ^[0-9]+$ ]] && process_active "$pid" && recorder_pid_matches "$pid"; then
+            printf '%s\n' "$pid"
+            return 0
+          fi
+        fi
+
+        ${pkgs.procps}/bin/pgrep -u "$(${pkgs.coreutils}/bin/id -u)" -f '(^|/)gpu-screen-recorder( |$)' 2>/dev/null \
+          | while IFS= read -r pid; do
+              [ "$pid" != "$$" ] || continue
+              if recorder_pid_matches "$pid"; then
+                printf '%s\n' "$pid"
+                return 0
+              fi
+            done
+      }
+
+      cleanup_state() {
+        rm -f "$PIDFILE" "$OUTFILE_STATE" "$STATUSFILE"
+      }
+
+      stop_recording() {
+        local pid
+        pid=$(find_recorder_pid | ${pkgs.coreutils}/bin/head -n 1 || true)
+
+        if [ -z "$pid" ]; then
+          cleanup_state
+          notify_recording low "No active recording."
+          return 0
+        fi
+
+        "$KILL_BIN" -INT "$pid"
+
+        for _ in $(${pkgs.coreutils}/bin/seq 1 100); do
+          if ! process_active "$pid"; then
+            break
+          fi
+          ${pkgs.coreutils}/bin/sleep 0.1
+        done
+
+        if process_active "$pid"; then
+          notify_recording normal "Stop requested, but gpu-screen-recorder is still shutting down."
+          return 1
+        fi
+
+        if [ -f "$OUTFILE_STATE" ]; then
+          OUTFILE=$(cat "$OUTFILE_STATE")
+          if [ -s "$OUTFILE" ]; then
+            notify_recording low "Saved: $OUTFILE"
+          else
+            DETAIL=$(summarize_log || true)
+            if [ -n "$DETAIL" ]; then
+              notify_recording normal "Recorder stopped, but no file was saved. $DETAIL"
+            else
+              notify_recording normal "Recorder stopped, but no file was saved."
+            fi
+          fi
+        else
+          notify_recording low "Recording stopped."
+        fi
+
+        cleanup_state
+      }
+
       MODE="region"
       AUDIO=1
       MIC=0
@@ -191,7 +279,7 @@
       fi
 
       case "$MODE" in
-        region|fullscreen|window) ;;
+        region|fullscreen|window|stop) ;;
         *)
           echo "Error: unknown mode '$MODE'." >&2
           usage >&2
@@ -228,6 +316,7 @@
       LOGFILE="$STATE_DIR/log"
       LOCKFILE="$STATE_DIR/lock"
       OUTDIR="$HOME/videos/screencasts"
+      KILL_BIN="''${GSR_RECORD_KILL:-${pkgs.procps}/bin/kill}"
       mkdir -p "$STATE_DIR"
       mkdir -p "$OUTDIR"
 
@@ -237,50 +326,18 @@
         exit 1
       fi
 
-      is_recorder_pid() {
-        local candidate="$1"
-        local exe
-        exe=$(readlink -f "/proc/$candidate/exe" 2>/dev/null || true)
-        [ "''${exe##*/}" = "gpu-screen-recorder" ]
-      }
+      if [ "$MODE" = "stop" ]; then
+        stop_recording
+        exit $?
+      fi
 
       if [ -f "$PIDFILE" ]; then
         PID=$(cat "$PIDFILE")
-        if [[ "$PID" =~ ^[0-9]+$ ]] && kill -0 "$PID" 2>/dev/null && is_recorder_pid "$PID"; then
-          kill -INT "$PID"
-
-          for _ in $(${pkgs.coreutils}/bin/seq 1 100); do
-            if ! kill -0 "$PID" 2>/dev/null; then
-              break
-            fi
-            ${pkgs.coreutils}/bin/sleep 0.1
-          done
-
-          if kill -0 "$PID" 2>/dev/null; then
-            notify_recording normal "Stop requested, but gpu-screen-recorder is still shutting down."
-            exit 1
-          fi
-
-          if [ -f "$OUTFILE_STATE" ]; then
-            OUTFILE=$(cat "$OUTFILE_STATE")
-            if [ -s "$OUTFILE" ]; then
-              notify_recording low "Saved: $OUTFILE"
-            else
-              DETAIL=$(summarize_log || true)
-              if [ -n "$DETAIL" ]; then
-                notify_recording normal "Recorder stopped, but no file was saved. $DETAIL"
-              else
-                notify_recording normal "Recorder stopped, but no file was saved."
-              fi
-            fi
-          else
-            notify_recording normal "Recorder stopped, but the output path was unknown."
-          fi
-
-          rm -f "$PIDFILE" "$OUTFILE_STATE" "$STATUSFILE"
+        if [[ "$PID" =~ ^[0-9]+$ ]] && process_active "$PID" && recorder_pid_matches "$PID"; then
+          stop_recording
           exit 0
         fi
-        rm -f "$PIDFILE" "$OUTFILE_STATE" "$STATUSFILE"
+        cleanup_state
       fi
 
       OUTFILE="$OUTDIR/screencast_$(date +%Y-%m-%d_%H-%M-%S).mp4"
@@ -343,7 +400,7 @@
       echo "$PID" > "$PIDFILE"
       ${pkgs.coreutils}/bin/sleep 1
 
-      if ! kill -0 "$PID" 2>/dev/null; then
+      if ! process_active "$PID"; then
         DETAIL=$(summarize_log || true)
         rm -f "$PIDFILE" "$OUTFILE_STATE" "$STATUSFILE"
         if [ -n "$DETAIL" ]; then
