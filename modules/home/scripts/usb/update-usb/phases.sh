@@ -15,6 +15,39 @@ phase_end() {
   TIMINGS+=("$PHASE_LABEL|$phase_elapsed")
 }
 
+format_duration() {
+  local seconds="$1"
+  local hours minutes remaining
+
+  if [ "$seconds" -lt 60 ]; then
+    printf '%ss' "$seconds"
+    return
+  fi
+
+  hours=$((seconds / 3600))
+  minutes=$(((seconds % 3600) / 60))
+  remaining=$((seconds % 60))
+
+  if [ "$hours" -gt 0 ]; then
+    if [ "$minutes" -gt 0 ] && [ "$remaining" -gt 0 ]; then
+      printf '%sh %sm %ss' "$hours" "$minutes" "$remaining"
+    elif [ "$minutes" -gt 0 ]; then
+      printf '%sh %sm' "$hours" "$minutes"
+    elif [ "$remaining" -gt 0 ]; then
+      printf '%sh %ss' "$hours" "$remaining"
+    else
+      printf '%sh' "$hours"
+    fi
+    return
+  fi
+
+  if [ "$remaining" -gt 0 ]; then
+    printf '%sm %ss' "$minutes" "$remaining"
+  else
+    printf '%sm' "$minutes"
+  fi
+}
+
 print_timing_summary() {
   if [ "${#TIMINGS[@]}" -eq 0 ]; then
     return
@@ -26,7 +59,7 @@ print_timing_summary() {
     local label="${timing%%|*}"
     local seconds="${timing##*|}"
     total=$((total + seconds))
-    printf '  - %s: %ss\n' "$label" "$seconds"
+    printf '  - %s: %s\n' "$label" "$(format_duration "$seconds")"
   done
-  printf '  - total: %ss\n' "$total"
+  printf '  - total: %s\n' "$(format_duration "$total")"
 }

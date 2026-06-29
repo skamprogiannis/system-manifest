@@ -94,14 +94,14 @@ if ! capture_desired_system_metadata; then
   echo "Error: refusing to update USB before touching it because the desired USB system path could not be evaluated." >&2
   exit 1
 fi
-echo "Source flake dir: $FLAKE_DIR"
+echo "Source flake: $FLAKE_DIR"
 if [ -n "$EXPECTED_CONFIG_REVISION" ]; then
-  echo "Source USB revision: $EXPECTED_CONFIG_REVISION"
+  echo "Desired revision: $EXPECTED_CONFIG_REVISION"
 else
-  echo "Warning: could not resolve Source USB revision from $FLAKE_DIR"
+  echo "Warning: could not resolve desired USB revision from $FLAKE_DIR"
 fi
 if [ -n "$DESIRED_SYSTEM_TOPLEVEL" ]; then
-  echo "Desired USB system path: $DESIRED_SYSTEM_TOPLEVEL"
+  echo "Desired system: $DESIRED_SYSTEM_TOPLEVEL"
 fi
 
 if [ ! -e "$USB_ROOT_PART" ]; then
@@ -215,18 +215,19 @@ if [ "$MODE" = "prebuild" ]; then
     -b 1048576 \
     -processors "$(nproc)"
   SQFS_SIZE="$(du -sh "$LOCAL_SQUASHFS" | cut -f1)"
-  echo "local squashfs image: $SQFS_SIZE"
+  echo "Local squashfs image: $SQFS_SIZE"
   phase_end
 
   phase_begin "syncing-squashfs" "Syncing squashfs to USB"
   umount "$MOUNT_POINT/nix/store"
   MOUNTED_STAGE_STORE=0
   rm -f "$MOUNT_POINT/nix-store.squashfs.tmp" "$MOUNT_POINT/nix-store.squashfs"
+  echo "Copying $SQFS_SIZE squashfs image to USB; this can take several minutes."
   cp "$LOCAL_SQUASHFS" "$MOUNT_POINT/nix-store.squashfs.tmp"
   mv "$MOUNT_POINT/nix-store.squashfs.tmp" "$MOUNT_POINT/nix-store.squashfs"
   FINAL_SQUASHFS="$MOUNT_POINT/nix-store.squashfs"
   SQFS_SIZE="$(du -sh "$MOUNT_POINT/nix-store.squashfs" | cut -f1)"
-  echo "usb squashfs image: $SQFS_SIZE"
+  echo "USB squashfs image: $SQFS_SIZE"
   phase_end
 else
   phase_begin "building-squashfs" "Building squashfs in-place on USB (slow path)"
@@ -238,7 +239,7 @@ else
     -processors "$(nproc)"
   FINAL_SQUASHFS="$MOUNT_POINT/nix-store.squashfs"
   SQFS_SIZE="$(du -sh "$MOUNT_POINT/nix-store.squashfs" | cut -f1)"
-  echo "squashfs image: $SQFS_SIZE"
+  echo "Squashfs image: $SQFS_SIZE"
   phase_end
 fi
 
@@ -258,15 +259,15 @@ phase_end
 
 CURRENT_PHASE="done"
 echo "=== USB Update: Done ==="
-echo "Mode used: $MODE"
+echo "Mode: $MODE"
 if [ -n "$EXPECTED_CONFIG_REVISION" ]; then
-  echo "Expected revision: $EXPECTED_CONFIG_REVISION"
+  echo "Desired revision: $EXPECTED_CONFIG_REVISION"
 fi
 if [ -n "$TARGET_CONFIG_REVISION" ]; then
   echo "Written revision: $TARGET_CONFIG_REVISION"
 fi
 if [ -n "$TARGET_SYSTEM_TOPLEVEL" ]; then
-  echo "Written system path: $TARGET_SYSTEM_TOPLEVEL"
+  echo "Written system: $TARGET_SYSTEM_TOPLEVEL"
 fi
 print_timing_summary
 echo "Boot flow: LUKS unlock -> squashfs overlay on /nix/store -> fast reads"

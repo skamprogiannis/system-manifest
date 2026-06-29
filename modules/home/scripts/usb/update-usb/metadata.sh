@@ -103,14 +103,14 @@ verify_installed_revision() {
   fi
 
   if [ -n "$EXPECTED_CONFIG_REVISION" ]; then
-    echo "expected USB revision: $EXPECTED_CONFIG_REVISION"
+    echo "Desired revision: $EXPECTED_CONFIG_REVISION"
   else
-    echo "expected USB revision: unavailable (flake evaluation did not return configurationRevision)"
+    echo "Desired revision: unavailable (flake evaluation did not return configurationRevision)"
   fi
-  echo "installed USB revision: $TARGET_CONFIG_REVISION"
-  echo "installed USB system path: $TARGET_SYSTEM_TOPLEVEL"
+  echo "Installed revision: $TARGET_CONFIG_REVISION"
+  echo "Installed system: $TARGET_SYSTEM_TOPLEVEL"
   if [ -n "$TARGET_NIXOS_VERSION" ]; then
-    echo "installed USB NixOS version: $TARGET_NIXOS_VERSION"
+    echo "Installed NixOS version: $TARGET_NIXOS_VERSION"
   fi
 
   if [ -n "$EXPECTED_CONFIG_REVISION" ] && [ "$TARGET_CONFIG_REVISION" != "$EXPECTED_CONFIG_REVISION" ]; then

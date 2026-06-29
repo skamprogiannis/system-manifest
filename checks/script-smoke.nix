@@ -68,6 +68,32 @@ in {
       run_expect 0 update-usb-help "$desktop_home/bin/update-usb" --help
       assert_log_contains "sudo update-usb [--mode prebuild|in-place] [--in-place] [--force] [path-to-flake-dir]"
 
+      timing_test="$TMPDIR/update-usb-timing"
+      mkdir -p "$timing_test"
+      (
+        # shellcheck disable=SC1091
+        . "$update_usb_source_dir/phases.sh"
+        TIMINGS=("Quick phase|59" "Opening LUKS|92" "Syncing squashfs to USB|780" "Full update|2243")
+        print_timing_summary
+      ) > "$timing_test/actual"
+
+      cat > "$timing_test/expected" <<'EOF'
+      === USB Update: Timing Summary ===
+        - Quick phase: 59s
+        - Opening LUKS: 1m 32s
+        - Syncing squashfs to USB: 13m
+        - Full update: 37m 23s
+        - total: 52m 54s
+      EOF
+      if ! cmp -s "$timing_test/expected" "$timing_test/actual"; then
+        echo "Expected update-usb timing summary to use human-readable durations." >&2
+        echo "Expected:" >&2
+        ${pkgs.gnused}/bin/sed 's/^/  /' "$timing_test/expected" >&2
+        echo "Actual:" >&2
+        ${pkgs.gnused}/bin/sed 's/^/  /' "$timing_test/actual" >&2
+        exit 1
+      fi
+
       if ! ${pkgs.gnugrep}/bin/grep -Fq "#/nix/store/}/init" "$update_usb_source_dir/metadata.sh"; then
         echo "Expected update-usb to normalize squashfs verification paths relative to /nix/store." >&2
         ${pkgs.gnused}/bin/sed -n '1,120p' "$update_usb_source_dir/metadata.sh" >&2
