@@ -44,44 +44,52 @@
     vesktop
 
     # CLI / Tools
+    _7zz
     alejandra
+    btop
     clang
     clang-tools
     cppcheck
     curl
+    deadnix
+    eslint
     fastfetch
     fd
     ffmpegthumbnailer
     file
-    imagemagick
     gcr
     glow
     gnumake
     go
     gopls
+    imagemagick
     jq
     libsecret
-    nodejs_24
-    typescript-language-server
-    prettier
-    eslint
-    omnisharp-roslyn
     nil
+    nodejs_24
+    omnisharp-roslyn
     pacvim
     pandoc
     playwright-test
+    prettier
     python3
     python3Packages.python-lsp-server
     ripgrep
     ruff
     rust-analyzer
+    shellcheck
+    shfmt
     sqlite
     statix
     transmission_4
+    tree
     tremc
+    typescript-language-server
+    unzip
     uv
     wget
     wl-clipboard
+    zip
     # Disk Utilities
     dosfstools
     e2fsprogs
