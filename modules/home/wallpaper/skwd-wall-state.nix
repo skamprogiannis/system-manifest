@@ -208,6 +208,7 @@
     };
     features = {
       matugen = true;
+      music = false;
       ollama = true;
       steam = true;
       wallhaven = true;

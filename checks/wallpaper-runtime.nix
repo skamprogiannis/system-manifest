@@ -105,6 +105,7 @@ in {
             fi
             assert_contains "schedule-dms-wallpaper-sync.sh" "$skwd_defaults" "generated skwd-wall defaults"
             assert_not_contains '"/sync-dms-wallpaper.sh"' "$skwd_defaults" "generated skwd-wall defaults"
+            assert_contains '"music":false' "$skwd_defaults" "generated skwd-wall defaults"
 
             assert_contains "sync-dms-wallpaper: missing both" "${desktopSkwdDmsSyncHook}" "DMS wallpaper sync hook"
             assert_contains "should_call_dms=" "${desktopSkwdDmsSyncHook}" "DMS wallpaper sync hook"
@@ -139,6 +140,7 @@ in {
             assert_contains '{ key: "B then W / S",  action: "Open Wallhaven / Steam browser" },' "$skwd_keybinds_qml" "patched skwd-wall keybind settings"
             assert_before 'title: "Settings controls"' 'title: "Filters"' "$skwd_keybinds_qml" "patched skwd-wall keybind settings"
             assert_contains "DaemonClient.applyVideo(path, outputs, neighbors, screens, audioMap, volumeMap)" ${../modules/home/wallpaper/qml-patches.nix} "skwd-wall QML patch module"
+            assert_contains "music = false;" ${../modules/home/wallpaper/skwd-wall-state.nix} "skwd-wall declarative config"
 
             dms_bin="$(readlink -f "${desktopHome}/bin/dms")"
             dms_pkg="$(dirname "$(dirname "$dms_bin")")"
