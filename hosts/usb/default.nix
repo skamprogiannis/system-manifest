@@ -1,9 +1,4 @@
-{
-  pkgs,
-  lib,
-  modulesPath,
-  ...
-}: {
+{lib, ...}: {
   imports = [
     ../common/default.nix
     ./host-scratch.nix

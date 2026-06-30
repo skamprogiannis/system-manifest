@@ -1,8 +1,4 @@
-{
-  pkgs,
-  lib,
-  ...
-}: let
+{pkgs, ...}: let
   version = "1.6.3";
   appImageName = "Voiden-${version}.AppImage";
   src = pkgs.fetchurl {

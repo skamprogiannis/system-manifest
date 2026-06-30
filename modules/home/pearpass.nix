@@ -1,7 +1,6 @@
 {
   config,
   pkgs,
-  inputs,
   lib,
   ...
 }: let
@@ -13,15 +12,6 @@
     "--ozone-platform-hint=auto"
     "--enable-wayland-ime=true"
   ];
-  pearpassPackageJson = builtins.fromJSON (builtins.readFile "${inputs.pearpass-app-desktop}/package.json");
-  pearpassSourceVersion = let
-    version =
-      pearpassPackageJson.version
-        or (throw "pearpass-app-desktop/package.json is missing the version field");
-  in
-    if builtins.isString version
-    then version
-    else throw "pearpass-app-desktop/package.json version must be a string";
 
   # Upstream's source repo version can move ahead of the published Linux
   # AppImage release. Keep following the repo for manifests/runtime data, but

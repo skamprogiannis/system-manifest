@@ -1,7 +1,6 @@
 {
   pkgs,
   inputs,
-  lib,
   ...
 }: let
   hyprlandBase = inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;

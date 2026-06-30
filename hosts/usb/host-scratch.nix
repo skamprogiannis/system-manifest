@@ -1,8 +1,4 @@
-{
-  pkgs,
-  lib,
-  ...
-}: let
+{pkgs, ...}: let
   userName = "stefan";
   userGroup = "users";
   userHome = "/home/${userName}";

@@ -53,6 +53,7 @@
 - **Pre-Completion Dry Build:** After any config/code change and before reporting "done," run `nixos-rebuild dry-build --flake .#desktop` yourself and fix any failures before handing back to the user.
 - **CI Shape:** GitHub Actions mirrors the Check registry groups in `checks/registry.nix` with separate host and support jobs so failures stay isolated. CI serializes full Nix builds and uses configured Nix caches plus GitHub's Nix store cache to reduce upstream fetch throttling.
 - **ShellCheck Scope:** ShellCheck currently lints the generated custom shell entrypoints from the Home Manager profiles, including host-variant wrappers where desktop and USB differ. If more shell logic moves into standalone `.sh` files later, extend linting to those sources too.
+- **Deadnix Hygiene:** Run `deadnix` after significant Nix refactors, package sweeps, or module rewiring before committing. Treat it as an occasional cleanup check, not a required gate for tiny config edits.
 - **Validation vs Deployment:** CI and `nix flake check` only validate buildability and scripted checks. Deployment is still manual: `nixos-rebuild switch --flake .#desktop` for desktop, `nixos-rebuild switch --flake .#laptop` for laptop, and `update-usb` for the USB image.
 
 ## Hyprland Keybind Guidance
