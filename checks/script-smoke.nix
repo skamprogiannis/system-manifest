@@ -383,6 +383,9 @@ in {
 
       [features]
       goals = true
+
+      [mcp_servers.context7]
+      command = "/nix/store/context7-mcp/bin/context7-mcp"
       TOML
 
       run_codex_merge() {
@@ -404,6 +407,9 @@ in {
 
       assert data["model"] == "gpt-5.5"
       assert data["projects"]["/home/stefan/system-manifest"]["trust_level"] == "trusted"
+      assert data["mcp_servers"]["context7"] == {
+          "command": "/nix/store/context7-mcp/bin/context7-mcp",
+      }
       assert stat.S_IMODE(os.stat(path).st_mode) == 0o600
       PY
 
@@ -423,6 +429,14 @@ in {
 
       [projects."/tmp/other"]
       trust_level = "trusted"
+
+      [mcp_servers.context7]
+      url = "https://mcp.context7.com/mcp/oauth"
+      args = ["-y", "@upstash/context7-mcp", "--api-key", "stale"]
+
+      [mcp_servers.local-test]
+      command = "local-mcp"
+      args = ["serve"]
       TOML
       run_codex_merge "$existing"
       ${codexConfigPython}/bin/python3 - "$existing" <<'PY'
@@ -439,6 +453,13 @@ in {
       assert data["features"]["local_flag"] is True
       assert data["projects"]["/home/stefan/system-manifest"]["trust_level"] == "trusted"
       assert data["projects"]["/tmp/other"]["trust_level"] == "trusted"
+      assert data["mcp_servers"]["context7"] == {
+          "command": "/nix/store/context7-mcp/bin/context7-mcp",
+      }
+      assert data["mcp_servers"]["local-test"] == {
+          "command": "local-mcp",
+          "args": ["serve"],
+      }
       PY
 
       symlink_dir="$TMPDIR/codex/symlink"

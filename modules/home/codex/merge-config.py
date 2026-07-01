@@ -16,7 +16,9 @@ def merge(seed_value, current_value, path=()):
     merged = copy.deepcopy(seed_value)
     for key, value in current_value.items():
         next_path = path + (key,)
-        if next_path == ("projects",) and isinstance(value, dict):
+        if path == ("mcp_servers",) and key in merged:
+            continue
+        elif next_path == ("projects",) and isinstance(value, dict):
             projects = copy.deepcopy(value)
             projects.update(seed_value.get(key, {}))
             merged[key] = projects
