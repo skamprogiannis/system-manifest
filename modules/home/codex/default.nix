@@ -315,6 +315,18 @@
   skillHomeFiles = builtins.listToAttrs (map skillHomeFile declarativeSkills);
   skillConfigToml = lib.concatMapStringsSep "\n" skillConfig declarativeSkills;
   codexConfigPython = pkgs.python3.withPackages (ps: [ps.tomli-w]);
+  context7Mcp = pkgs.writeShellScriptBin "context7-mcp" ''
+    api_key="''${CONTEXT7_API_KEY:-}"
+    if [ -z "$api_key" ] && [ -r "$HOME/.config/context7/api-key" ]; then
+      api_key="$(${pkgs.coreutils}/bin/head -n 1 "$HOME/.config/context7/api-key")"
+    fi
+
+    if [ -n "$api_key" ]; then
+      exec ${pkgs.nodejs}/bin/npx -y @upstash/context7-mcp --api-key "$api_key"
+    fi
+
+    exec ${pkgs.nodejs}/bin/npx -y @upstash/context7-mcp
+  '';
   codexConfigText = ''
     model = "gpt-5.5"
     model_reasoning_effort = "high"
@@ -342,8 +354,7 @@
     ${skillConfigToml}
 
     [mcp_servers.context7]
-    command = "npx"
-    args = ["-y", "@upstash/context7-mcp"]
+    command = "${context7Mcp}/bin/context7-mcp"
 
     [mcp_servers.etsy]
     url = "https://mcp.api.etsycloud.com/mcp"
