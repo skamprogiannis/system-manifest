@@ -1,0 +1,142 @@
+--- zellij-server/src/screen.rs	2026-07-04 17:54:26.580672881 +0300
++++ zellij-server/src/screen.rs	2026-07-04 17:54:32.222204873 +0300
+@@ -2490,8 +2490,11 @@
+ 
+                 for tab in self.tabs.values_mut() {
+                     let is_active = active_tab_ids_snapshot.contains(&tab.id);
+-                    let (new_panes, tab_newly_set) =
++                    let (new_panes, tab_newly_set, tab_had_bell) =
+                         tab.check_and_handle_bell_notifications(is_active);
++                    if tab_had_bell {
++                        has_bell = true;
++                    }
+                     if !new_panes.is_empty() {
+                         panes_to_flash.extend(new_panes);
+                         bell_state_changed = true;
+@@ -2502,7 +2505,7 @@
+                     }
+                 }
+ 
+-                has_bell = !panes_to_flash.is_empty() || !tabs_to_flash.is_empty();
++                has_bell = has_bell || !panes_to_flash.is_empty() || !tabs_to_flash.is_empty();
+                 if !panes_to_flash.is_empty() {
+                     let _ = self
+                         .bus
+--- zellij-server/src/tab/mod.rs	2026-07-04 17:54:26.580965193 +0300
++++ zellij-server/src/tab/mod.rs	2026-07-04 17:54:43.484088314 +0300
+@@ -2544,7 +2544,7 @@
+     pub fn check_and_handle_bell_notifications(
+         &mut self,
+         is_active_tab: bool,
+-    ) -> (Vec<PaneId>, bool) {
++    ) -> (Vec<PaneId>, bool, bool) {
+         let mut newly_notified_panes = vec![];
+         let mut tab_bell_newly_set = false;
+ 
+@@ -2563,6 +2563,7 @@
+             .filter(|(_, pane)| pane.has_bell())
+             .map(|(pane_id, _)| *pane_id)
+             .collect();
++        let had_bell = !ringing_panes.is_empty();
+ 
+         for pane_id in ringing_panes {
+             // Consume the bell from the pane
+@@ -2585,7 +2586,7 @@
+                 self.tab_has_pending_bell = true;
+             }
+         }
+-        (newly_notified_panes, tab_bell_newly_set)
++        (newly_notified_panes, tab_bell_newly_set, had_bell)
+     }
+     pub fn clear_bell_notification_for_pane(&mut self, pane_id: PaneId) {
+         self.panes_with_pending_bell.remove(&pane_id);
+--- zellij-server/src/tab/unit/tab_tests.rs	2026-07-04 17:54:26.588986401 +0300
++++ zellij-server/src/tab/unit/tab_tests.rs	2026-07-04 17:54:59.251925113 +0300
+@@ -15609,7 +15609,7 @@
+     tab.handle_pty_bytes(2, vec![7u8]).unwrap();
+ 
+     // Now call check_and_handle_bell_notifications as non-active tab
+-    let (new_panes, tab_newly_set) = tab.check_and_handle_bell_notifications(false);
++    let (new_panes, tab_newly_set, had_bell) = tab.check_and_handle_bell_notifications(false);
+ 
+     assert!(
+         new_panes.contains(&new_pane_id),
+@@ -15624,6 +15624,7 @@
+         "tab_has_pending_bell should be true"
+     );
+     assert!(tab_newly_set, "tab_bell_newly_set should be true");
++    assert!(had_bell, "had_bell should be true");
+     assert!(
+         tab.get_pane_with_id(new_pane_id)
+             .map(|p| p.get_bell_notification())
+@@ -15632,6 +15633,70 @@
+     );
+ }
+ 
++#[test]
++pub fn focused_active_pane_bell_is_reported_without_pending_notification() {
++    let size = Size {
++        cols: 121,
++        rows: 20,
++    };
++    let stacked_resize = true;
++    let mut tab = create_new_tab(size, stacked_resize);
++    let focused_pane_id = PaneId::Terminal(1);
++
++    tab.handle_pty_bytes(1, vec![7u8]).unwrap();
++
++    let (new_panes, tab_newly_set, had_bell) = tab.check_and_handle_bell_notifications(true);
++
++    assert!(
++        new_panes.is_empty(),
++        "focused pane should not get a pending notification"
++    );
++    assert!(
++        !tab.panes_with_pending_bell.contains(&focused_pane_id),
++        "focused pane should not be in panes_with_pending_bell"
++    );
++    assert!(
++        !tab.tab_has_pending_bell,
++        "active tab should not have a pending bell notification"
++    );
++    assert!(
++        tab_newly_set,
++        "tab_bell_newly_set should be true for first bell"
++    );
++    assert!(had_bell, "had_bell should be true");
++}
++
++#[test]
++pub fn repeated_focused_active_pane_bell_is_reported_even_without_new_visual_state() {
++    let size = Size {
++        cols: 121,
++        rows: 20,
++    };
++    let stacked_resize = true;
++    let mut tab = create_new_tab(size, stacked_resize);
++
++    tab.handle_pty_bytes(1, vec![7u8]).unwrap();
++    let (_, tab_newly_set, had_bell) = tab.check_and_handle_bell_notifications(true);
++    assert!(tab_newly_set, "first bell should set tab_bell_ring");
++    assert!(had_bell, "first bell should be reported");
++
++    tab.handle_pty_bytes(1, vec![7u8]).unwrap();
++    let (new_panes, tab_newly_set, had_bell) = tab.check_and_handle_bell_notifications(true);
++
++    assert!(
++        new_panes.is_empty(),
++        "focused pane should not get a pending notification"
++    );
++    assert!(
++        !tab_newly_set,
++        "second bell should not require new visual state to be reported"
++    );
++    assert!(
++        had_bell,
++        "second bell should still be reported for ANSI BEL forwarding"
++    );
++}
++
+ #[test]
+ pub fn clearing_last_pane_bell_clears_tab_bell() {
+     let size = Size {

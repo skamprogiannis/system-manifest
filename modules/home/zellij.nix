@@ -2,10 +2,19 @@
   config,
   pkgs,
   ...
-}: {
+}: let
+  zellijUnwrappedWithForwardedBells = pkgs.zellij-unwrapped.overrideAttrs (old: {
+    patchFlags = (old.patchFlags or []) ++ ["-p0"];
+    patches = (old.patches or []) ++ [./zellij-forward-all-bells.patch];
+  });
+  zellijWithForwardedBells = pkgs.zellij.overrideAttrs (_old: {
+    src = zellijUnwrappedWithForwardedBells;
+  });
+in {
   programs.zellij = {
     enable = true;
     enableBashIntegration = false;
+    package = zellijWithForwardedBells;
     settings = {
       default_shell = "${pkgs.bashInteractive}/bin/bash";
       escape_timeout = 0;
