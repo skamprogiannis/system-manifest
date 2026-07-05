@@ -98,6 +98,7 @@
     albumArtOpacity = "0.45";
     panelBlurPx = 8;
     popoverBlurPx = 8;
+    quickSearchSurfaceOpacity = "1.00";
   };
 
   gtk = {

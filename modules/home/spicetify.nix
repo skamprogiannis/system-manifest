@@ -17,6 +17,7 @@
       --cont: ${toString hazy.albumArtContrastPercent}% !important;
       --satu: ${toString hazy.albumArtSaturationPercent}% !important;
       --bright: ${toString hazy.albumArtBrightnessPercent}% !important;
+      --system-spicetify-quick-search-surface: rgba(var(--spice-rgb-card), ${hazy.quickSearchSurfaceOpacity}) !important;
     }
 
     .encore-layout-themes,
@@ -42,7 +43,7 @@
 
     .main-contextMenu-menu,
     .Dropdown-menu,
-    [data-tippy-root] [role="menu"],
+    [data-tippy-root]:has([role="menu"]) [role="menu"],
     .marketplace-code-editor,
     .main-trackCreditsModal-mainSection,
     .main-trackCreditsModal-originalCredits,
@@ -61,7 +62,7 @@
     div#context-menu::before,
     .main-contextMenu-menu::before,
     .Dropdown-menu::before,
-    ul > div[data-tippy-root]::before,
+    [data-tippy-root]:has([role="menu"])::before,
     .yzZ_VZHrZBb3REPcU7tD::before {
       content: none !important;
       backdrop-filter: none !important;
@@ -73,7 +74,7 @@
 
     .main-contextMenu-tippy,
     .main-contextMenu-tippy > div,
-    [data-tippy-root] {
+    [data-tippy-root]:has([role="menu"]) {
       background: transparent !important;
       backdrop-filter: none !important;
       -webkit-backdrop-filter: none !important;
@@ -82,7 +83,7 @@
 
     .main-contextMenu-menu,
     .Dropdown-menu,
-    [data-tippy-root] [role="menu"] {
+    [data-tippy-root]:has([role="menu"]) [role="menu"] {
       background-color: rgba(var(--spice-rgb-card), ${hazy.cardOpacity}) !important;
       overflow: visible !important;
     }
@@ -93,24 +94,33 @@
       -webkit-backdrop-filter: none !important;
     }
 
-    [data-tippy-root] [role="menu"] button,
+    [data-tippy-root]:has([role="menu"]) [role="menu"] button,
     .main-contextMenu-menu button,
     .Dropdown-menu button {
       pointer-events: auto !important;
     }
 
+    [data-system-manifest-row-play-tooltip="true"] {
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
     [role="dialog"]:has(input[placeholder="What do you want to play?"]),
     [role="dialog"]:has(.search-modal-listbox),
     .search-modal-listbox,
-    .search-modal-keyboard-accessibility-bar,
-    [role="dialog"]:has(.search-modal-listbox) > div,
-    [role="dialog"]:has(input[placeholder="What do you want to play?"]) > div {
-      background-color: rgba(var(--spice-rgb-card), ${hazy.cardOpacity}) !important;
+    .search-modal-keyboard-accessibility-bar {
+      background-color: var(--system-spicetify-quick-search-surface) !important;
     }
 
+    [role="dialog"]:has(input[placeholder="What do you want to play?"]) form,
+    [role="dialog"]:has(input[placeholder="What do you want to play?"]) form div:has(> input[placeholder="What do you want to play?"]),
     [role="dialog"]:has(.search-modal-listbox) input,
     [role="dialog"]:has(input[placeholder="What do you want to play?"]) input {
-      background-color: rgba(var(--spice-rgb-card), ${hazy.cardOpacity}) !important;
+      background: transparent !important;
+      border: 0 !important;
+      outline: none !important;
+      box-shadow: none !important;
     }
   '';
 in {
@@ -158,6 +168,37 @@ in {
         localStorage.setItem("brightAmount", "${toString hazy.albumArtBrightnessPercent}");
         localStorage.setItem("systemManifestHazySettingsVersion", systemManifestHazySettingsVersion);
       }
+
+      const markSystemManifestRowPlayTooltips = () => {
+        const markTooltip = (root) => {
+          const tooltip = root.querySelector("[role=\"tooltip\"]");
+          if (!tooltip) return;
+
+          const label = (tooltip.textContent || "").trim();
+          if (!/^Play\s+.+\s+by\s+.+$/.test(label)) return;
+
+          root.dataset.systemManifestRowPlayTooltip = "true";
+          root.setAttribute("aria-hidden", "true");
+        };
+
+        document.querySelectorAll("[data-tippy-root]").forEach(markTooltip);
+
+        const observer = new MutationObserver((mutations) => {
+          for (const mutation of mutations) {
+            for (const node of mutation.addedNodes) {
+              if (!(node instanceof Element)) continue;
+              if (node.matches("[data-tippy-root]")) markTooltip(node);
+              node.querySelectorAll("[data-tippy-root]").forEach(markTooltip);
+            }
+          }
+        });
+
+        if (document.body) {
+          observer.observe(document.body, { childList: true, subtree: true });
+        }
+      };
+
+      markSystemManifestRowPlayTooltips();
 
       const defImage = "https://i.imgur.com/Wl2D0h0.png";'
 
