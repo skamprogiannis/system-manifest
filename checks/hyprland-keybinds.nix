@@ -3,7 +3,9 @@
     (ctx)
     desktopHyprlandLuaFile
     desktopHyprlandPackage
+    laptopHyprlandLuaFile
     pkgs
+    usbHyprlandLuaFile
     ;
 in {
   hyprland-keybinds =
@@ -65,6 +67,30 @@ in {
       assert_not_contains 'hl.bind((mod .. " + SHIFT + Right"), (hl.dsp.window.move({ monitor = "r" })))'
       assert_not_contains 'source='
       assert_not_contains 'colors.conf'
+
+      for hyprland_lua in ${desktopHyprlandLuaFile} ${laptopHyprlandLuaFile} ${usbHyprlandLuaFile}; do
+        assert_contains_in_file() {
+          local needle="$1"
+          if ! grep -Fq "$needle" "$hyprland_lua"; then
+            echo "Expected generated Hyprland Lua config to contain: $needle" >&2
+            sed 's/^/  /' "$hyprland_lua" >&2
+            exit 1
+          fi
+        }
+
+        assert_not_contains_in_file() {
+          local needle="$1"
+          if grep -Fq "$needle" "$hyprland_lua"; then
+            echo "Generated Hyprland Lua config still contains legacy text: $needle" >&2
+            sed 's/^/  /' "$hyprland_lua" >&2
+            exit 1
+          fi
+        }
+
+        assert_contains_in_file 'hl.bind((mod .. " + h"), (hl.dsp.focus({ direction = "left" })))'
+        assert_contains_in_file 'hl.bind((mod .. " + l"), (hl.dsp.focus({ direction = "right" })))'
+        assert_not_contains_in_file 'hypr-nav'
+      done
 
       grep -Fq -- '--config' ${desktopHyprlandPackage}/bin/Hyprland
       grep -Fq -- 'hyprland.lua' ${desktopHyprlandPackage}/bin/Hyprland

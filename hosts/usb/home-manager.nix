@@ -8,9 +8,6 @@
     ../../modules/home/scripts/usb.nix
     ../../modules/home/spotify/usb.nix
   ];
-
-  system_manifest.navigation.wrapWorkspaces = true;
-
   # USB-only marker consumed by wallpaper helpers so power-saver can act as
   # a lightweight mode without changing desktop behavior.
   xdg.configFile."system-manifest/usb-light-mode-enabled".text = "1\n";

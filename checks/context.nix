@@ -37,6 +37,8 @@
   desktopAccountsServiceAvatarScript = pkgs.writeText "desktop-accounts-service-avatar-script" self.nixosConfigurations.desktop.config.system.activationScripts.accountsServiceAvatar.text;
   desktopHyprlandPackage = self.nixosConfigurations.desktop.config.home-manager.users.stefan.wayland.windowManager.hyprland.finalPackage;
   desktopHyprlandLuaFile = pkgs.writeText "desktop-hyprland.lua" self.nixosConfigurations.desktop.config.home-manager.users.stefan.xdg.configFile."hypr/hyprland.lua".text;
+  laptopHyprlandLuaFile = pkgs.writeText "laptop-hyprland.lua" self.nixosConfigurations.laptop.config.home-manager.users.stefan.xdg.configFile."hypr/hyprland.lua".text;
+  usbHyprlandLuaFile = pkgs.writeText "usb-hyprland.lua" self.nixosConfigurations.usb.config.home-manager.users.stefan.xdg.configFile."hypr/hyprland.lua".text;
   desktopGhosttySettingsFile = pkgs.writeText "desktop-ghostty-settings.json" (builtins.toJSON self.nixosConfigurations.desktop.config.home-manager.users.stefan.programs.ghostty.settings);
   desktopDmsOutputsFile = pkgs.writeText "desktop-dms-outputs.lua" self.nixosConfigurations.desktop.config.home-manager.users.stefan.xdg.configFile."hypr/dms/outputs.lua".text;
   desktopDmsLegacyProfileFile = pkgs.writeText "desktop-dms-profile.conf" self.nixosConfigurations.desktop.config.home-manager.users.stefan.xdg.configFile."hypr/dms/profiles/desktop.conf".text;
@@ -45,7 +47,6 @@
   shellcheckScripts = [
     "${desktopHome}/bin/codex-state-sync"
     "${desktopHome}/bin/gsr-record"
-    "${desktopHome}/bin/hypr-nav"
     "${desktopHome}/bin/hypr-quit-active"
     "${desktopHome}/bin/screenshot-path-copy"
     "${desktopHome}/bin/skwd-we-capture-still"

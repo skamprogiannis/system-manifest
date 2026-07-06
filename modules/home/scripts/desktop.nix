@@ -50,24 +50,6 @@
         echo "Stored Transmission peer port $PORT in settings.json."
       fi
     '')
-    (pkgs.writeShellScriptBin "hypr-nav" ''
-      DIRECTION=$1
-      BEFORE=$(hyprctl -j activewindow | jq -r '.address')
-      hyprctl dispatch movefocus $DIRECTION
-      AFTER=$(hyprctl -j activewindow | jq -r '.address')
-
-      if [ "$BEFORE" == "$AFTER" ] || [ "$BEFORE" == "null" ]; then
-          CURR=$(hyprctl -j activeworkspace | jq '.id')
-          if [ "$DIRECTION" == "r" ]; then
-              NEXT=$(( (CURR % 10) + 1 ))
-              hyprctl dispatch workspace $NEXT
-          elif [ "$DIRECTION" == "l" ]; then
-              NEXT=$(( CURR - 1 ))
-              [ $NEXT -lt 1 ] && NEXT=10
-              hyprctl dispatch workspace $NEXT
-          fi
-      fi
-    '')
     (pkgs.writeShellScriptBin "hypr-quit-active" ''
       set -euo pipefail
 
