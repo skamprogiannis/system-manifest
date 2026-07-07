@@ -13,6 +13,7 @@ assert lib.assertMsg (builtins.elem hostType ["desktop" "usb" "laptop"]) "hostTy
   vimiumCSeedLocalDir = ./brave/vimium-c/local-settings;
   vimiumCSeedSyncDir = ./brave/vimium-c/sync-settings;
   bravePreferencePatch = builtins.toJSON {
+    credentials_enable_service = true;
     intl = {
       accept_languages = "en,el";
       selected_languages = "en,el";
@@ -85,6 +86,8 @@ assert lib.assertMsg (builtins.elem hostType ["desktop" "usb" "laptop"]) "hostTy
       # false = use system title bar and borders
       custom_chrome_frame = false;
     };
+    profile.password_manager_enabled = true;
+    session.restore_on_startup = 1;
     account_values.browser.enable_spellchecking = true;
     privacy_sandbox = {
       first_party_sets_enabled = false;
@@ -132,6 +135,7 @@ assert lib.assertMsg (builtins.elem hostType ["desktop" "usb" "laptop"]) "hostTy
       "--extensions-on-chrome-urls"
       "--ozone-platform-hint=auto"
       "--force-dark-mode"
+      "--password-store=gnome-libsecret"
       "--user-data-dir=${config.xdg.configHome}/BraveSoftware/Brave-Browser"
       "--disable-features=${lib.concatStringsSep "," braveDisabledFeatures}"
       "--enable-features=${lib.concatStringsSep "," braveEnabledFeatures}"
