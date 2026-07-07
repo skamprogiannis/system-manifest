@@ -68,6 +68,31 @@ in {
       assert_not_contains 'source='
       assert_not_contains 'colors.conf'
 
+      assert_line_count_in_file() {
+        local file="$1"
+        local needle="$2"
+        local expected_count="$3"
+
+        local actual_count
+        actual_count="$(grep -Fxc "$needle" "$file" || true)"
+        if [ "$actual_count" -ne "$expected_count" ]; then
+          echo "Expected $expected_count exact occurrences of '$needle' in $file, got $actual_count" >&2
+          sed 's/^/  /' "$file" >&2
+          exit 1
+        fi
+      }
+
+      extract_navigation_binds() {
+        local file="$1"
+        grep -F \
+          -e 'hl.bind((mod .. " + h"), (hl.dsp.focus({ direction = "left" })))' \
+          -e 'hl.bind((mod .. " + l"), (hl.dsp.focus({ direction = "right" })))' \
+          "$file"
+      }
+
+      desktop_navigation_binds="$TMPDIR/desktop-navigation-binds"
+      extract_navigation_binds ${desktopHyprlandLuaFile} > "$desktop_navigation_binds"
+
       for hyprland_lua in ${desktopHyprlandLuaFile} ${laptopHyprlandLuaFile} ${usbHyprlandLuaFile}; do
         assert_contains_in_file() {
           local needle="$1"
@@ -89,7 +114,22 @@ in {
 
         assert_contains_in_file 'hl.bind((mod .. " + h"), (hl.dsp.focus({ direction = "left" })))'
         assert_contains_in_file 'hl.bind((mod .. " + l"), (hl.dsp.focus({ direction = "right" })))'
+        assert_line_count_in_file "$hyprland_lua" 'hl.bind((mod .. " + h"), (hl.dsp.focus({ direction = "left" })))' 1
+        assert_line_count_in_file "$hyprland_lua" 'hl.bind((mod .. " + l"), (hl.dsp.focus({ direction = "right" })))' 1
         assert_not_contains_in_file 'hypr-nav'
+        assert_not_contains_in_file 'no_focus_fallback'
+        assert_not_contains_in_file 'window_direction_monitor_fallback'
+
+        host_navigation_binds="$TMPDIR/$(basename "$hyprland_lua").navigation-binds"
+        extract_navigation_binds "$hyprland_lua" > "$host_navigation_binds"
+        if ! cmp -s "$desktop_navigation_binds" "$host_navigation_binds"; then
+          echo "Expected host Super+h/l navigation binds to match desktop exactly: $hyprland_lua" >&2
+          echo "Desktop:" >&2
+          sed 's/^/  /' "$desktop_navigation_binds" >&2
+          echo "Host:" >&2
+          sed 's/^/  /' "$host_navigation_binds" >&2
+          exit 1
+        fi
       done
 
       grep -Fq -- '--config' ${desktopHyprlandPackage}/bin/Hyprland
