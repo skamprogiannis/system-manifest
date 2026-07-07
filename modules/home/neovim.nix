@@ -57,7 +57,7 @@ in {
         event = "FileType";
         pattern = ["javascript" "typescript" "javascriptreact" "typescriptreact"];
         # Prettier standard: 2 spaces
-        command = "setlocal tabstop=2 shiftwidth=2 softtabstop=2 colorcolumn=100";
+        command = "setlocal tabstop=2 shiftwidth=2 softtabstop=2 colorcolumn=80";
       }
       {
         event = "FileType";
