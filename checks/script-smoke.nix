@@ -10,6 +10,10 @@
     usbActivation
     usbDmsServiceEnvironmentFile
     usbHome
+    usbHostScratchServiceDescriptionFile
+    usbHostScratchShutdownCleanupScript
+    usbHostScratchStopScript
+    usbShutdownRamfsStorePathsFile
     ;
 in {
   script-smoke =
@@ -26,6 +30,10 @@ in {
       update_usb_source_dir="${updateUsbSourceDir}"
       usb_activation="${usbActivation}"
       usb_home="${usbHome}"
+      usb_host_scratch_description="${usbHostScratchServiceDescriptionFile}"
+      usb_host_scratch_shutdown_cleanup="${usbHostScratchShutdownCleanupScript}"
+      usb_host_scratch_stop="${usbHostScratchStopScript}"
+      usb_shutdown_ramfs_store_paths="${usbShutdownRamfsStorePathsFile}"
       export HOME="$TMPDIR/home"
       export XDG_RUNTIME_DIR="$TMPDIR/runtime"
       mkdir -p "$HOME" "$XDG_RUNTIME_DIR"
@@ -61,6 +69,151 @@ in {
 
       run_expect 0 setup-persistent-usb-help "$usb_home/bin/setup-persistent-usb" --help
       assert_log_contains "Creates a fresh persistent NixOS USB"
+
+      if ${pkgs.gnugrep}/bin/grep -Eq '^Prepare\b' "$usb_host_scratch_description"; then
+        echo "Expected USB host scratch service description to read naturally during stop jobs." >&2
+        ${pkgs.gnused}/bin/sed 's/^/  /' "$usb_host_scratch_description" >&2
+        exit 1
+      fi
+
+      assert_file_contains() {
+        local file="$1"
+        local needle="$2"
+        local message="$3"
+
+        if ! ${pkgs.gnugrep}/bin/grep -Fq -- "$needle" "$file"; then
+          echo "$message" >&2
+          ${pkgs.gnused}/bin/sed 's/^/  /' "$file" >&2
+          exit 1
+        fi
+      }
+
+      assert_file_contains "$usb_host_scratch_stop" "still mounted; skipping sync" "Expected USB host scratch stop to skip sync when bind unmounts fail."
+      assert_file_contains "$usb_host_scratch_stop" "umount -l" "Expected USB host scratch stop to lazily unmount stuck bind mounts."
+      assert_file_contains "$usb_host_scratch_shutdown_cleanup" 'close "$MAPPER_NAME"' "Expected shutdown cleanup to close the host scratch mapper."
+      assert_file_contains "$usb_host_scratch_shutdown_cleanup" ".nixos-usb/session" "Expected shutdown cleanup to remove host-side encrypted scratch sessions."
+      assert_file_contains "$usb_host_scratch_shutdown_cleanup" "unmount_tree" "Expected shutdown cleanup to unmount scratch mount trees explicitly."
+      assert_file_contains "$usb_host_scratch_shutdown_cleanup" "trying lazy unmount" "Expected shutdown cleanup to lazily unmount stuck scratch mounts."
+      assert_file_contains "$usb_shutdown_ramfs_store_paths" "util-linux" "Expected shutdown ramfs to include util-linux tools."
+      assert_file_contains "$usb_shutdown_ramfs_store_paths" "cryptsetup" "Expected shutdown ramfs to include cryptsetup."
+
+      host_scratch_cleanup_test="$TMPDIR/usb-host-scratch-cleanup"
+      mkdir -p "$host_scratch_cleanup_test/bin" "$host_scratch_cleanup_test/root/nix/.host-store/.nixos-usb/session/boot-id"
+      touch "$host_scratch_cleanup_test/mapper"
+      cat > "$host_scratch_cleanup_test/mounted" <<EOF
+      $host_scratch_cleanup_test/root/nix/store
+      $host_scratch_cleanup_test/root/nix/.rw-store
+      $host_scratch_cleanup_test/root/nix/.ro-store
+      $host_scratch_cleanup_test/root/nix/.host-store-rw
+      $host_scratch_cleanup_test/root/nix/.host-scratch
+      $host_scratch_cleanup_test/root/nix/.host-store
+      EOF
+
+      cat > "$host_scratch_cleanup_test/bin/findmnt" <<'EOF'
+      #!${pkgs.bash}/bin/bash
+      set -euo pipefail
+
+      mounted_file="$USB_HOST_SCRATCH_TEST_MOUNTED"
+      case "$1 $2" in
+        "-rn -M")
+          ${pkgs.gnugrep}/bin/grep -Fxq "$3" "$mounted_file"
+          ;;
+        "-Rrn --target")
+          target="$3"
+          ${pkgs.gawk}/bin/awk -v target="$target" '$0 == target || index($0, target "/") == 1 { print }' "$mounted_file"
+          ;;
+        *)
+          echo "unexpected findmnt args: $*" >&2
+          exit 2
+          ;;
+      esac
+      EOF
+      chmod +x "$host_scratch_cleanup_test/bin/findmnt"
+
+      cat > "$host_scratch_cleanup_test/bin/umount" <<'EOF'
+      #!${pkgs.bash}/bin/bash
+      set -euo pipefail
+
+      mounted_file="$USB_HOST_SCRATCH_TEST_MOUNTED"
+      log_file="$USB_HOST_SCRATCH_TEST_UMOUNT_LOG"
+      mode=normal
+      target="$1"
+      if [ "$1" = "-l" ]; then
+        mode=lazy
+        target="$2"
+      fi
+      printf '%s %s\n' "$mode" "$target" >> "$log_file"
+      if [ "$mode" = normal ] && [ "$target" = "$USB_HOST_SCRATCH_TEST_FAIL_NORMAL_TARGET" ]; then
+        exit 1
+      fi
+      ${pkgs.gnugrep}/bin/grep -Fxv "$target" "$mounted_file" > "$mounted_file.tmp" || true
+      ${pkgs.coreutils}/bin/mv "$mounted_file.tmp" "$mounted_file"
+      EOF
+      chmod +x "$host_scratch_cleanup_test/bin/umount"
+
+      cat > "$host_scratch_cleanup_test/bin/cryptsetup" <<'EOF'
+      #!${pkgs.bash}/bin/bash
+      set -euo pipefail
+      printf '%s\n' "$*" >> "$USB_HOST_SCRATCH_TEST_CRYPT_LOG"
+      EOF
+      chmod +x "$host_scratch_cleanup_test/bin/cryptsetup"
+
+      cat > "$host_scratch_cleanup_test/bin/rm" <<'EOF'
+      #!${pkgs.bash}/bin/bash
+      set -euo pipefail
+      printf '%s\n' "$*" >> "$USB_HOST_SCRATCH_TEST_RM_LOG"
+      exec ${pkgs.coreutils}/bin/rm "$@"
+      EOF
+      chmod +x "$host_scratch_cleanup_test/bin/rm"
+
+      : > "$host_scratch_cleanup_test/umount.log"
+      : > "$host_scratch_cleanup_test/crypt.log"
+      : > "$host_scratch_cleanup_test/rm.log"
+      env \
+        USB_HOST_SCRATCH_FINDMNT="$host_scratch_cleanup_test/bin/findmnt" \
+        USB_HOST_SCRATCH_UMOUNT="$host_scratch_cleanup_test/bin/umount" \
+        USB_HOST_SCRATCH_CRYPTSETUP="$host_scratch_cleanup_test/bin/cryptsetup" \
+        USB_HOST_SCRATCH_RM="$host_scratch_cleanup_test/bin/rm" \
+        USB_HOST_SCRATCH_CHMOD="${pkgs.coreutils}/bin/chmod" \
+        USB_HOST_SCRATCH_SORT="${pkgs.coreutils}/bin/sort" \
+        USB_HOST_SCRATCH_GREP="${pkgs.gnugrep}/bin/grep" \
+        USB_HOST_SCRATCH_MAPPER_DEVICE="$host_scratch_cleanup_test/mapper" \
+        USB_HOST_SCRATCH_PREFIXES="$host_scratch_cleanup_test/root" \
+        USB_HOST_SCRATCH_TEST_MOUNTED="$host_scratch_cleanup_test/mounted" \
+        USB_HOST_SCRATCH_TEST_UMOUNT_LOG="$host_scratch_cleanup_test/umount.log" \
+        USB_HOST_SCRATCH_TEST_CRYPT_LOG="$host_scratch_cleanup_test/crypt.log" \
+        USB_HOST_SCRATCH_TEST_RM_LOG="$host_scratch_cleanup_test/rm.log" \
+        USB_HOST_SCRATCH_TEST_FAIL_NORMAL_TARGET="$host_scratch_cleanup_test/root/nix/.host-scratch" \
+        "$usb_host_scratch_shutdown_cleanup"
+
+      cat > "$host_scratch_cleanup_test/expected-umounts" <<EOF
+      normal $host_scratch_cleanup_test/root/nix/store
+      normal $host_scratch_cleanup_test/root/nix/.rw-store
+      normal $host_scratch_cleanup_test/root/nix/.ro-store
+      normal $host_scratch_cleanup_test/root/nix/.host-store-rw
+      normal $host_scratch_cleanup_test/root/nix/.host-scratch
+      lazy $host_scratch_cleanup_test/root/nix/.host-scratch
+      normal $host_scratch_cleanup_test/root/nix/.host-store
+      EOF
+      if ! cmp -s "$host_scratch_cleanup_test/expected-umounts" "$host_scratch_cleanup_test/umount.log"; then
+        echo "Expected USB host scratch shutdown cleanup to unmount paths deepest-first with lazy fallback." >&2
+        echo "Expected:" >&2
+        ${pkgs.gnused}/bin/sed 's/^/  /' "$host_scratch_cleanup_test/expected-umounts" >&2
+        echo "Actual:" >&2
+        ${pkgs.gnused}/bin/sed 's/^/  /' "$host_scratch_cleanup_test/umount.log" >&2
+        exit 1
+      fi
+
+      if ! ${pkgs.gnugrep}/bin/grep -Fxq "close nixos-usb-host-scratch" "$host_scratch_cleanup_test/crypt.log"; then
+        echo "Expected USB host scratch shutdown cleanup to close the scratch mapper." >&2
+        ${pkgs.gnused}/bin/sed 's/^/  /' "$host_scratch_cleanup_test/crypt.log" >&2
+        exit 1
+      fi
+
+      if [ -d "$host_scratch_cleanup_test/root/nix/.host-store/.nixos-usb/session" ]; then
+        echo "Expected USB host scratch shutdown cleanup to remove host session files." >&2
+        exit 1
+      fi
 
       run_expect 1 update-usb-invalid-mode "$desktop_home/bin/update-usb" --mode nope
       assert_log_contains "Error: invalid mode 'nope'."

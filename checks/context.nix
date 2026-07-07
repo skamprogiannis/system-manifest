@@ -26,6 +26,15 @@
   usbRamStorePrepareScript = pkgs.writeText "usb-ram-store-prepare-script" self.nixosConfigurations.usb.config.specialisation.ram-store.configuration.boot.initrd.systemd.services.initrd-usb-ram-store-prepare.script;
   usbHostAutoStoreInitrd = self.nixosConfigurations.usb.config.specialisation.host-auto-store.configuration.system.build.initialRamdisk;
   usbHostAutoStorePrepareScript = pkgs.writeText "usb-host-auto-store-prepare-script" self.nixosConfigurations.usb.config.specialisation.host-auto-store.configuration.boot.initrd.systemd.services.initrd-usb-host-auto-store-prepare.script;
+  usbHostScratchService = self.nixosConfigurations.usb.config.systemd.services.usb-host-scratch;
+  usbHostScratchServiceDescriptionFile = builtins.toFile "usb-host-scratch-service-description" usbHostScratchService.description;
+  usbHostScratchStopScript = usbHostScratchService.serviceConfig.ExecStop;
+  usbHostScratchShutdownCleanupScript = self.nixosConfigurations.usb.config.systemd.shutdownRamfs.contents."/lib/systemd/system-shutdown/usb-host-scratch-cleanup".source;
+  usbShutdownRamfsStorePathsFile = pkgs.writeText "usb-shutdown-ramfs-store-paths" (
+    builtins.concatStringsSep "\n" (
+      map (entry: entry.source) self.nixosConfigurations.usb.config.systemd.shutdownRamfs.storePaths
+    )
+  );
   usbDmsServiceEnvironmentFile = builtins.toFile "usb-dms-service-environment" (
     builtins.concatStringsSep "\n"
     self.nixosConfigurations.usb.config.home-manager.users.stefan.systemd.user.services.dms.Service.Environment
@@ -63,6 +72,8 @@
     "${updateUsbSourceDir}/squashfs.sh"
     "${usbHome}/bin/usb-host-scratch"
     "${usbHome}/bin/nixos-usb-store-status"
+    "${usbHostScratchStopScript}"
+    "${usbHostScratchShutdownCleanupScript}"
     "${usbHome}/bin/spotify_player"
     "${usbHome}/bin/setup-persistent-usb"
   ];
