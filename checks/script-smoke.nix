@@ -88,14 +88,34 @@ in {
         fi
       }
 
-      assert_file_contains "$usb_host_scratch_stop" "still mounted; skipping sync" "Expected USB host scratch stop to skip sync when bind unmounts fail."
-      assert_file_contains "$usb_host_scratch_stop" "umount -l" "Expected USB host scratch stop to lazily unmount stuck bind mounts."
+      assert_not_file_contains() {
+        local file="$1"
+        local needle="$2"
+        local message="$3"
+
+        if ${pkgs.gnugrep}/bin/grep -Fq -- "$needle" "$file"; then
+          echo "$message" >&2
+          ${pkgs.gnused}/bin/sed 's/^/  /' "$file" >&2
+          exit 1
+        fi
+      }
+
+      assert_file_contains "$usb_host_scratch_stop" "leaving it mounted and skipping sync" "Expected USB host scratch stop to skip sync when bind unmounts fail."
+      assert_file_contains "$usb_host_scratch_stop" "shutdown cleanup evidence" "Expected USB host scratch stop to preserve cleanup evidence after incomplete stops."
+      assert_not_file_contains "$usb_host_scratch_stop" "umount -l" "Expected USB host scratch stop to avoid lazy-detaching live bind mounts."
       assert_file_contains "$usb_host_scratch_shutdown_cleanup" 'close "$MAPPER_NAME"' "Expected shutdown cleanup to close the host scratch mapper."
       assert_file_contains "$usb_host_scratch_shutdown_cleanup" ".nixos-usb/session" "Expected shutdown cleanup to remove host-side encrypted scratch sessions."
       assert_file_contains "$usb_host_scratch_shutdown_cleanup" "unmount_tree" "Expected shutdown cleanup to unmount scratch mount trees explicitly."
       assert_file_contains "$usb_host_scratch_shutdown_cleanup" "trying lazy unmount" "Expected shutdown cleanup to lazily unmount stuck scratch mounts."
+      assert_not_file_contains "$usb_host_scratch_shutdown_cleanup" ":-/bin/findmnt" "Expected shutdown cleanup findmnt default to use a copied store path."
+      assert_not_file_contains "$usb_host_scratch_shutdown_cleanup" ":-/bin/umount" "Expected shutdown cleanup umount default to use a copied store path."
+      assert_not_file_contains "$usb_host_scratch_shutdown_cleanup" ":-/bin/cryptsetup" "Expected shutdown cleanup cryptsetup default to use a copied store path."
+      assert_not_file_contains "$usb_host_scratch_shutdown_cleanup" ":-/bin/grep" "Expected shutdown cleanup grep default to use a copied store path."
+      assert_file_contains "$usb_host_scratch_shutdown_cleanup" "util-linux" "Expected shutdown cleanup to reference util-linux store paths."
+      assert_file_contains "$usb_host_scratch_shutdown_cleanup" "gnugrep" "Expected shutdown cleanup to reference gnugrep store paths."
       assert_file_contains "$usb_shutdown_ramfs_store_paths" "util-linux" "Expected shutdown ramfs to include util-linux tools."
       assert_file_contains "$usb_shutdown_ramfs_store_paths" "cryptsetup" "Expected shutdown ramfs to include cryptsetup."
+      assert_file_contains "$usb_shutdown_ramfs_store_paths" "gnugrep" "Expected shutdown ramfs to include gnugrep."
 
       host_scratch_cleanup_test="$TMPDIR/usb-host-scratch-cleanup"
       mkdir -p "$host_scratch_cleanup_test/bin" "$host_scratch_cleanup_test/root/nix/.host-store/.nixos-usb/session/boot-id"

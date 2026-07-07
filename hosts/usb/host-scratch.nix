@@ -79,6 +79,7 @@
     docker_root=${dockerRoot}
     mode_file=${modeFile}
     user_root=${userRoot}
+    stop_status=0
 
     is_mounted() {
       target="$1"
@@ -94,12 +95,14 @@
 
       echo "usb-host-scratch: unmounting $target before USB sync" >&2
       if ! ${pkgs.util-linux}/bin/umount "$target"; then
-        echo "usb-host-scratch: normal unmount failed for $target; trying lazy unmount" >&2
-        ${pkgs.util-linux}/bin/umount -l "$target" || true
+        echo "usb-host-scratch: warning: normal unmount failed for $target; leaving it mounted and skipping sync for this path" >&2
+        stop_status=1
+        return 1
       fi
 
       if is_mounted "$target"; then
-        echo "usb-host-scratch: warning: $target is still mounted; skipping sync for this path" >&2
+        echo "usb-host-scratch: warning: $target is still mounted after normal unmount; skipping sync for this path" >&2
+        stop_status=1
         return 1
       fi
 
@@ -131,19 +134,24 @@
       fi
     fi
 
-    ${pkgs.coreutils}/bin/rm -f "$mode_file"
+    if [ "$stop_status" -eq 0 ]; then
+      ${pkgs.coreutils}/bin/rm -f "$mode_file"
+    else
+      echo "usb-host-scratch: warning: stop completed with unsynced mounted paths; keeping $mode_file for shutdown cleanup evidence" >&2
+      exit "$stop_status"
+    fi
   '';
 
   shutdownCleanup = pkgs.writeShellScript "usb-host-scratch-shutdown-cleanup" ''
     set -eu
 
-    FINDMNT="''${USB_HOST_SCRATCH_FINDMNT:-/bin/findmnt}"
-    UMOUNT="''${USB_HOST_SCRATCH_UMOUNT:-/bin/umount}"
-    CRYPTSETUP="''${USB_HOST_SCRATCH_CRYPTSETUP:-/bin/cryptsetup}"
-    RM="''${USB_HOST_SCRATCH_RM:-/bin/rm}"
-    CHMOD="''${USB_HOST_SCRATCH_CHMOD:-/bin/chmod}"
-    SORT="''${USB_HOST_SCRATCH_SORT:-/bin/sort}"
-    GREP="''${USB_HOST_SCRATCH_GREP:-/bin/grep}"
+    FINDMNT="''${USB_HOST_SCRATCH_FINDMNT:-${pkgs.util-linux}/bin/findmnt}"
+    UMOUNT="''${USB_HOST_SCRATCH_UMOUNT:-${pkgs.util-linux}/bin/umount}"
+    CRYPTSETUP="''${USB_HOST_SCRATCH_CRYPTSETUP:-${pkgs.cryptsetup}/bin/cryptsetup}"
+    RM="''${USB_HOST_SCRATCH_RM:-${pkgs.coreutils}/bin/rm}"
+    CHMOD="''${USB_HOST_SCRATCH_CHMOD:-${pkgs.coreutils}/bin/chmod}"
+    SORT="''${USB_HOST_SCRATCH_SORT:-${pkgs.coreutils}/bin/sort}"
+    GREP="''${USB_HOST_SCRATCH_GREP:-${pkgs.gnugrep}/bin/grep}"
     MAPPER_NAME="''${USB_HOST_SCRATCH_MAPPER_NAME:-${scratchMapperName}}"
     MAPPER_DEVICE="''${USB_HOST_SCRATCH_MAPPER_DEVICE:-${scratchMapperDevice}}"
     PREFIXES="''${USB_HOST_SCRATCH_PREFIXES:-/oldroot /}"
@@ -314,6 +322,7 @@ in {
   systemd.shutdownRamfs.storePaths = [
     "${pkgs.util-linux}/bin"
     "${pkgs.cryptsetup}/bin"
+    "${pkgs.gnugrep}/bin"
   ];
 
   environment.systemPackages = [
