@@ -132,6 +132,13 @@
       # Arrow keys for history search in Vi mode
       bind '"\e[A": history-search-backward'
       bind '"\e[B": history-search-forward'
+
+      _prompt_history_sync() {
+        history -a
+        history -n
+      }
+
+      PROMPT_COMMAND="_prompt_history_sync''${PROMPT_COMMAND:+;$PROMPT_COMMAND}"
     '';
   };
 
