@@ -2,7 +2,8 @@
   inherit
     (ctx)
     desktopDmsSettingsFile
-    desktopHome
+    desktopDmsPackage
+    desktopSkwdDaemonExec
     desktopSkwdDmsScheduleHook
     desktopSkwdDmsSyncHook
     desktopSkwdPrepareStateActivationFile
@@ -72,17 +73,22 @@ in {
               fi
             }
 
-            assert_executable "${desktopHome}/bin/skwd" "skwd"
-            assert_executable "${desktopHome}/bin/skwd-daemon" "skwd-daemon"
-            assert_executable "${desktopHome}/bin/skwd-wall" "skwd-wall"
-            assert_executable "${desktopHome}/bin/skwd-we-capture-still" "skwd-we-capture-still"
+            skwd_pkg="$(dirname "$(dirname "${desktopSkwdDaemonExec}")")"
+            assert_executable "$skwd_pkg/bin/skwd" "skwd"
+            assert_executable "$skwd_pkg/bin/skwd-daemon" "skwd-daemon"
+            assert_executable "$skwd_pkg/bin/skwd-wall" "skwd-wall"
             assert_executable "${desktopSkwdDmsSyncHook}" "DMS wallpaper sync hook"
             assert_executable "${desktopSkwdDmsScheduleHook}" "DMS wallpaper sync scheduler"
             ${pkgs.bash}/bin/bash -n "${desktopSkwdDmsSyncHook}"
             ${pkgs.bash}/bin/bash -n "${desktopSkwdDmsScheduleHook}"
+            skwd_capture_still="$(sed -n 's/^[[:space:]]*export SKWD_CAPTURE_STILL_BIN="\([^"]*\)"$/\1/p' "${desktopSkwdDmsSyncHook}")"
+            if [ -z "$skwd_capture_still" ]; then
+              echo "Expected DMS wallpaper sync hook to export SKWD_CAPTURE_STILL_BIN." >&2
+              sed 's/^/  /' "${desktopSkwdDmsSyncHook}" >&2
+              exit 1
+            fi
+            assert_executable "$skwd_capture_still" "skwd-we-capture-still"
 
-            skwd_bin="$(readlink -f "${desktopHome}/bin/skwd")"
-            skwd_pkg="$(dirname "$(dirname "$skwd_bin")")"
             skwd_keybinds_qml="$skwd_pkg/share/skwd-wall/qml/wallpaper/settings/KeybindsSettings.qml"
             skwd_selector_qml="$skwd_pkg/share/skwd-wall/qml/wallpaper/WallpaperSelector.qml"
             assert_executable "$skwd_pkg/libexec/skwd-wall/awww" "skwd-wall awww helper"
@@ -114,7 +120,7 @@ in {
             assert_contains "dms-wallpaper-sync.request" "${desktopSkwdDmsScheduleHook}" "DMS wallpaper sync scheduler"
             assert_contains "flock -n 9" "${desktopSkwdDmsScheduleHook}" "DMS wallpaper sync scheduler"
             assert_contains "REQUEST_FILE=" "${desktopSkwdDmsScheduleHook}" "DMS wallpaper sync scheduler"
-            assert_contains "skwd-we-capture-still" "${desktopHome}/bin/skwd-we-capture-still" "Wallpaper Engine capture helper"
+            assert_contains "skwd-we-capture-still" "$skwd_capture_still" "Wallpaper Engine capture helper"
             assert_contains "# selector navigation" ${../modules/home/wallpaper/qml-patches.nix} "skwd-wall QML patch module"
             assert_contains "# filter bar keyboard" ${../modules/home/wallpaper/qml-patches.nix} "skwd-wall QML patch module"
             assert_contains "# tag cloud keyboard" ${../modules/home/wallpaper/qml-patches.nix} "skwd-wall QML patch module"
@@ -142,8 +148,7 @@ in {
             assert_contains "DaemonClient.applyVideo(path, outputs, neighbors, screens, audioMap, volumeMap)" ${../modules/home/wallpaper/qml-patches.nix} "skwd-wall QML patch module"
             assert_contains "music = false;" ${../modules/home/wallpaper/skwd-wall-state.nix} "skwd-wall declarative config"
 
-            dms_bin="$(readlink -f "${desktopHome}/bin/dms")"
-            dms_pkg="$(dirname "$(dirname "$dms_bin")")"
+            dms_pkg="${desktopDmsPackage}"
             assert_contains 'function externalSet(path: string, mode: string): string' "$dms_pkg/share/quickshell/dms/Common/SessionData.qml" "patched DMS SessionData"
             external_set_block="$(sed -n '/function externalSet(path: string, mode: string): string/,/function clear(): string/p' "$dms_pkg/share/quickshell/dms/Common/SessionData.qml")"
             if printf '%s\n' "$external_set_block" | grep -Fq 'root.setWallpaper(path)'; then

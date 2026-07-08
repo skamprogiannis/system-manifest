@@ -10,6 +10,8 @@
   desktopActivation = self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.activationPackage;
   desktopSkwdDmsSyncHook = self.nixosConfigurations.desktop.config.home-manager.users.stefan.xdg.configFile."skwd-wall/scripts/sync-dms-wallpaper.sh".source;
   desktopSkwdDmsScheduleHook = self.nixosConfigurations.desktop.config.home-manager.users.stefan.xdg.configFile."skwd-wall/scripts/schedule-dms-wallpaper-sync.sh".source;
+  desktopSkwdDaemonExec = builtins.head self.nixosConfigurations.desktop.config.home-manager.users.stefan.systemd.user.services.skwd-daemon.Service.ExecStart;
+  desktopDmsPackage = self.nixosConfigurations.desktop.config.home-manager.users.stefan.programs.dank-material-shell.package;
   desktopSkwdPrepareStateActivationFile = pkgs.writeText "desktop-skwd-prepare-state-activation" self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.activation.ensureWritableSkwdConfig.data;
   desktopDmsSettingsFile = pkgs.writeText "desktop-dms-settings.json" (builtins.toJSON self.nixosConfigurations.desktop.config.home-manager.users.stefan.programs.dank-material-shell.settings);
   desktopGtk4ExtraCssFile = pkgs.writeText "desktop-gtk4-extra.css" self.nixosConfigurations.desktop.config.home-manager.users.stefan.gtk.gtk4.extraCss;

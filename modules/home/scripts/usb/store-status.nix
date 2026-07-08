@@ -45,6 +45,18 @@ pkgs.writeShellScriptBin "nixos-usb-store-status" ''
   print_mount /nix/.host-store-rw
   printf '\n'
 
+  printf '== /nix mount tree ==\n'
+  if ${pkgs.util-linux}/bin/findmnt -R /nix >/dev/null 2>&1; then
+    ${pkgs.util-linux}/bin/findmnt -R /nix || true
+  else
+    printf 'not mounted: /nix\n'
+  fi
+  printf '\n'
+
+  printf '== shutdown transport note ==\n'
+  printf '%s\n' 'If shutdown pauses near 300s with cmd_age=300s, FAT boot-sector read failures, or "Maybe the USB cable is bad?", suspect USB port/cable/drive transport before mount ordering.'
+  printf '\n'
+
   if ${pkgs.systemd}/bin/journalctl --version >/dev/null 2>&1; then
     printf '== initrd store services ==\n'
     ${pkgs.systemd}/bin/journalctl -b \

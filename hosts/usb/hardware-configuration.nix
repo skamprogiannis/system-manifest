@@ -8,6 +8,11 @@
 }: let
   usb = import ../../modules/shared/usb-constants.nix;
   usbStore = config.systemManifest.usb.store;
+  hostScratchMount = "/nix/.host-scratch";
+  hostStoreRwMount = "/nix/.host-store-rw";
+  roStoreMount = "/nix/.ro-store";
+  rwStoreMount = "/nix/.rw-store";
+  storeMount = "/nix/store";
   roStoreDevice =
     if usbStore.mode == "ram-backed"
     then "/sysroot/nix/.ram-store-image/nix-store.squashfs"
@@ -16,6 +21,17 @@
     else "/sysroot/nix-store.squashfs";
   roStoreMountUnit = "${utils.escapeSystemdPath "/sysroot/nix/.ro-store"}.mount";
   rwStoreMountUnit = "${utils.escapeSystemdPath "/sysroot/nix/.rw-store"}.mount";
+  hostAutoRoStoreDepends = lib.optionals (usbStore.mode == "host-auto") [
+    hostScratchMount
+  ];
+  hostAutoRwStoreDepends = lib.optionals (usbStore.mode == "host-auto") [
+    hostStoreRwMount
+    hostScratchMount
+  ];
+  overlayStoreDepends = [
+    roStoreMount
+    rwStoreMount
+  ];
 in {
   imports = [
     (modulesPath + "/installer/scan/not-detected.nix")
@@ -152,9 +168,10 @@ in {
 
     # NixOS-native squashfs store: the initrd systemd fstab generator mounts
     # these before initrd-find-nixos-closure.service resolves the boot closure.
-    fileSystems."/nix/.ro-store" = {
+    fileSystems.${roStoreMount} = {
       device = roStoreDevice;
       fsType = "squashfs";
+      depends = hostAutoRoStoreDepends;
       options =
         [
           "loop"
@@ -163,7 +180,7 @@ in {
       neededForBoot = true;
     };
 
-    fileSystems."/nix/.rw-store" =
+    fileSystems.${rwStoreMount} =
       if usbStore.mode == "ram-backed"
       then {
         device = "/nix/.ram-store-rw";
@@ -173,8 +190,9 @@ in {
       }
       else if usbStore.mode == "host-auto"
       then {
-        device = "/nix/.host-store-rw";
+        device = hostStoreRwMount;
         fsType = "none";
+        depends = hostAutoRwStoreDepends;
         options = ["bind"];
         neededForBoot = true;
       }
@@ -187,12 +205,13 @@ in {
         neededForBoot = true;
       };
 
-    fileSystems."/nix/store" = {
+    fileSystems.${storeMount} = {
       overlay = {
-        lowerdir = ["/nix/.ro-store"];
-        upperdir = "/nix/.rw-store/store";
-        workdir = "/nix/.rw-store/work";
+        lowerdir = [roStoreMount];
+        upperdir = "${rwStoreMount}/store";
+        workdir = "${rwStoreMount}/work";
       };
+      depends = overlayStoreDepends;
       neededForBoot = true;
     };
 

@@ -116,6 +116,10 @@ in {
       assert_file_contains "$usb_shutdown_ramfs_store_paths" "util-linux" "Expected shutdown ramfs to include util-linux tools."
       assert_file_contains "$usb_shutdown_ramfs_store_paths" "cryptsetup" "Expected shutdown ramfs to include cryptsetup."
       assert_file_contains "$usb_shutdown_ramfs_store_paths" "gnugrep" "Expected shutdown ramfs to include gnugrep."
+      assert_file_contains "$usb_home/bin/nixos-usb-store-status" "== /nix mount tree ==" "Expected USB store status to print mount topology."
+      assert_file_contains "$usb_home/bin/nixos-usb-store-status" "findmnt -R /nix" "Expected USB store status to collect the /nix mount tree."
+      assert_file_contains "$usb_home/bin/nixos-usb-store-status" "cmd_age=300s" "Expected USB store status to flag 300 second USB storage timeouts."
+      assert_file_contains "$usb_home/bin/nixos-usb-store-status" "Maybe the USB cable is bad?" "Expected USB store status to explain kernel USB transport warnings."
 
       host_scratch_cleanup_test="$TMPDIR/usb-host-scratch-cleanup"
       mkdir -p "$host_scratch_cleanup_test/bin" "$host_scratch_cleanup_test/root/nix/.host-store/.nixos-usb/session/boot-id"

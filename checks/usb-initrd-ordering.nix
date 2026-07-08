@@ -101,6 +101,18 @@ in {
         fi
       }
 
+      assert_unit_mount_dependency() {
+        local dependent_unit="$1"
+        local required_path="$2"
+        local label="$3"
+
+        if ! ${pkgs.gnugrep}/bin/grep -F 'RequiresMountsFor=' "$dependent_unit" | ${pkgs.gnugrep}/bin/grep -Fq -- "$required_path"; then
+          echo "Expected $label to require mount path: $required_path" >&2
+          ${pkgs.gnused}/bin/sed 's/^/  /' "$dependent_unit" >&2
+          exit 1
+        fi
+      }
+
       assert_static_unit_count() {
         local initrd_dir="$1"
         local pattern="$2"
@@ -216,6 +228,11 @@ in {
         assert_contains_once "lowerdir=/sysroot/nix/.ro-store" "$store_unit" "host-auto /nix/store unit"
         assert_contains_once "upperdir=/sysroot/nix/.rw-store/store" "$store_unit" "host-auto /nix/store unit"
         assert_contains_once "workdir=/sysroot/nix/.rw-store/work" "$store_unit" "host-auto /nix/store unit"
+        assert_unit_mount_dependency "$ro_unit" "/sysroot/nix/.host-scratch" "host-auto /nix/.ro-store unit"
+        assert_unit_mount_dependency "$rw_unit" "/sysroot/nix/.host-store-rw" "host-auto /nix/.rw-store unit"
+        assert_unit_mount_dependency "$rw_unit" "/sysroot/nix/.host-scratch" "host-auto /nix/.rw-store unit"
+        assert_unit_mount_dependency "$store_unit" "/sysroot/nix/.ro-store" "host-auto /nix/store unit"
+        assert_unit_mount_dependency "$store_unit" "/sysroot/nix/.rw-store" "host-auto /nix/store unit"
         assert_contains "find_host_store_candidates" ${usbHostAutoStorePrepareScript} "host-auto prep script"
         assert_contains "/bin/lsblk" ${usbHostAutoStorePrepareScript} "host-auto prep script"
         assert_contains "printf '10\\t%s\\t%s\\t%s\\t%s\\n'" ${usbHostAutoStorePrepareScript} "host-auto prep script"
