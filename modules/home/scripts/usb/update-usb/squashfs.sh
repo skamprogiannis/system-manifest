@@ -19,15 +19,16 @@ verify_squashfs_contains_system() {
     exit 1
   fi
 
-  echo "verified squashfs contains: $TARGET_SYSTEM_TOPLEVEL"
-  echo "usb squashfs timestamp: $(stat -c '%y' "$squashfs_path")"
+  echo "Squashfs verified."
+  verbose_log "verified squashfs contains: $TARGET_SYSTEM_TOPLEVEL"
+  verbose_log "usb squashfs timestamp: $(stat -c '%y' "$squashfs_path")"
 }
 
 skip_if_existing_squashfs_is_current() {
   local squashfs_path="$MOUNT_POINT/nix-store.squashfs"
 
   if [ "$FORCE_UPDATE" -eq 1 ]; then
-    echo "Force update requested; skipping existing squashfs preflight."
+    verbose_log "Force update requested; skipping existing squashfs preflight."
     return 0
   fi
 
@@ -37,7 +38,7 @@ skip_if_existing_squashfs_is_current() {
   fi
 
   if [ ! -f "$squashfs_path" ]; then
-    echo "No existing USB squashfs found; continuing update."
+    verbose_log "No existing USB squashfs found; continuing update."
     return 0
   fi
 
@@ -46,12 +47,12 @@ skip_if_existing_squashfs_is_current() {
     if [ -n "$EXPECTED_CONFIG_REVISION" ]; then
       echo "Expected revision: $EXPECTED_CONFIG_REVISION"
     fi
-    echo "Desired USB system path: $DESIRED_SYSTEM_TOPLEVEL"
-    echo "USB squashfs timestamp: $(stat -c '%y' "$squashfs_path")"
+    verbose_log "Desired USB system path: $DESIRED_SYSTEM_TOPLEVEL"
+    verbose_log "USB squashfs timestamp: $(stat -c '%y' "$squashfs_path")"
     echo "Pass --force to rebuild and rewrite the USB anyway."
     return 1
   fi
 
-  echo "Existing USB squashfs does not contain the desired system; continuing update."
+  verbose_log "Existing USB squashfs does not contain the desired system; continuing update."
   return 0
 }

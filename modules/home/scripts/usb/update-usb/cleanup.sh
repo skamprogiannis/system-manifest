@@ -64,7 +64,7 @@ close_usb_mapper() {
   done
 
   if output="$(cryptsetup close --deferred "$USB_MAPPER_NAME" 2>&1)"; then
-    echo "Deferred mapper close scheduled for $USB_MAPPER_NAME."
+    verbose_log "Deferred mapper close scheduled for $USB_MAPPER_NAME."
     return 0
   fi
 
@@ -91,7 +91,7 @@ cleanup() {
   if [ "$CANCELED" -eq 1 ]; then
     echo "=== USB Update: Cleanup after cancellation ==="
   else
-    echo "Cleaning up mounts..."
+    verbose_log "Cleaning up mounts..."
   fi
 
   if [ "$MOUNTED_STAGE_STORE" -eq 1 ] || [ "$MOUNTED_BOOT" -eq 1 ] || [ "$MOUNTED_ROOT" -eq 1 ]; then

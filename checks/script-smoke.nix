@@ -67,6 +67,15 @@ in {
         fi
       }
 
+      assert_log_not_contains() {
+        local needle="$1"
+        if ${pkgs.gnugrep}/bin/grep -Fq -- "$needle" "$LAST_LOG"; then
+          echo "Expected not to find '$needle' in $LAST_LOG" >&2
+          ${pkgs.gnused}/bin/sed 's/^/  /' "$LAST_LOG" >&2
+          exit 1
+        fi
+      }
+
       run_expect 0 setup-persistent-usb-help "$usb_home/bin/setup-persistent-usb" --help
       assert_log_contains "Creates a fresh persistent NixOS USB"
 
@@ -239,11 +248,64 @@ in {
         exit 1
       fi
 
-      run_expect 1 update-usb-invalid-mode "$desktop_home/bin/update-usb" --mode nope
-      assert_log_contains "Error: invalid mode 'nope'."
+      run_expect 1 update-usb-removed-mode "$desktop_home/bin/update-usb" --mode nope
+      assert_log_contains "Error: unknown option '--mode'."
 
       run_expect 0 update-usb-help "$desktop_home/bin/update-usb" --help
-      assert_log_contains "sudo update-usb [--mode prebuild|in-place] [--in-place] [--force] [path-to-flake-dir]"
+      assert_log_contains "sudo update-usb [-v|--verbose] [--in-place] [--force] [path-to-flake-dir]"
+      assert_log_not_contains "--mode"
+
+      args_test="$TMPDIR/update-usb-args"
+      mkdir -p "$args_test"
+      (
+        DEFAULT_MODE=prebuild
+        MODE="$DEFAULT_MODE"
+        VERBOSE=0
+        FORCE_UPDATE=0
+        FLAKE_DIR=/start
+        USB_ROOT_PART=/dev/root
+        USB_BOOT_DEV=/dev/boot
+        # shellcheck disable=SC1091
+        . "$update_usb_source_dir/args.sh"
+        parse_args -v --in-place --force /flake
+        printf 'mode=%s\nverbose=%s\nforce=%s\nflake=%s\n' "$MODE" "$VERBOSE" "$FORCE_UPDATE" "$FLAKE_DIR"
+      ) > "$args_test/short-verbose"
+      cat > "$args_test/expected-short-verbose" <<'EOF'
+      mode=in-place
+      verbose=1
+      force=1
+      flake=/flake
+      EOF
+      if ! cmp -s "$args_test/expected-short-verbose" "$args_test/short-verbose"; then
+        echo "Expected update-usb parser to handle -v, --in-place, and --force." >&2
+        ${pkgs.gnused}/bin/sed 's/^/  /' "$args_test/short-verbose" >&2
+        exit 1
+      fi
+
+      (
+        DEFAULT_MODE=prebuild
+        MODE="$DEFAULT_MODE"
+        VERBOSE=0
+        FORCE_UPDATE=0
+        FLAKE_DIR=/start
+        USB_ROOT_PART=/dev/root
+        USB_BOOT_DEV=/dev/boot
+        # shellcheck disable=SC1091
+        . "$update_usb_source_dir/args.sh"
+        parse_args --verbose /flake
+        printf 'mode=%s\nverbose=%s\nforce=%s\nflake=%s\n' "$MODE" "$VERBOSE" "$FORCE_UPDATE" "$FLAKE_DIR"
+      ) > "$args_test/long-verbose"
+      cat > "$args_test/expected-long-verbose" <<'EOF'
+      mode=prebuild
+      verbose=1
+      force=0
+      flake=/flake
+      EOF
+      if ! cmp -s "$args_test/expected-long-verbose" "$args_test/long-verbose"; then
+        echo "Expected update-usb parser to handle --verbose." >&2
+        ${pkgs.gnused}/bin/sed 's/^/  /' "$args_test/long-verbose" >&2
+        exit 1
+      fi
 
       timing_test="$TMPDIR/update-usb-timing"
       mkdir -p "$timing_test"
@@ -283,6 +345,71 @@ in {
         exit 1
       fi
 
+      deferred_close_test="$TMPDIR/update-usb-deferred-close"
+      mkdir -p "$deferred_close_test/bin"
+      cat > "$deferred_close_test/bin/cryptsetup" <<'EOF'
+      #!${pkgs.bash}/bin/bash
+      case "$*" in
+        "close NIXOS_USB_CRYPT")
+          exit 1
+          ;;
+        "close --deferred NIXOS_USB_CRYPT")
+          exit 0
+          ;;
+        *)
+          echo "unexpected cryptsetup args: $*" >&2
+          exit 2
+          ;;
+      esac
+      EOF
+      chmod +x "$deferred_close_test/bin/cryptsetup"
+
+      cat > "$deferred_close_test/bin/findmnt" <<'EOF'
+      #!${pkgs.bash}/bin/bash
+      exit 1
+      EOF
+      chmod +x "$deferred_close_test/bin/findmnt"
+
+      cat > "$deferred_close_test/bin/sleep" <<'EOF'
+      #!${pkgs.bash}/bin/bash
+      exit 0
+      EOF
+      chmod +x "$deferred_close_test/bin/sleep"
+
+      (
+        export PATH="$deferred_close_test/bin:$PATH"
+        VERBOSE=0
+        USB_MAPPER_NAME=NIXOS_USB_CRYPT
+        MOUNT_POINT=/mnt
+        # shellcheck disable=SC1091
+        . "$update_usb_source_dir/phases.sh"
+        # shellcheck disable=SC1091
+        . "$update_usb_source_dir/cleanup.sh"
+        close_usb_mapper
+      ) > "$deferred_close_test/quiet.out" 2>&1
+      if ${pkgs.gnugrep}/bin/grep -Fq "Deferred mapper close scheduled" "$deferred_close_test/quiet.out"; then
+        echo "Expected quiet update-usb cleanup to hide deferred mapper close detail." >&2
+        ${pkgs.gnused}/bin/sed 's/^/  /' "$deferred_close_test/quiet.out" >&2
+        exit 1
+      fi
+
+      (
+        export PATH="$deferred_close_test/bin:$PATH"
+        VERBOSE=1
+        USB_MAPPER_NAME=NIXOS_USB_CRYPT
+        MOUNT_POINT=/mnt
+        # shellcheck disable=SC1091
+        . "$update_usb_source_dir/phases.sh"
+        # shellcheck disable=SC1091
+        . "$update_usb_source_dir/cleanup.sh"
+        close_usb_mapper
+      ) > "$deferred_close_test/verbose.out" 2>&1
+      if ! ${pkgs.gnugrep}/bin/grep -Fq "Deferred mapper close scheduled for NIXOS_USB_CRYPT." "$deferred_close_test/verbose.out"; then
+        echo "Expected verbose update-usb cleanup to show deferred mapper close detail." >&2
+        ${pkgs.gnused}/bin/sed 's/^/  /' "$deferred_close_test/verbose.out" >&2
+        exit 1
+      fi
+
       if ! ${pkgs.gnugrep}/bin/grep -Fq "findmnt -Rrn --mountpoint" "$update_usb_source_dir/cleanup.sh"; then
         echo "Expected update-usb cleanup to unmount nested filesystems deepest-first." >&2
         ${pkgs.gnused}/bin/sed -n '1,140p' "$update_usb_source_dir/cleanup.sh" >&2
@@ -319,6 +446,18 @@ in {
       if ! ${pkgs.gnugrep}/bin/grep -Fq "refusing to update USB before touching it" "$update_usb_source_dir/main.sh"; then
         echo "Expected update-usb to abort before touching the USB when desired toplevel evaluation fails." >&2
         ${pkgs.gnused}/bin/sed -n '80,120p' "$update_usb_source_dir/main.sh" >&2
+        exit 1
+      fi
+
+      if ! ${pkgs.gnugrep}/bin/grep -Fq 'run_logged "nixos-install"' "$update_usb_source_dir/main.sh"; then
+        echo "Expected update-usb to route nixos-install output through quiet/verbose logging." >&2
+        ${pkgs.gnused}/bin/sed -n '170,190p' "$update_usb_source_dir/main.sh" >&2
+        exit 1
+      fi
+
+      if ! ${pkgs.gnugrep}/bin/grep -Fq 'run_logged "mksquashfs"' "$update_usb_source_dir/main.sh"; then
+        echo "Expected update-usb to route mksquashfs output through quiet/verbose logging." >&2
+        ${pkgs.gnused}/bin/sed -n '205,245p' "$update_usb_source_dir/main.sh" >&2
         exit 1
       fi
 

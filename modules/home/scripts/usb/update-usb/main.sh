@@ -31,6 +31,7 @@ FLAKE_DIR="$PWD"
 NIX_SHELL_PACKAGES=(squashfsTools cryptsetup util-linux coreutils findutils gnused)
 REQUIRED_TOOLS=(nixos-install cryptsetup mount umount findmnt find rm du cut sort nproc mountpoint sed mktemp cp mv date chroot lsblk sleep sync stat)
 FORCE_UPDATE=0
+VERBOSE=0
 CLOSE_MAPPER_ON_CLEANUP=0
 MOUNTED_ROOT=0
 MOUNTED_BOOT=0
@@ -101,7 +102,7 @@ else
   echo "Warning: could not resolve desired USB revision from $FLAKE_DIR"
 fi
 if [ -n "$DESIRED_SYSTEM_TOPLEVEL" ]; then
-  echo "Desired system: $DESIRED_SYSTEM_TOPLEVEL"
+  verbose_log "Desired system: $DESIRED_SYSTEM_TOPLEVEL"
 fi
 
 if [ ! -e "$USB_ROOT_PART" ]; then
@@ -161,7 +162,7 @@ rm -rf "$MOUNT_POINT/nix/var/nix/profiles"
 if [ "$MODE" = "in-place" ]; then
   find "$MOUNT_POINT/nix/store" -mindepth 1 -maxdepth 1 -exec rm -rf {} + 2>/dev/null || true
 else
-  echo "Prebuild mode: skipping ext4 /nix/store wipe (slow USB random I/O)."
+  verbose_log "Prebuild mode: skipping ext4 /nix/store wipe (slow USB random I/O)."
 fi
 phase_end
 
@@ -177,7 +178,7 @@ if [ "$MODE" = "prebuild" ]; then
 fi
 
 phase_begin "installing-nixos" "Installing NixOS (${MODE})"
-nixos-install --flake "$FLAKE_DIR#usb" --root "$MOUNT_POINT" --no-root-passwd
+run_logged "nixos-install" nixos-install --flake "$FLAKE_DIR#usb" --root "$MOUNT_POINT" --no-root-passwd
 phase_end
 
 phase_begin "verifying-installed-revision" "Verifying installed revision"
@@ -187,7 +188,7 @@ phase_end
 phase_begin "verifying-home-manager" "Verifying Home Manager"
 HM_SERVICE="$MOUNT_POINT/etc/systemd/system/home-manager-stefan.service"
 if [ -f "$HM_SERVICE" ]; then
-  echo "Home Manager service found. It will activate on first boot."
+  verbose_log "Home Manager service found. It will activate on first boot."
 else
   echo "Warning: Home Manager service not found at $HM_SERVICE"
   echo "First boot may not have the full user environment."
@@ -209,7 +210,7 @@ if [ "$MODE" = "prebuild" ]; then
   phase_begin "building-squashfs" "Building squashfs locally (desktop SSD)"
   LOCAL_SQUASHFS="$STAGE_DIR/nix-store.squashfs"
   rm -f "$LOCAL_SQUASHFS"
-  mksquashfs "$STAGE_STORE" "$LOCAL_SQUASHFS" \
+  run_logged "mksquashfs" mksquashfs "$STAGE_STORE" "$LOCAL_SQUASHFS" \
     -comp zstd \
     -Xcompression-level 3 \
     -b 1048576 \
@@ -232,7 +233,7 @@ if [ "$MODE" = "prebuild" ]; then
 else
   phase_begin "building-squashfs" "Building squashfs in-place on USB (slow path)"
   rm -f "$MOUNT_POINT/nix-store.squashfs"
-  mksquashfs "$MOUNT_POINT/nix/store" "$MOUNT_POINT/nix-store.squashfs" \
+  run_logged "mksquashfs" mksquashfs "$MOUNT_POINT/nix/store" "$MOUNT_POINT/nix-store.squashfs" \
     -comp zstd \
     -Xcompression-level 3 \
     -b 1048576 \
@@ -251,7 +252,7 @@ phase_begin "cleaning-ext4-store" "Cleaning ext4 store"
 if [ "$MODE" = "in-place" ]; then
   find "$MOUNT_POINT/nix/store" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
 else
-  echo "Prebuild mode: leaving ext4 /nix/store untouched."
+  verbose_log "Prebuild mode: leaving ext4 /nix/store untouched."
 fi
 # Preserve the target Nix DB. The booted squashfs store still needs valid DB
 # registration so Home Manager can realize its generation and add GC roots.
@@ -267,7 +268,7 @@ if [ -n "$TARGET_CONFIG_REVISION" ]; then
   echo "Written revision: $TARGET_CONFIG_REVISION"
 fi
 if [ -n "$TARGET_SYSTEM_TOPLEVEL" ]; then
-  echo "Written system: $TARGET_SYSTEM_TOPLEVEL"
+  verbose_log "Written system: $TARGET_SYSTEM_TOPLEVEL"
 fi
 print_timing_summary
 echo "Boot flow: LUKS unlock -> squashfs overlay on /nix/store -> fast reads"

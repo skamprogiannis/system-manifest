@@ -124,19 +124,17 @@ For later shared-contract refactors, treat `nix flake check` plus `nixos-rebuild
 sudo update-usb /path/to/system-manifest/main
 ```
 
-`update-usb` defaults to `--mode prebuild`, which builds locally and syncs the final squashfs image to the USB. Always pass the worktree path that contains `flake.nix`, not the repo container root.
+`update-usb` uses prebuild mode by default, which builds locally and syncs the final squashfs image to the USB. Always pass the worktree path that contains `flake.nix`, not the repo container root. Add `-v` or `--verbose` when you want full `nixos-install`, `mksquashfs`, and cleanup detail.
 
 The USB installer workflow is packaged from `modules/home/scripts/usb/`: Nix owns constants and host exposure, while the extracted `update-usb` shell fragments own runtime behavior.
-
-```bash
-sudo update-usb --mode prebuild /path/to/system-manifest/<worktree>
-```
 
 Use `--in-place` when local disk space is tight:
 
 ```bash
 sudo update-usb --in-place /path/to/system-manifest/<worktree>
 ```
+
+Use `--force` to rewrite the USB even when the existing squashfs already contains the desired system.
 
 The script handles preflight checks, safe cleanup on `Ctrl+C`, first-boot Home Manager activation, and revision verification. After booting the USB, confirm the running image with `nixos-version --json` and `readlink -f /run/current-system`.
 

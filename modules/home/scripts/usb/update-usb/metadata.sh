@@ -108,7 +108,7 @@ verify_installed_revision() {
     echo "Desired revision: unavailable (flake evaluation did not return configurationRevision)"
   fi
   echo "Installed revision: $TARGET_CONFIG_REVISION"
-  echo "Installed system: $TARGET_SYSTEM_TOPLEVEL"
+  verbose_log "Installed system: $TARGET_SYSTEM_TOPLEVEL"
   if [ -n "$TARGET_NIXOS_VERSION" ]; then
     echo "Installed NixOS version: $TARGET_NIXOS_VERSION"
   fi

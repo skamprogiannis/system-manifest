@@ -1,6 +1,39 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2034
 
+is_verbose() {
+  [ "${VERBOSE:-0}" -eq 1 ]
+}
+
+verbose_log() {
+  if is_verbose; then
+    printf '%s\n' "$*"
+  fi
+}
+
+run_logged() {
+  local description="$1"
+  shift
+
+  if is_verbose; then
+    "$@"
+    return
+  fi
+
+  local output="" status=0
+  if output="$("$@" 2>&1)"; then
+    return 0
+  else
+    status=$?
+  fi
+
+  echo "Error: $description failed." >&2
+  if [ -n "$output" ]; then
+    printf '%s\n' "$output" >&2
+  fi
+  return "$status"
+}
+
 phase_begin() {
   CURRENT_PHASE="$1"
   PHASE_LABEL="$2"
