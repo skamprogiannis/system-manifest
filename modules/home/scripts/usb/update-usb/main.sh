@@ -29,7 +29,7 @@ DEFAULT_MODE="prebuild"
 MODE="$DEFAULT_MODE"
 FLAKE_DIR="$PWD"
 NIX_SHELL_PACKAGES=(squashfsTools cryptsetup util-linux coreutils findutils gnused)
-REQUIRED_TOOLS=(nixos-install cryptsetup mount umount findmnt find rm du cut sort nproc mountpoint sed mktemp cp mv date chroot lsblk sleep sync stat)
+REQUIRED_TOOLS=(nixos-install cryptsetup mount umount findmnt find rm du cut sort nproc mountpoint sed mktemp cp mv date chroot lsblk sleep sync stat cat tr tail)
 FORCE_UPDATE=0
 VERBOSE=0
 CLOSE_MAPPER_ON_CLEANUP=0
@@ -52,6 +52,7 @@ TARGET_INIT_RELATIVE=""
 PHASE_LABEL=""
 PHASE_STARTED_AT=0
 TIMINGS=()
+LAST_PROGRESS_LINE=""
 ORIGINAL_ARGS=("$@")
 
 parse_args "$@"
@@ -127,7 +128,7 @@ trap cleanup EXIT
 trap 'cancel_update INT' INT
 trap 'cancel_update TERM' TERM
 
-phase_begin "opening-luks" "Opening LUKS"
+phase_begin "opening-luks" "Opening LUKS" 5
 refresh_usb_mapper
 if [ ! -e "$USB_ROOT_DEV" ]; then
   cryptsetup open "$USB_ROOT_PART" "$PREFERRED_USB_MAPPER_NAME"
@@ -136,7 +137,7 @@ fi
 CLOSE_MAPPER_ON_CLEANUP=1
 phase_end
 
-phase_begin "mounting" "Mounting"
+phase_begin "mounting" "Mounting" 10
 umount "$MOUNT_POINT/boot" 2>/dev/null || true
 umount "$MOUNT_POINT" 2>/dev/null || true
 
@@ -147,7 +148,7 @@ mount "$USB_BOOT_DEV" "$MOUNT_POINT/boot"
 MOUNTED_BOOT=1
 phase_end
 
-phase_begin "checking-existing-squashfs" "Checking existing USB squashfs"
+phase_begin "checking-existing-squashfs" "Checking existing USB squashfs" 12
 if ! skip_if_existing_squashfs_is_current; then
   phase_end
   CURRENT_PHASE="done"
@@ -156,7 +157,7 @@ if ! skip_if_existing_squashfs_is_current; then
 fi
 phase_end
 
-phase_begin "cleaning-stale-nix-state" "Cleaning stale Nix state"
+phase_begin "cleaning-stale-nix-state" "Cleaning stale Nix state" 16
 rm -rf "$MOUNT_POINT/nix/var/nix/db"
 rm -rf "$MOUNT_POINT/nix/var/nix/profiles"
 if [ "$MODE" = "in-place" ]; then
@@ -167,7 +168,7 @@ fi
 phase_end
 
 if [ "$MODE" = "prebuild" ]; then
-  phase_begin "preparing-prebuild-stage" "Preparing local prebuild stage"
+  phase_begin "preparing-prebuild-stage" "Preparing local prebuild stage" 18
   STAGE_DIR="$(mktemp -d /var/tmp/update-usb-stage.XXXXXX)"
   STAGE_STORE="$STAGE_DIR/store"
   mkdir -p "$STAGE_STORE"
@@ -177,15 +178,19 @@ if [ "$MODE" = "prebuild" ]; then
   phase_end
 fi
 
-phase_begin "installing-nixos" "Installing NixOS (${MODE})"
-run_logged "nixos-install" nixos-install --flake "$FLAKE_DIR#usb" --root "$MOUNT_POINT" --no-root-passwd
+phase_begin "building-usb-system" "Building USB system" 25
+run_logged_progress "Building USB system" 25 45 nix build --no-link "$FLAKE_DIR#nixosConfigurations.usb.config.system.build.toplevel"
 phase_end
 
-phase_begin "verifying-installed-revision" "Verifying installed revision"
+phase_begin "installing-nixos" "Installing NixOS" 50
+run_logged_progress "Installing NixOS" 50 58 nixos-install --system "$DESIRED_SYSTEM_TOPLEVEL" --root "$MOUNT_POINT" --no-root-passwd
+phase_end
+
+phase_begin "verifying-installed-revision" "Verifying installed revision" 60
 verify_installed_revision
 phase_end
 
-phase_begin "verifying-home-manager" "Verifying Home Manager"
+phase_begin "verifying-home-manager" "Verifying Home Manager" 62
 HM_SERVICE="$MOUNT_POINT/etc/systemd/system/home-manager-stefan.service"
 if [ -f "$HM_SERVICE" ]; then
   verbose_log "Home Manager service found. It will activate on first boot."
@@ -195,7 +200,7 @@ else
 fi
 phase_end
 
-phase_begin "preparing-home-manager-state" "Preparing Home Manager state"
+phase_begin "preparing-home-manager-state" "Preparing Home Manager state" 64
 # Home Manager's first-boot activation writes GC roots and per-user profiles
 # under ~/.local/state. Seed the directories in the target root now so the
 # activation service can succeed on a fresh USB image.
@@ -207,10 +212,10 @@ chroot "$MOUNT_POINT" /nix/var/nix/profiles/system/sw/bin/install -d -m 0755 -o 
 phase_end
 
 if [ "$MODE" = "prebuild" ]; then
-  phase_begin "building-squashfs" "Building squashfs locally (desktop SSD)"
+  phase_begin "building-squashfs" "Building squashfs locally (desktop SSD)" 66
   LOCAL_SQUASHFS="$STAGE_DIR/nix-store.squashfs"
   rm -f "$LOCAL_SQUASHFS"
-  run_logged "mksquashfs" mksquashfs "$STAGE_STORE" "$LOCAL_SQUASHFS" \
+  run_logged_progress "Building squashfs" 66 78 mksquashfs "$STAGE_STORE" "$LOCAL_SQUASHFS" \
     -comp zstd \
     -Xcompression-level 3 \
     -b 1048576 \
@@ -219,21 +224,21 @@ if [ "$MODE" = "prebuild" ]; then
   echo "Local squashfs image: $SQFS_SIZE"
   phase_end
 
-  phase_begin "syncing-squashfs" "Syncing squashfs to USB"
+  phase_begin "syncing-squashfs" "Syncing squashfs to USB" 80
   umount "$MOUNT_POINT/nix/store"
   MOUNTED_STAGE_STORE=0
   rm -f "$MOUNT_POINT/nix-store.squashfs.tmp" "$MOUNT_POINT/nix-store.squashfs"
   echo "Copying $SQFS_SIZE squashfs image to USB; this can take several minutes."
-  cp "$LOCAL_SQUASHFS" "$MOUNT_POINT/nix-store.squashfs.tmp"
+  copy_with_progress "$LOCAL_SQUASHFS" "$MOUNT_POINT/nix-store.squashfs.tmp" 80 93 "Syncing squashfs to USB"
   mv "$MOUNT_POINT/nix-store.squashfs.tmp" "$MOUNT_POINT/nix-store.squashfs"
   FINAL_SQUASHFS="$MOUNT_POINT/nix-store.squashfs"
   SQFS_SIZE="$(du -sh "$MOUNT_POINT/nix-store.squashfs" | cut -f1)"
   echo "USB squashfs image: $SQFS_SIZE"
   phase_end
 else
-  phase_begin "building-squashfs" "Building squashfs in-place on USB (slow path)"
+  phase_begin "building-squashfs" "Building squashfs in-place on USB (slow path)" 66
   rm -f "$MOUNT_POINT/nix-store.squashfs"
-  run_logged "mksquashfs" mksquashfs "$MOUNT_POINT/nix/store" "$MOUNT_POINT/nix-store.squashfs" \
+  run_logged_progress "Building squashfs" 66 85 mksquashfs "$MOUNT_POINT/nix/store" "$MOUNT_POINT/nix-store.squashfs" \
     -comp zstd \
     -Xcompression-level 3 \
     -b 1048576 \
@@ -244,11 +249,11 @@ else
   phase_end
 fi
 
-phase_begin "verifying-squashfs" "Verifying USB squashfs"
+phase_begin "verifying-squashfs" "Verifying USB squashfs" 95
 verify_squashfs_contains_system "$FINAL_SQUASHFS"
 phase_end
 
-phase_begin "cleaning-ext4-store" "Cleaning ext4 store"
+phase_begin "cleaning-ext4-store" "Cleaning ext4 store" 97
 if [ "$MODE" = "in-place" ]; then
   find "$MOUNT_POINT/nix/store" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
 else
@@ -259,7 +264,7 @@ fi
 phase_end
 
 CURRENT_PHASE="done"
-echo "=== USB Update: Done ==="
+progress_set 100 "Done"
 echo "Mode: $MODE"
 if [ -n "$EXPECTED_CONFIG_REVISION" ]; then
   echo "Desired revision: $EXPECTED_CONFIG_REVISION"

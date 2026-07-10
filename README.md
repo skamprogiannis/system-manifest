@@ -124,7 +124,7 @@ For later shared-contract refactors, treat `nix flake check` plus `nixos-rebuild
 sudo update-usb /path/to/system-manifest/main
 ```
 
-`update-usb` uses prebuild mode by default, which builds locally and syncs the final squashfs image to the USB. Always pass the worktree path that contains `flake.nix`, not the repo container root. Add `-v` or `--verbose` when you want full `nixos-install`, `mksquashfs`, and cleanup detail.
+`update-usb` uses prebuild mode by default, which builds locally and syncs the final squashfs image to the USB. Always pass the worktree path that contains `flake.nix`, not the repo container root. The default output shows concise percent progress; add `-v` or `--verbose` when you want full `nix build`, `nixos-install`, `mksquashfs`, and cleanup detail.
 
 The USB installer workflow is packaged from `modules/home/scripts/usb/`: Nix owns constants and host exposure, while the extracted `update-usb` shell fragments own runtime behavior.
 

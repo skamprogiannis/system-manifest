@@ -307,6 +307,33 @@ in {
         exit 1
       fi
 
+      progress_test="$TMPDIR/update-usb-progress"
+      mkdir -p "$progress_test"
+      (
+        # shellcheck disable=SC1091
+        . "$update_usb_source_dir/phases.sh"
+        progress_set 12 "Opening LUKS"
+        progress_set 12 "Opening LUKS"
+        progress_set 67 "Building squashfs"
+        map_percent_range 50 66 78
+      ) > "$progress_test/actual"
+      cat > "$progress_test/expected" <<'EOF'
+      [12%] Opening LUKS
+      [67%] Building squashfs
+      72
+      EOF
+      if ! cmp -s "$progress_test/expected" "$progress_test/actual"; then
+        echo "Expected update-usb progress helpers to emit concise percent lines." >&2
+        ${pkgs.gnused}/bin/sed 's/^/  /' "$progress_test/actual" >&2
+        exit 1
+      fi
+
+      if ${pkgs.gnugrep}/bin/grep -Fq "Still running" "$update_usb_source_dir/phases.sh"; then
+        echo "Expected update-usb progress output to avoid generic still-running messages." >&2
+        ${pkgs.gnused}/bin/sed -n '1,140p' "$update_usb_source_dir/phases.sh" >&2
+        exit 1
+      fi
+
       timing_test="$TMPDIR/update-usb-timing"
       mkdir -p "$timing_test"
       (
@@ -449,15 +476,33 @@ in {
         exit 1
       fi
 
-      if ! ${pkgs.gnugrep}/bin/grep -Fq 'run_logged "nixos-install"' "$update_usb_source_dir/main.sh"; then
-        echo "Expected update-usb to route nixos-install output through quiet/verbose logging." >&2
+      if ! ${pkgs.gnugrep}/bin/grep -Fq 'nix build --no-link "$FLAKE_DIR#nixosConfigurations.usb.config.system.build.toplevel"' "$update_usb_source_dir/main.sh"; then
+        echo "Expected update-usb to prebuild the USB system before nixos-install." >&2
         ${pkgs.gnused}/bin/sed -n '170,190p' "$update_usb_source_dir/main.sh" >&2
         exit 1
       fi
 
-      if ! ${pkgs.gnugrep}/bin/grep -Fq 'run_logged "mksquashfs"' "$update_usb_source_dir/main.sh"; then
-        echo "Expected update-usb to route mksquashfs output through quiet/verbose logging." >&2
+      if ! ${pkgs.gnugrep}/bin/grep -Fq 'nixos-install --system "$DESIRED_SYSTEM_TOPLEVEL"' "$update_usb_source_dir/main.sh"; then
+        echo "Expected update-usb to install the prebuilt USB system path." >&2
+        ${pkgs.gnused}/bin/sed -n '175,195p' "$update_usb_source_dir/main.sh" >&2
+        exit 1
+      fi
+
+      if ${pkgs.gnugrep}/bin/grep -Fq 'nixos-install --flake' "$update_usb_source_dir/main.sh"; then
+        echo "Expected update-usb not to hide flake builds inside nixos-install." >&2
+        ${pkgs.gnused}/bin/sed -n '175,195p' "$update_usb_source_dir/main.sh" >&2
+        exit 1
+      fi
+
+      if ! ${pkgs.gnugrep}/bin/grep -Fq 'run_logged_progress "Building squashfs"' "$update_usb_source_dir/main.sh"; then
+        echo "Expected update-usb to route mksquashfs output through percent progress logging." >&2
         ${pkgs.gnused}/bin/sed -n '205,245p' "$update_usb_source_dir/main.sh" >&2
+        exit 1
+      fi
+
+      if ! ${pkgs.gnugrep}/bin/grep -Fq 'copy_with_progress "$LOCAL_SQUASHFS"' "$update_usb_source_dir/main.sh"; then
+        echo "Expected update-usb to show byte-based progress while copying squashfs to USB." >&2
+        ${pkgs.gnused}/bin/sed -n '220,235p' "$update_usb_source_dir/main.sh" >&2
         exit 1
       fi
 

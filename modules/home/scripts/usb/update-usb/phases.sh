@@ -11,6 +11,44 @@ verbose_log() {
   fi
 }
 
+progress_set() {
+  local percent="$1"
+  shift
+  local message="$*"
+  local line="[$percent%] $message"
+
+  if [ "${LAST_PROGRESS_LINE:-}" != "$line" ]; then
+    printf '%s\n' "$line"
+    LAST_PROGRESS_LINE="$line"
+  fi
+}
+
+extract_latest_percent() {
+  local log_file="$1"
+
+  if [ ! -s "$log_file" ]; then
+    return 1
+  fi
+
+  tr '\r' '\n' <"$log_file" \
+    | sed -n 's/.*[^0-9]\([0-9][0-9]*\)%.*/\1/p' \
+    | tail -n1
+}
+
+map_percent_range() {
+  local percent="$1"
+  local start="$2"
+  local end="$3"
+
+  if [ "$percent" -lt 0 ]; then
+    percent=0
+  elif [ "$percent" -gt 100 ]; then
+    percent=100
+  fi
+
+  printf '%s\n' $((start + (percent * (end - start) / 100)))
+}
+
 run_logged() {
   local description="$1"
   shift
@@ -34,11 +72,137 @@ run_logged() {
   return "$status"
 }
 
+run_logged_progress() {
+  local description="$1"
+  local start_percent="$2"
+  local end_percent="$3"
+  shift 3
+
+  if is_verbose; then
+    "$@"
+    return
+  fi
+
+  local log_file pid status=0 displayed_percent latest_percent mapped_percent
+  local sleep_pid wait_status
+  local next_estimate=$((start_percent + 1))
+  local poll_seconds="${PROGRESS_POLL_SECONDS:-60}"
+
+  log_file="$(mktemp)"
+  "$@" >"$log_file" 2>&1 &
+  pid="$!"
+
+  while kill -0 "$pid" 2>/dev/null; do
+    sleep "$poll_seconds" &
+    sleep_pid="$!"
+
+    set +e
+    wait -n "$pid" "$sleep_pid"
+    wait_status=$?
+    set -e
+
+    if ! kill -0 "$pid" 2>/dev/null; then
+      if kill -0 "$sleep_pid" 2>/dev/null; then
+        kill "$sleep_pid" 2>/dev/null || true
+        wait "$sleep_pid" 2>/dev/null || true
+      fi
+      status="$wait_status"
+      break
+    fi
+
+    wait "$sleep_pid" 2>/dev/null || true
+
+    latest_percent="$(extract_latest_percent "$log_file" || true)"
+    if [ -n "$latest_percent" ]; then
+      mapped_percent="$(map_percent_range "$latest_percent" "$start_percent" "$end_percent")"
+      if [ "$mapped_percent" -lt "$end_percent" ]; then
+        progress_set "$mapped_percent" "$description"
+      fi
+      continue
+    fi
+
+    if [ "$next_estimate" -lt "$end_percent" ]; then
+      displayed_percent="$next_estimate"
+      next_estimate=$((next_estimate + 1))
+      progress_set "$displayed_percent" "$description"
+    fi
+  done
+
+  if [ "$status" -ne 0 ]; then
+    echo "Error: $description failed." >&2
+    if [ -s "$log_file" ]; then
+      cat "$log_file" >&2
+    fi
+    rm -f "$log_file"
+    return "$status"
+  fi
+
+  rm -f "$log_file"
+}
+
+copy_with_progress() {
+  local source="$1"
+  local target="$2"
+  local start_percent="$3"
+  local end_percent="$4"
+  local description="$5"
+
+  if is_verbose; then
+    cp "$source" "$target"
+    return
+  fi
+
+  local total_bytes copied_bytes raw_percent mapped_percent pid status=0
+  local sleep_pid wait_status
+  total_bytes="$(stat -c '%s' "$source")"
+  cp "$source" "$target" &
+  pid="$!"
+
+  while kill -0 "$pid" 2>/dev/null; do
+    sleep 1 &
+    sleep_pid="$!"
+
+    set +e
+    wait -n "$pid" "$sleep_pid"
+    wait_status=$?
+    set -e
+
+    if ! kill -0 "$pid" 2>/dev/null; then
+      if kill -0 "$sleep_pid" 2>/dev/null; then
+        kill "$sleep_pid" 2>/dev/null || true
+        wait "$sleep_pid" 2>/dev/null || true
+      fi
+      status="$wait_status"
+      break
+    fi
+
+    wait "$sleep_pid" 2>/dev/null || true
+
+    copied_bytes="$(stat -c '%s' "$target" 2>/dev/null || printf '0')"
+    if [ "$total_bytes" -gt 0 ]; then
+      raw_percent=$((copied_bytes * 100 / total_bytes))
+      mapped_percent="$(map_percent_range "$raw_percent" "$start_percent" "$end_percent")"
+      if [ "$mapped_percent" -lt "$end_percent" ]; then
+        progress_set "$mapped_percent" "$description"
+      fi
+    fi
+  done
+
+  if [ "$status" -ne 0 ]; then
+    echo "Error: $description failed." >&2
+    return "$status"
+  fi
+}
+
 phase_begin() {
   CURRENT_PHASE="$1"
   PHASE_LABEL="$2"
   PHASE_STARTED_AT="$(date +%s)"
-  echo "=== USB Update: $PHASE_LABEL ==="
+  if [ -n "${3:-}" ]; then
+    progress_set "$3" "$PHASE_LABEL"
+  else
+    echo "=== USB Update: $PHASE_LABEL ==="
+  fi
 }
 
 phase_end() {
