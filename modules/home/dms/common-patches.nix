@@ -179,8 +179,8 @@
 
   modalConnectedBorderFallback = ''
     (
-        '                        border.color: (root.connectedSurfaceOverride || root.frameOwnsConnectedChrome) ? "transparent" : BlurService.borderColor',
-        '                        border.color: (root.connectedSurfaceOverride || root.frameOwnsConnectedChrome) ? "transparent" : (BlurService.enabled ? BlurService.borderColor : Theme.outlineMedium)',
+        '                        border.color: (root.connectedSurfaceOverride || root.frameOwnsConnectedChrome) ? Theme.withAlpha(BlurService.borderColor, 0) : BlurService.borderColor',
+        '                        border.color: (root.connectedSurfaceOverride || root.frameOwnsConnectedChrome) ? Theme.withAlpha(BlurService.borderColor, 0) : (BlurService.enabled ? BlurService.borderColor : Theme.outlineMedium)',
     ),
     (
         '                        border.width: (root.connectedSurfaceOverride || root.frameOwnsConnectedChrome) ? 0 : BlurService.borderWidth',
@@ -217,8 +217,8 @@
 
   notificationPopupBorderFallback = ''
     (
-        '            border.color: win.connectedFrameMode ? "transparent" : BlurService.borderColor',
-        '            border.color: win.connectedFrameMode ? "transparent" : (BlurService.enabled ? BlurService.borderColor : Qt.rgba(Theme.outline.r, Theme.outline.g, Theme.outline.b, 0.12))',
+        '            border.color: win.connectedFrameMode ? Theme.withAlpha(BlurService.borderColor, 0) : BlurService.borderColor',
+        '            border.color: win.connectedFrameMode ? Theme.withAlpha(BlurService.borderColor, 0) : (BlurService.enabled ? BlurService.borderColor : Qt.rgba(Theme.outline.r, Theme.outline.g, Theme.outline.b, 0.12))',
     ),
     (
         "            border.width: win.connectedFrameMode ? 0 : BlurService.borderWidth",
@@ -311,18 +311,16 @@ in {
     ${launcherSourceClassifier}
     root / "Widgets/CachingImage.qml": [
         (
-            "        cacheProbe.running = false;\n        cacheProbe.cachePath = cPath;\n        cacheProbe.fallbackSource = encoded;\n        cacheProbe.running = true;",
-            '        staticImg.source = encoded;',
-        ),
-    ],
-    root / "Modules/DankDash/WallpaperTab.qml": [
-        (
-            "import QtQuick.Effects",
-            "import QtQuick.Effects\nimport Quickshell",
+            "import QtQuick\nimport qs.Common",
+            "import QtQuick\nimport Quickshell\nimport qs.Common",
         ),
         (
-            "                            maxCacheSize: 256\n\n                            layer.enabled: true",
-            '                            maxCacheSize: 256\n\n                            layer.enabled: Quickshell.env("QT_QUICK_BACKEND") !== "software"',
+            "                if (root._fromCache || root.isRemoteUrl || !root.cachePath)",
+            '                if (root._fromCache || root.isRemoteUrl || !root.cachePath || Quickshell.env("QT_QUICK_BACKEND") === "software")',
+        ),
+        (
+            "        // Cache-first; a miss errors and falls back to encodedImagePath\n        _fromCache = true;\n        staticImg.source = cachePath;",
+            "        if (Quickshell.env(\"QT_QUICK_BACKEND\") === \"software\") {\n            _fromCache = false;\n            staticImg.source = encodedImagePath;\n            return;\n        }\n        // Cache-first; a miss errors and falls back to encodedImagePath\n        _fromCache = true;\n        staticImg.source = cachePath;",
         ),
     ],
     root / "Modules/Settings/WallpaperTab.qml": [
@@ -361,28 +359,6 @@ in {
         (
             "                                                SessionData.clearWallpaper();",
             "                                                root.launchSkwdWall();\n                                                return;",
-        ),
-    ],
-    root / "Widgets/DankCircularImage.qml": [
-        (
-            "import QtQuick.Window\nimport QtQuick.Effects",
-            "import QtQuick.Window\nimport QtQuick.Effects\nimport Quickshell",
-        ),
-        (
-            "    property int imageStatus: activeImage.status",
-            '    property int imageStatus: activeImage.status\n    readonly property bool softwareQtQuick: Quickshell.env("QT_QUICK_BACKEND") === "software"',
-        ),
-        (
-            "        visible: false",
-            "        visible: root.softwareQtQuick && root.isAnimated",
-        ),
-        (
-            "        visible: false",
-            '        visible: root.softwareQtQuick && !root.isAnimated && root.imageSource !== ""',
-        ),
-        (
-            '        visible: root.activeImage.status === Image.Ready && root.imageSource !== ""',
-            '        visible: !root.softwareQtQuick && root.activeImage.status === Image.Ready && root.imageSource !== ""',
         ),
     ],
     root / "Modules/DankBar/BarCanvas.qml": [

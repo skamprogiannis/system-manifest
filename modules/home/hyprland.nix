@@ -74,7 +74,6 @@
   execBindWith = key: command: options: bindWith key (execCallback command) options;
   focusDirection = direction: lua ''hl.dsp.focus({ direction = ${builtins.toJSON direction} })'';
   focusWorkspace = workspace: lua ''hl.dsp.focus({ workspace = ${builtins.toJSON workspace} })'';
-  moveWindowDirection = direction: lua ''hl.dsp.window.move({ direction = ${builtins.toJSON direction} })'';
   moveWindowOrGroupDirection = direction: lua ''hl.dsp.window.move({ direction = ${builtins.toJSON direction}, group_aware = true })'';
   moveWindowMonitor = monitor:
     lua ''

@@ -4,13 +4,13 @@
   inputs,
   ...
 }: let
-  codexVersion = "0.142.3";
+  codexVersion = "0.144.1";
   codexUpstream = pkgs.stdenvNoCC.mkDerivation {
     pname = "codex-cli";
     version = codexVersion;
     src = pkgs.fetchurl {
       url = "https://github.com/openai/codex/releases/download/rust-v${codexVersion}/codex-x86_64-unknown-linux-musl.tar.gz";
-      hash = "sha256-+WgT9BaStNiuRNCBIWWi/MQpGW6zSB9rwiGv3slqF/g=";
+      hash = "sha256-hAka4gxl/MfUEg25fRvVfX/435x2Cft4HHjC671PWig=";
     };
     dontUnpack = true;
     installPhase = ''
@@ -58,7 +58,7 @@
       chmod +x "$out/bin/codex"
     '';
   };
-  pinchtabVersion = "0.13.2";
+  pinchtabVersion = "0.14.1";
   skillDir = source: {
     inherit source;
     force = true;
@@ -134,7 +134,7 @@
     version = pinchtabVersion;
     src = pkgs.fetchurl {
       url = "https://github.com/pinchtab/pinchtab/releases/download/v${pinchtabVersion}/pinchtab-linux-amd64";
-      hash = "sha256-ystOX/baA5hjvAG7bG8gvLJnDLCaGHCmZwKbZ+W+z50=";
+      hash = "sha256-+UM7p4ZGdX7zkLpywY4mNgM3BQY1wd26Rx+xGnLFcSI=";
     };
     dontUnpack = true;
     installPhase = ''
@@ -301,15 +301,15 @@
     (mkSkill "caveman-commit" "${inputs.caveman}/skills/caveman-commit" "Generate terse Conventional Commit messages in caveman style.")
     (mkSkill "caveman-review" "${inputs.caveman}/skills/caveman-review" "Produce compact code review findings in caveman style.")
     (mkSkill "caveman-compress" "${inputs.caveman}/skills/caveman-compress" "Compress text aggressively while preserving technical meaning.")
-    (mkSkill "diagnose" "${inputs.mattpocock-skills}/skills/engineering/diagnose" "Use a disciplined reproduce-minimize-hypothesize-instrument-fix loop for bugs and regressions.")
+    (mkSkill "diagnose" "${inputs.mattpocock-skills}/skills/engineering/diagnosing-bugs" "Use a disciplined reproduce-minimize-hypothesize-instrument-fix loop for bugs and regressions.")
     (mkSkill "grill-with-docs" "${inputs.mattpocock-skills}/skills/engineering/grill-with-docs" "Stress-test a plan against project docs, domain language, and recorded decisions.")
     (mkSkill "triage" "${inputs.mattpocock-skills}/skills/engineering/triage" "Triage issues through the configured issue tracker and triage role workflow.")
     (mkSkill "improve-codebase-architecture" "${inputs.mattpocock-skills}/skills/engineering/improve-codebase-architecture" "Find architectural refactoring opportunities that improve testability and navigation.")
     (mkSkill "setup-matt-pocock-skills" "${inputs.mattpocock-skills}/skills/engineering/setup-matt-pocock-skills" "Set up project context for Matt Pocock engineering skills.")
     (mkSkill "tdd" "${inputs.mattpocock-skills}/skills/engineering/tdd" "Use red-green-refactor test-driven development for features and bug fixes.")
-    (mkSkill "to-issues" "${inputs.mattpocock-skills}/skills/engineering/to-issues" "Break plans, specs, or PRDs into independently grabbable implementation issues.")
-    (mkSkill "to-prd" "${inputs.mattpocock-skills}/skills/engineering/to-prd" "Turn current context into a PRD for the project issue tracker.")
-    (mkSkill "zoom-out" "${inputs.mattpocock-skills}/skills/engineering/zoom-out" "Step up a level and map unfamiliar code areas, modules, and callers.")
+    (mkSkill "to-issues" "${inputs.mattpocock-skills}/skills/engineering/to-tickets" "Break plans, specs, or PRDs into independently grabbable implementation issues.")
+    (mkSkill "to-prd" "${inputs.mattpocock-skills}/skills/engineering/to-spec" "Turn current context into a PRD for the project issue tracker.")
+    (mkSkill "zoom-out" "${inputs.mattpocock-skills}/skills/engineering/wayfinder" "Step up a level and map unfamiliar code areas, modules, and callers.")
     (mkSkill "prototype" "${inputs.mattpocock-skills}/skills/engineering/prototype" "Build a throwaway prototype to validate data, state, or UI design choices.")
   ];
   skillHomeFiles = builtins.listToAttrs (map skillHomeFile declarativeSkills);

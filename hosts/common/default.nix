@@ -143,6 +143,36 @@
   };
 
   # Allow unfree packages
+  nixpkgs.overlays = [
+    (_final: prev: let
+      python3 = prev.python3.override {
+        packageOverrides = _pythonFinal: pythonPrev: let
+          patchCatppuccin = old: {
+            postPatch =
+              (old.postPatch or "")
+              + ''
+                substituteInPlace catppuccin/extras/matplotlib.py \
+                  --replace-fail "mpl.style.core.read_style_directory" "mpl.style.read_style_directory" \
+                  --replace-fail "mpl.style.core.update_nested_dict" "mpl.style.update_nested_dict"
+              '';
+          };
+        in {
+          catppuccin = pythonPrev.catppuccin.overridePythonAttrs patchCatppuccin;
+        };
+      };
+    in {
+      catppuccin-gtk = prev.catppuccin-gtk.overrideAttrs (old: {
+        postPatch =
+          (old.postPatch or "")
+          + ''
+            substituteInPlace sources/build/args.py \
+              --replace-fail "        type=bool," ""
+          '';
+      });
+      inherit python3;
+      python3Packages = python3.pkgs;
+    })
+  ];
   nixpkgs.config.allowUnfree = true;
   nixpkgs.config.permittedInsecurePackages = [
     "libsoup-2.74.3"
