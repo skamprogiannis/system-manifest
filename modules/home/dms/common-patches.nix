@@ -198,10 +198,6 @@
         "                borderWidth: BlurService.enabled ? BlurService.borderWidth : root.borderWidth",
     ),
     (
-        "                targetRadius: root.cornerRadius\n                shadowEnabled:",
-        "                targetRadius: root.cornerRadius\n                sourceRect.antialiasing: true\n                sourceRect.smooth: true\n                shadowEnabled:",
-    ),
-    (
         "                border.color: BlurService.borderColor",
         "                border.color: BlurService.enabled ? BlurService.borderColor : root.borderColor",
     ),
