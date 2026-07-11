@@ -33,6 +33,11 @@ in {
       number = true;
       relativenumber = true;
       expandtab = true;
+      foldenable = true;
+      foldexpr = "v:lua.vim.treesitter.foldexpr()";
+      foldlevel = 99;
+      foldlevelstart = 99;
+      foldmethod = "expr";
       tabstop = 4;
       shiftwidth = 4;
       softtabstop = 4;
@@ -501,6 +506,10 @@ in {
           highlight.enable = true;
         };
       };
+      treesitter-textobjects = {
+        enable = true;
+        settings.select.lookahead = true;
+      };
       snacks = {
         enable = true;
         settings = {
@@ -529,6 +538,26 @@ in {
 
     keymaps = [
       # --- Clipboard (system) ---
+      {
+        mode = ["x" "o"];
+        key = "af";
+        action.__raw = ''
+          function()
+            require("nvim-treesitter-textobjects.select").select_textobject("@function.outer", "textobjects")
+          end
+        '';
+        options.desc = "Around function";
+      }
+      {
+        mode = ["x" "o"];
+        key = "if";
+        action.__raw = ''
+          function()
+            require("nvim-treesitter-textobjects.select").select_textobject("@function.inner", "textobjects")
+          end
+        '';
+        options.desc = "Inside function";
+      }
       {
         mode = "n";
         key = "K";
