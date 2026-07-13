@@ -316,11 +316,21 @@ in {
         progress_set 12 "Opening LUKS"
         progress_set 67 "Building squashfs"
         map_percent_range 50 66 78
+        estimated_progress_percent 0 1080 6 58
+        estimated_progress_percent 60 1080 6 58
+        estimated_progress_percent 540 1080 6 58
+        estimated_progress_percent 1080 1080 6 58
+        estimated_progress_percent 2160 1080 6 58
       ) > "$progress_test/actual"
       cat > "$progress_test/expected" <<'EOF'
       [12%] Opening LUKS
       [67%] Building squashfs
       72
+      6
+      8
+      32
+      58
+      58
       EOF
       if ! cmp -s "$progress_test/expected" "$progress_test/actual"; then
         echo "Expected update-usb progress helpers to emit concise percent lines." >&2
@@ -499,6 +509,20 @@ in {
         ${pkgs.gnused}/bin/sed -n '205,245p' "$update_usb_source_dir/main.sh" >&2
         exit 1
       fi
+
+      for expected_progress_call in \
+        'phase_begin "opening-luks" "Opening LUKS" 0' \
+        'phase_begin "preparing-prebuild-stage" "Preparing local prebuild stage" 5' \
+        'run_logged_progress "Building USB system" 6 58 1080' \
+        'run_logged_progress "Installing NixOS" 58 60 120' \
+        'run_logged_progress "Building squashfs" 63 75 360' \
+        'copy_with_progress "$LOCAL_SQUASHFS" "$MOUNT_POINT/nix-store.squashfs.tmp" 76 96'; do
+        if ! ${pkgs.gnugrep}/bin/grep -Fq "$expected_progress_call" "$update_usb_source_dir/main.sh"; then
+          echo "Expected update-usb to use the calibrated prebuild progress ranges: $expected_progress_call" >&2
+          ${pkgs.gnused}/bin/sed -n '125,270p' "$update_usb_source_dir/main.sh" >&2
+          exit 1
+        fi
+      done
 
       if ! ${pkgs.gnugrep}/bin/grep -Fq 'copy_with_progress "$LOCAL_SQUASHFS"' "$update_usb_source_dir/main.sh"; then
         echo "Expected update-usb to show byte-based progress while copying squashfs to USB." >&2

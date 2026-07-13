@@ -49,6 +49,24 @@ map_percent_range() {
   printf '%s\n' $((start + (percent * (end - start) / 100)))
 }
 
+estimated_progress_percent() {
+  local elapsed_seconds="$1"
+  local estimate_seconds="$2"
+  local start="$3"
+  local end="$4"
+
+  if [ "$estimate_seconds" -le 0 ] || [ "$elapsed_seconds" -le 0 ]; then
+    printf '%s\n' "$start"
+    return
+  fi
+
+  if [ "$elapsed_seconds" -gt "$estimate_seconds" ]; then
+    elapsed_seconds="$estimate_seconds"
+  fi
+
+  printf '%s\n' $((start + (elapsed_seconds * (end - start) / estimate_seconds)))
+}
+
 run_logged() {
   local description="$1"
   shift
@@ -76,19 +94,20 @@ run_logged_progress() {
   local description="$1"
   local start_percent="$2"
   local end_percent="$3"
-  shift 3
+  local estimate_seconds="$4"
+  shift 4
 
   if is_verbose; then
     "$@"
     return
   fi
 
-  local log_file pid status=0 displayed_percent latest_percent mapped_percent
+  local log_file pid status=0 displayed_percent latest_percent mapped_percent started_at
   local sleep_pid wait_status
-  local next_estimate=$((start_percent + 1))
   local poll_seconds="${PROGRESS_POLL_SECONDS:-60}"
 
   log_file="$(mktemp)"
+  started_at="$(date +%s)"
   "$@" >"$log_file" 2>&1 &
   pid="$!"
 
@@ -121,9 +140,8 @@ run_logged_progress() {
       continue
     fi
 
-    if [ "$next_estimate" -lt "$end_percent" ]; then
-      displayed_percent="$next_estimate"
-      next_estimate=$((next_estimate + 1))
+    displayed_percent="$(estimated_progress_percent "$(( $(date +%s) - started_at ))" "$estimate_seconds" "$start_percent" "$end_percent")"
+    if [ "$displayed_percent" -lt "$end_percent" ]; then
       progress_set "$displayed_percent" "$description"
     fi
   done
