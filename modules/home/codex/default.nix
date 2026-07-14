@@ -328,7 +328,7 @@
     exec ${pkgs.nodejs}/bin/npx -y @upstash/context7-mcp
   '';
   codexConfigText = ''
-    model = "gpt-5.5"
+    model = "gpt-5.6-terra"
     model_reasoning_effort = "high"
     plan_mode_reasoning_effort = "xhigh"
     approval_policy = "on-request"

@@ -755,9 +755,29 @@ in {
         "$codex_seed_path" \
         "Expected Codex config to include the Linear MCP server."
 
+      assert_log_contains_file \
+        'model = "gpt-5.6-terra"' \
+        "$codex_seed_path" \
+        "Expected Codex config to use the GPT-5.6 Terra model."
+
+      if ${pkgs.gnugrep}/bin/grep -Fq 'model = "gpt-5.6"' "$codex_seed_path"; then
+        echo "Codex config must not use the unsupported bare GPT-5.6 model alias." >&2
+        exit 1
+      fi
+
+      assert_log_contains_file \
+        'model_reasoning_effort = "high"' \
+        "$codex_seed_path" \
+        "Expected Codex config to retain high reasoning for normal work."
+
+      assert_log_contains_file \
+        'plan_mode_reasoning_effort = "xhigh"' \
+        "$codex_seed_path" \
+        "Expected Codex config to retain xhigh reasoning for Plan Mode."
+
       codex_seed="$TMPDIR/codex-seed.toml"
       cat > "$codex_seed" <<'TOML'
-      model = "gpt-5.5"
+      model = "gpt-5.6-terra"
       approval_policy = "on-request"
 
       [tui]
@@ -790,7 +810,7 @@ in {
       with path.open("rb") as f:
           data = tomllib.load(f)
 
-      assert data["model"] == "gpt-5.5"
+      assert data["model"] == "gpt-5.6-terra"
       assert data["projects"]["/home/stefan/system-manifest"]["trust_level"] == "trusted"
       assert data["mcp_servers"]["context7"] == {
           "command": "/nix/store/context7-mcp/bin/context7-mcp",
@@ -832,7 +852,7 @@ in {
       with Path(sys.argv[1]).open("rb") as f:
           data = tomllib.load(f)
 
-      assert data["model"] == "gpt-5.5"
+      assert data["model"] == "gpt-5.6-terra"
       assert data["local_only"] == "kept"
       assert data["features"]["goals"] is True
       assert data["features"]["local_flag"] is True
@@ -864,7 +884,7 @@ in {
       assert stat.S_IMODE(os.stat(path).st_mode) == 0o600
       with path.open("rb") as f:
           data = tomllib.load(f)
-      assert data["model"] == "gpt-5.5"
+      assert data["model"] == "gpt-5.6-terra"
       assert data["projects"]["/home/stefan/system-manifest"]["trust_level"] == "trusted"
       PY
 
@@ -882,7 +902,7 @@ in {
       assert not path.is_symlink()
       with path.open("rb") as f:
           data = tomllib.load(f)
-      assert data["model"] == "gpt-5.5"
+      assert data["model"] == "gpt-5.6-terra"
       PY
 
       malformed_dir="$TMPDIR/codex/malformed"
@@ -902,7 +922,7 @@ in {
       assert backups[0].read_text() == "[broken\n"
       with config.open("rb") as f:
           data = tomllib.load(f)
-      assert data["model"] == "gpt-5.5"
+      assert data["model"] == "gpt-5.6-terra"
       PY
 
       if ${pkgs.gnugrep}/bin/grep -Fq "get key devices" "$desktop_home/bin/spotify_player"; then
