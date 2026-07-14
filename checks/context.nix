@@ -23,6 +23,8 @@
   updateUsbSourceDir = ../modules/home/scripts/usb/update-usb;
   usbHome = self.nixosConfigurations.usb.config.home-manager.users.stefan.home.path;
   usbActivation = self.nixosConfigurations.usb.config.home-manager.users.stefan.home.activationPackage;
+  usbSkwdDaemonExec = builtins.head self.nixosConfigurations.usb.config.home-manager.users.stefan.systemd.user.services.skwd-daemon.Service.ExecStart;
+  usbDmsPackage = self.nixosConfigurations.usb.config.home-manager.users.stefan.programs.dank-material-shell.package;
   usbInitrd = self.nixosConfigurations.usb.config.system.build.initialRamdisk;
   usbRamStoreInitrd = self.nixosConfigurations.usb.config.specialisation.ram-store.configuration.system.build.initialRamdisk;
   usbRamStorePrepareScript = pkgs.writeText "usb-ram-store-prepare-script" self.nixosConfigurations.usb.config.specialisation.ram-store.configuration.boot.initrd.systemd.services.initrd-usb-ram-store-prepare.script;

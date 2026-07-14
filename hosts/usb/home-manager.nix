@@ -7,6 +7,7 @@
     ../../modules/home/dms/usb.nix
     ../../modules/home/scripts/usb.nix
     ../../modules/home/spotify/usb.nix
+    ../../modules/home/wallpaper/usb.nix
   ];
   # USB-only marker consumed by wallpaper helpers so power-saver can act as
   # a lightweight mode without changing desktop behavior.

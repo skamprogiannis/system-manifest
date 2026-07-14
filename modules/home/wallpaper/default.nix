@@ -1,4 +1,4 @@
-{...}: {
+{lib, ...}: {
   # Shared wallpaper entrypoint only: compose the common DMS/skwd-wall contract
   # here, but keep host-owned runtime behavior in host imports or per-module
   # `desktop.nix` / `usb.nix` files instead of growing `hostType` branches.
@@ -6,4 +6,6 @@
     ../dms
     ../skwd-wall.nix
   ];
+
+  _module.args.skwdQsgRhiBackend = lib.mkDefault "vulkan";
 }

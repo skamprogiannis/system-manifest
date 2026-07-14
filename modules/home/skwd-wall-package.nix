@@ -1,7 +1,9 @@
 {
   pkgs,
   inputs,
-}: let
+  qsgRhiBackend,
+}:
+assert pkgs.lib.assertMsg (builtins.elem qsgRhiBackend ["opengl" "vulkan"]) "qsgRhiBackend must be \"opengl\" or \"vulkan\"."; let
   system = pkgs.stdenv.hostPlatform.system;
   skwdWallInput = inputs.skwd-wall;
   quickshellInput = skwdWallInput.inputs.quickshell;
@@ -62,18 +64,18 @@ in
 
       makeWrapper ${quickshellWithModules}/bin/quickshell $out/bin/skwd-wall \
         --prefix PATH : ${pkgs.lib.makeBinPath runtimeDeps} \
-        --set-default QSG_RHI_BACKEND vulkan \
+        --set-default QSG_RHI_BACKEND ${qsgRhiBackend} \
         --add-flags "-p $out/share/skwd-wall/shell.qml"
 
       makeWrapper ${daemon}/bin/skwd $out/bin/skwd \
         --prefix PATH : ${pkgs.lib.makeBinPath daemonDeps} \
-        --set-default QSG_RHI_BACKEND vulkan \
+        --set-default QSG_RHI_BACKEND ${qsgRhiBackend} \
         --set SKWD_SHELL_QML "$out/share/skwd-wall/shell.qml" \
         --set SKWD_DATA_DIR "$out/share/skwd-wall/data"
 
       makeWrapper ${daemon}/bin/skwd-daemon $out/bin/skwd-daemon \
         --prefix PATH : ${pkgs.lib.makeBinPath daemonDeps} \
-        --set-default QSG_RHI_BACKEND vulkan \
+        --set-default QSG_RHI_BACKEND ${qsgRhiBackend} \
         --set SKWD_SHELL_QML "$out/share/skwd-wall/shell.qml" \
         --set SKWD_DATA_DIR "$out/share/skwd-wall/data"
 

@@ -9,6 +9,8 @@
     desktopSkwdPrepareStateActivationFile
     desktopTmpfilesRulesFile
     pkgs
+    usbDmsPackage
+    usbSkwdDaemonExec
     ;
 in {
   wallpaper-runtime =
@@ -74,9 +76,28 @@ in {
             }
 
             skwd_pkg="$(dirname "$(dirname "${desktopSkwdDaemonExec}")")"
+            usb_skwd_pkg="$(dirname "$(dirname "${usbSkwdDaemonExec}")")"
             assert_executable "$skwd_pkg/bin/skwd" "skwd"
             assert_executable "$skwd_pkg/bin/skwd-daemon" "skwd-daemon"
             assert_executable "$skwd_pkg/bin/skwd-wall" "skwd-wall"
+            assert_executable "$usb_skwd_pkg/bin/skwd" "USB skwd"
+            assert_executable "$usb_skwd_pkg/bin/skwd-daemon" "USB skwd-daemon"
+            assert_executable "$usb_skwd_pkg/bin/skwd-wall" "USB skwd-wall"
+
+            for binary in skwd skwd-daemon skwd-wall; do
+              assert_contains "QSG_RHI_BACKEND-'vulkan'" "$skwd_pkg/bin/$binary" "desktop $binary wrapper"
+              assert_contains "QSG_RHI_BACKEND-'opengl'" "$usb_skwd_pkg/bin/$binary" "USB $binary wrapper"
+              assert_not_contains "QSG_RHI_BACKEND-'vulkan'" "$usb_skwd_pkg/bin/$binary" "USB $binary wrapper"
+            done
+
+            usb_dms_session="${usbDmsPackage}/share/quickshell/dms/Common/SessionData.qml"
+            usb_dms_skwd="$(sed -n 's|.*\["\(/nix/store/[^" ]*/bin/skwd\)".*|\1|p' "$usb_dms_session" | head -n1)"
+            if [ -z "$usb_dms_skwd" ]; then
+              echo "Expected USB DMS SessionData to reference an absolute skwd command." >&2
+              exit 1
+            fi
+            assert_executable "$usb_dms_skwd" "USB DMS skwd command"
+            assert_contains "QSG_RHI_BACKEND-'opengl'" "$usb_dms_skwd" "USB DMS skwd wrapper"
             assert_executable "${desktopSkwdDmsSyncHook}" "DMS wallpaper sync hook"
             assert_executable "${desktopSkwdDmsScheduleHook}" "DMS wallpaper sync scheduler"
             ${pkgs.bash}/bin/bash -n "${desktopSkwdDmsSyncHook}"

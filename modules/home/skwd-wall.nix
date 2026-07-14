@@ -3,6 +3,7 @@
   pkgs,
   lib,
   inputs,
+  skwdQsgRhiBackend,
   ...
 }: let
   wallpaperContracts = import ./wallpaper/contracts.nix;
@@ -10,7 +11,10 @@
   wallpaperTransitionContract = wallpaperContracts.wallpaperTransitions;
   dmsWallpaperSessionSync = wallpaperContracts.dmsWallpaperSessionSync;
   skwdColorContract = wallpaperContracts.skwdColorContract;
-  skwdWallBase = import ./skwd-wall-package.nix {inherit pkgs inputs;};
+  skwdWallBase = import ./skwd-wall-package.nix {
+    inherit pkgs inputs;
+    qsgRhiBackend = skwdQsgRhiBackend;
+  };
   homeDir = config.home.homeDirectory;
   steamLibraryDir = "${homeDir}/games/SteamLibrary";
   steamWorkshopDir = "${steamLibraryDir}/steamapps/workshop/content/431960";
