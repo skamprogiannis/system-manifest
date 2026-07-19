@@ -81,6 +81,7 @@
     shfmt
     sqlite
     statix
+    stylelint
     transmission_4
     tree
     tremc

@@ -96,6 +96,7 @@ in {
     export XDG_CONFIG_HOME="$TMPDIR/config"
     export XDG_STATE_HOME="$TMPDIR/state"
     mkdir -p "$HOME" "$XDG_CACHE_HOME" "$XDG_CONFIG_HOME" "$XDG_STATE_HOME"
+    export PATH=${desktopHome}/bin:$PATH
 
     cat > check-lsp-health.lua <<'LUA'
     vim.cmd("checkhealth vim.lsp")
@@ -152,6 +153,112 @@ in {
       vim.cmd("cquit")
     end
 
+    vim.cmd("qa!")
+    LUA
+
+    cat > check-web-tooling.lua <<'LUA'
+    local function fail(message)
+      io.stderr:write(message .. "\n")
+      vim.cmd("cquit")
+    end
+
+    local function write_file(path, text)
+      local file = assert(io.open(path, "w"))
+      file:write(text)
+      file:close()
+    end
+
+    local function assert_equal(actual, expected, label)
+      if actual ~= expected then
+        fail(string.format("%s: got %q, expected %q", label, tostring(actual), tostring(expected)))
+      end
+    end
+
+    local function open_buffer(directory, filename, text, expected_filetype)
+      vim.fn.mkdir(directory, "p")
+      local path = directory .. "/" .. filename
+      write_file(path, text)
+      vim.cmd("edit " .. vim.fn.fnameescape(path))
+      assert_equal(vim.bo.filetype, expected_filetype, filename .. " filetype")
+      return path
+    end
+
+    local function has_formatter(name)
+      for _, formatter in ipairs(require("conform").list_formatters_to_run(0)) do
+        if formatter.name == name then
+          return true
+        end
+      end
+      return false
+    end
+
+    for _, server in ipairs({ "html", "cssls" }) do
+      if not vim.lsp.is_enabled(server) then
+        fail(server .. " must be enabled")
+      end
+    end
+
+    for _, command in ipairs({ "vscode-html-language-server", "vscode-css-language-server" }) do
+      if vim.fn.executable(command) ~= 1 then
+        fail(command .. " must be available inside Neovim")
+      end
+    end
+
+    local lint = require("lint")
+    if not lint.linters_by_ft.css or lint.linters_by_ft.css[1] ~= "stylelint" then
+      fail("CSS must use Stylelint")
+    end
+    if vim.fn.executable("stylelint") ~= 1 then
+      fail("Stylelint must be available inside Neovim")
+    end
+
+    local root = vim.fn.tempname()
+    vim.fn.mkdir(root, "p")
+
+    open_buffer(root .. "/html", "index.html", "<main><p>Hello</p></main>\n", "html")
+    assert_equal(vim.bo.shiftwidth, 2, "HTML shiftwidth")
+    assert_equal(vim.bo.tabstop, 2, "HTML tabstop")
+    if not has_formatter("prettier") then
+      fail("HTML must use Prettier")
+    end
+
+    local calls = {}
+    local original_try_lint = lint.try_lint
+    lint.try_lint = function(names, opts)
+      table.insert(calls, { names = names, opts = opts })
+    end
+
+    open_buffer(root .. "/unconfigured", "site.css", "main { color: red; }\n", "css")
+    assert_equal(vim.bo.shiftwidth, 2, "CSS shiftwidth")
+    assert_equal(vim.bo.tabstop, 2, "CSS tabstop")
+    if not has_formatter("prettier") then
+      fail("CSS must use Prettier")
+    end
+    vim.api.nvim_exec_autocmds("BufWritePost", { buffer = 0 })
+    assert_equal(#calls, 0, "unconfigured CSS lint calls")
+
+    local configured_root = root .. "/configured"
+    vim.fn.mkdir(configured_root .. "/assets", "p")
+    write_file(configured_root .. "/stylelint.config.mjs", "export default { rules: {} };\n")
+    open_buffer(configured_root .. "/assets", "site.css", "main { color: red; }\n", "css")
+    vim.api.nvim_exec_autocmds("BufWritePost", { buffer = 0 })
+    assert_equal(#calls, 1, "configured CSS lint calls")
+    assert_equal(calls[1].opts.cwd, configured_root, "configured CSS lint cwd")
+
+    local package_root = root .. "/package-config"
+    vim.fn.mkdir(package_root .. "/assets", "p")
+    write_file(package_root .. "/package.json", '{ "stylelint": { "rules": {} } }\n')
+    open_buffer(package_root .. "/assets", "site.css", "main { color: red; }\n", "css")
+    vim.api.nvim_exec_autocmds("BufWritePost", { buffer = 0 })
+    assert_equal(#calls, 2, "package.json CSS lint calls")
+    assert_equal(calls[2].opts.cwd, package_root, "package.json CSS lint cwd")
+
+    open_buffer(root .. "/javascript", "main.js", "const answer = 42;\n", "javascript")
+    vim.api.nvim_exec_autocmds("BufWritePost", { buffer = 0 })
+    assert_equal(#calls, 3, "existing JavaScript lint calls")
+    assert_equal(calls[3].opts, nil, "existing JavaScript lint options")
+
+    lint.try_lint = original_try_lint
     vim.cmd("qa!")
     LUA
 
@@ -312,6 +419,10 @@ in {
     ${pkgs.coreutils}/bin/timeout 20s \
       ${desktopHome}/bin/nvim --headless -n -i NONE -u ${desktopNeovimInitFile} \
       +"lua dofile('$PWD/check-lsp-health.lua')"
+
+    ${pkgs.coreutils}/bin/timeout 20s \
+      ${desktopHome}/bin/nvim --headless -n -i NONE -u ${desktopNeovimInitFile} \
+      +"lua dofile('$PWD/check-web-tooling.lua')"
 
     ${pkgs.coreutils}/bin/timeout 20s \
       ${desktopHome}/bin/nvim --headless -n -i NONE -u ${desktopNeovimInitFile} \

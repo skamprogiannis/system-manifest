@@ -60,7 +60,7 @@ in {
       }
       {
         event = "FileType";
-        pattern = ["javascript" "typescript" "javascriptreact" "typescriptreact"];
+        pattern = ["css" "html" "javascript" "typescript" "javascriptreact" "typescriptreact"];
         # Prettier standard: 2 spaces
         command = "setlocal tabstop=2 shiftwidth=2 softtabstop=2 colorcolumn=80";
       }
@@ -369,7 +369,9 @@ in {
       lsp = {
         enable = true;
         servers = {
+          cssls.enable = true;
           gopls.enable = true;
+          html.enable = true;
           ts_ls = {
             enable = true;
             filetypes = lib.mkForce [
@@ -444,6 +446,8 @@ in {
             lsp_fallback = false;
           };
           formatters_by_ft = {
+            css = ["prettier"];
+            html = ["prettier"];
             javascript = ["prettier"];
             typescript = ["prettier"];
             javascriptreact = ["prettier"];
@@ -460,6 +464,7 @@ in {
       lint = {
         enable = true;
         lintersByFt = {
+          css = ["stylelint"];
           javascript = ["eslint"];
           typescript = ["eslint"];
           javascriptreact = ["eslint"];
@@ -468,6 +473,80 @@ in {
           nix = ["statix"];
           c = ["cppcheck"];
           cpp = ["cppcheck"];
+        };
+        autoCmd.callback = {
+          __raw = ''
+            function(event)
+              local lint = require("lint")
+
+              if vim.bo[event.buf].filetype ~= "css" then
+                lint.try_lint()
+                return
+              end
+
+              local config_names = {
+                "stylelint.config.js",
+                "stylelint.config.mjs",
+                "stylelint.config.cjs",
+                "stylelint.config.ts",
+                ".stylelintrc.js",
+                ".stylelintrc.mjs",
+                ".stylelintrc.cjs",
+                ".stylelintrc",
+                ".stylelintrc.yml",
+                ".stylelintrc.yaml",
+                ".stylelintrc.json",
+              }
+
+              local function package_has_stylelint(path)
+                local file = io.open(path, "r")
+                if not file then
+                  return false
+                end
+
+                local content = file:read("*a")
+                file:close()
+                local ok, package = pcall(vim.json.decode, content)
+                return ok and type(package) == "table" and package.stylelint ~= nil
+              end
+
+              local function stylelint_root(bufnr)
+                local filename = vim.api.nvim_buf_get_name(bufnr)
+                if filename == "" then
+                  return nil
+                end
+
+                local directory = vim.fs.dirname(filename)
+                while directory and directory ~= "" do
+                  for _, name in ipairs(config_names) do
+                    if vim.uv.fs_stat(directory .. "/" .. name) then
+                      return directory
+                    end
+                  end
+
+                  local package_json = directory .. "/package.json"
+                  if vim.uv.fs_stat(package_json) and package_has_stylelint(package_json) then
+                    return directory
+                  end
+
+                  local parent = vim.fs.dirname(directory)
+                  if parent == directory then
+                    break
+                  end
+                  directory = parent
+                end
+
+                return nil
+              end
+
+              local root = stylelint_root(event.buf)
+              if root then
+                lint.try_lint(nil, { cwd = root })
+              else
+                vim.diagnostic.reset(lint.get_namespace("stylelint"), event.buf)
+              end
+            end
+          '';
         };
       };
 
