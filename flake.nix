@@ -5,6 +5,8 @@
     # We use unstable to get the latest Hyprland and Ghostty
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
 
+    spotify-nixpkgs.url = "github:NixOS/nixpkgs/ee09932cedcef15aaf476f9343d1dea2cb77e261";
+
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";

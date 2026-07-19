@@ -4,6 +4,10 @@
   ...
 }: let
   glass = import ./glass.nix;
+  spotifyPkgs = import inputs.spotify-nixpkgs {
+    system = pkgs.stdenv.hostPlatform.system;
+    config.allowUnfree = true;
+  };
   spicePkgs = inputs.spicetify-nix.legacyPackages.${pkgs.stdenv.system};
   hazy = glass.spicetify.hazy;
   hazyGlassCss = ''
@@ -126,6 +130,7 @@
 in {
   programs.spicetify = {
     enable = true;
+    spotifyPackage = spotifyPkgs.spotify;
     theme =
       spicePkgs.themes.hazy
       // {

@@ -724,6 +724,7 @@
         "pearpass-app-desktop": "pearpass-app-desktop",
         "skwd-wall": "skwd-wall",
         "spicetify-nix": "spicetify-nix",
+        "spotify-nixpkgs": "spotify-nixpkgs",
         "trailofbits-skills": "trailofbits-skills",
         "ui-ux-pro-max": "ui-ux-pro-max",
         "visual-explainer": "visual-explainer"
@@ -785,6 +786,22 @@
       "original": {
         "owner": "Gerg-L",
         "repo": "spicetify-nix",
+        "type": "github"
+      }
+    },
+    "spotify-nixpkgs": {
+      "locked": {
+        "lastModified": 1763934636,
+        "narHash": "sha256-9glbI7f1uU+yzQCq5LwLgdZqx6svOhZWkd4JRY265fc=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "ee09932cedcef15aaf476f9343d1dea2cb77e261",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "ee09932cedcef15aaf476f9343d1dea2cb77e261",
         "type": "github"
       }
     },
