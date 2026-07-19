@@ -17,10 +17,19 @@ progress_set() {
   local message="$*"
   local line="[$percent%] $message"
 
+  if [ "$percent" -lt "${PROGRESS_PERCENT:-0}" ]; then
+    percent="$PROGRESS_PERCENT"
+    line="[$percent%] $message"
+  elif [ "$percent" -gt 100 ]; then
+    percent=100
+    line="[$percent%] $message"
+  fi
+
   if [ "${LAST_PROGRESS_LINE:-}" != "$line" ]; then
     printf '%s\n' "$line"
     LAST_PROGRESS_LINE="$line"
   fi
+  PROGRESS_PERCENT="$percent"
 }
 
 extract_latest_percent() {
@@ -65,6 +74,55 @@ estimated_progress_percent() {
   fi
 
   printf '%s\n' $((start + (elapsed_seconds * (end - start) / estimate_seconds)))
+}
+
+adaptive_progress_end() {
+  local current_percent="$1"
+  local phase_seconds="$2"
+  local remaining_seconds="$3"
+  local available_percent end_percent
+
+  if [ "$remaining_seconds" -le 0 ] || [ "$phase_seconds" -le 0 ]; then
+    printf '%s\n' "$current_percent"
+    return
+  fi
+
+  available_percent=$((100 - current_percent))
+  end_percent=$((current_percent + (available_percent * phase_seconds / remaining_seconds)))
+
+  if [ "$end_percent" -ge 100 ]; then
+    end_percent=99
+  elif [ "$end_percent" -le "$current_percent" ] && [ "$current_percent" -lt 99 ]; then
+    end_percent=$((current_percent + 1))
+  fi
+
+  printf '%s\n' "$end_percent"
+}
+
+progress_plan_init() {
+  local estimate_seconds
+
+  PROGRESS_PLAN_REMAINING_SECONDS=0
+  for estimate_seconds in "$@"; do
+    PROGRESS_PLAN_REMAINING_SECONDS=$((PROGRESS_PLAN_REMAINING_SECONDS + estimate_seconds))
+  done
+}
+
+progress_plan_begin() {
+  local estimate_seconds="$1"
+
+  PHASE_PROGRESS_START="${PROGRESS_PERCENT:-0}"
+  PHASE_PROGRESS_END="$(adaptive_progress_end "$PHASE_PROGRESS_START" "$estimate_seconds" "$PROGRESS_PLAN_REMAINING_SECONDS")"
+  PHASE_PROGRESS_ESTIMATE="$estimate_seconds"
+}
+
+progress_plan_end() {
+  local elapsed_seconds completed_percent
+
+  elapsed_seconds=$(( $(date +%s) - PHASE_STARTED_AT ))
+  completed_percent="$(estimated_progress_percent "$elapsed_seconds" "$PHASE_PROGRESS_ESTIMATE" "$PHASE_PROGRESS_START" "$PHASE_PROGRESS_END")"
+  progress_set "$completed_percent" "$PHASE_LABEL"
+  PROGRESS_PLAN_REMAINING_SECONDS=$((PROGRESS_PLAN_REMAINING_SECONDS - PHASE_PROGRESS_ESTIMATE))
 }
 
 run_logged() {
@@ -223,11 +281,27 @@ phase_begin() {
   fi
 }
 
+phase_begin_estimated() {
+  CURRENT_PHASE="$1"
+  PHASE_LABEL="$2"
+  PHASE_STARTED_AT="$(date +%s)"
+  if [ -n "${4:-}" ]; then
+    progress_set "$4" "$PHASE_LABEL"
+  fi
+  progress_plan_begin "$3"
+  progress_set "$PHASE_PROGRESS_START" "$PHASE_LABEL"
+}
+
 phase_end() {
   local phase_ended_at phase_elapsed
   phase_ended_at="$(date +%s)"
   phase_elapsed=$((phase_ended_at - PHASE_STARTED_AT))
   TIMINGS+=("$PHASE_LABEL|$phase_elapsed")
+}
+
+phase_end_estimated() {
+  progress_plan_end
+  phase_end
 }
 
 format_duration() {

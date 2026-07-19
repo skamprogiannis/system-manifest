@@ -315,22 +315,29 @@ in {
         progress_set 12 "Opening LUKS"
         progress_set 12 "Opening LUKS"
         progress_set 67 "Building squashfs"
+        progress_set 66 "Building squashfs"
         map_percent_range 50 66 78
-        estimated_progress_percent 0 1080 6 58
-        estimated_progress_percent 60 1080 6 58
-        estimated_progress_percent 540 1080 6 58
-        estimated_progress_percent 1080 1080 6 58
-        estimated_progress_percent 2160 1080 6 58
+        adaptive_progress_end 6 1080 2260
+        estimated_progress_percent 0 1080 6 50
+        estimated_progress_percent 60 1080 6 50
+        estimated_progress_percent 120 1080 6 50
+        adaptive_progress_end 10 120 1180
+        map_percent_range 50 43 98
+        adaptive_progress_end 98 5 5
+        adaptive_progress_end 98 1 1000
       ) > "$progress_test/actual"
       cat > "$progress_test/expected" <<'EOF'
       [12%] Opening LUKS
       [67%] Building squashfs
       72
+      50
       6
       8
-      32
-      58
-      58
+      10
+      19
+      70
+      99
+      99
       EOF
       if ! cmp -s "$progress_test/expected" "$progress_test/actual"; then
         echo "Expected update-usb progress helpers to emit concise percent lines." >&2
@@ -513,12 +520,14 @@ in {
       for expected_progress_call in \
         'phase_begin "opening-luks" "Opening LUKS" 0' \
         'phase_begin "preparing-prebuild-stage" "Preparing local prebuild stage" 5' \
-        'run_logged_progress "Building USB system" 6 58 1080' \
-        'run_logged_progress "Installing NixOS" 58 60 120' \
-        'run_logged_progress "Building squashfs" 63 75 360' \
-        'copy_with_progress "$LOCAL_SQUASHFS" "$MOUNT_POINT/nix-store.squashfs.tmp" 76 96'; do
+        'progress_plan_init 1080 120 10 5 10 360 660 10 5' \
+        'phase_begin_estimated "building-usb-system" "Building USB system" 1080 6' \
+        'phase_begin_estimated "installing-nixos" "Installing NixOS" 120' \
+        'phase_begin_estimated "building-squashfs" "Building squashfs locally (desktop SSD)" 360' \
+        'phase_begin_estimated "syncing-squashfs" "Syncing squashfs to USB" 660' \
+        'copy_with_progress "$LOCAL_SQUASHFS" "$MOUNT_POINT/nix-store.squashfs.tmp" "$PHASE_PROGRESS_START" "$PHASE_PROGRESS_END"'; do
         if ! ${pkgs.gnugrep}/bin/grep -Fq "$expected_progress_call" "$update_usb_source_dir/main.sh"; then
-          echo "Expected update-usb to use the calibrated prebuild progress ranges: $expected_progress_call" >&2
+          echo "Expected update-usb to use adaptive prebuild progress ranges: $expected_progress_call" >&2
           ${pkgs.gnused}/bin/sed -n '125,270p' "$update_usb_source_dir/main.sh" >&2
           exit 1
         fi

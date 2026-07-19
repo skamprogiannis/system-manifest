@@ -178,19 +178,25 @@ if [ "$MODE" = "prebuild" ]; then
   phase_end
 fi
 
-phase_begin "building-usb-system" "Building USB system" 6
-run_logged_progress "Building USB system" 6 58 1080 nix build --no-link "$FLAKE_DIR#nixosConfigurations.usb.config.system.build.toplevel"
-phase_end
+if [ "$MODE" = "prebuild" ]; then
+  progress_plan_init 1080 120 10 5 10 360 660 10 5
+else
+  progress_plan_init 1080 120 10 5 10 1800 10 600
+fi
 
-phase_begin "installing-nixos" "Installing NixOS" 58
-run_logged_progress "Installing NixOS" 58 60 120 nixos-install --system "$DESIRED_SYSTEM_TOPLEVEL" --root "$MOUNT_POINT" --no-root-passwd
-phase_end
+phase_begin_estimated "building-usb-system" "Building USB system" 1080 6
+run_logged_progress "Building USB system" "$PHASE_PROGRESS_START" "$PHASE_PROGRESS_END" "$PHASE_PROGRESS_ESTIMATE" nix build --no-link "$FLAKE_DIR#nixosConfigurations.usb.config.system.build.toplevel"
+phase_end_estimated
 
-phase_begin "verifying-installed-revision" "Verifying installed revision" 60
+phase_begin_estimated "installing-nixos" "Installing NixOS" 120
+run_logged_progress "Installing NixOS" "$PHASE_PROGRESS_START" "$PHASE_PROGRESS_END" "$PHASE_PROGRESS_ESTIMATE" nixos-install --system "$DESIRED_SYSTEM_TOPLEVEL" --root "$MOUNT_POINT" --no-root-passwd
+phase_end_estimated
+
+phase_begin_estimated "verifying-installed-revision" "Verifying installed revision" 10
 verify_installed_revision
-phase_end
+phase_end_estimated
 
-phase_begin "verifying-home-manager" "Verifying Home Manager" 61
+phase_begin_estimated "verifying-home-manager" "Verifying Home Manager" 5
 HM_SERVICE="$MOUNT_POINT/etc/systemd/system/home-manager-stefan.service"
 if [ -f "$HM_SERVICE" ]; then
   verbose_log "Home Manager service found. It will activate on first boot."
@@ -198,9 +204,9 @@ else
   echo "Warning: Home Manager service not found at $HM_SERVICE"
   echo "First boot may not have the full user environment."
 fi
-phase_end
+phase_end_estimated
 
-phase_begin "preparing-home-manager-state" "Preparing Home Manager state" 62
+phase_begin_estimated "preparing-home-manager-state" "Preparing Home Manager state" 10
 # Home Manager's first-boot activation writes GC roots and per-user profiles
 # under ~/.local/state. Seed the directories in the target root now so the
 # activation service can succeed on a fresh USB image.
@@ -209,36 +215,36 @@ chroot "$MOUNT_POINT" /nix/var/nix/profiles/system/sw/bin/install -d -m 0755 -o 
   /home/stefan/.local/state/home-manager/gcroots \
   /home/stefan/.local/state/nix \
   /home/stefan/.local/state/nix/profiles
-phase_end
+phase_end_estimated
 
 if [ "$MODE" = "prebuild" ]; then
-  phase_begin "building-squashfs" "Building squashfs locally (desktop SSD)" 63
+  phase_begin_estimated "building-squashfs" "Building squashfs locally (desktop SSD)" 360
   LOCAL_SQUASHFS="$STAGE_DIR/nix-store.squashfs"
   rm -f "$LOCAL_SQUASHFS"
-  run_logged_progress "Building squashfs" 63 75 360 mksquashfs "$STAGE_STORE" "$LOCAL_SQUASHFS" \
+  run_logged_progress "Building squashfs" "$PHASE_PROGRESS_START" "$PHASE_PROGRESS_END" "$PHASE_PROGRESS_ESTIMATE" mksquashfs "$STAGE_STORE" "$LOCAL_SQUASHFS" \
     -comp zstd \
     -Xcompression-level 3 \
     -b 1048576 \
     -processors "$(nproc)"
   SQFS_SIZE="$(du -sh "$LOCAL_SQUASHFS" | cut -f1)"
   echo "Local squashfs image: $SQFS_SIZE"
-  phase_end
+  phase_end_estimated
 
-  phase_begin "syncing-squashfs" "Syncing squashfs to USB" 76
+  phase_begin_estimated "syncing-squashfs" "Syncing squashfs to USB" 660
   umount "$MOUNT_POINT/nix/store"
   MOUNTED_STAGE_STORE=0
   rm -f "$MOUNT_POINT/nix-store.squashfs.tmp" "$MOUNT_POINT/nix-store.squashfs"
   echo "Copying $SQFS_SIZE squashfs image to USB; this can take several minutes."
-  copy_with_progress "$LOCAL_SQUASHFS" "$MOUNT_POINT/nix-store.squashfs.tmp" 76 96 "Syncing squashfs to USB"
+  copy_with_progress "$LOCAL_SQUASHFS" "$MOUNT_POINT/nix-store.squashfs.tmp" "$PHASE_PROGRESS_START" "$PHASE_PROGRESS_END" "Syncing squashfs to USB"
   mv "$MOUNT_POINT/nix-store.squashfs.tmp" "$MOUNT_POINT/nix-store.squashfs"
   FINAL_SQUASHFS="$MOUNT_POINT/nix-store.squashfs"
   SQFS_SIZE="$(du -sh "$MOUNT_POINT/nix-store.squashfs" | cut -f1)"
   echo "USB squashfs image: $SQFS_SIZE"
-  phase_end
+  phase_end_estimated
 else
-  phase_begin "building-squashfs" "Building squashfs in-place on USB (slow path)" 63
+  phase_begin_estimated "building-squashfs" "Building squashfs in-place on USB (slow path)" 1800
   rm -f "$MOUNT_POINT/nix-store.squashfs"
-  run_logged_progress "Building squashfs" 63 96 1800 mksquashfs "$MOUNT_POINT/nix/store" "$MOUNT_POINT/nix-store.squashfs" \
+  run_logged_progress "Building squashfs" "$PHASE_PROGRESS_START" "$PHASE_PROGRESS_END" "$PHASE_PROGRESS_ESTIMATE" mksquashfs "$MOUNT_POINT/nix/store" "$MOUNT_POINT/nix-store.squashfs" \
     -comp zstd \
     -Xcompression-level 3 \
     -b 1048576 \
@@ -246,14 +252,18 @@ else
   FINAL_SQUASHFS="$MOUNT_POINT/nix-store.squashfs"
   SQFS_SIZE="$(du -sh "$MOUNT_POINT/nix-store.squashfs" | cut -f1)"
   echo "Squashfs image: $SQFS_SIZE"
-  phase_end
+  phase_end_estimated
 fi
 
-phase_begin "verifying-squashfs" "Verifying USB squashfs" 97
+phase_begin_estimated "verifying-squashfs" "Verifying USB squashfs" 10
 verify_squashfs_contains_system "$FINAL_SQUASHFS"
-phase_end
+phase_end_estimated
 
-phase_begin "cleaning-ext4-store" "Cleaning ext4 store" 99
+if [ "$MODE" = "prebuild" ]; then
+  phase_begin_estimated "cleaning-ext4-store" "Cleaning ext4 store" 5
+else
+  phase_begin_estimated "cleaning-ext4-store" "Cleaning ext4 store" 600
+fi
 if [ "$MODE" = "in-place" ]; then
   find "$MOUNT_POINT/nix/store" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
 else
@@ -261,7 +271,7 @@ else
 fi
 # Preserve the target Nix DB. The booted squashfs store still needs valid DB
 # registration so Home Manager can realize its generation and add GC roots.
-phase_end
+phase_end_estimated
 
 CURRENT_PHASE="done"
 progress_set 100 "Done"
