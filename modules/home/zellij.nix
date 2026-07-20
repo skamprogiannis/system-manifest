@@ -1,5 +1,6 @@
 {
   config,
+  lib,
   pkgs,
   ...
 }: let
@@ -10,6 +11,18 @@
   zellijWithForwardedBells = pkgs.zellij.overrideAttrs (_old: {
     src = zellijUnwrappedWithForwardedBells;
   });
+  zellijPostCommandDiscoveryHook = pkgs.writeShellScript "zellij-post-command-discovery-hook" ''
+    resurrect_command="''${RESURRECT_COMMAND:-}"
+
+    case "$resurrect_command" in
+      npm\ exec\ @upstash/context7-mcp* | */npm\ exec\ @upstash/context7-mcp* | npm\ exec\ @softeria/ms-365-mcp-server* | */npm\ exec\ @softeria/ms-365-mcp-server*)
+        printf '%s\n' "${pkgs.bashInteractive}/bin/bash -lc 'exec codex'"
+        ;;
+      *)
+        printf '%s\n' "$resurrect_command"
+        ;;
+    esac
+  '';
 in {
   programs.zellij = {
     enable = true;
@@ -19,6 +32,7 @@ in {
       default_shell = "${pkgs.bashInteractive}/bin/bash";
       escape_timeout = 0;
       pane_frames = false;
+      post_command_discovery_hook = "${zellijPostCommandDiscoveryHook}";
       simplified_ui = true;
       theme = "catppuccin-mocha";
     };
@@ -224,6 +238,32 @@ in {
     '';
   };
 
+  home.activation.scrubLegacyZellijContext7Args = lib.hm.dag.entryAfter ["writeBoundary"] ''
+    # shellcheck shell=bash
+    zellij_cache_root="''${XDG_CACHE_HOME:-$HOME/.cache}/zellij"
+    if [[ -d "$zellij_cache_root" ]]; then
+      while IFS= read -r -d "" session_layout; do
+        session_layout_dir="$(${pkgs.coreutils}/bin/dirname "$session_layout")"
+        scrubbed_layout="$(${pkgs.coreutils}/bin/mktemp --tmpdir="$session_layout_dir" .session-layout.kdl.XXXXXX)"
+
+        if ! ${pkgs.gnused}/bin/sed -E \
+          '/"@upstash\/context7-mcp/ s/[[:space:]]+"--api-key"[[:space:]]+"[^"]*"//g' \
+          "$session_layout" > "$scrubbed_layout"; then
+          ${pkgs.coreutils}/bin/rm -f "$scrubbed_layout"
+          exit 1
+        fi
+
+        if ${pkgs.diffutils}/bin/cmp -s "$session_layout" "$scrubbed_layout"; then
+          ${pkgs.coreutils}/bin/rm -f "$scrubbed_layout"
+        else
+          ${pkgs.coreutils}/bin/chmod 0600 "$scrubbed_layout"
+          ${pkgs.coreutils}/bin/mv -f "$scrubbed_layout" "$session_layout"
+          ${pkgs.coreutils}/bin/chmod 0600 "$session_layout"
+        fi
+      done < <(${pkgs.findutils}/bin/find "$zellij_cache_root" -type f -name session-layout.kdl -print0)
+    fi
+  '';
+
   home.packages = [
     (pkgs.writeShellScriptBin "zellij-sessionizer" ''
       resolve_path() {
@@ -330,11 +370,68 @@ in {
 
       if [[ -z $ZELLIJ ]]; then
           cd "$selected_path" || exit 1
-          if zellij list-sessions 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g' | grep -qF "$selected_name"; then
-              zellij attach "$selected_name"
-          else
-              zellij attach -c "$selected_name"
-          fi
+          session_listing=$(zellij list-sessions --no-formatting 2>/dev/null || true)
+          session_state=absent
+          session_prefix="$selected_name [Created "
+
+          while IFS= read -r session_line; do
+              if [[ "$session_line" == "$session_prefix"* ]]; then
+                  session_state=live
+                  if [[ "$session_line" == "$session_prefix"*"(EXITED"* ]]; then
+                      session_state=exited
+                  fi
+                  break
+              fi
+          done <<< "$session_listing"
+
+          case "$session_state" in
+              live)
+                  zellij attach "$selected_name"
+                  ;;
+              exited)
+                  zellij_cache_root="''${XDG_CACHE_HOME:-$HOME/.cache}/zellij"
+                  corrupt_snapshot=false
+                  for session_layout in "$zellij_cache_root"/contract_version_*/session_info/"$selected_name"/session-layout.kdl; do
+                      if [[ -f "$session_layout" ]] && ${pkgs.gawk}/bin/awk '
+                          !in_npm_pane && /^[[:space:]]*pane([[:space:]]|$)/ && /command="npm"/ {
+                              in_npm_pane = 1
+                              pane_depth = 0
+                          }
+
+                          in_npm_pane {
+                              if (/^[[:space:]]*args[[:space:]]+"exec"[[:space:]]+"@upstash\/context7-mcp/ || /^[[:space:]]*args[[:space:]]+"exec"[[:space:]]+"@softeria\/ms-365-mcp-server/) {
+                                  corrupt = 1
+                              }
+
+                              braces = $0
+                              opens = gsub(/\{/, "", braces)
+                              braces = $0
+                              closes = gsub(/\}/, "", braces)
+                              pane_depth += opens - closes
+                              if (pane_depth <= 0) {
+                                  in_npm_pane = 0
+                              }
+                          }
+
+                          END {
+                              exit corrupt ? 0 : 1
+                          }
+                      ' "$session_layout"; then
+                          corrupt_snapshot=true
+                          break
+                      fi
+                  done
+
+                  if [[ "$corrupt_snapshot" == true ]]; then
+                      zellij attach --forget -c "$selected_name"
+                  else
+                      zellij attach "$selected_name"
+                  fi
+                  ;;
+              absent)
+                  zellij attach -c "$selected_name"
+                  ;;
+          esac
       else
           zellij action new-tab -l dev -c "$selected_path" -n "$selected_name"
       fi

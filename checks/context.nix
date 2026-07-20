@@ -20,6 +20,8 @@
   desktopSpicetifyInjectThemeJsFile = pkgs.writeText "desktop-spicetify-inject-theme-js" (builtins.toJSON self.nixosConfigurations.desktop.config.home-manager.users.stefan.programs.spicetify.theme.injectThemeJs);
   desktopTmpfilesRulesFile = pkgs.writeText "desktop-tmpfiles-rules" (builtins.concatStringsSep "\n" self.nixosConfigurations.desktop.config.systemd.tmpfiles.rules);
   desktopZellijDevLayoutFile = pkgs.writeText "desktop-zellij-dev-layout" self.nixosConfigurations.desktop.config.home-manager.users.stefan.xdg.configFile."zellij/layouts/dev.kdl".text;
+  desktopZellijLegacyArgsScrubActivationFile = pkgs.writeText "desktop-zellij-legacy-args-scrub-activation" self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.activation.scrubLegacyZellijContext7Args.data;
+  desktopZellijPostCommandDiscoveryHook = self.nixosConfigurations.desktop.config.home-manager.users.stefan.programs.zellij.settings.post_command_discovery_hook;
   updateUsbSourceDir = ../modules/home/scripts/usb/update-usb;
   usbHome = self.nixosConfigurations.usb.config.home-manager.users.stefan.home.path;
   usbActivation = self.nixosConfigurations.usb.config.home-manager.users.stefan.home.activationPackage;
@@ -67,6 +69,8 @@
     "${desktopHome}/bin/transmission-port-sync"
     "${desktopHome}/bin/update-usb"
     "${desktopHome}/bin/zellij-sessionizer"
+    "${desktopZellijLegacyArgsScrubActivationFile}"
+    "${desktopZellijPostCommandDiscoveryHook}"
     "${desktopSkwdDmsSyncHook}"
     "${updateUsbSourceDir}/args.sh"
     "${updateUsbSourceDir}/cleanup.sh"

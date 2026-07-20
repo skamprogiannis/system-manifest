@@ -322,7 +322,7 @@
     fi
 
     if [ -n "$api_key" ]; then
-      exec ${pkgs.nodejs}/bin/npx -y @upstash/context7-mcp --api-key "$api_key"
+      export CONTEXT7_API_KEY="$api_key"
     fi
 
     exec ${pkgs.nodejs}/bin/npx -y @upstash/context7-mcp

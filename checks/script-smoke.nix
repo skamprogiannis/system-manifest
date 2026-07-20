@@ -5,6 +5,8 @@
     desktopActivation
     desktopHome
     desktopZellijDevLayoutFile
+    desktopZellijLegacyArgsScrubActivationFile
+    desktopZellijPostCommandDiscoveryHook
     pkgs
     updateUsbSourceDir
     usbActivation
@@ -27,6 +29,8 @@ in {
 
       desktop_home="${desktopHome}"
       desktop_activation="${desktopActivation}"
+      desktop_zellij_legacy_args_scrub_activation="${desktopZellijLegacyArgsScrubActivationFile}"
+      desktop_zellij_post_command_discovery_hook="${desktopZellijPostCommandDiscoveryHook}"
       update_usb_source_dir="${updateUsbSourceDir}"
       usb_activation="${usbActivation}"
       usb_home="${usbHome}"
@@ -699,6 +703,245 @@ in {
         exit 1
       fi
 
+      expected_codex_resurrect="${pkgs.bashInteractive}/bin/bash -lc 'exec codex'"
+      for legacy_mcp_command in \
+        'npm exec @upstash/context7-mcp --api-key legacy-secret' \
+        '/nix/store/node/bin/npm exec @softeria/ms-365-mcp-server@0.126.0 --preset mail'; do
+        actual_resurrect="$(env RESURRECT_COMMAND="$legacy_mcp_command" "$desktop_zellij_post_command_discovery_hook")"
+        if [ "$actual_resurrect" != "$expected_codex_resurrect" ]; then
+          echo "Expected Zellij command discovery hook to replace a known MCP descendant with Codex." >&2
+          printf '  %s\n' "$actual_resurrect" >&2
+          exit 1
+        fi
+      done
+
+      unrelated_resurrect_command='npm exec @example/other-mcp --read-only'
+      actual_resurrect="$(env RESURRECT_COMMAND="$unrelated_resurrect_command" "$desktop_zellij_post_command_discovery_hook")"
+      if [ "$actual_resurrect" != "$unrelated_resurrect_command" ]; then
+        echo "Expected Zellij command discovery hook to preserve unrelated commands." >&2
+        printf '  %s\n' "$actual_resurrect" >&2
+        exit 1
+      fi
+
+      zellij_sessionizer_test="$TMPDIR/zellij-sessionizer"
+      mkdir -p "$zellij_sessionizer_test/bin" "$zellij_sessionizer_test/home/sortable"
+      cat > "$zellij_sessionizer_test/bin/zellij" <<'EOF'
+      #!${pkgs.bash}/bin/bash
+      set -euo pipefail
+
+      printf '%s\n' "$*" >> "$ZELLIJ_SESSIONIZER_TEST_LOG"
+      case "$1" in
+        list-sessions)
+          if [ "$*" != "list-sessions --no-formatting" ]; then
+            echo "Expected an unformatted session listing, got: $*" >&2
+            exit 2
+          fi
+          case "$ZELLIJ_SESSIONIZER_TEST_STATE" in
+            live)
+              printf 'sortable [Created 1h ago]\n'
+              ;;
+            healthy-exited|corrupt-exited)
+              printf 'sortable [Created 1h ago] (EXITED - attach to resurrect)\n'
+              ;;
+            absent)
+              exit 1
+              ;;
+          esac
+          ;;
+        attach)
+          shift
+          create=0
+          forget=0
+          session_name=
+          for arg in "$@"; do
+            case "$arg" in
+              -c|--create)
+                create=1
+                ;;
+              --forget)
+                forget=1
+                ;;
+              -*)
+                ;;
+              *)
+                session_name="$arg"
+                ;;
+            esac
+          done
+
+          case "$ZELLIJ_SESSIONIZER_TEST_STATE" in
+            live)
+              if [ "$create" -eq 0 ] && [ "$forget" -eq 0 ] && [ "$session_name" = sortable ]; then
+                exit 0
+              fi
+              ;;
+            absent)
+              if [ "$create" -eq 1 ] && [ "$forget" -eq 0 ] && [ "$session_name" = sortable ]; then
+                exit 0
+              fi
+              ;;
+            healthy-exited)
+              if [ "$create" -eq 0 ] && [ "$forget" -eq 0 ] && [ "$session_name" = sortable ]; then
+                exit 0
+              fi
+              ;;
+            corrupt-exited)
+              if [ "$create" -eq 1 ] && [ "$forget" -eq 1 ] && [ "$session_name" = sortable ]; then
+                exit 0
+              fi
+              echo 'npm warn Unknown cli config "--api-key".' >&2
+              echo 'error: too many arguments. Expected 0 arguments but got 1.' >&2
+              ;;
+          esac
+
+          echo "Unexpected attach command for $ZELLIJ_SESSIONIZER_TEST_STATE session: attach $*" >&2
+          exit 2
+          ;;
+        *)
+          echo "Unexpected zellij invocation: $*" >&2
+          exit 2
+          ;;
+      esac
+      EOF
+      chmod +x "$zellij_sessionizer_test/bin/zellij"
+      zellij_sessionizer_cache="$zellij_sessionizer_test/cache"
+      : > "$zellij_sessionizer_test/zellij.log"
+
+      run_expect 0 zellij-sessionizer-live-session env -u ZELLIJ \
+        HOME="$zellij_sessionizer_test/home" \
+        PATH="$zellij_sessionizer_test/bin:$PATH" \
+        XDG_CACHE_HOME="$zellij_sessionizer_cache" \
+        ZELLIJ_SESSIONIZER_TEST_LOG="$zellij_sessionizer_test/zellij.log" \
+        ZELLIJ_SESSIONIZER_TEST_STATE=live \
+        "$desktop_home/bin/zellij-sessionizer" "$zellij_sessionizer_test/home/sortable"
+
+      run_expect 0 zellij-sessionizer-absent-session env -u ZELLIJ \
+        HOME="$zellij_sessionizer_test/home" \
+        PATH="$zellij_sessionizer_test/bin:$PATH" \
+        XDG_CACHE_HOME="$zellij_sessionizer_cache" \
+        ZELLIJ_SESSIONIZER_TEST_LOG="$zellij_sessionizer_test/zellij.log" \
+        ZELLIJ_SESSIONIZER_TEST_STATE=absent \
+        "$desktop_home/bin/zellij-sessionizer" "$zellij_sessionizer_test/home/sortable"
+
+      session_layout_dir="$zellij_sessionizer_cache/zellij/contract_version_1/session_info/sortable"
+      mkdir -p "$session_layout_dir"
+      cat > "$session_layout_dir/session-layout.kdl" <<'EOF'
+      layout {
+          pane command="npm" name="unrelated" {
+              args "exec" "@example/other-mcp"
+          }
+          pane command="/nix/store/bash/bin/bash" name="context-note" {
+              args "exec" "@upstash/context7-mcp"
+          }
+      }
+      EOF
+
+      run_expect 0 zellij-sessionizer-healthy-exited-session env -u ZELLIJ \
+        HOME="$zellij_sessionizer_test/home" \
+        PATH="$zellij_sessionizer_test/bin:$PATH" \
+        XDG_CACHE_HOME="$zellij_sessionizer_cache" \
+        ZELLIJ_SESSIONIZER_TEST_LOG="$zellij_sessionizer_test/zellij.log" \
+        ZELLIJ_SESSIONIZER_TEST_STATE=healthy-exited \
+        "$desktop_home/bin/zellij-sessionizer" "$zellij_sessionizer_test/home/sortable"
+
+      cat > "$session_layout_dir/session-layout.kdl" <<'EOF'
+      layout {
+          pane command="npm" {
+              args "exec" "@softeria/ms-365-mcp-server@0.126.0" "--preset" "mail"
+          }
+      }
+      EOF
+
+      run_expect 0 zellij-sessionizer-corrupt-exited-session env -u ZELLIJ \
+        HOME="$zellij_sessionizer_test/home" \
+        PATH="$zellij_sessionizer_test/bin:$PATH" \
+        XDG_CACHE_HOME="$zellij_sessionizer_cache" \
+        ZELLIJ_SESSIONIZER_TEST_LOG="$zellij_sessionizer_test/zellij.log" \
+        ZELLIJ_SESSIONIZER_TEST_STATE=corrupt-exited \
+        "$desktop_home/bin/zellij-sessionizer" "$zellij_sessionizer_test/home/sortable"
+
+      cat > "$zellij_sessionizer_test/expected-zellij.log" <<'EOF'
+      list-sessions --no-formatting
+      attach sortable
+      list-sessions --no-formatting
+      attach -c sortable
+      list-sessions --no-formatting
+      attach sortable
+      list-sessions --no-formatting
+      attach --forget -c sortable
+      EOF
+      if ! cmp -s "$zellij_sessionizer_test/expected-zellij.log" "$zellij_sessionizer_test/zellij.log"; then
+        echo "Expected zellij-sessionizer to query once and choose the command for each session state." >&2
+        echo "Expected:" >&2
+        ${pkgs.gnused}/bin/sed 's/^/  /' "$zellij_sessionizer_test/expected-zellij.log" >&2
+        echo "Actual:" >&2
+        ${pkgs.gnused}/bin/sed 's/^/  /' "$zellij_sessionizer_test/zellij.log" >&2
+        exit 1
+      fi
+
+      zellij_scrub_test="$TMPDIR/zellij-legacy-args-scrub"
+      zellij_scrub_cache="$zellij_scrub_test/cache"
+      corrupt_layout="$zellij_scrub_cache/zellij/contract_version_1/session_info/corrupt/session-layout.kdl"
+      unrelated_layout="$zellij_scrub_cache/zellij/0.44.1/session_info/unrelated/session-layout.kdl"
+      mkdir -p "$(${pkgs.coreutils}/bin/dirname "$corrupt_layout")" "$(${pkgs.coreutils}/bin/dirname "$unrelated_layout")"
+
+      cat > "$corrupt_layout" <<'EOF'
+      layout {
+          pane command="npm" {
+              args "exec" "@upstash/context7-mcp" "--api-key" "legacy-secret" "--transport" "stdio"
+          }
+      }
+      EOF
+      chmod 0644 "$corrupt_layout"
+
+      cat > "$unrelated_layout" <<'EOF'
+      layout {
+          pane command="example" {
+              args "--api-key" "unrelated-value"
+          }
+      }
+      EOF
+      chmod 0644 "$unrelated_layout"
+      cp "$unrelated_layout" "$zellij_scrub_test/unrelated.expected"
+
+      run_expect 0 zellij-legacy-args-scrub env \
+        HOME="$zellij_scrub_test/home" \
+        XDG_CACHE_HOME="$zellij_scrub_cache" \
+        ${pkgs.bash}/bin/bash "$desktop_zellij_legacy_args_scrub_activation"
+      assert_log_not_contains "legacy-secret"
+
+      if ${pkgs.gnugrep}/bin/grep -Fq -- '--api-key' "$corrupt_layout" \
+        || ${pkgs.gnugrep}/bin/grep -Fq -- 'legacy-secret' "$corrupt_layout"; then
+        echo "Expected Zellij activation to remove legacy Context7 API-key arguments." >&2
+        exit 1
+      fi
+      if ! ${pkgs.gnugrep}/bin/grep -Fq -- '"--transport" "stdio"' "$corrupt_layout"; then
+        echo "Expected Zellij activation to preserve non-secret Context7 arguments." >&2
+        exit 1
+      fi
+      if [ "$(${pkgs.coreutils}/bin/stat -c '%a' "$corrupt_layout")" != 600 ]; then
+        echo "Expected scrubbed Zellij layout permissions to be 0600." >&2
+        exit 1
+      fi
+      if ! cmp -s "$zellij_scrub_test/unrelated.expected" "$unrelated_layout"; then
+        echo "Expected Zellij activation to leave unrelated layouts untouched." >&2
+        exit 1
+      fi
+      if [ "$(${pkgs.coreutils}/bin/stat -c '%a' "$unrelated_layout")" != 644 ]; then
+        echo "Expected Zellij activation to preserve permissions on unrelated layouts." >&2
+        exit 1
+      fi
+
+      cp "$corrupt_layout" "$zellij_scrub_test/corrupt.scrubbed"
+      run_expect 0 zellij-legacy-args-scrub-idempotent env \
+        HOME="$zellij_scrub_test/home" \
+        XDG_CACHE_HOME="$zellij_scrub_cache" \
+        ${pkgs.bash}/bin/bash "$desktop_zellij_legacy_args_scrub_activation"
+      if ! cmp -s "$zellij_scrub_test/corrupt.scrubbed" "$corrupt_layout"; then
+        echo "Expected repeated Zellij legacy argument scrubbing to be idempotent." >&2
+        exit 1
+      fi
+
       if ! ${pkgs.gnugrep}/bin/grep -Fq "skwd-daemon.service.d/livefix.conf" "$desktop_activation/activate"; then
         echo "Expected Home Manager activation to remove stale skwd-daemon livefix drop-ins." >&2
         ${pkgs.gnused}/bin/sed -n '/cleanupLegacySkwdDaemonLivefix/,/fi/p' "$desktop_activation/activate" >&2
@@ -753,6 +996,26 @@ in {
         ${pkgs.gnused}/bin/sed -n '/ensureWritableCodexConfig/,/Activating/p' "$desktop_activation/activate" >&2
         exit 1
       fi
+
+      context7_wrapper_path="$(${pkgs.gnused}/bin/sed -n '
+        /^\[mcp_servers.context7\]$/,/^\[/ {
+          s|^command = "\(/nix/store/[^"]*/bin/context7-mcp\)"$|\1|p
+        }
+      ' "$codex_seed_path" | head -n1)"
+      if [ -z "$context7_wrapper_path" ] || [ ! -f "$context7_wrapper_path" ]; then
+        echo "Expected generated Codex config to reference the Context7 wrapper." >&2
+        ${pkgs.gnused}/bin/sed -n '/^\[mcp_servers.context7\]$/,/^\[/p' "$codex_seed_path" >&2
+        exit 1
+      fi
+
+      assert_file_contains \
+        "$context7_wrapper_path" \
+        'export CONTEXT7_API_KEY="$api_key"' \
+        "Expected Context7 wrapper to pass the API key through the environment."
+      assert_not_file_contains \
+        "$context7_wrapper_path" \
+        '--api-key' \
+        "Context7 wrapper must not expose the API key in process arguments."
 
       assert_log_contains_file \
         "experimental_use_rmcp_client = true" \
