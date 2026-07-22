@@ -289,31 +289,55 @@
     (mkSkill "technical-debt" ./skills/technical-debt "Audit code health, quantify technical debt, and produce focused refactoring roadmaps.")
     (mkSkill "browser-automation" ./skills/browser-automation "Control Chrome with PinchTab for web UI testing, scraping, form filling, and browser workflows.")
     (mkSkill "static-analysis" staticAnalysisSkill "Run scanner-backed security analysis with CodeQL, Semgrep, and SARIF interpretation.")
-    (mkSkill "impeccable" "${inputs.impeccable}/skill" "Design, audit, and polish frontend interfaces, layouts, typography, motion, and UX details.")
-    (mkSkill "banner-design" "${inputs.ui-ux-pro-max}/.claude/skills/banner-design" "Design polished banners for social, ads, website heroes, and print.")
-    (mkSkill "brand" "${inputs.ui-ux-pro-max}/.claude/skills/brand" "Work on brand voice, identity, messaging, style guides, and brand consistency.")
-    (mkSkill "design" "${inputs.ui-ux-pro-max}/.claude/skills/design" "Create brand, UI, logo, icon, banner, slide, and social design assets.")
-    (mkSkill "design-system" "${inputs.ui-ux-pro-max}/.claude/skills/design-system" "Define design tokens, component specs, and systematic UI foundations.")
-    (mkSkill "slides" "${inputs.ui-ux-pro-max}/.claude/skills/slides" "Create strategic HTML presentations with charts, design tokens, and responsive layouts.")
-    (mkSkill "ui-styling" "${inputs.ui-ux-pro-max}/.claude/skills/ui-styling" "Build accessible Tailwind and shadcn-style UI components and visual systems.")
-    (mkSkill "ui-ux-pro-max" "${inputs.ui-ux-pro-max}/.claude/skills/ui-ux-pro-max" "Plan, build, review, and polish UI/UX across web and mobile product surfaces.")
+    (mkSkill "impeccable" "${inputs.impeccable}/.agents/skills/impeccable" "Design, audit, and polish frontend interfaces, layouts, typography, motion, and UX details.")
     (mkSkill "caveman" "${inputs.caveman}/skills/caveman" "Use terse caveman-mode responses with technical accuracy and minimal filler.")
     (mkSkill "caveman-commit" "${inputs.caveman}/skills/caveman-commit" "Generate terse Conventional Commit messages in caveman style.")
     (mkSkill "caveman-review" "${inputs.caveman}/skills/caveman-review" "Produce compact code review findings in caveman style.")
-    (mkSkill "caveman-compress" "${inputs.caveman}/skills/caveman-compress" "Compress text aggressively while preserving technical meaning.")
     (mkSkill "diagnose" "${inputs.mattpocock-skills}/skills/engineering/diagnosing-bugs" "Use a disciplined reproduce-minimize-hypothesize-instrument-fix loop for bugs and regressions.")
+    (mkSkill "grilling" "${inputs.mattpocock-skills}/skills/productivity/grilling" "Grill users one decision at a time to stress-test plans and designs.")
+    (mkSkill "domain-modeling" "${inputs.mattpocock-skills}/skills/engineering/domain-modeling" "Build and sharpen a project's domain vocabulary and architectural decisions.")
     (mkSkill "grill-with-docs" "${inputs.mattpocock-skills}/skills/engineering/grill-with-docs" "Stress-test a plan against project docs, domain language, and recorded decisions.")
+    (mkSkill "codebase-design" "${inputs.mattpocock-skills}/skills/engineering/codebase-design" "Design deep modules with small interfaces, clean seams, and testable implementations.")
+    (mkSkill "code-review" "${inputs.mattpocock-skills}/skills/engineering/code-review" "Review changes against repository standards and the originating specification.")
     (mkSkill "triage" "${inputs.mattpocock-skills}/skills/engineering/triage" "Triage issues through the configured issue tracker and triage role workflow.")
     (mkSkill "improve-codebase-architecture" "${inputs.mattpocock-skills}/skills/engineering/improve-codebase-architecture" "Find architectural refactoring opportunities that improve testability and navigation.")
     (mkSkill "setup-matt-pocock-skills" "${inputs.mattpocock-skills}/skills/engineering/setup-matt-pocock-skills" "Set up project context for Matt Pocock engineering skills.")
     (mkSkill "tdd" "${inputs.mattpocock-skills}/skills/engineering/tdd" "Use red-green-refactor test-driven development for features and bug fixes.")
+    (mkSkill "implement" "${inputs.mattpocock-skills}/skills/engineering/implement" "Implement a specification or ticket with testing, validation, and review.")
     (mkSkill "to-issues" "${inputs.mattpocock-skills}/skills/engineering/to-tickets" "Break plans, specs, or PRDs into independently grabbable implementation issues.")
     (mkSkill "to-prd" "${inputs.mattpocock-skills}/skills/engineering/to-spec" "Turn current context into a PRD for the project issue tracker.")
     (mkSkill "zoom-out" "${inputs.mattpocock-skills}/skills/engineering/wayfinder" "Step up a level and map unfamiliar code areas, modules, and callers.")
     (mkSkill "prototype" "${inputs.mattpocock-skills}/skills/engineering/prototype" "Build a throwaway prototype to validate data, state, or UI design choices.")
   ];
-  skillHomeFiles = builtins.listToAttrs (map skillHomeFile declarativeSkills);
-  skillConfigToml = lib.concatMapStringsSep "\n" skillConfig declarativeSkills;
+  skillDependencies = {
+    "code-review" = ["setup-matt-pocock-skills"];
+    diagnose = ["improve-codebase-architecture"];
+    "grill-with-docs" = ["grilling" "domain-modeling"];
+    implement = ["tdd" "code-review"];
+    "improve-codebase-architecture" = ["codebase-design" "grilling" "domain-modeling"];
+    tdd = ["code-review"];
+    "to-issues" = ["setup-matt-pocock-skills" "implement"];
+    "to-prd" = ["setup-matt-pocock-skills"];
+    triage = ["setup-matt-pocock-skills" "grilling" "domain-modeling"];
+    "zoom-out" = ["setup-matt-pocock-skills" "prototype" "grilling" "domain-modeling"];
+  };
+  skillNames = map (skill: skill.name) declarativeSkills;
+  unresolvedSkillDependencies = lib.concatLists (
+    lib.mapAttrsToList (
+      skillName: dependencies:
+        lib.optional (!(builtins.elem skillName skillNames)) "${skillName} (declaring skill)"
+        ++ map (dependency: "${skillName} -> ${dependency}") (
+          builtins.filter (dependency: !(builtins.elem dependency skillNames)) dependencies
+        )
+    )
+    skillDependencies
+  );
+  checkedDeclarativeSkills =
+    if unresolvedSkillDependencies == []
+    then declarativeSkills
+    else throw "Codex skill catalog has unresolved workflow dependencies: ${builtins.concatStringsSep ", " unresolvedSkillDependencies}";
+  skillHomeFiles = builtins.listToAttrs (map skillHomeFile checkedDeclarativeSkills);
+  skillConfigToml = lib.concatMapStringsSep "\n" skillConfig checkedDeclarativeSkills;
   codexConfigPython = pkgs.python3.withPackages (ps: [ps.tomli-w]);
   context7Mcp = pkgs.writeShellScriptBin "context7-mcp" ''
     api_key="''${CONTEXT7_API_KEY:-}"

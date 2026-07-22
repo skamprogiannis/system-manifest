@@ -1063,6 +1063,10 @@ in {
 
       [mcp_servers.context7]
       command = "/nix/store/context7-mcp/bin/context7-mcp"
+
+      [[skills.config]]
+      path = "/home/stefan/.agents/skills/grilling"
+      enabled = true
       TOML
 
       run_codex_merge() {
@@ -1087,6 +1091,10 @@ in {
       assert data["mcp_servers"]["context7"] == {
           "command": "/nix/store/context7-mcp/bin/context7-mcp",
       }
+      assert data["skills"]["config"] == [{
+          "path": "/home/stefan/.agents/skills/grilling",
+          "enabled": True,
+      }]
       assert stat.S_IMODE(os.stat(path).st_mode) == 0o600
       PY
 
@@ -1114,6 +1122,10 @@ in {
       [mcp_servers.local-test]
       command = "local-mcp"
       args = ["serve"]
+
+      [[skills.config]]
+      path = "/home/stefan/.agents/skills/ui-ux-pro-max"
+      enabled = true
       TOML
       run_codex_merge "$existing"
       ${codexConfigPython}/bin/python3 - "$existing" <<'PY'
@@ -1137,6 +1149,10 @@ in {
           "command": "local-mcp",
           "args": ["serve"],
       }
+      assert data["skills"]["config"] == [{
+          "path": "/home/stefan/.agents/skills/grilling",
+          "enabled": True,
+      }]
       PY
 
       symlink_dir="$TMPDIR/codex/symlink"

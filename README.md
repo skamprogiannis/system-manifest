@@ -21,7 +21,7 @@ Managed via **Nix Flakes** and **Home Manager**.
   - **Brave + Vimium C:** Declarative browser setup with preseeded extension settings and portable keymaps.
 - **Vesktop:** Discord client with declarative Translucence theming and a wallpaper-aware QuickCSS bridge.
 - **Dev Ready:** Pre-configured environment for Node.js, Python, Go, Playwright, and Neovim (via nixvim), plus Clang build essentials. Neovim is also registered as the default text editor via an `nvim-text` desktop entry.
-- **AI Integrated:** Built-in configuration for **Codex CLI** with per-repo `AGENTS.md` instructions, global defaults in `~/.codex/AGENTS.md`, custom agents in `~/.codex/agents`, Linear/Context7/Etsy/OpenAI Docs MCP servers, and explicitly enabled curated skills in `~/.agents/skills` for visualization, browser automation, static analysis, frontend design, architecture review, diagnosis, TDD, issue triage, PRDs, prototyping, codebase zoom-out, and concise response modes.
+- **AI Integrated:** Built-in configuration for **Codex CLI** with per-repo `AGENTS.md` instructions, global defaults in `~/.codex/AGENTS.md`, custom agents in `~/.codex/agents`, Linear/Context7/Etsy/OpenAI Docs MCP servers, and explicitly enabled curated skills in `~/.agents/skills` for visualization, browser automation, static analysis, frontend design, plan grilling, domain and module design, architecture improvement, code review, implementation, diagnosis, TDD, issue triage, PRDs, prototyping, codebase zoom-out, and concise response modes.
   Linear MCP auth is local per machine; after first enabling a host, run `codex mcp login linear` once if Codex reports that Linear is not logged in. Context7 uses a local API key from `~/.config/context7/api-key` when present.
 - **Modular Architecture:** Configuration split across `hosts/` (system-level) and `modules/home/` (user-level) for maintainability.
 - **Voiden:** Declarative AppImage wrapper for the Voiden offline-first API client.
@@ -42,9 +42,8 @@ Packages tracked independently of nixpkgs for tighter version control:
 | `pearpass-app-desktop` | `github:tetherto/pearpass-app-desktop` | PearPass AppImage source for NixOS wrapper |
 | `visual-explainer` | `github:nicobailon/visual-explainer` | HTML visualization generator for architecture diagrams and code explanations |
 | `impeccable` | `github:pbakaus/impeccable` | Frontend design skill bundle for typography, color, layout, and motion |
-| `ui-ux-pro-max` | `github:nextlevelbuilder/ui-ux-pro-max-skill` | UI/UX design skill pack with companion skills for design systems, styling, branding, banners, and slides |
 | `caveman` | `github:JuliusBrussee/caveman` | Skill suite for concise low-token responses plus terse commit/review helpers |
-| `mattpocock-skills` | `github:mattpocock/skills` | Planning and engineering skill collection used here for diagnosis, docs-aware plan grilling, architecture improvement, TDD, issue triage, issue/PRD generation, prototyping, and codebase zoom-out |
+| `mattpocock-skills` | `github:mattpocock/skills` | Planning and engineering skills for diagnosis, grilling, domain and module design, architecture improvement, review, implementation, TDD, issue workflows, prototyping, and codebase zoom-out |
 | `trailofbits-skills` | `github:trailofbits/skills` | Security and analysis skill marketplace used here as the upstream source for the compact `static-analysis` skill |
 | `dms` | `github:AvengeMedia/DankMaterialShell` | Fast-moving shell UI |
 

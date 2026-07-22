@@ -7,6 +7,17 @@
   registry = import ./registry.nix;
 
   desktopHome = self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.path;
+  desktopHomeFiles = self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.file;
+  desktopCodexSkillsRoot = pkgs.linkFarm "desktop-codex-skills" (
+    map
+    (name: {
+      name = pkgs.lib.removePrefix ".agents/skills/" name;
+      path = desktopHomeFiles.${name}.source;
+    })
+    (builtins.filter
+      (name: pkgs.lib.hasPrefix ".agents/skills/" name)
+      (builtins.attrNames desktopHomeFiles))
+  );
   desktopActivation = self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.activationPackage;
   desktopSkwdDmsSyncHook = self.nixosConfigurations.desktop.config.home-manager.users.stefan.xdg.configFile."skwd-wall/scripts/sync-dms-wallpaper.sh".source;
   desktopSkwdDmsScheduleHook = self.nixosConfigurations.desktop.config.home-manager.users.stefan.xdg.configFile."skwd-wall/scripts/schedule-dms-wallpaper-sync.sh".source;

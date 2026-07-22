@@ -726,7 +726,6 @@
         "spicetify-nix": "spicetify-nix",
         "spotify-nixpkgs": "spotify-nixpkgs",
         "trailofbits-skills": "trailofbits-skills",
-        "ui-ux-pro-max": "ui-ux-pro-max",
         "visual-explainer": "visual-explainer"
       }
     },
@@ -880,22 +879,6 @@
       "original": {
         "owner": "trailofbits",
         "repo": "skills",
-        "type": "github"
-      }
-    },
-    "ui-ux-pro-max": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1783693806,
-        "narHash": "sha256-dGadEntSMg1gUxuR790sKex6HgIJUQO38bdTgjroHf0=",
-        "owner": "nextlevelbuilder",
-        "repo": "ui-ux-pro-max-skill",
-        "rev": "3da52ff1cab1be91848072ec1be5f493d730fd5f",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nextlevelbuilder",
-        "repo": "ui-ux-pro-max-skill",
         "type": "github"
       }
     },

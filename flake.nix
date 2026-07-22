@@ -39,11 +39,6 @@
       flake = false;
     };
 
-    ui-ux-pro-max = {
-      url = "github:nextlevelbuilder/ui-ux-pro-max-skill";
-      flake = false;
-    };
-
     caveman = {
       url = "github:JuliusBrussee/caveman";
       flake = false;

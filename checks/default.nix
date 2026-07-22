@@ -16,6 +16,7 @@
     ./desktop-runtime-config.nix
     ./neovim.nix
     ./wallpaper-runtime.nix
+    ./codex-skills.nix
     ./script-smoke.nix
     ./shellcheck.nix
     ./ci-registry.nix

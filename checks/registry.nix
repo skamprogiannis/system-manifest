@@ -13,6 +13,7 @@
     "neovim-langmap"
     "neovim-lsp-health"
     "wallpaper-runtime"
+    "codex-skills"
     "script-smoke"
     "shellcheck"
     "ci-registry"
