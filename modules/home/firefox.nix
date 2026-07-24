@@ -1,7 +1,7 @@
 {config, ...}: {
   programs.firefox = {
     enable = true;
-    configPath = "${config.xdg.configHome}/mozilla/firefox";
+    configPath = "${config.home.homeDirectory}/.mozilla/firefox";
     profiles.stefan = {
       isDefault = true;
       settings = {
