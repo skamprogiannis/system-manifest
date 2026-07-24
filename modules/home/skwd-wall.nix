@@ -3,6 +3,7 @@
   pkgs,
   lib,
   inputs,
+  skwdAdaptiveRhi,
   skwdQsgRhiBackend,
   ...
 }: let
@@ -40,7 +41,7 @@
     )
     .skwdWeCaptureStill;
 
-  skwdWallPkg =
+  skwdWallPatchedPkg =
     (
       import ./wallpaper/patched-package.nix {
         inherit
@@ -54,6 +55,15 @@
       }
     )
     .skwdWallPkg;
+
+  skwdWallPkg =
+    if skwdAdaptiveRhi
+    then
+      import ./wallpaper/adaptive-skwd-wall.nix {
+        inherit pkgs;
+        skwdWallPackage = skwdWallPatchedPkg;
+      }
+    else skwdWallPatchedPkg;
 
   skwdPrepareState =
     (
@@ -123,16 +133,20 @@ in {
       After = ["hyprland-session.target"];
       PartOf = ["hyprland-session.target"];
     };
-    Service = {
-      Type = "simple";
-      ExecStartPre = [
-        "${pkgs.coreutils}/bin/mkdir -p %t/skwd"
-        "-${pkgs.coreutils}/bin/rm -f %t/skwd/daemon.sock"
-      ];
-      ExecStart = "${skwdWallPkg}/bin/skwd-daemon";
-      Restart = "on-failure";
-      RestartSec = "2";
-    };
+    Service =
+      {
+        Type = "simple";
+        ExecStartPre = [
+          "${pkgs.coreutils}/bin/mkdir -p %t/skwd"
+          "-${pkgs.coreutils}/bin/rm -f %t/skwd/daemon.sock"
+        ];
+        ExecStart = "${skwdWallPkg}/bin/skwd-daemon";
+        Restart = "on-failure";
+        RestartSec = "2";
+      }
+      // lib.optionalAttrs skwdAdaptiveRhi {
+        Environment = ["SKWD_WALL_BIN=${skwdWallPkg}/bin/skwd-wall"];
+      };
     Install = {
       WantedBy = ["hyprland-session.target"];
     };

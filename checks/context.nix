@@ -55,6 +55,18 @@
   usbHome = self.nixosConfigurations.usb.config.home-manager.users.stefan.home.path;
   usbActivation = self.nixosConfigurations.usb.config.home-manager.users.stefan.home.activationPackage;
   usbSkwdDaemonExec = builtins.head self.nixosConfigurations.usb.config.home-manager.users.stefan.systemd.user.services.skwd-daemon.Service.ExecStart;
+  usbSkwdWallExec = "${builtins.dirOf (builtins.dirOf usbSkwdDaemonExec)}/bin/skwd-wall";
+  usbSkwdDaemonEnvironmentFile = pkgs.writeText "usb-skwd-daemon-environment" (
+    builtins.concatStringsSep "\n"
+    self.nixosConfigurations.usb.config.home-manager.users.stefan.systemd.user.services.skwd-daemon.Service.Environment
+  );
+  usbHostFingerprintService = self.nixosConfigurations.usb.config.systemd.services.system-manifest-host-fingerprint;
+  usbHostFingerprintExec = builtins.head (
+    pkgs.lib.splitString " " usbHostFingerprintService.serviceConfig.ExecStart
+  );
+  usbHostFingerprintBeforeFile = builtins.toFile "usb-host-fingerprint-before" (
+    builtins.concatStringsSep "\n" usbHostFingerprintService.before
+  );
   usbDmsPackage = self.nixosConfigurations.usb.config.home-manager.users.stefan.programs.dank-material-shell.package;
   usbInitrd = self.nixosConfigurations.usb.config.system.build.initialRamdisk;
   usbRamStoreInitrd = self.nixosConfigurations.usb.config.specialisation.ram-store.configuration.system.build.initialRamdisk;

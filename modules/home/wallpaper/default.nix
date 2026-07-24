@@ -7,5 +7,6 @@
     ../skwd-wall.nix
   ];
 
+  _module.args.skwdAdaptiveRhi = lib.mkDefault false;
   _module.args.skwdQsgRhiBackend = lib.mkDefault "vulkan";
 }
