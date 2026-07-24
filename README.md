@@ -79,10 +79,10 @@ Packages tracked independently of nixpkgs for tighter version control:
 | `skwd-we-capture-still` | Captures a Wallpaper Engine still image into `~/.cache/skwd-wall/wallpaper/we-captures/`, with `--current-live` for a faithful live-screen fallback |
 | `transmission-port-sync` | Syncs Transmission's configured peer port (for example after a VPN-forwarded port change) |
 | `codex-state-sync` | Syncs resumable Codex state between desktop and USB (`to-usb` / `from-usb`) while leaving auth/config/cache local |
-| `nixos-usb-host-scratch-status` | Shows whether encrypted host scratch is active and which user/cache/Docker paths are bound to it |
+| `nixos-usb-host-scratch-status` | Shows encrypted host-scratch mounts plus the last checkpoint/shutdown sync result |
 | `specify` | Spec Kit CLI wrapper — scaffolds spec-driven development for new projects |
 | `setup-persistent-usb` | Initialises a fresh LUKS-encrypted persistent NixOS USB drive |
-| `usb-host-scratch` | Prints the active encrypted host scratch `repositories` path for fast temporary clones |
+| `usb-host-scratch` | Opens the temporary repositories path, checkpoints persistent app state, or shows host-scratch status |
 | `update-usb` | Updates the USB image using prebuild mode by default, with `--in-place` as a lower-disk-space fallback |
 
 ## Usage
@@ -159,6 +159,15 @@ nixos-usb-host-scratch-status
 
 `writable-encrypted-host-auto-overlay` means store reads and writes are backed by the encrypted host scratch image. If no suitable partition can be mounted or copied to, the specialisation falls back to the USB-backed squashfs and encrypted USB-root scratch writable layer. `nixos-usb-store-status` prints the selected store mode, host candidates, mount diagnostics, and relevant initrd service logs. `nixos-usb-host-scratch-status` shows Docker/cache/Codex/Brave bind mounts and the active repositories path.
 
+To make current cache, Codex, and Brave changes durable before shutdown:
+
+```bash
+usb-host-scratch checkpoint
+usb-host-scratch status
+```
+
+Checkpoints are serialized and update the last-successful-sync record shown by `status`. Docker state and everything under the host-scratch `repositories` directory remain intentionally temporary, so commit or push repository work before powering off.
+
 For fast temporary clones:
 
 ```bash
@@ -166,7 +175,7 @@ cd "$(usb-host-scratch)"
 git clone https://github.com/OWNER/REPO.git
 ```
 
-On clean shutdown, the USB syncs `~/.cache`, `~/.codex`, and `~/.config/BraveSoftware` back to the USB root, then removes host-side encrypted session files. If power is cut, the host may retain ciphertext under `.nixos-usb/session/`, but the key only lived in RAM and stale session files are removed on the next successful host-auto boot.
+On clean shutdown, the USB runs the same serialized sync for `~/.cache`, `~/.codex`, and `~/.config/BraveSoftware`, then removes host-side encrypted session files. A forced power-off cannot guarantee the final sync; use `usb-host-scratch checkpoint` first when recent state matters. If power is cut, the host may retain ciphertext under `.nixos-usb/session/`, but the key only lived in RAM and stale session files are removed on the next successful host-auto boot.
 
 ### Initialize / Reformat Persistent USB
 

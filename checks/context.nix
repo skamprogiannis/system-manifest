@@ -75,7 +75,13 @@
   usbHostAutoStorePrepareScript = pkgs.writeText "usb-host-auto-store-prepare-script" self.nixosConfigurations.usb.config.specialisation.host-auto-store.configuration.boot.initrd.systemd.services.initrd-usb-host-auto-store-prepare.script;
   usbHostScratchService = self.nixosConfigurations.usb.config.systemd.services.usb-host-scratch;
   usbHostScratchServiceDescriptionFile = builtins.toFile "usb-host-scratch-service-description" usbHostScratchService.description;
+  usbHostScratchStartScript = usbHostScratchService.serviceConfig.ExecStart;
   usbHostScratchStopScript = usbHostScratchService.serviceConfig.ExecStop;
+  usbHostScratchCheckpointExec = self.nixosConfigurations.usb.config.systemd.services.usb-host-scratch-checkpoint.serviceConfig.ExecStart;
+  usbHostScratchSyncScript = builtins.head (pkgs.lib.splitString " " usbHostScratchCheckpointExec);
+  usbTmpfilesRulesFile = pkgs.writeText "usb-tmpfiles-rules" (
+    builtins.concatStringsSep "\n" self.nixosConfigurations.usb.config.systemd.tmpfiles.rules
+  );
   usbHostScratchShutdownCleanupScript = self.nixosConfigurations.usb.config.systemd.shutdownRamfs.contents."/lib/systemd/system-shutdown/usb-host-scratch-cleanup".source;
   usbShutdownRamfsStorePathsFile = pkgs.writeText "usb-shutdown-ramfs-store-paths" (
     builtins.concatStringsSep "\n" (
@@ -122,7 +128,10 @@
     "${updateUsbSourceDir}/squashfs.sh"
     "${usbHome}/bin/usb-host-scratch"
     "${usbHome}/bin/nixos-usb-store-status"
+    "${usbSkwdWallExec}"
+    "${usbHostScratchStartScript}"
     "${usbHostScratchStopScript}"
+    "${usbHostScratchSyncScript}"
     "${usbHostScratchShutdownCleanupScript}"
     "${usbHome}/bin/spotify_player"
     "${usbHome}/bin/setup-persistent-usb"

@@ -16,6 +16,115 @@
   hostSessionRelative = ".nixos-usb/session";
   userRoot = "${hostScratchMount}/user/${userName}";
   repoRoot = "${hostScratchMount}/repositories";
+  usbHomeBacking = "${stateDir}/usb-home";
+  lastSyncState = "${userHome}/.local/state/system-manifest/host-scratch-last-sync";
+
+  hostScratchSync = pkgs.writeShellScript "usb-host-scratch-sync" ''
+    set -eu
+
+    reason="''${1:-checkpoint}"
+    case "$reason" in
+      checkpoint|shutdown)
+        ;;
+      *)
+        echo "usb-host-scratch-sync: unsupported reason: $reason" >&2
+        exit 2
+        ;;
+    esac
+
+    MODE_FILE="''${USB_HOST_SCRATCH_MODE_FILE:-${modeFile}}"
+    STATE_DIR="''${USB_HOST_SCRATCH_STATE_DIR:-${stateDir}}"
+    ATTEMPT_STATE="''${USB_HOST_SCRATCH_ATTEMPT_STATE:-/run/usb-host-scratch-last-sync}"
+    USB_HOME="''${USB_HOST_SCRATCH_USB_HOME:-${usbHomeBacking}}"
+    USER_ROOT="''${USB_HOST_SCRATCH_USER_ROOT:-${userRoot}}"
+    LAST_SYNC_STATE="''${USB_HOST_SCRATCH_LAST_SYNC_STATE:-$USB_HOME/.local/state/system-manifest/host-scratch-last-sync}"
+    FINDMNT="''${USB_HOST_SCRATCH_FINDMNT:-${pkgs.util-linux}/bin/findmnt}"
+    FLOCK="''${USB_HOST_SCRATCH_FLOCK:-${pkgs.util-linux}/bin/flock}"
+    RSYNC="''${USB_HOST_SCRATCH_RSYNC:-${pkgs.rsync}/bin/rsync}"
+    MKDIR="''${USB_HOST_SCRATCH_MKDIR:-${pkgs.coreutils}/bin/mkdir}"
+    MV="''${USB_HOST_SCRATCH_MV:-${pkgs.coreutils}/bin/mv}"
+    CHOWN="''${USB_HOST_SCRATCH_CHOWN:-${pkgs.coreutils}/bin/chown}"
+    CHMOD="''${USB_HOST_SCRATCH_CHMOD:-${pkgs.coreutils}/bin/chmod}"
+    DATE="''${USB_HOST_SCRATCH_DATE:-${pkgs.coreutils}/bin/date}"
+    SYNC="''${USB_HOST_SCRATCH_SYNC:-${pkgs.coreutils}/bin/sync}"
+
+    "$MKDIR" -p "$STATE_DIR"
+    exec 9>"$STATE_DIR/sync.lock"
+    "$FLOCK" -x 9
+
+    write_record() {
+      target="$1"
+      result="$2"
+      timestamp="$("$DATE" -u +%Y-%m-%dT%H:%M:%SZ)"
+      "$MKDIR" -p "''${target%/*}"
+      {
+        printf 'timestamp=%s\n' "$timestamp"
+        printf 'reason=%s\n' "$reason"
+        printf 'result=%s\n' "$result"
+        printf 'targets=%s\n' "cache,codex,brave"
+        printf 'excluded=%s\n' "docker,repositories"
+      } > "$target.tmp"
+      "$MV" "$target.tmp" "$target"
+    }
+
+    record_failure() {
+      status="$?"
+      trap - EXIT
+      write_record "$ATTEMPT_STATE" failed || true
+      "$CHMOD" 0644 "$ATTEMPT_STATE" 2>/dev/null || true
+      echo "usb-host-scratch-sync: $reason failed; USB state may be stale" >&2
+      exit "$status"
+    }
+    trap record_failure EXIT
+    write_record "$ATTEMPT_STATE" running
+    "$CHMOD" 0644 "$ATTEMPT_STATE"
+
+    if [ ! -f "$MODE_FILE" ] || ! ${pkgs.gnugrep}/bin/grep -qx "encrypted-host-scratch" "$MODE_FILE"; then
+      echo "usb-host-scratch-sync: encrypted host scratch is not active" >&2
+      exit 1
+    fi
+    if ! "$FINDMNT" -rn -M "$USB_HOME" >/dev/null 2>&1; then
+      echo "usb-host-scratch-sync: underlying USB home bind is unavailable: $USB_HOME" >&2
+      exit 1
+    fi
+
+    ensure_user_dir() {
+      target="$1"
+      "$MKDIR" -p "$target"
+      "$CHOWN" ${userName}:${userGroup} "$target"
+      "$CHMOD" u+rwx "$target"
+    }
+
+    sync_one() {
+      label="$1"
+      source="$2"
+      target="$3"
+      if [ ! -d "$source" ]; then
+        echo "usb-host-scratch-sync: missing $label source: $source" >&2
+        return 1
+      fi
+      echo "usb-host-scratch-sync: syncing $label to USB" >&2
+      ensure_user_dir "$target"
+      "$RSYNC" -a --delete "$source/" "$target/"
+    }
+
+    sync_one cache "$USER_ROOT/cache" "$USB_HOME/.cache"
+    sync_one codex "$USER_ROOT/codex" "$USB_HOME/.codex"
+    ensure_user_dir "$USB_HOME/.config"
+    sync_one brave "$USER_ROOT/brave-config" "$USB_HOME/.config/BraveSoftware"
+
+    for state_path in "$USB_HOME/.local" "$USB_HOME/.local/state" "$USB_HOME/.local/state/system-manifest"; do
+      ensure_user_dir "$state_path"
+    done
+    write_record "$ATTEMPT_STATE" success
+    "$CHMOD" 0644 "$ATTEMPT_STATE"
+    write_record "$LAST_SYNC_STATE" success
+    "$CHOWN" ${userName}:${userGroup} "$LAST_SYNC_STATE"
+    "$SYNC" -f "$USB_HOME"
+    trap - EXIT
+    echo "usb-host-scratch-sync: $reason complete; cache, Codex, and Brave are durable on USB" >&2
+    echo "usb-host-scratch-sync: Docker state and repositories remain temporary and are not copied" >&2
+  '';
 
   hostScratchStart = pkgs.writeShellScript "usb-host-scratch-start" ''
     set -eu
@@ -26,6 +135,7 @@
     state_dir=${stateDir}
     user_root=${userRoot}
     repo_root=${repoRoot}
+    usb_home=${usbHomeBacking}
 
     ${pkgs.coreutils}/bin/mkdir -p "$state_dir" "$docker_root"
     ${pkgs.coreutils}/bin/rm -f "$mode_file"
@@ -64,6 +174,8 @@
     sync_to_scratch "${userHome}/.codex" "$user_root/codex"
     sync_to_scratch "${userHome}/.config/BraveSoftware" "$user_root/brave-config"
 
+    bind_mount "${userHome}" "$usb_home"
+    ${pkgs.util-linux}/bin/mount --make-private "$usb_home"
     bind_mount "$user_root/cache" "${userHome}/.cache"
     bind_mount "$user_root/codex" "${userHome}/.codex"
     bind_mount "$user_root/brave-config" "${userHome}/.config/BraveSoftware"
@@ -78,7 +190,7 @@
 
     docker_root=${dockerRoot}
     mode_file=${modeFile}
-    user_root=${userRoot}
+    usb_home=${usbHomeBacking}
     stop_status=0
 
     is_mounted() {
@@ -86,22 +198,22 @@
       ${pkgs.util-linux}/bin/findmnt -rn -M "$target" >/dev/null 2>&1
     }
 
-    unmount_for_sync() {
+    unmount_target() {
       target="$1"
 
       if ! is_mounted "$target"; then
         return 0
       fi
 
-      echo "usb-host-scratch: unmounting $target before USB sync" >&2
+      echo "usb-host-scratch: unmounting $target" >&2
       if ! ${pkgs.util-linux}/bin/umount "$target"; then
-        echo "usb-host-scratch: warning: normal unmount failed for $target; leaving it mounted and skipping sync for this path" >&2
+        echo "usb-host-scratch: warning: normal unmount failed for $target" >&2
         stop_status=1
         return 1
       fi
 
       if is_mounted "$target"; then
-        echo "usb-host-scratch: warning: $target is still mounted after normal unmount; skipping sync for this path" >&2
+        echo "usb-host-scratch: warning: $target is still mounted after normal unmount" >&2
         stop_status=1
         return 1
       fi
@@ -109,35 +221,23 @@
       return 0
     }
 
-    sync_to_usb() {
-      source="$1"
-      target="$2"
-      if [ -d "$source" ]; then
-        echo "usb-host-scratch: syncing $source back to $target" >&2
-        ${pkgs.coreutils}/bin/mkdir -p "$target"
-        ${pkgs.rsync}/bin/rsync -a --delete "$source/" "$target/"
-        ${pkgs.coreutils}/bin/chown -R ${userName}:${userGroup} "$target"
-      fi
-    }
-
-    unmount_for_sync "$docker_root" || true
-
     if [ -f "$mode_file" ] && ${pkgs.gnugrep}/bin/grep -qx "encrypted-host-scratch" "$mode_file"; then
-      if unmount_for_sync "${userHome}/.config/BraveSoftware"; then
-        sync_to_usb "$user_root/brave-config" "${userHome}/.config/BraveSoftware"
-      fi
-      if unmount_for_sync "${userHome}/.codex"; then
-        sync_to_usb "$user_root/codex" "${userHome}/.codex"
-      fi
-      if unmount_for_sync "${userHome}/.cache"; then
-        sync_to_usb "$user_root/cache" "${userHome}/.cache"
+      if ! ${hostScratchSync} shutdown; then
+        echo "usb-host-scratch: shutdown sync failed; keeping failure evidence for status and cleanup" >&2
+        stop_status=1
       fi
     fi
+
+    unmount_target "$docker_root" || true
+    unmount_target "${userHome}/.config/BraveSoftware" || true
+    unmount_target "${userHome}/.codex" || true
+    unmount_target "${userHome}/.cache" || true
+    unmount_target "$usb_home" || true
 
     if [ "$stop_status" -eq 0 ]; then
       ${pkgs.coreutils}/bin/rm -f "$mode_file"
     else
-      echo "usb-host-scratch: warning: stop completed with unsynced mounted paths; keeping $mode_file for shutdown cleanup evidence" >&2
+      echo "usb-host-scratch: warning: stop completed with sync or unmount failures; keeping $mode_file for shutdown cleanup evidence" >&2
       exit "$stop_status"
     fi
   '';
@@ -268,6 +368,7 @@
     fi
 
     for prefix in $PREFIXES; do
+      unmount_tree "$(path_under_prefix "$prefix" ${usbHomeBacking})"
       unmount_tree "$(path_under_prefix "$prefix" ${nixStoreMount})"
       unmount_tree "$(path_under_prefix "$prefix" ${rwStoreMount})"
       unmount_tree "$(path_under_prefix "$prefix" ${roStoreMount})"
@@ -313,6 +414,17 @@ in {
     };
   };
 
+  systemd.services.usb-host-scratch-checkpoint = {
+    description = "Checkpoint USB host scratch state to persistent USB storage";
+    after = ["usb-host-scratch.service"];
+    requires = ["usb-host-scratch.service"];
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = "${hostScratchSync} checkpoint";
+      TimeoutStartSec = "15min";
+    };
+  };
+
   systemd.services.docker = {
     after = ["usb-host-scratch.service"];
     requires = ["usb-host-scratch.service"];
@@ -351,10 +463,13 @@ in {
       }
 
       print_file "scratch mode" /run/usb-host-scratch.mode
+      print_file "last sync attempt" /run/usb-host-scratch-last-sync
+      print_file "last successful sync" ${lastSyncState}
 
       printf '== mounts ==\n'
       print_mount ${hostStoreMount}
       print_mount ${hostScratchMount}
+      print_mount ${usbHomeBacking}
       print_mount ${dockerRoot}
       print_mount ${userHome}/.cache
       print_mount ${userHome}/.codex
@@ -366,9 +481,13 @@ in {
         printf '%s\n\n' ${repoRoot}
       fi
 
+      printf '== durability ==\n'
+      printf '%s\n' "Only cache, Codex, and Brave are checkpointed."
+      printf '%s\n\n' "Docker state and repositories are temporary and are not copied to USB."
+
       if ${pkgs.systemd}/bin/journalctl --version >/dev/null 2>&1; then
         printf '== services ==\n'
-        ${pkgs.systemd}/bin/journalctl -b -u usb-host-scratch.service --no-pager -n 60 || true
+        ${pkgs.systemd}/bin/journalctl -b -u usb-host-scratch.service -u usb-host-scratch-checkpoint.service --no-pager -n 80 || true
       fi
     '')
   ];
