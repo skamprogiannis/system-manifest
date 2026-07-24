@@ -13,6 +13,7 @@
     ./usb-initrd-ordering.nix
     ./hyprland-keybinds.nix
     ./desktop-glass.nix
+    ./spotify-runtime.nix
     ./desktop-runtime-config.nix
     ./neovim.nix
     ./wallpaper-runtime.nix

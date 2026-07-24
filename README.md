@@ -12,7 +12,7 @@ Managed via **Nix Flakes** and **Home Manager**.
 - **Laptop: Dual-Boot Hyprland** — Laptop host keeps the full desktop muscle-memory workflow with portable display detection, encrypted-root install labels, Caps-to-Escape, Greek/US layouts, Zellij, Neovim, Codex, and browser setup.
 - **Gaming Mode:** A dedicated specialisation (`gaming-box`) that boots directly into Steam Big Picture Mode with Gamescope.
 - **Media & Productivity:**
-  - **Spotify GUI:** Official Spotify client wrapped with Spicetify and the Hazy translucent theme, with local glass polish.
+  - **Spotify GUI:** The authenticated-stable Spotify payload is rebuilt against the current Nixpkgs runtime, wrapped with Spicetify and the Hazy translucent theme, and launched through one adaptive command that caches a per-host `--disable-gpu` fallback only after an exact Chromium GPU failure.
   - **Spotify Player:** Terminal-based Spotify client (`spotify_player`) with streaming support. The wrapper authenticates interactively before bootstrapping the background daemon so the login callback port is not stolen by a headless service on fresh setups, it does one safe re-auth pass when Spotify later rejects a cached refresh token, and it can read a personal Spotify app client ID from `~/.config/spotify-player/client_id` so Web API auth does not depend on a shared client ID when Spotify rate-limits it.
   - **Transmission:** BitTorrent daemon with `tremc` TUI frontend.
   - **Mailspring:** Email client; credentials stored via GNOME Keyring (runs standalone, no GNOME shell required).

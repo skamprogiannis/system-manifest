@@ -9,6 +9,7 @@
     "usb-initrd-ordering"
     "hyprland-keybinds"
     "desktop-glass"
+    "spotify-runtime"
     "desktop-runtime-config"
     "neovim-langmap"
     "neovim-lsp-health"

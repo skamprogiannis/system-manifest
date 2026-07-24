@@ -29,6 +29,24 @@
   desktopSpicetifyAdditionalCssFile = pkgs.writeText "desktop-spicetify-additional.css" self.nixosConfigurations.desktop.config.home-manager.users.stefan.programs.spicetify.theme.additionalCss;
   desktopSpicetifyExtraCommandsFile = pkgs.writeText "desktop-spicetify-extra-commands" self.nixosConfigurations.desktop.config.home-manager.users.stefan.programs.spicetify.extraCommands;
   desktopSpicetifyInjectThemeJsFile = pkgs.writeText "desktop-spicetify-inject-theme-js" (builtins.toJSON self.nixosConfigurations.desktop.config.home-manager.users.stefan.programs.spicetify.theme.injectThemeJs);
+  desktopSpotifyPackage = self.nixosConfigurations.desktop.config.home-manager.users.stefan.programs.spicetify.spotifyPackage;
+  desktopSpicedSpotify = self.nixosConfigurations.desktop.config.home-manager.users.stefan.programs.spicetify.spicedSpotify;
+  desktopSpotifyPackageClosure = pkgs.closureInfo {
+    rootPaths = [desktopSpicedSpotify];
+  };
+  desktopSpotifyLauncherPackage = builtins.head (
+    builtins.filter
+    (package: package.systemManifestSpotifyLauncher or false)
+    self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.packages
+  );
+  desktopSpotifyDesktopEntryNames = pkgs.writeText "desktop-spotify-entry-names.json" (
+    builtins.toJSON (
+      builtins.filter
+      (name: pkgs.lib.hasInfix "spotify" (pkgs.lib.toLower name))
+      (builtins.attrNames self.nixosConfigurations.desktop.config.home-manager.users.stefan.xdg.desktopEntries)
+    )
+  );
+  desktopSpotifyDesktopExec = self.nixosConfigurations.desktop.config.home-manager.users.stefan.xdg.desktopEntries.spotify.exec;
   desktopTmpfilesRulesFile = pkgs.writeText "desktop-tmpfiles-rules" (builtins.concatStringsSep "\n" self.nixosConfigurations.desktop.config.systemd.tmpfiles.rules);
   desktopZellijDevLayoutFile = pkgs.writeText "desktop-zellij-dev-layout" self.nixosConfigurations.desktop.config.home-manager.users.stefan.xdg.configFile."zellij/layouts/dev.kdl".text;
   desktopZellijLegacyArgsScrubActivationFile = pkgs.writeText "desktop-zellij-legacy-args-scrub-activation" self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.activation.scrubLegacyZellijContext7Args.data;
@@ -76,6 +94,7 @@
     "${desktopHome}/bin/hypr-quit-active"
     "${desktopHome}/bin/screenshot-path-copy"
     "${desktopHome}/bin/skwd-we-capture-still"
+    "${desktopSpotifyLauncherPackage}/bin/spotify"
     "${desktopHome}/bin/spotify_player"
     "${desktopHome}/bin/transmission-port-sync"
     "${desktopHome}/bin/update-usb"
