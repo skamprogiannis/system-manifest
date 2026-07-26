@@ -171,18 +171,18 @@ in {
             printf '%s\n' encrypted-host-scratch > "$host_scratch_sync_test/mode"
 
             cat > "$host_scratch_sync_test/bin/findmnt" <<'EOF'
-      #!${pkgs.bash}/bin/bash
-      set -eu
-      [ "$1" = "-rn" ]
-      [ "$2" = "-M" ]
-      [ "$3" = "$USB_HOST_SCRATCH_TEST_USB_HOME" ]
-      EOF
+            #!${pkgs.bash}/bin/bash
+            set -eu
+            [ "$1" = "-rn" ]
+            [ "$2" = "-M" ]
+            [ "$3" = "$USB_HOST_SCRATCH_TEST_USB_HOME" ]
+            EOF
             chmod +x "$host_scratch_sync_test/bin/findmnt"
             cat > "$host_scratch_sync_test/bin/chown" <<'EOF'
-      #!${pkgs.bash}/bin/bash
-      set -eu
-      printf '%s\n' "$*" >> "$USB_HOST_SCRATCH_TEST_CHOWN_LOG"
-      EOF
+            #!${pkgs.bash}/bin/bash
+            set -eu
+            printf '%s\n' "$*" >> "$USB_HOST_SCRATCH_TEST_CHOWN_LOG"
+            EOF
             chmod +x "$host_scratch_sync_test/bin/chown"
             : > "$host_scratch_sync_test/chown.log"
 
@@ -256,17 +256,17 @@ in {
             assert_file_contains "$last_sync_record" "result=success" "Expected a failed checkpoint to preserve the last successful sync record."
 
             cat > "$host_scratch_sync_test/bin/id" <<'EOF'
-      #!${pkgs.bash}/bin/bash
-      set -eu
-      [ "$1" = "-u" ]
-      printf '%s\n' 1000
-      EOF
+            #!${pkgs.bash}/bin/bash
+            set -eu
+            [ "$1" = "-u" ]
+            printf '%s\n' 1000
+            EOF
             chmod +x "$host_scratch_sync_test/bin/id"
             cat > "$host_scratch_sync_test/bin/sudo" <<'EOF'
-      #!${pkgs.bash}/bin/bash
-      set -eu
-      printf '%s\n' "$*" > "$USB_HOST_SCRATCH_TEST_SUDO_LOG"
-      EOF
+            #!${pkgs.bash}/bin/bash
+            set -eu
+            printf '%s\n' "$*" > "$USB_HOST_SCRATCH_TEST_SUDO_LOG"
+            EOF
             chmod +x "$host_scratch_sync_test/bin/sudo"
 
             run_expect 0 host-scratch-checkpoint-command \
@@ -846,25 +846,31 @@ in {
             cat > "$torrent_test/bin/systemctl" <<'EOF'
             #!${pkgs.bash}/bin/bash
             set -euo pipefail
-            printf 'systemctl'
-            printf ' <%s>' "$@"
-            printf '\n' >> "$TORRENT_TEST_LOG"
+            {
+              printf 'systemctl'
+              printf ' <%s>' "$@"
+              printf '\n'
+            } >> "$TORRENT_TEST_LOG"
             EOF
             chmod +x "$torrent_test/bin/systemctl"
             cat > "$torrent_test/bin/transmission-remote" <<'EOF'
             #!${pkgs.bash}/bin/bash
             set -euo pipefail
-            printf 'remote'
-            printf ' <%s>' "$@"
-            printf '\n' >> "$TORRENT_TEST_LOG"
+            {
+              printf 'remote'
+              printf ' <%s>' "$@"
+              printf '\n'
+            } >> "$TORRENT_TEST_LOG"
             EOF
             chmod +x "$torrent_test/bin/transmission-remote"
             cat > "$torrent_test/bin/brave" <<'EOF'
             #!${pkgs.bash}/bin/bash
             set -euo pipefail
-            printf 'brave'
-            printf ' <%s>' "$@"
-            printf '\n' >> "$TORRENT_TEST_LOG"
+            {
+              printf 'brave'
+              printf ' <%s>' "$@"
+              printf '\n'
+            } >> "$TORRENT_TEST_LOG"
             EOF
             chmod +x "$torrent_test/bin/brave"
             : > "$torrent_test/commands.log"
