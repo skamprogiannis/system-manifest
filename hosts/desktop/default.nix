@@ -121,7 +121,14 @@
   # Ollama (local LLMs on the RTX 3080)
   services.ollama = {
     enable = true;
-    package = pkgs.ollama-cuda;
+    package = pkgs.ollama-cuda.overrideAttrs (old: {
+      # Ollama's nested CMake build needs the complete merged CUDA toolkit.
+      env =
+        old.env
+        // lib.optionalAttrs (!(old.env ? CUDAToolkit_ROOT)) {
+          CUDAToolkit_ROOT = "${old.env.CUDA_PATH}-${lib.versions.major pkgs.cudaPackages.cuda_cudart.version}";
+        };
+    });
     loadModels = [
       "qwen2.5-coder:14b"
       "gemma3:4b"
