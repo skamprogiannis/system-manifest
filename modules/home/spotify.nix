@@ -18,81 +18,19 @@ assert lib.assertMsg (builtins.elem hostType ["desktop" "usb" "laptop"]) "hostTy
         import re
         from pathlib import Path
 
-        client_path = Path("spotify_player/src/client/mod.rs")
-        client_text = client_path.read_text()
         auth_path = Path("spotify_player/src/auth.rs")
         auth_text = auth_path.read_text()
-
-        new_popup = """        #[cfg(feature = "streaming")]
-            {
-                if state.is_streaming_enabled() {
-                    let configs = config::get_config();
-                    let session = self.spotify.session().await;
-                    let local_device = Device {
-                        id: session.device_id().to_string(),
-                        name: configs.app_config.device.name.clone(),
-                    };
-
-                    // Only add if not already in the list (avoid duplicates)
-                    if !devices.iter().any(|d| d.id == local_device.id) {
-                        devices.push(local_device);
-                    }
-                }
-            }
-        """
-
-        new_default = """        #[cfg(feature = "streaming")]
-            {
-                if configs.app_config.enable_streaming == config::StreamingType::Always {
-                    let session = self.spotify.session().await;
-                    devices.push((
-                        configs.app_config.device.name.clone(),
-                        session.device_id().to_string(),
-                    ));
-                }
-            }
-        """
-
-        popup_pattern = re.compile(
-            r"""^[ \t]+#\[cfg\(feature = "streaming"\)\]\n"""
-            r"""[ \t]+\{\n"""
-            r"""[ \t]+let configs = config::get_config\(\);\n"""
-            r"""[ \t]+let session = self\.spotify\.session\(\)\.await;\n"""
-            r"""[ \t]+let local_device = Device \{\n"""
-            r"""[ \t]+id: session\.device_id\(\)\.to_string\(\),\n"""
-            r"""[ \t]+name: configs\.app_config\.device\.name\.clone\(\),\n"""
-            r"""[ \t]+\};\n\n"""
-            r"""[ \t]+// Only add if not already in the list \(avoid duplicates\)\n"""
-            r"""[ \t]+if !devices\.iter\(\)\.any\(\|d\| d\.id == local_device\.id\) \{\n"""
-            r"""[ \t]+devices\.push\(local_device\);\n"""
-            r"""[ \t]+\}\n"""
-            r"""[ \t]+\}\n""",
-            re.MULTILINE,
-        )
-        default_pattern = re.compile(
-            r"""^[ \t]+#\[cfg\(feature = "streaming"\)\]\n"""
-            r"""[ \t]+\{\n"""
-            r"""[ \t]+let session = self\.spotify\.session\(\)\.await;\n"""
-            r"""[ \t]+devices\.push\(\(\n"""
-            r"""[ \t]+configs\.app_config\.device\.name\.clone\(\),\n"""
-            r"""[ \t]+session\.device_id\(\)\.to_string\(\),\n"""
-            r"""[ \t]+\)\);\n"""
-            r"""[ \t]+\}\n""",
-            re.MULTILINE,
-        )
 
         auth_config_struct_pattern = re.compile(
             r"""(?ms)^#\[derive\(Clone\)\]\n"""
             r"""pub struct AuthConfig \{\n"""
             r"""    pub cache: Cache,\n"""
-            r"""    pub session_config: SessionConfig,\n"""
             r"""    pub login_redirect_uri: String,\n"""
             r"""\}\n"""
         )
         auth_config_struct_new = """#[derive(Clone)]
     pub struct AuthConfig {
         pub cache: Cache,
-        pub session_config: SessionConfig,
         pub client_id: String,
         pub login_redirect_uri: String,
     }
@@ -100,13 +38,11 @@ assert lib.assertMsg (builtins.elem hostType ["desktop" "usb" "laptop"]) "hostTy
         auth_default_pattern = re.compile(
             r"""(?ms)^        AuthConfig \{\n"""
             r"""            cache: Cache::new\(None::<String>, None, None, None\)\.unwrap\(\),\n"""
-            r"""            session_config: SessionConfig::default\(\),\n"""
             r"""            login_redirect_uri: "http://127\.0\.0\.1:8989/login"\.to_string\(\),\n"""
             r"""        \}\n"""
         )
         auth_default_new = """        AuthConfig {
                 cache: Cache::new(None::<String>, None, None, None).unwrap(),
-                session_config: SessionConfig::default(),
                 client_id: SPOTIFY_CLIENT_ID.to_string(),
                 login_redirect_uri: "http://127.0.0.1:8989/login".to_string(),
             }
@@ -114,28 +50,23 @@ assert lib.assertMsg (builtins.elem hostType ["desktop" "usb" "laptop"]) "hostTy
         auth_new_pattern = re.compile(
             r"""(?ms)^        Ok\(AuthConfig \{\n"""
             r"""            cache,\n"""
-            r"""            session_config: configs\.app_config\.session_config\(\),\n"""
             r"""            login_redirect_uri: configs\.app_config\.login_redirect_uri\.clone\(\),\n"""
             r"""        \}\)\n"""
         )
-        auth_new_new = """        let client_id = configs
-                .app_config
-                .get_user_client_id()?
-                .unwrap_or_else(|| SPOTIFY_CLIENT_ID.to_string());
+        auth_new_new = """        let client_id = configs.app_config.get_client_id()?;
 
             Ok(AuthConfig {
                 cache,
-                session_config: configs.app_config.session_config(),
                 client_id,
                 login_redirect_uri: configs.app_config.login_redirect_uri.clone(),
             })
     """
         auth_oauth_pattern = re.compile(
-            r"""(?ms)^                let client_builder = OAuthClientBuilder::new\(\n"""
+            r"""(?ms)^                let access_token = get_oauth_access_token\(\n"""
             r"""                    SPOTIFY_CLIENT_ID,\n"""
             r"""                    &auth_config\.login_redirect_uri,\n"""
-            r"""                    OAUTH_SCOPES\.to_vec\(\),\n"""
-            r"""                \)\n"""
+            r"""                    OAUTH_SCOPES,\n"""
+            r"""                \)\?;\n"""
         )
         auth_oauth_new = """                let oauth_scopes = if auth_config.client_id == SPOTIFY_CLIENT_ID {
                         OAUTH_SCOPES.to_vec()
@@ -146,20 +77,12 @@ assert lib.assertMsg (builtins.elem hostType ["desktop" "usb" "laptop"]) "hostTy
                             .filter(|scope| *scope != "user-personalized")
                             .collect()
                     };
-                    let client_builder = OAuthClientBuilder::new(
+                    let access_token = get_oauth_access_token(
                         &auth_config.client_id,
                         &auth_config.login_redirect_uri,
-                        oauth_scopes,
-                    )
+                        &oauth_scopes,
+                    )?;
     """
-
-        client_text, popup_count = popup_pattern.subn(new_popup, client_text, count=1)
-        if popup_count != 1:
-            raise SystemExit("spotify-player popup device block not found")
-        client_text, default_count = default_pattern.subn(new_default, client_text, count=1)
-        if default_count != 1:
-            raise SystemExit("spotify-player default device block not found")
-        client_path.write_text(client_text)
 
         auth_text, auth_struct_count = auth_config_struct_pattern.subn(auth_config_struct_new, auth_text, count=1)
         if auth_struct_count != 1:
