@@ -97,6 +97,7 @@
   neovimLangmapFile = builtins.toFile "neovim-langmap" self.nixosConfigurations.desktop.config.home-manager.users.stefan.programs.nixvim.opts.langmap;
   desktopGreeterPackage = self.nixosConfigurations.desktop.config.programs.dms-greeter.package;
   desktopAccountsServiceAvatarScript = pkgs.writeText "desktop-accounts-service-avatar-script" self.nixosConfigurations.desktop.config.system.activationScripts.accountsServiceAvatar.text;
+  desktopMimeDefaultApplicationsFile = pkgs.writeText "desktop-mime-default-applications.json" (builtins.toJSON self.nixosConfigurations.desktop.config.home-manager.users.stefan.xdg.mimeApps.defaultApplications);
   desktopHyprlandPackage = self.nixosConfigurations.desktop.config.home-manager.users.stefan.wayland.windowManager.hyprland.finalPackage;
   desktopHyprlandLuaFile = pkgs.writeText "desktop-hyprland.lua" self.nixosConfigurations.desktop.config.home-manager.users.stefan.xdg.configFile."hypr/hyprland.lua".text;
   laptopHyprlandLuaFile = pkgs.writeText "laptop-hyprland.lua" self.nixosConfigurations.laptop.config.home-manager.users.stefan.xdg.configFile."hypr/hyprland.lua".text;
@@ -114,6 +115,7 @@
     "${desktopHome}/bin/skwd-we-capture-still"
     "${desktopSpotifyLauncherPackage}/bin/spotify"
     "${desktopHome}/bin/spotify_player"
+    "${desktopHome}/bin/torrent"
     "${desktopHome}/bin/transmission-port-sync"
     "${desktopHome}/bin/update-usb"
     "${desktopHome}/bin/zellij-sessionizer"

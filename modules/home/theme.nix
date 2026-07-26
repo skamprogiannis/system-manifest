@@ -153,10 +153,6 @@ in {
       name = "ikhal";
       noDisplay = true;
     };
-    tremc = {
-      name = "tremc";
-      noDisplay = true;
-    };
     # Hide individual Zathura plugin desktop entries — only the main one should appear
     "org.pwmt.zathura-djvu" = {
       name = "Zathura";

@@ -14,7 +14,7 @@ Managed via **Nix Flakes** and **Home Manager**.
 - **Media & Productivity:**
   - **Spotify GUI:** The authenticated-stable Spotify payload is rebuilt against the current Nixpkgs runtime, wrapped with Spicetify and the Hazy translucent theme, and launched through one adaptive command that caches a per-host `--disable-gpu` fallback only after an exact Chromium GPU failure.
   - **Spotify Player:** Terminal-based Spotify client (`spotify_player`) with streaming support. The wrapper authenticates interactively before bootstrapping the background daemon so the login callback port is not stolen by a headless service on fresh setups, it does one safe re-auth pass when Spotify later rejects a cached refresh token, and it can read a personal Spotify app client ID from `~/.config/spotify-player/client_id` so Web API auth does not depend on a shared client ID when Spotify rate-limits it.
-  - **Transmission:** BitTorrent daemon with `tremc` TUI frontend.
+  - **Transmission:** Local BitTorrent daemon with a browser-app Web UI and a keyboard-friendly `torrent` helper.
   - **Mailspring:** Email client; credentials stored via GNOME Keyring (runs standalone, no GNOME shell required).
   - **Obsidian:** Note-taking application with Home Manager plugin management.
   - **PearPass:** Declarative wrapper for the PearPass P2P password manager AppImage.
@@ -77,6 +77,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 | `hypr-quit-active` | Force-quits the active app process when a client minimizes to tray instead of exiting |
 | `gsr-record` | Emergency stop helper for active GPU Screen Recorder captures; `stop` finalizes recordings and clears stale runtime state |
 | `skwd-we-capture-still` | Captures a Wallpaper Engine still image into `~/.cache/skwd-wall/wallpaper/we-captures/`, with `--current-live` for a faithful live-screen fallback |
+| `torrent` | Manages the local Transmission daemon with readable `gui`, `list`, `add`, `start`, `stop`, `remove`, and guarded `delete --yes` commands |
 | `transmission-port-sync` | Syncs Transmission's configured peer port (for example after a VPN-forwarded port change) |
 | `codex-state-sync` | Syncs resumable Codex state between desktop and USB (`to-usb` / `from-usb`) while leaving auth/config/cache local |
 | `nixos-usb-host-scratch-status` | Shows encrypted host-scratch mounts plus the last checkpoint/shutdown sync result |

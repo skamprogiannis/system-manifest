@@ -8,6 +8,7 @@
     desktopGreeterPackage
     desktopHome
     desktopHyprlandPackage
+    desktopMimeDefaultApplicationsFile
     laptopDmsOutputsFile
     pkgs
     usbDmsOutputsFile
@@ -49,6 +50,10 @@ in {
       assert_file_not_contains ${desktopHome}/bin/brave '--test-type'
       assert_file_contains ${desktopHome}/bin/brave '--user-data-dir=/home/stefan/.config/BraveSoftware/Brave-Browser'
       assert_file_contains ${desktopHome}/share/applications/com.brave.Browser.desktop 'Exec=brave %U'
+      assert_file_contains ${desktopHome}/share/applications/transmission.desktop 'Exec=torrent gui'
+      assert_file_contains ${desktopHome}/share/applications/torrent-add.desktop 'Exec=torrent add %U'
+      assert_file_contains ${desktopMimeDefaultApplicationsFile} '"x-scheme-handler/magnet":["torrent-add.desktop"]'
+      assert_file_contains ${desktopMimeDefaultApplicationsFile} '"application/x-bittorrent":["torrent-add.desktop"]'
       test -x ${desktopGreeterPackage}/bin/dms-greeter
       assert_file_not_contains ${desktopDmsPackage}/share/quickshell/dms/Modals/DankLauncherV2/DankLauncherV2ModalStandalone.qml 'sourceRect.antialiasing'
       assert_file_not_contains ${desktopDmsPackage}/share/quickshell/dms/Modals/DankLauncherV2/DankLauncherV2ModalStandalone.qml 'sourceRect.smooth'

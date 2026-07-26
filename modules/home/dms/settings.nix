@@ -302,11 +302,6 @@ in {
         type = "exact";
       }
       {
-        pattern = "com.transmissionbt.transmission";
-        replacement = "transmission-gtk";
-        type = "contains";
-      }
-      {
         pattern = "^steam_app_(\\d+)$";
         replacement = "steam_icon_$1";
         type = "regex";

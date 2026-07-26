@@ -1,5 +1,129 @@
 {pkgs, ...}: {
   home.packages = [
+    (pkgs.writeShellScriptBin "torrent" ''
+      set -euo pipefail
+
+      endpoint="127.0.0.1:9091"
+      web_ui="http://127.0.0.1:9091/transmission/web/"
+
+      usage() {
+        printf '%s\n' 'Usage: torrent <command> [arguments]'
+        printf '\n'
+        printf '%s\n' \
+          'Commands:' \
+          '  gui                       Open the Transmission Web UI.' \
+          '  list                      List torrents.' \
+          '  info <id|all> [...]       Show torrent details.' \
+          '  add <path|magnet> [...]   Add one or more torrents.' \
+          '  start <id|all> [...]      Start torrents.' \
+          '  stop <id|all> [...]       Stop torrents.' \
+          '  remove <id|all> [...]     Remove torrents but keep downloaded data.' \
+          '  delete --yes <id|all>     Remove torrents and delete downloaded data.'
+      }
+
+      ensure_daemon() {
+        systemctl --user start transmission-daemon.service
+      }
+
+      remote() {
+        transmission-remote "$endpoint" "$@"
+      }
+
+      normalize_source() {
+        local source="$1"
+
+        case "$source" in
+          file://*)
+            ${pkgs.python3}/bin/python3 -c 'import sys; from urllib.parse import unquote, urlparse; uri = urlparse(sys.argv[1]); (uri.netloc in ("", "localhost") and uri.path) or sys.exit("torrent: file URI must refer to a local path"); print(unquote(uri.path))' "$source"
+            ;;
+          *)
+            printf '%s\n' "$source"
+            ;;
+        esac
+      }
+
+      torrent_selector() {
+        if [ "$#" -eq 0 ]; then
+          echo "torrent: provide one or more torrent IDs, or all." >&2
+          exit 1
+        fi
+
+        local selector
+        selector=$(IFS=,; printf '%s' "$*")
+        printf '%s\n' "$selector"
+      }
+
+      command="''${1:-}"
+      if [ "$#" -gt 0 ]; then
+        shift
+      fi
+
+      case "$command" in
+        gui)
+          if [ "$#" -ne 0 ]; then
+            usage >&2
+            exit 1
+          fi
+          ensure_daemon
+          exec brave "--app=$web_ui"
+          ;;
+        list)
+          if [ "$#" -ne 0 ]; then
+            usage >&2
+            exit 1
+          fi
+          ensure_daemon
+          remote --list
+          ;;
+        info)
+          ensure_daemon
+          remote --torrent "$(torrent_selector "$@")" --info
+          ;;
+        add)
+          if [ "$#" -eq 0 ]; then
+            echo "torrent: provide a torrent file or magnet link to add." >&2
+            exit 1
+          fi
+          ensure_daemon
+          for source in "$@"; do
+            remote --add "$(normalize_source "$source")"
+          done
+          ;;
+        start)
+          ensure_daemon
+          remote --torrent "$(torrent_selector "$@")" --start
+          ;;
+        stop)
+          ensure_daemon
+          remote --torrent "$(torrent_selector "$@")" --stop
+          ;;
+        remove)
+          ensure_daemon
+          remote --torrent "$(torrent_selector "$@")" --remove
+          ;;
+        delete)
+          if [ "''${1:-}" != "--yes" ]; then
+            echo "Refusing to delete torrent data without --yes." >&2
+            exit 1
+          fi
+          shift
+          ensure_daemon
+          remote --torrent "$(torrent_selector "$@")" --remove-and-delete
+          ;;
+        help|--help|-h)
+          usage
+          ;;
+        "")
+          usage >&2
+          exit 1
+          ;;
+        *)
+          echo "torrent: unknown command: $command" >&2
+          usage >&2
+          exit 1
+          ;;
+      esac
+    '')
     (pkgs.writeShellScriptBin "transmission-port-sync" ''
       set -euo pipefail
 

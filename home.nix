@@ -84,7 +84,6 @@
     stylelint
     transmission_4
     tree
-    tremc
     typescript-language-server
     unzip
     uv
@@ -156,7 +155,6 @@
   home.shellAliases = {
     cat = "bat";
     pearpass-dev = "cd ~/repositories/pearpass-app-desktop && npx pear run -d .";
-    tremc = "systemd-inhibit --why='Downloading torrents' --who='tremc' --what='sleep:idle' tremc";
   };
 
   programs.bat = {
@@ -328,6 +326,22 @@
     noDisplay = true;
   };
 
+  xdg.desktopEntries.transmission = {
+    name = "Transmission";
+    comment = "Manage local Transmission downloads";
+    genericName = "BitTorrent Client";
+    exec = "torrent gui";
+    icon = "transmission";
+    categories = ["Network" "FileTransfer" "P2P"];
+  };
+
+  xdg.desktopEntries."torrent-add" = {
+    name = "Add Torrent";
+    exec = "torrent add %U";
+    noDisplay = true;
+    mimeType = ["x-scheme-handler/magnet" "application/x-bittorrent"];
+  };
+
   xdg.desktopEntries."Mailspring" = {
     name = "Mailspring";
     comment = "The best email app for people and teams at work";
@@ -341,12 +355,12 @@
   xdg.mimeApps = {
     enable = true;
     associations.added = {
-      "x-scheme-handler/magnet" = ["tremc.desktop"];
-      "application/x-bittorrent" = ["tremc.desktop"];
+      "x-scheme-handler/magnet" = ["torrent-add.desktop"];
+      "application/x-bittorrent" = ["torrent-add.desktop"];
     };
     defaultApplications = {
-      "x-scheme-handler/magnet" = ["tremc.desktop"];
-      "application/x-bittorrent" = ["tremc.desktop"];
+      "x-scheme-handler/magnet" = ["torrent-add.desktop"];
+      "application/x-bittorrent" = ["torrent-add.desktop"];
       "image/png" = ["imv.desktop"];
       "image/jpeg" = ["imv.desktop"];
       "image/gif" = ["imv.desktop"];

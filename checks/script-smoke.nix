@@ -841,6 +841,60 @@ in {
             run_expect 1 transmission-port-sync-invalid-port "$desktop_home/bin/transmission-port-sync" 0
             assert_log_contains "Error: port must be an integer between 1 and 65535."
 
+            torrent_test="$TMPDIR/torrent"
+            mkdir -p "$torrent_test/bin"
+            cat > "$torrent_test/bin/systemctl" <<'EOF'
+            #!${pkgs.bash}/bin/bash
+            set -euo pipefail
+            printf 'systemctl'
+            printf ' <%s>' "$@"
+            printf '\n' >> "$TORRENT_TEST_LOG"
+            EOF
+            chmod +x "$torrent_test/bin/systemctl"
+            cat > "$torrent_test/bin/transmission-remote" <<'EOF'
+            #!${pkgs.bash}/bin/bash
+            set -euo pipefail
+            printf 'remote'
+            printf ' <%s>' "$@"
+            printf '\n' >> "$TORRENT_TEST_LOG"
+            EOF
+            chmod +x "$torrent_test/bin/transmission-remote"
+            cat > "$torrent_test/bin/brave" <<'EOF'
+            #!${pkgs.bash}/bin/bash
+            set -euo pipefail
+            printf 'brave'
+            printf ' <%s>' "$@"
+            printf '\n' >> "$TORRENT_TEST_LOG"
+            EOF
+            chmod +x "$torrent_test/bin/brave"
+            : > "$torrent_test/commands.log"
+
+            run_expect 1 torrent-missing-command "$desktop_home/bin/torrent"
+            assert_log_contains "Usage: torrent <command>"
+
+            run_expect 0 torrent-list \
+              env PATH="$torrent_test/bin:$PATH" TORRENT_TEST_LOG="$torrent_test/commands.log" \
+              "$desktop_home/bin/torrent" list
+            assert_file_contains "$torrent_test/commands.log" "systemctl <--user> <start> <transmission-daemon.service>" "Expected torrent list to start the Transmission daemon."
+            assert_file_contains "$torrent_test/commands.log" "remote <127.0.0.1:9091> <--list>" "Expected torrent list to target the local Transmission RPC endpoint."
+
+            : > "$torrent_test/commands.log"
+            run_expect 0 torrent-add-file-uri \
+              env PATH="$torrent_test/bin:$PATH" TORRENT_TEST_LOG="$torrent_test/commands.log" \
+              "$desktop_home/bin/torrent" add "file:///tmp/Torrent%20Name.torrent"
+            assert_file_contains "$torrent_test/commands.log" "remote <127.0.0.1:9091> <--add> </tmp/Torrent Name.torrent>" "Expected torrent add to decode local file URIs from desktop handlers."
+
+            run_expect 1 torrent-delete-without-confirmation \
+              env PATH="$torrent_test/bin:$PATH" TORRENT_TEST_LOG="$torrent_test/commands.log" \
+              "$desktop_home/bin/torrent" delete 1
+            assert_log_contains "Refusing to delete torrent data without --yes."
+
+            : > "$torrent_test/commands.log"
+            run_expect 0 torrent-gui \
+              env PATH="$torrent_test/bin:$PATH" TORRENT_TEST_LOG="$torrent_test/commands.log" \
+              "$desktop_home/bin/torrent" gui
+            assert_file_contains "$torrent_test/commands.log" "brave <--app=http://127.0.0.1:9091/transmission/web/>" "Expected torrent gui to open Transmission's local web interface as a Brave app."
+
             if ! ${pkgs.gnugrep}/bin/grep -Fq 'command="${pkgs.bashInteractive}/bin/bash"' ${desktopZellijDevLayoutFile}; then
               echo "Expected zellij dev layout to launch Codex through a shell." >&2
               ${pkgs.gnused}/bin/sed -n '/tab name="codex"/,/}/p' ${desktopZellijDevLayoutFile} >&2
