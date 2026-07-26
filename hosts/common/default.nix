@@ -143,18 +143,6 @@
   };
 
   # Allow unfree packages
-  nixpkgs.overlays = [
-    (_final: prev: {
-      catppuccin-gtk = prev.catppuccin-gtk.overrideAttrs (old: {
-        postPatch =
-          (old.postPatch or "")
-          + ''
-            substituteInPlace sources/build/args.py \
-              --replace-fail "        type=bool," ""
-          '';
-      });
-    })
-  ];
   nixpkgs.config.allowUnfree = true;
   nixpkgs.config.permittedInsecurePackages = [
     "libsoup-2.74.3"
