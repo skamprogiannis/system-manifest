@@ -30,6 +30,11 @@
       "ghostty.cachix.org-1:QB389yTa6gTyneehvqG58y0WnHjQOqgnA+wBnpWWxns="
     ];
   };
+  nix.gc = {
+    automatic = true;
+    dates = "weekly";
+    options = "--delete-older-than 10d";
+  };
 
   # Use LTS kernel for better stability
   boot.kernelPackages = pkgs.linuxPackages;
@@ -125,8 +130,18 @@
   # Enable zRAM
   zramSwap.enable = true;
 
-  # Enable Docker
-  virtualisation.docker.enable = true;
+  # Enable Docker and prune old, unused build data without touching volumes
+  virtualisation.docker = {
+    enable = true;
+    autoPrune = {
+      enable = true;
+      dates = "weekly";
+      flags = [
+        "--all"
+        "--filter=until=240h"
+      ];
+    };
+  };
 
   # Prevent annoying 90s hang on shutdown if a service fails to stop
   systemd.settings.Manager.DefaultTimeoutStopSec = "10s";
