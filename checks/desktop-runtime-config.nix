@@ -49,10 +49,7 @@ in {
       assert_file_not_contains ${desktopHome}/bin/brave '--test-type'
       assert_file_contains ${desktopHome}/bin/brave '--user-data-dir=/home/stefan/.config/BraveSoftware/Brave-Browser'
       assert_file_contains ${desktopHome}/share/applications/com.brave.Browser.desktop 'Exec=brave %U'
-      assert_file_not_contains ${desktopGreeterPackage}/share/quickshell/dms/Modules/Greetd/assets/dms-greeter '$CACHE_DIR/hyprland.log'
-      assert_file_contains ${desktopGreeterPackage}/share/quickshell/dms/Modules/Greetd/assets/dms-greeter "neither 'start-hyprland' nor 'Hyprland' was found in PATH"
-      assert_file_contains ${desktopGreeterPackage}/share/quickshell/dms/Modules/Greetd/assets/dms-greeter 'exec_compositor "hyprland" start-hyprland -- --config "$COMPOSITOR_CONFIG"'
-      assert_file_contains ${desktopGreeterPackage}/share/quickshell/dms/Modules/Greetd/assets/dms-greeter 'exec_compositor "hyprland" Hyprland -c "$COMPOSITOR_CONFIG"'
+      test -x ${desktopGreeterPackage}/bin/dms-greeter
       assert_file_not_contains ${desktopDmsPackage}/share/quickshell/dms/Modals/DankLauncherV2/DankLauncherV2ModalStandalone.qml 'sourceRect.antialiasing'
       assert_file_not_contains ${desktopDmsPackage}/share/quickshell/dms/Modals/DankLauncherV2/DankLauncherV2ModalStandalone.qml 'sourceRect.smooth'
       assert_file_contains ${desktopAccountsServiceAvatarScript} '/var/lib/AccountsService/icons/stefan'

@@ -95,7 +95,7 @@
   codexConfigPython = pkgs.python3.withPackages (ps: [ps.tomli-w]);
   desktopNeovimInitFile = self.nixosConfigurations.desktop.config.home-manager.users.stefan.xdg.configFile."nvim/init.lua".source;
   neovimLangmapFile = builtins.toFile "neovim-langmap" self.nixosConfigurations.desktop.config.home-manager.users.stefan.programs.nixvim.opts.langmap;
-  desktopGreeterPackage = self.nixosConfigurations.desktop.config.programs.dank-material-shell.greeter.package;
+  desktopGreeterPackage = self.nixosConfigurations.desktop.config.programs.dms-greeter.package;
   desktopAccountsServiceAvatarScript = pkgs.writeText "desktop-accounts-service-avatar-script" self.nixosConfigurations.desktop.config.system.activationScripts.accountsServiceAvatar.text;
   desktopHyprlandPackage = self.nixosConfigurations.desktop.config.home-manager.users.stefan.wayland.windowManager.hyprland.finalPackage;
   desktopHyprlandLuaFile = pkgs.writeText "desktop-hyprland.lua" self.nixosConfigurations.desktop.config.home-manager.users.stefan.xdg.configFile."hypr/hyprland.lua".text;

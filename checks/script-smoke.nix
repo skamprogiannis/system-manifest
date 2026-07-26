@@ -128,7 +128,11 @@ in {
             assert_not_file_contains "$usb_host_scratch_stop" "umount -l" "Expected USB host scratch stop to avoid lazy-detaching live bind mounts."
             assert_file_contains "$usb_host_scratch_sync" '"$FLOCK" -x 9' "Expected USB host scratch synchronization to serialize checkpoints."
             assert_file_contains "$usb_host_scratch_sync" "Docker state and repositories remain temporary" "Expected USB host scratch synchronization to disclose excluded ephemeral data."
-            assert_file_contains "$usb_host_scratch_checkpoint_exec" " checkpoint" "Expected the manual checkpoint unit to use the shared synchronization helper."
+            if [ "$usb_host_scratch_checkpoint_exec" != "$usb_host_scratch_sync checkpoint" ]; then
+              echo "Expected the manual checkpoint unit to use the shared synchronization helper." >&2
+              printf '  %s\n' "$usb_host_scratch_checkpoint_exec" >&2
+              exit 1
+            fi
             assert_file_contains "$usb_host_scratch_shutdown_cleanup" 'close "$MAPPER_NAME"' "Expected shutdown cleanup to close the host scratch mapper."
             assert_file_contains "$usb_host_scratch_shutdown_cleanup" ".nixos-usb/session" "Expected shutdown cleanup to remove host-side encrypted scratch sessions."
             assert_file_contains "$usb_host_scratch_shutdown_cleanup" "unmount_tree" "Expected shutdown cleanup to unmount scratch mount trees explicitly."

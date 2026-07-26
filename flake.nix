@@ -59,6 +59,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    dank-greeter = {
+      url = "github:AvengeMedia/dank-greeter";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     hyprland = {
       url = "github:hyprwm/Hyprland";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -83,7 +88,7 @@
 
     desktopModules = [
       ./hosts/desktop/default.nix
-      inputs.dms.nixosModules.greeter
+      inputs.dank-greeter.nixosModules.default
       home-manager.nixosModules.home-manager
       {
         home-manager.useGlobalPkgs = true;
@@ -140,7 +145,7 @@
         specialArgs = {inherit inputs;};
         modules = [
           ./hosts/usb/default.nix
-          inputs.dms.nixosModules.greeter
+          inputs.dank-greeter.nixosModules.default
           home-manager.nixosModules.home-manager
           {
             home-manager.useGlobalPkgs = true;
@@ -170,7 +175,7 @@
         specialArgs = {inherit inputs;};
         modules = [
           ./hosts/laptop/default.nix
-          inputs.dms.nixosModules.greeter
+          inputs.dank-greeter.nixosModules.default
           home-manager.nixosModules.home-manager
           {
             home-manager.useGlobalPkgs = true;

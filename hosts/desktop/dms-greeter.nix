@@ -2,7 +2,6 @@
   pkgs,
   lib,
   config,
-  inputs,
   ...
 }: let
   greeterUser = "stefan";
@@ -15,104 +14,6 @@
   greeterUsersCacheDir = "${greeterLogDir}/users";
   avatarSourceWebp = ./assets/stefan-avatar.webp;
 
-  portalServicePatchScript = pkgs.writeText "patch-greeter-portal-service.py" ''
-    import re
-    import sys
-    from pathlib import Path
-
-    portal_service = Path(sys.argv[1])
-    if not portal_service.exists():
-        sys.exit(0)
-
-    text = portal_service.read_text(encoding="utf-8")
-    signature_match = re.search(r"function\s+getGreeterUserProfileImage\s*\([^)]*\)\s*\{", text)
-    if signature_match is None:
-        raise RuntimeError("PortalService lookup function signature not found")
-
-    function_start = text.rfind("\n", 0, signature_match.start()) + 1
-    opening_brace = text.find("{", signature_match.start())
-
-    depth = 0
-    function_end = None
-    for index in range(opening_brace, len(text)):
-        character = text[index]
-        if character == "{":
-            depth += 1
-        elif character == "}":
-            depth -= 1
-            if depth == 0:
-                function_end = index + 1
-                break
-
-    if function_end is None:
-        raise RuntimeError("PortalService lookup function closing brace not found")
-
-    if function_end < len(text) and text[function_end] == "\n":
-        function_end += 1
-
-    new_lookup = """    function getGreeterUserProfileImage(username) {
-        if (!username) {
-            profileImage = "";
-            return;
-        }
-
-        const safeUsername = username.replace(/[^a-zA-Z0-9._-]/g, "");
-        if (!safeUsername) {
-            profileImage = "";
-            return;
-        }
-
-        const lookupScript = [
-            "uid=$(id -u " + safeUsername + " 2>/dev/null)",
-            "if [ -z \\"$uid\\" ]; then",
-            "  echo \\"\\"",
-            "  exit 0",
-            "fi",
-            "",
-            "icon_path=$(dbus-send --system --print-reply --dest=org.freedesktop.Accounts /org/freedesktop/Accounts/User$uid org.freedesktop.DBus.Properties.Get string:org.freedesktop.Accounts.User string:IconFile 2>/dev/null | sed -n 's/.*string \\"\\\\(.*\\\\)\\"/\\\\1/p' | sed -n '1p')",
-            "",
-            "if [ -n \\"$icon_path\\" ] && [ \\"$icon_path\\" != \\"/var/lib/AccountsService/icons/\\" ]; then",
-            "  echo \\"$icon_path\\"",
-            "elif [ -r \\"/var/lib/AccountsService/icons/" + safeUsername + ".png\\" ]; then",
-            "  echo \\"/var/lib/AccountsService/icons/" + safeUsername + ".png\\"",
-            "elif [ -r \\"/var/lib/AccountsService/icons/" + safeUsername + ".jpg\\" ]; then",
-            "  echo \\"/var/lib/AccountsService/icons/" + safeUsername + ".jpg\\"",
-            "elif [ -r \\"/var/lib/AccountsService/icons/" + safeUsername + ".jpeg\\" ]; then",
-            "  echo \\"/var/lib/AccountsService/icons/" + safeUsername + ".jpeg\\"",
-            "elif [ -r \\"/var/lib/AccountsService/icons/" + safeUsername + ".webp\\" ]; then",
-            "  echo \\"/var/lib/AccountsService/icons/" + safeUsername + ".webp\\"",
-            "else",
-            "  echo \\"\\"",
-            "fi"
-        ].join("\\n");
-
-        console.info("Greeter avatar lookup for user:", safeUsername);
-        userProfileCheckProcess.command = ["bash", "-c", lookupScript];
-        userProfileCheckProcess.running = true;
-    }"""
-
-    portal_service.write_text(
-        text[:function_start] + new_lookup + "\n" + text[function_end:],
-        encoding="utf-8",
-    )
-  '';
-
-  greeterBasePackage = inputs.dms.packages.${pkgs.stdenv.hostPlatform.system}.dms-shell;
-
-  greeterPatchedPackage = greeterBasePackage.overrideAttrs (old: {
-    postInstall =
-      (old.postInstall or "")
-      + ''
-        target_qml="$out/share/quickshell/dms/Services/PortalService.qml"
-        if [ -f "$target_qml" ]; then
-          chmod u+w "$target_qml"
-          ${pkgs.python3}/bin/python3 ${portalServicePatchScript} "$target_qml"
-          chmod a-w "$target_qml"
-        fi
-
-      '';
-  });
-
   avatarPng = pkgs.runCommand "${greeterUser}-avatar-png" {nativeBuildInputs = [pkgs.ffmpeg];} ''
     mkdir -p "$out"
     ${pkgs.ffmpeg}/bin/ffmpeg -hide_banner -loglevel error -y \
@@ -123,9 +24,8 @@ in {
   # DMS greeter (greetd + QuickShell) replaces GDM.
   services.displayManager.gdm.enable = false;
 
-  programs.dank-material-shell.greeter = {
+  programs.dms-greeter = {
     enable = true;
-    package = greeterPatchedPackage;
     compositor = {
       name = "hyprland";
       customConfig = ''
