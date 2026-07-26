@@ -7,11 +7,12 @@ package.overrideAttrs (old: {
   postInstall =
     (old.postInstall or "")
     + ''
-          ${pkgs.python3}/bin/python3 - <<PY
+          ${pkgs.python3}/bin/python3 - <<'PY'
       from pathlib import Path
+      import os
       import stat
 
-      root = Path("$out/share/quickshell/dms")
+      root = Path(os.environ["out"]) / "share/quickshell/dms"
       ${pythonPrelude}
       replacements = {
       ${replacementsPython}

@@ -305,7 +305,7 @@ in {
     ${calendarOverviewCard}
     ${appSearchService}
     ${launcherSourceClassifier}
-    root / "Widgets/CachingImage.qml": [
+    root / "DankCommon/Widgets/CachingImage.qml": [
         (
             "import QtQuick\nimport qs.Common",
             "import QtQuick\nimport Quickshell\nimport qs.Common",
@@ -315,8 +315,8 @@ in {
             '                if (root._fromCache || root.isRemoteUrl || !root.cachePath || Quickshell.env("QT_QUICK_BACKEND") === "software")',
         ),
         (
-            "        // Cache-first; a miss errors and falls back to encodedImagePath\n        _fromCache = true;\n        staticImg.source = cachePath;",
-            "        if (Quickshell.env(\"QT_QUICK_BACKEND\") === \"software\") {\n            _fromCache = false;\n            staticImg.source = encodedImagePath;\n            return;\n        }\n        // Cache-first; a miss errors and falls back to encodedImagePath\n        _fromCache = true;\n        staticImg.source = cachePath;",
+            "        // Cache-first; a miss errors and falls back to encodedImagePath\n        _fromCache = true;\n        staticImg.source = `''${Paths.stringify(Paths.imagecache)}/''${hash}@''${maxCacheSize}x''${maxCacheSize}.png`;",
+            "        if (Quickshell.env(\"QT_QUICK_BACKEND\") === \"software\") {\n            _fromCache = false;\n            staticImg.source = encoded;\n            return;\n        }\n        // Cache-first; a miss errors and falls back to encodedImagePath\n        _fromCache = true;\n        staticImg.source = `''${Paths.stringify(Paths.imagecache)}/''${hash}@''${maxCacheSize}x''${maxCacheSize}.png`;",
         ),
     ],
     root / "Modules/Settings/WallpaperTab.qml": [
