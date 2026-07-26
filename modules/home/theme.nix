@@ -49,8 +49,8 @@ in {
       name = "Papirus-Dark";
       package = pkgs.papirus-icon-theme;
     };
-    # GTK 3: Catppuccin Mocha
-    gtk3.extraConfig.gtk-theme-name = "catppuccin-mocha-blue-standard";
+    # GTK 3: static Catppuccin palette shared with other integrations.
+    gtk3.extraConfig.gtk-theme-name = "catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}-standard";
     gtk4.theme = null;
     # GTK 4: matugen dynamic colors + coherent translucent popovers/menus.
     # Paint the shell itself so GTK/WebKit apps do not get a transparent wrapper
@@ -80,7 +80,10 @@ in {
 
   # Catppuccin GTK theme (GTK 3 only — GTK 4 uses matugen/dank-colors.css) + icon packs
   home.packages = with pkgs; [
-    (catppuccin-gtk.override {variant = "mocha";})
+    (catppuccin-gtk.override {
+      variant = config.catppuccin.flavor;
+      accents = [config.catppuccin.accent];
+    })
     dracula-icon-theme
     hicolor-icon-theme
   ];
@@ -109,7 +112,7 @@ in {
     # System-wide Interface Settings (Fonts)
     "org/gnome/desktop/interface" = {
       color-scheme = "prefer-dark";
-      gtk-theme = "catppuccin-mocha-blue-standard";
+      gtk-theme = "catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}-standard";
       icon-theme = "Papirus-Dark";
       font-name = "Noto Sans 9";
       document-font-name = "Noto Sans 9";

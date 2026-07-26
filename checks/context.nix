@@ -100,6 +100,9 @@
   desktopMimeDefaultApplicationsFile = pkgs.writeText "desktop-mime-default-applications.json" (builtins.toJSON self.nixosConfigurations.desktop.config.home-manager.users.stefan.xdg.mimeApps.defaultApplications);
   desktopHyprlandPackage = self.nixosConfigurations.desktop.config.home-manager.users.stefan.wayland.windowManager.hyprland.finalPackage;
   desktopHyprlandLuaFile = pkgs.writeText "desktop-hyprland.lua" self.nixosConfigurations.desktop.config.home-manager.users.stefan.xdg.configFile."hypr/hyprland.lua".text;
+  desktopBraveExtensionsFile = pkgs.writeText "desktop-brave-extensions.json" (
+    builtins.toJSON self.nixosConfigurations.desktop.config.home-manager.users.stefan.programs.brave.extensions
+  );
   laptopHyprlandLuaFile = pkgs.writeText "laptop-hyprland.lua" self.nixosConfigurations.laptop.config.home-manager.users.stefan.xdg.configFile."hypr/hyprland.lua".text;
   usbHyprlandLuaFile = pkgs.writeText "usb-hyprland.lua" self.nixosConfigurations.usb.config.home-manager.users.stefan.xdg.configFile."hypr/hyprland.lua".text;
   desktopGhosttySettingsFile = pkgs.writeText "desktop-ghostty-settings.json" (builtins.toJSON self.nixosConfigurations.desktop.config.home-manager.users.stefan.programs.ghostty.settings);

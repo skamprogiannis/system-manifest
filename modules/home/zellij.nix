@@ -34,7 +34,6 @@ in {
       pane_frames = false;
       post_command_discovery_hook = "${zellijPostCommandDiscoveryHook}";
       simplified_ui = true;
-      theme = "catppuccin-mocha";
     };
     extraConfig = ''
       keybinds {

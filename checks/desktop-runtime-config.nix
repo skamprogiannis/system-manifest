@@ -2,6 +2,7 @@
   inherit
     (ctx)
     desktopAccountsServiceAvatarScript
+    desktopBraveExtensionsFile
     desktopDmsPackage
     desktopDmsLegacyProfileFile
     desktopDmsOutputsFile
@@ -49,6 +50,7 @@ in {
       assert_file_contains ${desktopHyprlandPackage}/bin/start-hyprland '/bin/Hyprland" "$@"'
       assert_file_not_contains ${desktopHome}/bin/brave '--test-type'
       assert_file_contains ${desktopHome}/bin/brave '--user-data-dir=/home/stefan/.config/BraveSoftware/Brave-Browser'
+      assert_file_contains ${desktopBraveExtensionsFile} 'bkkmolkhemgaeaeggcmfbghljjjoofoh'
       assert_file_contains ${desktopHome}/share/applications/com.brave.Browser.desktop 'Exec=brave %U'
       assert_file_contains ${desktopHome}/share/applications/transmission.desktop 'Exec=torrent gui'
       assert_file_contains ${desktopHome}/share/applications/torrent-add.desktop 'Exec=torrent add %U'

@@ -8,7 +8,9 @@
   home.homeDirectory = "/home/stefan";
 
   imports = [
+    inputs.catppuccin.homeModules.catppuccin
     inputs.spicetify-nix.homeManagerModules.spicetify
+    ./modules/home/catppuccin.nix
     ./modules/home/git.nix
     ./modules/home/ghostty.nix
     ./modules/home/neovim.nix
@@ -159,10 +161,7 @@
 
   programs.bat = {
     enable = true;
-    config = {
-      theme = "Catppuccin Mocha";
-      italic-text = "always";
-    };
+    config.italic-text = "always";
   };
 
   programs.lazygit = {

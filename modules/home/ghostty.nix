@@ -10,7 +10,6 @@ in {
     package = inputs.ghostty.packages.${pkgs.stdenv.hostPlatform.system}.ghostty;
     enableBashIntegration = false;
     settings = {
-      theme = "Catppuccin Mocha";
       background-opacity = glass.ghostty.backgroundOpacity;
       background-opacity-cells = true;
       background-blur = glass.ghostty.backgroundBlur;
