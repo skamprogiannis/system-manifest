@@ -131,6 +131,12 @@ in {
       vim.cmd("cquit")
     end
 
+    local diagnostic_config = vim.diagnostic.config()
+    if type(diagnostic_config.float) ~= "table" or diagnostic_config.float.focusable ~= true then
+      io.stderr:write("Neovim diagnostic floats must be focusable\n")
+      vim.cmd("cquit")
+    end
+
     local parsed = require("pretty_hover.parser").parse({ "@brief Hover docs keep readable prose." })
     if type(parsed.text) ~= "table" or #parsed.text == 0 then
       io.stderr:write("pretty_hover parser returned no hover text\n")
