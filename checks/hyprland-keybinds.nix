@@ -1,6 +1,7 @@
 {ctx}: let
   inherit
     (ctx)
+    desktopGreeterHyprlandLuaFile
     desktopHyprlandLuaFile
     desktopHyprlandPackage
     laptopHyprlandLuaFile
@@ -176,7 +177,20 @@ in {
       export HOME="$TMPDIR/home"
       export XDG_RUNTIME_DIR="$TMPDIR/runtime"
       mkdir -p "$HOME" "$XDG_RUNTIME_DIR"
-      ${desktopHyprlandPackage}/bin/Hyprland --config ${desktopHyprlandLuaFile} --verify-config
+
+      verify_hyprland_lua() {
+        local config_file="$1"
+        local verify_output
+        verify_output="$(${desktopHyprlandPackage}/bin/Hyprland --config "$config_file" --verify-config 2>&1)"
+        if ! grep -Fq 'config ok' <<< "$verify_output"; then
+          echo "Generated Hyprland Lua config failed verification: $config_file" >&2
+          echo "$verify_output" >&2
+          exit 1
+        fi
+      }
+
+      verify_hyprland_lua ${desktopHyprlandLuaFile}
+      verify_hyprland_lua ${desktopGreeterHyprlandLuaFile}
 
       touch "$out"
     '';

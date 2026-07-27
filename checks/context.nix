@@ -96,6 +96,12 @@
   desktopNeovimInitFile = self.nixosConfigurations.desktop.config.home-manager.users.stefan.xdg.configFile."nvim/init.lua".source;
   neovimLangmapFile = builtins.toFile "neovim-langmap" self.nixosConfigurations.desktop.config.home-manager.users.stefan.programs.nixvim.opts.langmap;
   desktopGreeterPackage = self.nixosConfigurations.desktop.config.programs.dms-greeter.package;
+  desktopGreeterHyprlandLuaFile = pkgs.writeText "desktop-greeter-hyprland.lua" ''
+    ${self.nixosConfigurations.desktop.config.programs.dms-greeter.compositor.customConfig}
+    hl.on("hyprland.start", function()
+      hl.exec_cmd("true")
+    end)
+  '';
   desktopAccountsServiceAvatarScript = pkgs.writeText "desktop-accounts-service-avatar-script" self.nixosConfigurations.desktop.config.system.activationScripts.accountsServiceAvatar.text;
   desktopMimeDefaultApplicationsFile = pkgs.writeText "desktop-mime-default-applications.json" (builtins.toJSON self.nixosConfigurations.desktop.config.home-manager.users.stefan.xdg.mimeApps.defaultApplications);
   desktopHyprlandPackage = self.nixosConfigurations.desktop.config.home-manager.users.stefan.wayland.windowManager.hyprland.finalPackage;

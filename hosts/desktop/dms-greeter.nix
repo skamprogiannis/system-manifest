@@ -29,9 +29,11 @@ in {
     compositor = {
       name = "hyprland";
       customConfig = ''
-        misc {
-          disable_hyprland_logo = true
-        }
+        hl.config({
+          misc = {
+            disable_hyprland_logo = true,
+          },
+        })
       '';
     };
     configHome = greeterHome;
