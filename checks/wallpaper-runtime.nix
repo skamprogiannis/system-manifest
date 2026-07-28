@@ -8,6 +8,8 @@
     desktopSkwdDmsSyncHook
     desktopSkwdPrepareStateActivationFile
     desktopTmpfilesRulesFile
+    desktopHostFingerprintExec
+    laptopHostFingerprintExec
     pkgs
     usbDmsPackage
     usbHostFingerprintBeforeFile
@@ -144,15 +146,23 @@ in {
             ${pkgs.bash}/bin/bash -n "$usb_skwd_wall"
 
             assert_executable "${usbHostFingerprintExec}" "USB host fingerprint generator"
+            assert_executable "${desktopHostFingerprintExec}" "desktop host fingerprint generator"
+            assert_executable "${laptopHostFingerprintExec}" "laptop host fingerprint generator"
             assert_contains "display-manager.service" "${usbHostFingerprintBeforeFile}" "USB host fingerprint ordering"
 
             fingerprint_test="$TMPDIR/host-fingerprint"
             fingerprint_dmi="$TMPDIR/product_uuid"
-            fingerprint_boot="$TMPDIR/boot_id"
+            fingerprint_product_serial="$TMPDIR/product_serial"
+            fingerprint_board_serial="$TMPDIR/board_serial"
+            fingerprint_chassis_serial="$TMPDIR/chassis_serial"
             printf '%s\n' '123e4567-e89b-12d3-a456-426614174000' > "$fingerprint_dmi"
-            printf '%s\n' '5b9c139d-17a5-4bca-b18d-1cfc24e87cb0' > "$fingerprint_boot"
+            printf '%s\n' 'PRODUCT-1234' > "$fingerprint_product_serial"
+            printf '%s\n' 'BOARD-5678' > "$fingerprint_board_serial"
+            printf '%s\n' 'CHASSIS-9012' > "$fingerprint_chassis_serial"
             SYSTEM_MANIFEST_DMI_UUID_FILE="$fingerprint_dmi" \
-              SYSTEM_MANIFEST_BOOT_ID_FILE="$fingerprint_boot" \
+              SYSTEM_MANIFEST_PRODUCT_SERIAL_FILE="$fingerprint_product_serial" \
+              SYSTEM_MANIFEST_BOARD_SERIAL_FILE="$fingerprint_board_serial" \
+              SYSTEM_MANIFEST_CHASSIS_SERIAL_FILE="$fingerprint_chassis_serial" \
               SYSTEM_MANIFEST_HOST_FINGERPRINT_FILE="$fingerprint_test" \
               "${usbHostFingerprintExec}"
             if [ "$(cat "$fingerprint_test")" != "dd2dc6c539f98758ce36c9cc6540f4de97413a1f71d98368d2e18c859d5fced4" ]; then
@@ -166,11 +176,29 @@ in {
             assert_not_contains "123e4567-e89b-12d3-a456-426614174000" "$fingerprint_test" "USB host fingerprint"
 
             SYSTEM_MANIFEST_DMI_UUID_FILE="$TMPDIR/missing-product-uuid" \
-              SYSTEM_MANIFEST_BOOT_ID_FILE="$fingerprint_boot" \
+              SYSTEM_MANIFEST_PRODUCT_SERIAL_FILE="$fingerprint_product_serial" \
+              SYSTEM_MANIFEST_BOARD_SERIAL_FILE="$fingerprint_board_serial" \
+              SYSTEM_MANIFEST_CHASSIS_SERIAL_FILE="$fingerprint_chassis_serial" \
               SYSTEM_MANIFEST_HOST_FINGERPRINT_FILE="$fingerprint_test" \
               "${usbHostFingerprintExec}"
-            if [ "$(cat "$fingerprint_test")" != "edb853c7e82d3443a9b34afb280dd2cf72d5a9014aab521216cb46fe86c6b66a" ]; then
-              echo "Expected missing DMI identity to produce a boot-scoped fingerprint." >&2
+            if [ "$(cat "$fingerprint_test")" != "b10678843e2537e2d70eb3ba502fe529207efc0d693473d2fb7b6276868097bb" ]; then
+              echo "Expected missing DMI UUID to use the stable serial tuple." >&2
+              cat "$fingerprint_test" >&2
+              exit 1
+            fi
+
+            printf '%s\n' '  To Be Filled By O.E.M.  ' > "$fingerprint_product_serial"
+            printf '%s\n' '	Default string	' > "$fingerprint_board_serial"
+            printf '%s\n' '  Unknown  ' > "$fingerprint_chassis_serial"
+            SYSTEM_MANIFEST_DMI_UUID_FILE="$TMPDIR/missing-product-uuid" \
+              SYSTEM_MANIFEST_PRODUCT_SERIAL_FILE="$fingerprint_product_serial" \
+              SYSTEM_MANIFEST_BOARD_SERIAL_FILE="$fingerprint_board_serial" \
+              SYSTEM_MANIFEST_CHASSIS_SERIAL_FILE="$fingerprint_chassis_serial" \
+              SYSTEM_MANIFEST_HOST_FINGERPRINT_FILE="$fingerprint_test" \
+              "${usbHostFingerprintExec}"
+            if [ -e "$fingerprint_test" ]; then
+              echo "Expected missing or placeholder physical identity to disable host caching." >&2
+              cat "$fingerprint_test" >&2
               exit 1
             fi
 
@@ -208,7 +236,7 @@ in {
               exit 1
             fi
 
-            adaptive_cache="$(find "$adaptive_state/system-manifest/render-compat" -type f -name 'skwd-wall-*.backend' -print -quit)"
+            adaptive_cache="$(find "$adaptive_state/system-manifest/render-compat" -type f -name 'skwd-wall-*.conf' -print -quit)"
             printf '%s\n' 'malformed' > "$adaptive_cache"
             : > "$adaptive_calls"
             run_adaptive_wall init
@@ -230,6 +258,22 @@ in {
 
             rm -rf "$adaptive_state"
             mkdir -p "$adaptive_state"
+            printf '%s\n' 'invalid-host-fingerprint' > "$adaptive_fingerprint"
+            : > "$adaptive_calls"
+            run_adaptive_wall rhi
+            : > "$adaptive_calls"
+            run_adaptive_wall rhi
+            if [ "$(cat "$adaptive_calls")" != $'opengl:\nopengl:software' ] \
+              || [ -e "$adaptive_state/system-manifest/render-compat" ]; then
+              echo "Adaptive skwd-wall must re-probe and avoid cache state without a valid physical-host fingerprint." >&2
+              cat "$adaptive_calls" >&2
+              find "$adaptive_state" -type f -print 2>/dev/null >&2 || true
+              exit 1
+            fi
+
+            rm -rf "$adaptive_state"
+            mkdir -p "$adaptive_state"
+            printf '%s\n' 'dd2dc6c539f98758ce36c9cc6540f4de97413a1f71d98368d2e18c859d5fced4' > "$adaptive_fingerprint"
             : > "$adaptive_calls"
             HOME="$adaptive_home" \
               XDG_STATE_HOME="$adaptive_state" \

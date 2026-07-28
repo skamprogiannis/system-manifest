@@ -7,6 +7,7 @@
   ...
 }: {
   imports = [
+    ./render-compat.nix
     # hardware-configuration.nix is imported by the specific host
   ];
 

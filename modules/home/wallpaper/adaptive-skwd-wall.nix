@@ -3,34 +3,27 @@
   skwdWallPackage,
 }: let
   policyVersion = "1";
+  renderPolicy = import ../render-compat/policy.nix {
+    inherit pkgs;
+    name = "skwd-wall";
+    inherit policyVersion;
+    packageId = "@packageId@";
+    valueKey = "backend";
+    allowedValues = ["opengl" "software"];
+  };
   launcherTemplate = pkgs.writeText "skwd-wall-adaptive-launcher" ''
     #!${pkgs.bash}/bin/bash
     set -u
 
-    policy_version="${policyVersion}"
     render_failure_status=70
-    package_id="@packageId@"
     renderer="''${SKWD_WALL_RENDERER_BIN:-${skwdWallPackage}/bin/skwd-wall}"
-    fingerprint_file="''${SYSTEM_MANIFEST_HOST_FINGERPRINT_FILE:-/run/system-manifest/host-fingerprint}"
-    state_root="''${XDG_STATE_HOME:-$HOME/.local/state}"
-    cache_dir="$state_root/system-manifest/render-compat"
-    cache_file=""
+    render_policy_fingerprint_file="''${SYSTEM_MANIFEST_HOST_FINGERPRINT_FILE:-/run/system-manifest/host-fingerprint}"
     child_pid=""
     tee_pid=""
     attempt_dir=""
     terminate_requested=0
 
-    fingerprint=""
-    if [ -r "$fingerprint_file" ]; then
-      IFS= read -r fingerprint < "$fingerprint_file" || true
-      if [[ ! "$fingerprint" =~ ^[0-9a-f]{64}$ ]]; then
-        fingerprint=""
-      fi
-    fi
-
-    if [ -n "$fingerprint" ]; then
-      cache_file="$cache_dir/skwd-wall-$fingerprint.backend"
-    fi
+    ${renderPolicy}
 
     stop_child() {
       local signal="$1"
@@ -81,43 +74,6 @@
     trap 'forward_signal INT' INT
     trap 'forward_signal QUIT' QUIT
     trap cleanup_attempt EXIT
-
-    read_cached_backend() {
-      local lines=()
-
-      [ -n "$cache_file" ] && [ -r "$cache_file" ] || return 1
-      mapfile -t lines < "$cache_file" || return 1
-      [ "''${#lines[@]}" -eq 3 ] || return 1
-      [ "''${lines[0]}" = "policy=$policy_version" ] || return 1
-      [ "''${lines[1]}" = "package=$package_id" ] || return 1
-      case "''${lines[2]}" in
-        backend=opengl)
-          printf '%s\n' opengl
-          ;;
-        backend=software)
-          printf '%s\n' software
-          ;;
-        *)
-          return 1
-          ;;
-      esac
-    }
-
-    cache_backend() {
-      local backend="$1"
-      local cache_tmp
-
-      [ -n "$cache_file" ] || return 0
-      ${pkgs.coreutils}/bin/mkdir -p -- "$cache_dir"
-      cache_tmp="$(${pkgs.coreutils}/bin/mktemp "$cache_file.tmp.XXXXXX")" || return 0
-      ${pkgs.coreutils}/bin/chmod 0600 "$cache_tmp"
-      {
-        printf 'policy=%s\n' "$policy_version"
-        printf 'package=%s\n' "$package_id"
-        printf 'backend=%s\n' "$backend"
-      } > "$cache_tmp"
-      ${pkgs.coreutils}/bin/mv -f -- "$cache_tmp" "$cache_file"
-    }
 
     has_render_failure() {
       ${pkgs.gnugrep}/bin/grep -Fq \
@@ -178,7 +134,7 @@
         fi
 
         if [ "$cached" -eq 0 ] && [ "$success_ticks" -ge 20 ]; then
-          cache_backend "$backend"
+          render_policy_write "$backend"
           cached=1
         fi
         success_ticks=$((success_ticks + 1))
@@ -225,23 +181,21 @@
         return "$render_failure_status"
       fi
       if [ "$status" -eq 0 ] && [ "$cached" -eq 0 ] && [ "$terminate_requested" -eq 0 ]; then
-        cache_backend "$backend"
+        render_policy_write "$backend"
       fi
       return "$status"
     }
 
-    backend="$(read_cached_backend || printf '%s\n' opengl)"
+    backend="$(render_policy_read || printf '%s\n' opengl)"
     run_attempt "$backend" "$@"
     status=$?
 
     if [ "$status" -eq "$render_failure_status" ] && [ "$backend" = opengl ] && [ "$terminate_requested" -eq 0 ]; then
-      if [ -n "$cache_file" ]; then
-        ${pkgs.coreutils}/bin/rm -f -- "$cache_file"
-      fi
+      render_policy_clear
       run_attempt software "$@"
       status=$?
-    elif [ "$status" -eq "$render_failure_status" ] && [ -n "$cache_file" ]; then
-      ${pkgs.coreutils}/bin/rm -f -- "$cache_file"
+    elif [ "$status" -eq "$render_failure_status" ]; then
+      render_policy_clear
     fi
 
     exit "$status"

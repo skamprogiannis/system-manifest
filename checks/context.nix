@@ -5,6 +5,8 @@
   inherit self pkgs;
 
   registry = import ./registry.nix;
+  serviceExec = service:
+    builtins.head (pkgs.lib.splitString " " service.serviceConfig.ExecStart);
 
   desktopHome = self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.path;
   desktopHomeFiles = self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.file;
@@ -60,10 +62,12 @@
     builtins.concatStringsSep "\n"
     self.nixosConfigurations.usb.config.home-manager.users.stefan.systemd.user.services.skwd-daemon.Service.Environment
   );
+  desktopHostFingerprintService = self.nixosConfigurations.desktop.config.systemd.services.system-manifest-host-fingerprint;
+  laptopHostFingerprintService = self.nixosConfigurations.laptop.config.systemd.services.system-manifest-host-fingerprint;
   usbHostFingerprintService = self.nixosConfigurations.usb.config.systemd.services.system-manifest-host-fingerprint;
-  usbHostFingerprintExec = builtins.head (
-    pkgs.lib.splitString " " usbHostFingerprintService.serviceConfig.ExecStart
-  );
+  desktopHostFingerprintExec = serviceExec desktopHostFingerprintService;
+  laptopHostFingerprintExec = serviceExec laptopHostFingerprintService;
+  usbHostFingerprintExec = serviceExec usbHostFingerprintService;
   usbHostFingerprintBeforeFile = builtins.toFile "usb-host-fingerprint-before" (
     builtins.concatStringsSep "\n" usbHostFingerprintService.before
   );

@@ -138,7 +138,9 @@ in {
         shift 2
 
         mkdir -p "$case_root/home" "$case_root/state"
-        printf 'test-host-fingerprint\n' > "$case_root/fingerprint"
+        if [ ! -e "$case_root/fingerprint" ]; then
+          printf '%s\n' 'dd2dc6c539f98758ce36c9cc6540f4de97413a1f71d98368d2e18c859d5fced4' > "$case_root/fingerprint"
+        fi
         : > "$case_root/trace"
         : > "$case_root/notify"
 
@@ -182,6 +184,10 @@ in {
         echo "Successful software fallback was not cached." >&2
         exit 1
       fi
+      if [ "$(stat -c '%a' "$cache_file")" != 600 ]; then
+        echo "Spotify render policy cache must be private." >&2
+        exit 1
+      fi
 
       : > "$gpu_root/trace"
       run_case "$gpu_root" gpu-fatal
@@ -199,6 +205,32 @@ in {
         || grep -Fq '<--disable-gpu>' < <(sed -n '1p' "$gpu_root/trace"); then
         echo "A stale render-policy cache must re-probe normal GPU mode." >&2
         cat "$gpu_root/trace" >&2
+        exit 1
+      fi
+
+      sed -i 's|^package=.*|package=stale|' "$cache_file"
+      : > "$gpu_root/trace"
+      run_case "$gpu_root" gpu-fatal
+      if [ "$(wc -l < "$gpu_root/trace")" -ne 2 ] \
+        || grep -Fq '<--disable-gpu>' < <(sed -n '1p' "$gpu_root/trace"); then
+        echo "A stale package cache must re-probe normal GPU mode." >&2
+        cat "$gpu_root/trace" >&2
+        exit 1
+      fi
+
+      invalid_identity_root="$TMPDIR/invalid-identity"
+      run_case "$invalid_identity_root" gpu-fatal
+      printf '%s\n' 'not-a-physical-host-fingerprint' > "$invalid_identity_root/fingerprint"
+      rm -rf "$invalid_identity_root/state"
+      : > "$invalid_identity_root/trace"
+      run_case "$invalid_identity_root" gpu-fatal
+      : > "$invalid_identity_root/trace"
+      run_case "$invalid_identity_root" gpu-fatal
+      if [ "$(wc -l < "$invalid_identity_root/trace")" -ne 2 ] \
+        || [ -e "$invalid_identity_root/state/system-manifest/render-compat" ]; then
+        echo "Spotify must re-probe and avoid cache state without a valid physical-host fingerprint." >&2
+        cat "$invalid_identity_root/trace" >&2
+        find "$invalid_identity_root/state" -type f -print 2>/dev/null >&2 || true
         exit 1
       fi
 
@@ -240,7 +272,7 @@ in {
 
       signal_root="$TMPDIR/signal"
       mkdir -p "$signal_root/home" "$signal_root/state" "$signal_root/signals"
-      printf 'test-host-fingerprint\n' > "$signal_root/fingerprint"
+      printf '%s\n' 'dd2dc6c539f98758ce36c9cc6540f4de97413a1f71d98368d2e18c859d5fced4' > "$signal_root/fingerprint"
       : > "$signal_root/trace"
       : > "$signal_root/notify"
       HOME="$signal_root/home" \

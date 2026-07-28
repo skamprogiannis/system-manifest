@@ -2,7 +2,6 @@
   imports = [
     ../common/default.nix
     ./host-scratch.nix
-    ./render-compat.nix
     ../../modules/desktop-enviroments/hyprland.nix
     ../desktop/dms-greeter.nix
     ./hardware-configuration.nix
