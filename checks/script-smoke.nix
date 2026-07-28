@@ -13,7 +13,9 @@
     usbDmsServiceEnvironmentFile
     usbHome
     usbHostScratchCheckpointExec
+    usbHostScratchServiceBeforeFile
     usbHostScratchServiceDescriptionFile
+    usbHostScratchServiceTimeoutStopSecFile
     usbHostScratchShutdownCleanupScript
     usbHostScratchStartScript
     usbHostScratchStopScript
@@ -39,9 +41,11 @@ in {
             usb_activation="${usbActivation}"
             usb_home="${usbHome}"
             usb_host_scratch_description="${usbHostScratchServiceDescriptionFile}"
+            usb_host_scratch_before="${usbHostScratchServiceBeforeFile}"
             usb_host_scratch_start="${usbHostScratchStartScript}"
             usb_host_scratch_shutdown_cleanup="${usbHostScratchShutdownCleanupScript}"
             usb_host_scratch_stop="${usbHostScratchStopScript}"
+            usb_host_scratch_timeout_stop_sec="${usbHostScratchServiceTimeoutStopSecFile}"
             usb_host_scratch_sync="${usbHostScratchSyncScript}"
             usb_host_scratch_checkpoint_exec="${usbHostScratchCheckpointExec}"
             usb_shutdown_ramfs_store_paths="${usbShutdownRamfsStorePathsFile}"
@@ -303,9 +307,15 @@ in {
             }
 
             assert_file_contains "$usb_host_scratch_start" "mount --make-private" "Expected USB host scratch to preserve a private view of the underlying USB home."
+            assert_file_contains "$usb_host_scratch_before" "docker.service" "Expected USB host scratch to stop after Docker."
+            assert_file_contains "$usb_host_scratch_before" "user@1000.service" "Expected USB host scratch to stop after the user manager."
             assert_file_contains "$usb_tmpfiles_rules" "d /run/usb-host-scratch 0700 root root" "Expected the private USB-home bind parent to remain root-only."
             assert_file_contains "$usb_host_scratch_stop" "shutdown sync failed" "Expected USB host scratch stop to report failed final synchronization."
             assert_file_contains "$usb_host_scratch_stop" "shutdown cleanup evidence" "Expected USB host scratch stop to preserve cleanup evidence after incomplete stops."
+            assert_file_contains "$usb_host_scratch_stop" "USB_HOST_SCRATCH_SYNC_HELPER" "Expected USB host scratch stop to expose its final-sync test seam."
+            assert_file_contains "$usb_host_scratch_stop" "USB_HOST_SCRATCH_SHUTDOWN_BUDGET_SECONDS" "Expected automatic shutdown synchronization to have one explicit total budget."
+            assert_file_contains "$usb_host_scratch_stop" "USB_HOST_SCRATCH_KILL_GRACE_SECONDS" "Expected a TERM-resistant shutdown sync to have a bounded kill grace."
+            assert_file_contains "$usb_host_scratch_timeout_stop_sec" "60s" "Expected systemd to enforce the hard 60-second stop budget."
             assert_not_file_contains "$usb_host_scratch_stop" "umount -l" "Expected USB host scratch stop to avoid lazy-detaching live bind mounts."
             assert_file_contains "$usb_host_scratch_sync" '"$FLOCK" -x 9' "Expected USB host scratch synchronization to serialize checkpoints."
             assert_file_contains "$usb_host_scratch_sync" "Docker state and repositories remain temporary" "Expected USB host scratch synchronization to disclose excluded ephemeral data."
@@ -332,6 +342,7 @@ in {
             assert_file_contains "$usb_home/bin/nixos-usb-store-status" "cmd_age=300s" "Expected USB store status to flag 300 second USB storage timeouts."
             assert_file_contains "$usb_home/bin/nixos-usb-store-status" "Maybe the USB cable is bad?" "Expected USB store status to explain kernel USB transport warnings."
             assert_file_contains "$usb_home/bin/usb-host-scratch" "checkpoint)" "Expected usb-host-scratch to expose a manual checkpoint command."
+            assert_file_contains "$usb_home/bin/usb-host-scratch" "--include-cache" "Expected usb-host-scratch to expose an explicit slow cache checkpoint."
             assert_file_contains "$usb_home/bin/usb-host-scratch" "repositories remain temporary" "Expected checkpoint output to warn about temporary repositories."
 
             host_scratch_sync_test="$TMPDIR/usb-host-scratch-sync"
@@ -347,7 +358,9 @@ in {
               "$host_scratch_sync_test/bin"
             printf '%s\n' cache-current > "$host_scratch_sync_test/user/cache/current"
             printf '%s\n' codex-current > "$host_scratch_sync_test/user/codex/current"
+            printf '%s\n' source-secret > "$host_scratch_sync_test/user/codex/auth.json"
             printf '%s\n' brave-current > "$host_scratch_sync_test/user/brave-config/current"
+            printf '%s\n' usb-secret > "$host_scratch_sync_test/usb/.codex/auth.json"
             touch "$host_scratch_sync_test/usb/.cache/stale"
             printf '%s\n' encrypted-host-scratch > "$host_scratch_sync_test/mode"
 
@@ -385,7 +398,6 @@ in {
             assert_log_contains "repositories remain temporary"
 
             for synced_path in \
-              .cache/current \
               .codex/current \
               .config/BraveSoftware/current; do
               if [ ! -f "$host_scratch_sync_test/usb/$synced_path" ]; then
@@ -393,17 +405,22 @@ in {
                 exit 1
               fi
             done
-            if [ -e "$host_scratch_sync_test/usb/.cache/stale" ]; then
-              echo "Expected checkpoint to mirror scratch cache deletions to USB." >&2
+            if [ "$(cat "$host_scratch_sync_test/usb/.codex/auth.json")" != usb-secret ]; then
+              echo "Expected checkpoint to preserve USB-local Codex authentication." >&2
+              exit 1
+            fi
+            if [ ! -e "$host_scratch_sync_test/usb/.cache/stale" ]; then
+              echo "Expected the default essential checkpoint to leave the full user cache untouched." >&2
               exit 1
             fi
             last_sync_record="$host_scratch_sync_test/usb/.local/state/system-manifest/host-scratch-last-sync"
             assert_file_contains "$last_sync_record" "result=success" "Expected checkpoint to record its last successful sync."
-            assert_file_contains "$last_sync_record" "targets=cache,codex,brave" "Expected checkpoint status to identify persistent targets."
-            assert_file_contains "$last_sync_record" "excluded=docker,repositories" "Expected checkpoint status to record excluded temporary data."
+            assert_file_contains "$last_sync_record" "scope=essential" "Expected checkpoint status to identify the bounded essential scope."
+            assert_file_contains "$last_sync_record" "phase=complete" "Expected checkpoint status to expose its completed phase."
+            assert_file_contains "$last_sync_record" "targets=codex,brave" "Expected checkpoint status to identify persistent targets."
+            assert_file_contains "$last_sync_record" "excluded=cache,docker,repositories,volatile-codex,volatile-brave" "Expected checkpoint status to record excluded temporary data."
             assert_file_contains "$host_scratch_sync_test/last-attempt" "result=success" "Expected public runtime status to show the latest checkpoint result."
             for user_owned_path in \
-              "$host_scratch_sync_test/usb/.cache" \
               "$host_scratch_sync_test/usb/.codex" \
               "$host_scratch_sync_test/usb/.config/BraveSoftware" \
               "$host_scratch_sync_test/usb/.local" \
@@ -416,6 +433,31 @@ in {
                 exit 1
               fi
             done
+
+            run_expect 0 host-scratch-sync-helper-with-cache \
+              env \
+                USB_HOST_SCRATCH_MODE_FILE="$host_scratch_sync_test/mode" \
+                USB_HOST_SCRATCH_STATE_DIR="$host_scratch_sync_test/run" \
+                USB_HOST_SCRATCH_ATTEMPT_STATE="$host_scratch_sync_test/last-attempt" \
+                USB_HOST_SCRATCH_USB_HOME="$host_scratch_sync_test/usb" \
+                USB_HOST_SCRATCH_USER_ROOT="$host_scratch_sync_test/user" \
+                USB_HOST_SCRATCH_LAST_SYNC_STATE="$last_sync_record" \
+                USB_HOST_SCRATCH_FINDMNT="$host_scratch_sync_test/bin/findmnt" \
+                USB_HOST_SCRATCH_CHOWN="$host_scratch_sync_test/bin/chown" \
+                USB_HOST_SCRATCH_SYNC="${pkgs.coreutils}/bin/true" \
+                USB_HOST_SCRATCH_TEST_CHOWN_LOG="$host_scratch_sync_test/chown.log" \
+                USB_HOST_SCRATCH_TEST_USB_HOME="$host_scratch_sync_test/usb" \
+                "$usb_host_scratch_sync" checkpoint --include-cache
+            assert_log_contains "full user cache is also durable"
+            if [ ! -f "$host_scratch_sync_test/usb/.cache/current" ]; then
+              echo "Expected the explicit cache checkpoint to persist ~/.cache." >&2
+              exit 1
+            fi
+            if [ -e "$host_scratch_sync_test/usb/.cache/stale" ]; then
+              echo "Expected the explicit cache checkpoint to mirror scratch cache deletions." >&2
+              exit 1
+            fi
+            assert_file_contains "$last_sync_record" "scope=include-cache" "Expected full-cache checkpoint status to identify its scope."
 
             rm -rf "$host_scratch_sync_test/user/brave-config"
             run_expect 1 host-scratch-sync-helper-failure \
@@ -464,12 +506,109 @@ in {
               ${pkgs.gnused}/bin/sed 's/^/  /' "$host_scratch_sync_test/sudo.log" >&2
               exit 1
             fi
+            run_expect 0 host-scratch-checkpoint-cache-command \
+              env \
+                USB_HOST_SCRATCH_MODE_FILE="$host_scratch_sync_test/mode" \
+                USB_HOST_SCRATCH_ID="$host_scratch_sync_test/bin/id" \
+                USB_HOST_SCRATCH_SUDO="$host_scratch_sync_test/bin/sudo" \
+                USB_HOST_SCRATCH_SYSTEMCTL="$host_scratch_sync_test/bin/systemctl" \
+                USB_HOST_SCRATCH_TEST_SUDO_LOG="$host_scratch_sync_test/sudo.log" \
+                "$usb_home/bin/usb-host-scratch" checkpoint --include-cache
+            if ! ${pkgs.gnugrep}/bin/grep -Fxq "$host_scratch_sync_test/bin/systemctl start --wait usb-host-scratch-checkpoint-cache.service" "$host_scratch_sync_test/sudo.log"; then
+              echo "Expected usb-host-scratch checkpoint --include-cache to start the unbounded cache unit." >&2
+              exit 1
+            fi
+
+            host_scratch_stop_test="$TMPDIR/usb-host-scratch-stop"
+            mkdir -p "$host_scratch_stop_test/bin"
+            printf '%s\n' encrypted-host-scratch > "$host_scratch_stop_test/mode"
+            cat > "$host_scratch_stop_test/mounted" <<EOF
+            /var/lib/docker
+            /home/stefan/.config/BraveSoftware
+            /home/stefan/.codex
+            /home/stefan/.cache
+            $host_scratch_stop_test/usb-home
+            EOF
+            cat > "$host_scratch_stop_test/bin/findmnt" <<'EOF'
+            #!${pkgs.bash}/bin/bash
+            set -euo pipefail
+            [ "$1 $2" = "-rn -M" ]
+            ${pkgs.gnugrep}/bin/grep -Fxq "$3" "$USB_HOST_SCRATCH_TEST_MOUNTED"
+            EOF
+            cat > "$host_scratch_stop_test/bin/umount" <<'EOF'
+            #!${pkgs.bash}/bin/bash
+            set -euo pipefail
+            printf 'unmount %s\n' "$1" >> "$USB_HOST_SCRATCH_TEST_EVENTS"
+            ${pkgs.gnugrep}/bin/grep -Fxv "$1" "$USB_HOST_SCRATCH_TEST_MOUNTED" > "$USB_HOST_SCRATCH_TEST_MOUNTED.tmp" || true
+            ${pkgs.coreutils}/bin/mv "$USB_HOST_SCRATCH_TEST_MOUNTED.tmp" "$USB_HOST_SCRATCH_TEST_MOUNTED"
+            EOF
+            cat > "$host_scratch_stop_test/bin/sync" <<'EOF'
+            #!${pkgs.bash}/bin/bash
+            set -euo pipefail
+            trap "" TERM
+            printf '%s\n' sync-start >> "$USB_HOST_SCRATCH_TEST_EVENTS"
+            ${pkgs.coreutils}/bin/sleep 30 &
+            child_pid=$!
+            printf '%s\n' "$child_pid" > "$USB_HOST_SCRATCH_TEST_STOP_ROOT/sync-child.pid"
+            wait "$child_pid"
+            EOF
+            chmod +x "$host_scratch_stop_test/bin/"*
+            : > "$host_scratch_stop_test/events"
+
+            stop_started="$(${pkgs.coreutils}/bin/date +%s)"
+            run_expect 1 host-scratch-stop-hanging-sync \
+              env \
+                USB_HOST_SCRATCH_MODE_FILE="$host_scratch_stop_test/mode" \
+                USB_HOST_SCRATCH_USB_HOME="$host_scratch_stop_test/usb-home" \
+                USB_HOST_SCRATCH_FINDMNT="$host_scratch_stop_test/bin/findmnt" \
+                USB_HOST_SCRATCH_UMOUNT="$host_scratch_stop_test/bin/umount" \
+                USB_HOST_SCRATCH_SYNC_HELPER="$host_scratch_stop_test/bin/sync" \
+                USB_HOST_SCRATCH_TIMEOUT="${pkgs.coreutils}/bin/timeout" \
+                USB_HOST_SCRATCH_RM="${pkgs.coreutils}/bin/rm" \
+                USB_HOST_SCRATCH_GREP="${pkgs.gnugrep}/bin/grep" \
+                USB_HOST_SCRATCH_SHUTDOWN_BUDGET_SECONDS=1 \
+                USB_HOST_SCRATCH_KILL_GRACE_SECONDS=1 \
+                USB_HOST_SCRATCH_TEST_MOUNTED="$host_scratch_stop_test/mounted" \
+                USB_HOST_SCRATCH_TEST_EVENTS="$host_scratch_stop_test/events" \
+                USB_HOST_SCRATCH_TEST_STOP_ROOT="$host_scratch_stop_test" \
+                "$usb_host_scratch_stop"
+            stop_elapsed="$(("$(${pkgs.coreutils}/bin/date +%s)" - stop_started))"
+            if [ "$stop_elapsed" -gt 5 ]; then
+              echo "Expected a hanging final sync to yield promptly for cleanup; took $stop_elapsed seconds." >&2
+              exit 1
+            fi
+            sync_child_pid="$(cat "$host_scratch_stop_test/sync-child.pid")"
+            if ${pkgs.procps}/bin/ps -p "$sync_child_pid" >/dev/null 2>&1; then
+              echo "Expected the timeout to terminate the hanging sync descendant." >&2
+              exit 1
+            fi
+            cat > "$host_scratch_stop_test/expected-events" <<EOF
+            unmount /var/lib/docker
+            unmount /home/stefan/.config/BraveSoftware
+            unmount /home/stefan/.codex
+            unmount /home/stefan/.cache
+            sync-start
+            unmount $host_scratch_stop_test/usb-home
+            EOF
+            if ! cmp -s "$host_scratch_stop_test/expected-events" "$host_scratch_stop_test/events"; then
+              echo "Expected live binds to unmount before sync and USB backing cleanup to run after timeout." >&2
+              ${pkgs.gnused}/bin/sed 's/^/  /' "$host_scratch_stop_test/events" >&2
+              exit 1
+            fi
 
             host_scratch_cleanup_test="$TMPDIR/usb-host-scratch-cleanup"
-            mkdir -p "$host_scratch_cleanup_test/bin" "$host_scratch_cleanup_test/root/nix/.host-store/.nixos-usb/session/boot-id"
+            mkdir -p \
+              "$host_scratch_cleanup_test/bin" \
+              "$host_scratch_cleanup_test/root/home/stefan/.local/state/system-manifest" \
+              "$host_scratch_cleanup_test/root/nix/.host-store/.nixos-usb/session/boot-id"
             touch "$host_scratch_cleanup_test/mapper"
             cat > "$host_scratch_cleanup_test/mounted" <<EOF
             $host_scratch_cleanup_test/root/nix/store
+            $host_scratch_cleanup_test/root/var/lib/docker
+            $host_scratch_cleanup_test/root/home/stefan/.config/BraveSoftware
+            $host_scratch_cleanup_test/root/home/stefan/.codex
+            $host_scratch_cleanup_test/root/home/stefan/.cache
+            $host_scratch_cleanup_test/root/run/usb-host-scratch/usb-home
             $host_scratch_cleanup_test/root/nix/.rw-store
             $host_scratch_cleanup_test/root/nix/.ro-store
             $host_scratch_cleanup_test/root/nix/.host-store-rw
@@ -545,22 +684,30 @@ in {
               USB_HOST_SCRATCH_CHMOD="${pkgs.coreutils}/bin/chmod" \
               USB_HOST_SCRATCH_SORT="${pkgs.coreutils}/bin/sort" \
               USB_HOST_SCRATCH_GREP="${pkgs.gnugrep}/bin/grep" \
+              USB_HOST_SCRATCH_DATE="${pkgs.coreutils}/bin/date" \
+              USB_HOST_SCRATCH_MKDIR="${pkgs.coreutils}/bin/mkdir" \
+              USB_HOST_SCRATCH_MV="${pkgs.coreutils}/bin/mv" \
               USB_HOST_SCRATCH_MAPPER_DEVICE="$host_scratch_cleanup_test/mapper" \
               USB_HOST_SCRATCH_PREFIXES="$host_scratch_cleanup_test/root" \
               USB_HOST_SCRATCH_TEST_MOUNTED="$host_scratch_cleanup_test/mounted" \
               USB_HOST_SCRATCH_TEST_UMOUNT_LOG="$host_scratch_cleanup_test/umount.log" \
               USB_HOST_SCRATCH_TEST_CRYPT_LOG="$host_scratch_cleanup_test/crypt.log" \
               USB_HOST_SCRATCH_TEST_RM_LOG="$host_scratch_cleanup_test/rm.log" \
-              USB_HOST_SCRATCH_TEST_FAIL_NORMAL_TARGET="$host_scratch_cleanup_test/root/nix/.host-scratch" \
+              USB_HOST_SCRATCH_TEST_FAIL_NORMAL_TARGET="$host_scratch_cleanup_test/root/home/stefan/.config/BraveSoftware" \
               "$usb_host_scratch_shutdown_cleanup"
 
             cat > "$host_scratch_cleanup_test/expected-umounts" <<EOF
+            normal $host_scratch_cleanup_test/root/var/lib/docker
+            normal $host_scratch_cleanup_test/root/home/stefan/.config/BraveSoftware
+            lazy $host_scratch_cleanup_test/root/home/stefan/.config/BraveSoftware
+            normal $host_scratch_cleanup_test/root/home/stefan/.codex
+            normal $host_scratch_cleanup_test/root/home/stefan/.cache
+            normal $host_scratch_cleanup_test/root/run/usb-host-scratch/usb-home
             normal $host_scratch_cleanup_test/root/nix/store
             normal $host_scratch_cleanup_test/root/nix/.rw-store
             normal $host_scratch_cleanup_test/root/nix/.ro-store
             normal $host_scratch_cleanup_test/root/nix/.host-store-rw
             normal $host_scratch_cleanup_test/root/nix/.host-scratch
-            lazy $host_scratch_cleanup_test/root/nix/.host-scratch
             normal $host_scratch_cleanup_test/root/nix/.host-store
             EOF
             if ! cmp -s "$host_scratch_cleanup_test/expected-umounts" "$host_scratch_cleanup_test/umount.log"; then
@@ -582,6 +729,7 @@ in {
               echo "Expected USB host scratch shutdown cleanup to remove host session files." >&2
               exit 1
             fi
+            assert_file_contains "$host_scratch_cleanup_test/root/home/stefan/.local/state/system-manifest/host-scratch-last-cleanup" "result=success" "Expected late cleanup to persist its result for the next boot."
 
             run_expect 1 update-usb-removed-mode "$desktop_home/bin/update-usb" --mode nope
             assert_log_contains "Error: unknown option '--mode'."

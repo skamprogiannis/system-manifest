@@ -18,11 +18,13 @@
   repoRoot = "${hostScratchMount}/repositories";
   usbHomeBacking = "${stateDir}/usb-home";
   lastSyncState = "${userHome}/.local/state/system-manifest/host-scratch-last-sync";
+  lastCleanupState = "${userHome}/.local/state/system-manifest/host-scratch-last-cleanup";
 
   hostScratchSync = pkgs.writeShellScript "usb-host-scratch-sync" ''
     set -eu
 
     reason="''${1:-checkpoint}"
+    scope=essential
     case "$reason" in
       checkpoint|shutdown)
         ;;
@@ -31,6 +33,27 @@
         exit 2
         ;;
     esac
+    shift || true
+    case "''${1:-}" in
+      "")
+        ;;
+      --include-cache)
+        if [ "$reason" = shutdown ]; then
+          echo "usb-host-scratch-sync: shutdown does not permit the unbounded cache scope" >&2
+          exit 2
+        fi
+        scope=include-cache
+        shift
+        ;;
+      *)
+        echo "usb-host-scratch-sync: unsupported option: $1" >&2
+        exit 2
+        ;;
+    esac
+    if [ "$#" -ne 0 ]; then
+      echo "usb-host-scratch-sync: unexpected arguments" >&2
+      exit 2
+    fi
 
     MODE_FILE="''${USB_HOST_SCRATCH_MODE_FILE:-${modeFile}}"
     STATE_DIR="''${USB_HOST_SCRATCH_STATE_DIR:-${stateDir}}"
@@ -49,8 +72,7 @@
     SYNC="''${USB_HOST_SCRATCH_SYNC:-${pkgs.coreutils}/bin/sync}"
 
     "$MKDIR" -p "$STATE_DIR"
-    exec 9>"$STATE_DIR/sync.lock"
-    "$FLOCK" -x 9
+    phase=locking
 
     write_record() {
       target="$1"
@@ -60,9 +82,16 @@
       {
         printf 'timestamp=%s\n' "$timestamp"
         printf 'reason=%s\n' "$reason"
+        printf 'scope=%s\n' "$scope"
+        printf 'phase=%s\n' "$phase"
         printf 'result=%s\n' "$result"
-        printf 'targets=%s\n' "cache,codex,brave"
-        printf 'excluded=%s\n' "docker,repositories"
+        if [ "$scope" = include-cache ]; then
+          printf 'targets=%s\n' "codex,brave,cache"
+          printf 'excluded=%s\n' "docker,repositories,volatile-codex,volatile-brave"
+        else
+          printf 'targets=%s\n' "codex,brave"
+          printf 'excluded=%s\n' "cache,docker,repositories,volatile-codex,volatile-brave"
+        fi
       } > "$target.tmp"
       "$MV" "$target.tmp" "$target"
     }
@@ -76,6 +105,12 @@
       exit "$status"
     }
     trap record_failure EXIT
+    write_record "$ATTEMPT_STATE" running
+    "$CHMOD" 0644 "$ATTEMPT_STATE"
+
+    exec 9>"$STATE_DIR/sync.lock"
+    "$FLOCK" -x 9
+    phase=validating
     write_record "$ATTEMPT_STATE" running
     "$CHMOD" 0644 "$ATTEMPT_STATE"
 
@@ -99,30 +134,80 @@
       label="$1"
       source="$2"
       target="$3"
+      shift 3
       if [ ! -d "$source" ]; then
         echo "usb-host-scratch-sync: missing $label source: $source" >&2
         return 1
       fi
       echo "usb-host-scratch-sync: syncing $label to USB" >&2
       ensure_user_dir "$target"
-      "$RSYNC" -a --delete "$source/" "$target/"
+      "$RSYNC" -a --delete "$@" "$source/" "$target/"
     }
 
-    sync_one cache "$USER_ROOT/cache" "$USB_HOME/.cache"
-    sync_one codex "$USER_ROOT/codex" "$USB_HOME/.codex"
+    phase=codex
+    write_record "$ATTEMPT_STATE" running
+    sync_one codex "$USER_ROOT/codex" "$USB_HOME/.codex" \
+      --exclude=/auth.json \
+      --exclude=/config.toml \
+      --exclude=/AGENTS.md \
+      --exclude=/skills/ \
+      --exclude=/agents/ \
+      --exclude=/cache/ \
+      --exclude=/log/ \
+      --exclude=/logs/ \
+      --exclude=/.tmp/ \
+      '--exclude=/logs*.sqlite*' \
+      --exclude=/models_cache.json \
+      --exclude=/version.json \
+      --exclude=/installation_id \
+      '--exclude=*/files/alt-nix-store/***' \
+      --exclude=/plugins/cache/
     ensure_user_dir "$USB_HOME/.config"
-    sync_one brave "$USER_ROOT/brave-config" "$USB_HOME/.config/BraveSoftware"
+    phase=brave
+    write_record "$ATTEMPT_STATE" running
+    sync_one brave "$USER_ROOT/brave-config" "$USB_HOME/.config/BraveSoftware" \
+      --delete-excluded \
+      '--exclude=/**/Cache/***' \
+      '--exclude=/**/Code Cache/***' \
+      '--exclude=/**/GPUCache/***' \
+      '--exclude=/**/DawnCache/***' \
+      '--exclude=/**/DawnGraphiteCache/***' \
+      '--exclude=/**/DawnWebGPUCache/***' \
+      '--exclude=/**/GPUPersistentCache/***' \
+      '--exclude=/**/GraphiteDawnCache/***' \
+      '--exclude=/**/GrShaderCache/***' \
+      '--exclude=/**/ShaderCache/***' \
+      '--exclude=/**/Service Worker/CacheStorage/***' \
+      '--exclude=/**/Service Worker/ScriptCache/***' \
+      '--exclude=/Crash Reports/***' \
+      '--exclude=/Crashpad/***' \
+      '--exclude=/component_crx_cache/***' \
+      '--exclude=/extensions_crx_cache/***'
+    if [ "$scope" = include-cache ]; then
+      phase=cache
+      write_record "$ATTEMPT_STATE" running
+      sync_one cache "$USER_ROOT/cache" "$USB_HOME/.cache"
+    fi
 
     for state_path in "$USB_HOME/.local" "$USB_HOME/.local/state" "$USB_HOME/.local/state/system-manifest"; do
       ensure_user_dir "$state_path"
     done
+    phase=flushing
+    write_record "$ATTEMPT_STATE" running
+    "$SYNC" -f "$USB_HOME"
+    phase=complete
     write_record "$ATTEMPT_STATE" success
     "$CHMOD" 0644 "$ATTEMPT_STATE"
     write_record "$LAST_SYNC_STATE" success
     "$CHOWN" ${userName}:${userGroup} "$LAST_SYNC_STATE"
     "$SYNC" -f "$USB_HOME"
     trap - EXIT
-    echo "usb-host-scratch-sync: $reason complete; cache, Codex, and Brave are durable on USB" >&2
+    echo "usb-host-scratch-sync: $reason complete; essential Codex and Brave state is durable on USB" >&2
+    if [ "$scope" = include-cache ]; then
+      echo "usb-host-scratch-sync: full user cache is also durable on USB" >&2
+    else
+      echo "usb-host-scratch-sync: full user cache was skipped; use checkpoint --include-cache for the slow scope" >&2
+    fi
     echo "usb-host-scratch-sync: Docker state and repositories remain temporary and are not copied" >&2
   '';
 
@@ -186,16 +271,25 @@
   '';
 
   hostScratchStop = pkgs.writeShellScript "usb-host-scratch-stop" ''
-    set -eu
+    set -u
 
-    docker_root=${dockerRoot}
-    mode_file=${modeFile}
-    usb_home=${usbHomeBacking}
+    docker_root="''${USB_HOST_SCRATCH_DOCKER_ROOT:-${dockerRoot}}"
+    mode_file="''${USB_HOST_SCRATCH_MODE_FILE:-${modeFile}}"
+    usb_home="''${USB_HOST_SCRATCH_USB_HOME:-${usbHomeBacking}}"
+    FINDMNT="''${USB_HOST_SCRATCH_FINDMNT:-${pkgs.util-linux}/bin/findmnt}"
+    UMOUNT="''${USB_HOST_SCRATCH_UMOUNT:-${pkgs.util-linux}/bin/umount}"
+    SYNC_HELPER="''${USB_HOST_SCRATCH_SYNC_HELPER:-${hostScratchSync}}"
+    TIMEOUT="''${USB_HOST_SCRATCH_TIMEOUT:-${pkgs.coreutils}/bin/timeout}"
+    RM="''${USB_HOST_SCRATCH_RM:-${pkgs.coreutils}/bin/rm}"
+    GREP="''${USB_HOST_SCRATCH_GREP:-${pkgs.gnugrep}/bin/grep}"
+    shutdown_budget="''${USB_HOST_SCRATCH_SHUTDOWN_BUDGET_SECONDS:-50}"
+    kill_grace="''${USB_HOST_SCRATCH_KILL_GRACE_SECONDS:-5}"
     stop_status=0
+    cleanup_ran=0
 
     is_mounted() {
       target="$1"
-      ${pkgs.util-linux}/bin/findmnt -rn -M "$target" >/dev/null 2>&1
+      "$FINDMNT" -rn -M "$target" >/dev/null 2>&1
     }
 
     unmount_target() {
@@ -206,7 +300,7 @@
       fi
 
       echo "usb-host-scratch: unmounting $target" >&2
-      if ! ${pkgs.util-linux}/bin/umount "$target"; then
+      if ! "$UMOUNT" "$target"; then
         echo "usb-host-scratch: warning: normal unmount failed for $target" >&2
         stop_status=1
         return 1
@@ -221,21 +315,42 @@
       return 0
     }
 
-    if [ -f "$mode_file" ] && ${pkgs.gnugrep}/bin/grep -qx "encrypted-host-scratch" "$mode_file"; then
-      if ! ${hostScratchSync} shutdown; then
+    cleanup() {
+      [ "$cleanup_ran" -eq 0 ] || return 0
+      cleanup_ran=1
+      unmount_target "$docker_root" || true
+      unmount_target "${userHome}/.config/BraveSoftware" || true
+      unmount_target "${userHome}/.codex" || true
+      unmount_target "${userHome}/.cache" || true
+      unmount_target "$usb_home" || true
+    }
+    on_exit() {
+      cleanup
+    }
+    on_signal() {
+      stop_status=1
+      exit 1
+    }
+    trap on_exit EXIT
+    trap on_signal HUP INT TERM
+
+    if [ -f "$mode_file" ] && "$GREP" -qx "encrypted-host-scratch" "$mode_file"; then
+      unmount_target "$docker_root" || true
+      unmount_target "${userHome}/.config/BraveSoftware" || true
+      unmount_target "${userHome}/.codex" || true
+      unmount_target "${userHome}/.cache" || true
+
+      if ! "$TIMEOUT" --signal=TERM --kill-after="$kill_grace" "$shutdown_budget" "$SYNC_HELPER" shutdown; then
         echo "usb-host-scratch: shutdown sync failed; keeping failure evidence for status and cleanup" >&2
         stop_status=1
       fi
     fi
 
-    unmount_target "$docker_root" || true
-    unmount_target "${userHome}/.config/BraveSoftware" || true
-    unmount_target "${userHome}/.codex" || true
-    unmount_target "${userHome}/.cache" || true
-    unmount_target "$usb_home" || true
+    cleanup
+    trap - EXIT HUP INT TERM
 
     if [ "$stop_status" -eq 0 ]; then
-      ${pkgs.coreutils}/bin/rm -f "$mode_file"
+      "$RM" -f "$mode_file"
     else
       echo "usb-host-scratch: warning: stop completed with sync or unmount failures; keeping $mode_file for shutdown cleanup evidence" >&2
       exit "$stop_status"
@@ -255,6 +370,11 @@
     MAPPER_NAME="''${USB_HOST_SCRATCH_MAPPER_NAME:-${scratchMapperName}}"
     MAPPER_DEVICE="''${USB_HOST_SCRATCH_MAPPER_DEVICE:-${scratchMapperDevice}}"
     PREFIXES="''${USB_HOST_SCRATCH_PREFIXES:-/oldroot /}"
+    CLEANUP_STATE_RELATIVE="''${USB_HOST_SCRATCH_CLEANUP_STATE_RELATIVE:-${lastCleanupState}}"
+    DATE="''${USB_HOST_SCRATCH_DATE:-${pkgs.coreutils}/bin/date}"
+    MKDIR="''${USB_HOST_SCRATCH_MKDIR:-${pkgs.coreutils}/bin/mkdir}"
+    MV="''${USB_HOST_SCRATCH_MV:-${pkgs.coreutils}/bin/mv}"
+    cleanup_status=success
 
     log() {
       printf '%s\n' "usb-host-scratch-cleanup: $*" >&2
@@ -301,6 +421,7 @@
       fi
 
       log "warning: failed to unmount $target"
+      cleanup_status=failed
       return 1
     }
 
@@ -309,7 +430,7 @@
       mounts="$(list_mount_tree "$target" | "$SORT" -r)"
       [ -n "$mounts" ] || return 0
 
-      printf '%s\n' "$mounts" | while IFS= read -r mounted_target; do
+      for mounted_target in $mounts; do
         [ -n "$mounted_target" ] || continue
         unmount_one "$mounted_target" || true
       done
@@ -359,7 +480,25 @@
 
       log "direct removal failed for $session_dir; retrying after chmod"
       "$CHMOD" -R u+w "$session_dir" 2>/dev/null || true
-      "$RM" -rf "$session_dir" || log "warning: failed to remove $session_dir"
+      if ! "$RM" -rf "$session_dir"; then
+        cleanup_status=failed
+        log "warning: failed to remove $session_dir"
+      fi
+    }
+
+    write_cleanup_record() {
+      prefix="$1"
+      target="$(path_under_prefix "$prefix" "$CLEANUP_STATE_RELATIVE")"
+      parent="''${target%/*}"
+      [ -d "$(path_under_prefix "$prefix" ${userHome})" ] || return 0
+      "$MKDIR" -p "$parent" || return 0
+      {
+        printf 'timestamp=%s\n' "$("$DATE" -u +%Y-%m-%dT%H:%M:%SZ)"
+        printf 'result=%s\n' "$cleanup_status"
+        printf 'phase=%s\n' complete
+        printf 'scope=%s\n' late-shutdown
+      } > "$target.tmp"
+      "$MV" "$target.tmp" "$target"
     }
 
     if ! has_host_scratch_evidence; then
@@ -368,6 +507,10 @@
     fi
 
     for prefix in $PREFIXES; do
+      unmount_tree "$(path_under_prefix "$prefix" ${dockerRoot})"
+      unmount_tree "$(path_under_prefix "$prefix" ${userHome}/.config/BraveSoftware)"
+      unmount_tree "$(path_under_prefix "$prefix" ${userHome}/.codex)"
+      unmount_tree "$(path_under_prefix "$prefix" ${userHome}/.cache)"
       unmount_tree "$(path_under_prefix "$prefix" ${usbHomeBacking})"
       unmount_tree "$(path_under_prefix "$prefix" ${nixStoreMount})"
       unmount_tree "$(path_under_prefix "$prefix" ${rwStoreMount})"
@@ -378,7 +521,10 @@
 
     if [ -e "$MAPPER_DEVICE" ]; then
       log "closing $MAPPER_NAME"
-      "$CRYPTSETUP" close "$MAPPER_NAME" || log "warning: failed to close $MAPPER_NAME"
+      if ! "$CRYPTSETUP" close "$MAPPER_NAME"; then
+        cleanup_status=failed
+        log "warning: failed to close $MAPPER_NAME"
+      fi
     fi
 
     for prefix in $PREFIXES; do
@@ -387,6 +533,10 @@
 
     for prefix in $PREFIXES; do
       unmount_tree "$(path_under_prefix "$prefix" ${hostStoreMount})"
+    done
+
+    for prefix in $PREFIXES; do
+      write_cleanup_record "$prefix"
     done
   '';
 in {
@@ -402,6 +552,7 @@ in {
     before = [
       "display-manager.service"
       "docker.service"
+      "user@1000.service"
     ];
     wantedBy = ["multi-user.target"];
     serviceConfig = {
@@ -410,7 +561,7 @@ in {
       ExecStart = hostScratchStart;
       ExecStop = hostScratchStop;
       TimeoutStartSec = "10min";
-      TimeoutStopSec = "15min";
+      TimeoutStopSec = "60s";
     };
   };
 
@@ -422,6 +573,17 @@ in {
       Type = "oneshot";
       ExecStart = "${hostScratchSync} checkpoint";
       TimeoutStartSec = "15min";
+    };
+  };
+
+  systemd.services.usb-host-scratch-checkpoint-cache = {
+    description = "Checkpoint USB host scratch state and full cache to persistent USB storage";
+    after = ["usb-host-scratch.service"];
+    requires = ["usb-host-scratch.service"];
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = "${hostScratchSync} checkpoint --include-cache";
+      TimeoutStartSec = "infinity";
     };
   };
 
@@ -465,6 +627,7 @@ in {
       print_file "scratch mode" /run/usb-host-scratch.mode
       print_file "last sync attempt" /run/usb-host-scratch-last-sync
       print_file "last successful sync" ${lastSyncState}
+      print_file "previous late cleanup" ${lastCleanupState}
 
       printf '== mounts ==\n'
       print_mount ${hostStoreMount}
@@ -482,12 +645,13 @@ in {
       fi
 
       printf '== durability ==\n'
-      printf '%s\n' "Only cache, Codex, and Brave are checkpointed."
+      printf '%s\n' "Automatic and default checkpoints persist essential Codex and Brave state."
+      printf '%s\n' "Use usb-host-scratch checkpoint --include-cache to persist the full user cache explicitly."
       printf '%s\n\n' "Docker state and repositories are temporary and are not copied to USB."
 
       if ${pkgs.systemd}/bin/journalctl --version >/dev/null 2>&1; then
         printf '== services ==\n'
-        ${pkgs.systemd}/bin/journalctl -b -u usb-host-scratch.service -u usb-host-scratch-checkpoint.service --no-pager -n 80 || true
+        ${pkgs.systemd}/bin/journalctl -b -u usb-host-scratch.service -u usb-host-scratch-checkpoint.service -u usb-host-scratch-checkpoint-cache.service --no-pager -n 80 || true
       fi
     '')
   ];

@@ -75,6 +75,10 @@
   usbHostAutoStorePrepareScript = pkgs.writeText "usb-host-auto-store-prepare-script" self.nixosConfigurations.usb.config.specialisation.host-auto-store.configuration.boot.initrd.systemd.services.initrd-usb-host-auto-store-prepare.script;
   usbHostScratchService = self.nixosConfigurations.usb.config.systemd.services.usb-host-scratch;
   usbHostScratchServiceDescriptionFile = builtins.toFile "usb-host-scratch-service-description" usbHostScratchService.description;
+  usbHostScratchServiceBeforeFile = builtins.toFile "usb-host-scratch-service-before" (
+    builtins.concatStringsSep "\n" usbHostScratchService.before
+  );
+  usbHostScratchServiceTimeoutStopSecFile = builtins.toFile "usb-host-scratch-service-timeout-stop-sec" usbHostScratchService.serviceConfig.TimeoutStopSec;
   usbHostScratchStartScript = usbHostScratchService.serviceConfig.ExecStart;
   usbHostScratchStopScript = usbHostScratchService.serviceConfig.ExecStop;
   usbHostScratchCheckpointExec = self.nixosConfigurations.usb.config.systemd.services.usb-host-scratch-checkpoint.serviceConfig.ExecStart;

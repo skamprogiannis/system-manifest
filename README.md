@@ -161,14 +161,15 @@ nixos-usb-host-scratch-status
 
 `writable-encrypted-host-auto-overlay` means store reads and writes are backed by the encrypted host scratch image. If no suitable partition can be mounted or copied to, the specialisation falls back to the USB-backed squashfs and encrypted USB-root scratch writable layer. `nixos-usb-store-status` prints the selected store mode, host candidates, mount diagnostics, and relevant initrd service logs. `nixos-usb-host-scratch-status` shows Docker/cache/Codex/Brave bind mounts and the active repositories path.
 
-To make current cache, Codex, and Brave changes durable before shutdown:
+To make essential Codex and Brave changes durable before shutdown:
 
 ```bash
 usb-host-scratch checkpoint
+usb-host-scratch checkpoint --include-cache
 usb-host-scratch status
 ```
 
-Checkpoints are serialized and update the last-successful-sync record shown by `status`. Docker state and everything under the host-scratch `repositories` directory remain intentionally temporary, so commit or push repository work before powering off.
+Checkpoints are serialized and update phase, scope, and result diagnostics shown by `status`. The default checkpoint persists essential Codex session state and Brave profile state while excluding volatile caches and USB-local Codex authentication/configuration. Add `--include-cache` for an explicit, potentially slow full `~/.cache` copy. Docker state and everything under the host-scratch `repositories` directory remain intentionally temporary, so commit or push repository work before powering off.
 
 For fast temporary clones:
 
@@ -177,7 +178,7 @@ cd "$(usb-host-scratch)"
 git clone https://github.com/OWNER/REPO.git
 ```
 
-On clean shutdown, the USB runs the same serialized sync for `~/.cache`, `~/.codex`, and `~/.config/BraveSoftware`, then removes host-side encrypted session files. A forced power-off cannot guarantee the final sync; use `usb-host-scratch checkpoint` first when recent state matters. If power is cut, the host may retain ciphertext under `.nixos-usb/session/`, but the key only lived in RAM and stale session files are removed on the next successful host-auto boot.
+On clean shutdown, the USB first detaches live Docker and user-state bind mounts, then gives the essential Codex/Brave sync 50 seconds plus at most five seconds to terminate, leaving cleanup time inside systemd's hard 60-second stop budget. Cleanup still detaches the USB backing bind and removes host-side encrypted session files after a sync failure or timeout. A forced power-off cannot guarantee the final sync; use `usb-host-scratch checkpoint` first when recent state matters. If power is cut, the host may retain ciphertext under `.nixos-usb/session/`, but the key only lived in RAM and stale session files are removed on the next successful host-auto boot.
 
 ### Initialize / Reformat Persistent USB
 
