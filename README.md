@@ -80,7 +80,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 | `skwd-we-capture-still` | Captures a Wallpaper Engine still image into `~/.cache/skwd-wall/wallpaper/we-captures/`, with `--current-live` for a faithful live-screen fallback |
 | `torrent` | Manages the local Transmission daemon with readable `gui`, `list`, `add`, `start`, `stop`, `remove`, and guarded `delete --yes` commands |
 | `transmission-port-sync` | Syncs Transmission's configured peer port (for example after a VPN-forwarded port change) |
-| `codex-state-sync` | Syncs resumable Codex state between desktop and USB (`to-usb` / `from-usb`) while leaving auth/config/cache local |
+| `codex-state-sync` | Safely merges active Codex sessions between desktop and USB (`to-usb` / `from-usb`) while leaving machine-local state alone |
 | `nixos-usb-host-scratch-status` | Shows encrypted host-scratch mounts plus the last checkpoint/shutdown sync result |
 | `specify` | Spec Kit CLI wrapper — scaffolds spec-driven development for new projects |
 | `setup-persistent-usb` | Initialises a fresh LUKS-encrypted persistent NixOS USB drive |
@@ -198,7 +198,9 @@ codex-state-sync to-usb    # before leaving for a lab machine
 codex-state-sync from-usb  # after returning
 ```
 
-The script syncs resumable Codex state from `~/.codex/` and escalates with `sudo` only for the USB mount/unlock steps. Auth, declarative config, skills, agents, caches, and logs remain local to each machine.
+The script merges only active rollout files under `~/.codex/sessions/`; it never deletes destination-only sessions, and it preserves a newer destination copy. Before replacing an older same-path rollout, it saves the old file under `~/.local/state/codex-state-sync/backups/`. When files change, it also backs up the destination state database and requests a rollout reindex for the next Codex launch.
+
+Close Codex before running `from-usb`; the command refuses to import while a local Codex process is active. Auth, declarative config, databases, archived sessions, goals, memories, skills, agents, caches, and logs remain local to each machine.
 
 ## License
 

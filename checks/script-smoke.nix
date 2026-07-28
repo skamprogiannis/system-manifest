@@ -88,6 +88,187 @@ in {
               fi
             }
 
+            codex_sync_test="$TMPDIR/codex-state-sync"
+            codex_sync_local="$codex_sync_test/local-home/.codex"
+            codex_sync_remote="$codex_sync_test/usb-root$codex_sync_test/local-home/.codex"
+            mkdir -p \
+              "$codex_sync_local/sessions/2026/07/26" \
+              "$codex_sync_local/sessions/2026/07/28" \
+              "$codex_sync_local/projects/example/files/alt-nix-store" \
+              "$codex_sync_remote/sessions/2026/07/27" \
+              "$codex_sync_remote/sessions/2026/07/28" \
+              "$codex_sync_remote/projects/example/files/alt-nix-store" \
+              "$codex_sync_remote/archived_sessions"
+            printf '%s\n' desktop-only > "$codex_sync_local/sessions/2026/07/26/rollout-desktop-only.jsonl"
+            printf '%s\n' usb-only > "$codex_sync_remote/sessions/2026/07/27/rollout-usb-only.jsonl"
+            ${pkgs.sqlite}/bin/sqlite3 "$codex_sync_local/state_5.sqlite" "
+              CREATE TABLE backfill_state (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                status TEXT NOT NULL,
+                last_watermark TEXT,
+                last_success_at INTEGER,
+                updated_at INTEGER NOT NULL
+              );
+              INSERT INTO backfill_state VALUES (
+                1,
+                'complete',
+                'sessions/old-rollout.jsonl',
+                100,
+                100
+              );
+              CREATE TABLE local_marker (value TEXT NOT NULL);
+              INSERT INTO local_marker VALUES ('desktop-database');
+            "
+            printf '%s\n' usb-database > "$codex_sync_remote/state_5.sqlite"
+            printf '%s\n' usb-archived > "$codex_sync_remote/archived_sessions/rollout-usb-archived.jsonl"
+            printf '%s\n' desktop-old > "$codex_sync_local/sessions/2026/07/28/rollout-source-newer.jsonl"
+            printf '%s\n' usb-new > "$codex_sync_remote/sessions/2026/07/28/rollout-source-newer.jsonl"
+            printf '%s\n' desktop-new > "$codex_sync_local/sessions/2026/07/28/rollout-destination-newer.jsonl"
+            printf '%s\n' usb-old > "$codex_sync_remote/sessions/2026/07/28/rollout-destination-newer.jsonl"
+            printf '%s\n' desktop-local > "$codex_sync_local/projects/example/files/alt-nix-store/marker"
+            printf '%s\n' usb-local > "$codex_sync_remote/projects/example/files/alt-nix-store/marker"
+            touch -d @100 "$codex_sync_local/state_5.sqlite"
+            touch -d @200 "$codex_sync_remote/state_5.sqlite"
+            touch -d @100 "$codex_sync_local/sessions/2026/07/28/rollout-source-newer.jsonl"
+            touch -d @200 "$codex_sync_remote/sessions/2026/07/28/rollout-source-newer.jsonl"
+            touch -d @300 "$codex_sync_local/sessions/2026/07/28/rollout-destination-newer.jsonl"
+            touch -d @200 "$codex_sync_remote/sessions/2026/07/28/rollout-destination-newer.jsonl"
+
+            run_expect 0 codex-state-sync-from-usb \
+              env \
+                CODEX_STATE_SYNC_TEST_MODE=1 \
+                CODEX_STATE_SYNC_TEST_ROOT="$codex_sync_test" \
+                CODEX_STATE_SYNC_TEST_TIMESTAMP=20260728T120000Z \
+                "$desktop_home/bin/codex-state-sync" from-usb
+
+            if [ ! -f "$codex_sync_local/sessions/2026/07/26/rollout-desktop-only.jsonl" ]; then
+              echo "Expected from-usb to preserve a desktop-only Codex session." >&2
+              exit 1
+            fi
+            if [ ! -f "$codex_sync_local/sessions/2026/07/27/rollout-usb-only.jsonl" ]; then
+              echo "Expected from-usb to import a USB-only Codex session." >&2
+              exit 1
+            fi
+            if [ "$(${pkgs.sqlite}/bin/sqlite3 "$codex_sync_local/state_5.sqlite" "SELECT value FROM local_marker;")" != desktop-database ]; then
+              echo "Expected from-usb to keep the desktop Codex database local." >&2
+              exit 1
+            fi
+            if [ -e "$codex_sync_local/archived_sessions/rollout-usb-archived.jsonl" ]; then
+              echo "Expected from-usb to leave archived Codex sessions local." >&2
+              exit 1
+            fi
+            if [ "$(cat "$codex_sync_local/sessions/2026/07/28/rollout-source-newer.jsonl")" != usb-new ]; then
+              echo "Expected from-usb to import a newer USB rollout." >&2
+              exit 1
+            fi
+            codex_sync_backup="$codex_sync_test/local-home/.local/state/codex-state-sync/backups/20260728T120000Z/from-usb/sessions/2026/07/28/rollout-source-newer.jsonl"
+            if [ ! -f "$codex_sync_backup" ] || [ "$(cat "$codex_sync_backup")" != desktop-old ]; then
+              echo "Expected from-usb to back up an overwritten desktop rollout." >&2
+              exit 1
+            fi
+            if [ "$(cat "$codex_sync_local/sessions/2026/07/28/rollout-destination-newer.jsonl")" != desktop-new ]; then
+              echo "Expected from-usb to preserve a newer desktop rollout." >&2
+              exit 1
+            fi
+            codex_sync_state="$(${pkgs.sqlite}/bin/sqlite3 "$codex_sync_local/state_5.sqlite" "
+              SELECT status, COALESCE(last_watermark, 'NULL'), COALESCE(last_success_at, 'NULL')
+              FROM backfill_state
+              WHERE id = 1;
+            ")"
+            if [ "$codex_sync_state" != "pending|NULL|NULL" ]; then
+              echo "Expected from-usb to request a Codex rollout reindex." >&2
+              exit 1
+            fi
+            codex_sync_state_backup="$codex_sync_test/local-home/.local/state/codex-state-sync/backups/20260728T120000Z/from-usb/state/state_5.sqlite"
+            if [ ! -f "$codex_sync_state_backup" ]; then
+              echo "Expected from-usb to back up the desktop Codex database before reindexing." >&2
+              exit 1
+            fi
+            codex_sync_backup_state="$(${pkgs.sqlite}/bin/sqlite3 "$codex_sync_state_backup" "
+              SELECT status, last_watermark, last_success_at
+              FROM backfill_state
+              WHERE id = 1;
+            ")"
+            if [ "$codex_sync_backup_state" != "complete|sessions/old-rollout.jsonl|100" ]; then
+              echo "Expected the database backup to preserve pre-reindex state." >&2
+              exit 1
+            fi
+            if [ ! -f "$codex_sync_local/projects/example/files/alt-nix-store/marker" ] ||
+               [ ! -f "$codex_sync_remote/projects/example/files/alt-nix-store/marker" ]; then
+              echo "Expected Codex state sync to leave non-session trees untouched." >&2
+              exit 1
+            fi
+
+            run_expect 1 codex-state-sync-running \
+              env \
+                CODEX_STATE_SYNC_TEST_MODE=1 \
+                CODEX_STATE_SYNC_TEST_ROOT="$codex_sync_test" \
+                CODEX_STATE_SYNC_TEST_CODEX_RUNNING=1 \
+                "$desktop_home/bin/codex-state-sync" from-usb
+            assert_log_contains "Close Codex before importing USB sessions."
+
+            codex_sync_to_test="$TMPDIR/codex-state-sync-to"
+            codex_sync_to_local="$codex_sync_to_test/local-home/.codex"
+            codex_sync_to_remote="$codex_sync_to_test/usb-root$codex_sync_to_test/local-home/.codex"
+            mkdir -p \
+              "$codex_sync_to_local/sessions/2026/07/28" \
+              "$codex_sync_to_remote/sessions/2026/07/27"
+            printf '%s\n' desktop-to-usb > "$codex_sync_to_local/sessions/2026/07/28/rollout-desktop-to-usb.jsonl"
+            printf '%s\n' usb-existing > "$codex_sync_to_remote/sessions/2026/07/27/rollout-usb-existing.jsonl"
+            ${pkgs.sqlite}/bin/sqlite3 "$codex_sync_to_remote/state_5.sqlite" "
+              CREATE TABLE backfill_state (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                status TEXT NOT NULL,
+                last_watermark TEXT,
+                last_success_at INTEGER,
+                updated_at INTEGER NOT NULL
+              );
+              INSERT INTO backfill_state VALUES (
+                1,
+                'complete',
+                'sessions/usb-old-rollout.jsonl',
+                200,
+                200
+              );
+              CREATE TABLE usb_marker (value TEXT NOT NULL);
+              INSERT INTO usb_marker VALUES ('usb-database');
+            "
+
+            run_expect 0 codex-state-sync-to-usb \
+              env \
+                CODEX_STATE_SYNC_TEST_MODE=1 \
+                CODEX_STATE_SYNC_TEST_ROOT="$codex_sync_to_test" \
+                CODEX_STATE_SYNC_TEST_TIMESTAMP=20260728T130000Z \
+                "$desktop_home/bin/codex-state-sync" to-usb
+
+            if [ ! -f "$codex_sync_to_remote/sessions/2026/07/28/rollout-desktop-to-usb.jsonl" ] ||
+               [ ! -f "$codex_sync_to_remote/sessions/2026/07/27/rollout-usb-existing.jsonl" ]; then
+              echo "Expected to-usb to merge desktop sessions into the USB." >&2
+              exit 1
+            fi
+            codex_sync_to_state="$(${pkgs.sqlite}/bin/sqlite3 "$codex_sync_to_remote/state_5.sqlite" "
+              SELECT status, COALESCE(last_watermark, 'NULL'), COALESCE(last_success_at, 'NULL')
+              FROM backfill_state
+              WHERE id = 1;
+            ")"
+            if [ "$codex_sync_to_state" != "pending|NULL|NULL" ]; then
+              echo "Expected to-usb to request a USB Codex rollout reindex." >&2
+              exit 1
+            fi
+            codex_sync_to_backup="$codex_sync_to_test/local-home/.local/state/codex-state-sync/backups/20260728T130000Z/to-usb/state/state_5.sqlite"
+            if [ ! -f "$codex_sync_to_backup" ]; then
+              echo "Expected to-usb to back up the USB Codex database before reindexing." >&2
+              exit 1
+            fi
+            if [ "$(${pkgs.sqlite}/bin/sqlite3 "$codex_sync_to_backup" "
+              SELECT status, last_watermark, last_success_at
+              FROM backfill_state
+              WHERE id = 1;
+            ")" != "complete|sessions/usb-old-rollout.jsonl|200" ]; then
+              echo "Expected the USB database backup to preserve pre-reindex state." >&2
+              exit 1
+            fi
+
             run_expect 0 setup-persistent-usb-help "$usb_home/bin/setup-persistent-usb" --help
             assert_log_contains "Creates a fresh persistent NixOS USB"
 

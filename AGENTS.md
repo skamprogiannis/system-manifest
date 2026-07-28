@@ -108,7 +108,9 @@ Codex resumable state lives under `~/.codex/`. To share it between desktop and U
 - `codex-state-sync to-usb` — push desktop Codex state to USB (run before leaving for a lab)
 - `codex-state-sync from-usb` — pull USB Codex state back to desktop (run when back home)
 
-The script finds the USB automatically via the `NIXOS_USB_CRYPT` disk label, unlocks LUKS, mounts, rsyncs, and unmounts. It excludes auth, declarative config, skills, agents, caches, and logs. Requires `sudo`.
+The script finds the USB automatically via the `NIXOS_USB_CRYPT` disk label, unlocks LUKS, mounts, merges only active rollout files under `~/.codex/sessions/`, and unmounts. It never deletes destination-only sessions, preserves newer destination copies, and backs up overwritten rollouts plus the destination state database under `~/.local/state/codex-state-sync/backups/`. When rollouts change, it requests a destination reindex for the next Codex launch.
+
+Close Codex before running `from-usb`; the command refuses to import while a local Codex process is active. Auth, declarative config, databases, archived sessions, goals, memories, skills, agents, caches, and logs remain local to each machine. Requires `sudo` for the USB unlock and mount steps.
 
 At the lab: `codex resume` to pick up synced sessions.
 
