@@ -545,6 +545,26 @@ in {
     "d /run/usb-host-scratch 0700 root root - -"
   ];
 
+  # These mounts are created dynamically in the initrd. Leave them mounted
+  # through umount.target so the shutdown-ramfs hook can close the scratch
+  # mapper between unmounting the scratch filesystem and its host backing.
+  systemd.units = {
+    "nix-.host-scratch.mount" = {
+      overrideStrategy = "asDropin";
+      text = ''
+        [Unit]
+        DefaultDependencies=no
+      '';
+    };
+    "nix-.host-store.mount" = {
+      overrideStrategy = "asDropin";
+      text = ''
+        [Unit]
+        DefaultDependencies=no
+      '';
+    };
+  };
+
   systemd.services.usb-host-scratch = {
     description = "USB encrypted host scratch storage";
     after = ["local-fs.target"];

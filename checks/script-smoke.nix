@@ -13,6 +13,7 @@
     usbDmsServiceEnvironmentFile
     usbHome
     usbHostScratchCheckpointExec
+    usbHostScratchMountDropinFile
     usbHostScratchServiceBeforeFile
     usbHostScratchServiceDescriptionFile
     usbHostScratchServiceTimeoutStopSecFile
@@ -20,6 +21,7 @@
     usbHostScratchStartScript
     usbHostScratchStopScript
     usbHostScratchSyncScript
+    usbHostStoreMountDropinFile
     usbShutdownRamfsStorePathsFile
     usbTmpfilesRulesFile
     ;
@@ -41,12 +43,14 @@ in {
             usb_activation="${usbActivation}"
             usb_home="${usbHome}"
             usb_host_scratch_description="${usbHostScratchServiceDescriptionFile}"
+            usb_host_scratch_mount_dropin="${usbHostScratchMountDropinFile}"
             usb_host_scratch_before="${usbHostScratchServiceBeforeFile}"
             usb_host_scratch_start="${usbHostScratchStartScript}"
             usb_host_scratch_shutdown_cleanup="${usbHostScratchShutdownCleanupScript}"
             usb_host_scratch_stop="${usbHostScratchStopScript}"
             usb_host_scratch_timeout_stop_sec="${usbHostScratchServiceTimeoutStopSecFile}"
             usb_host_scratch_sync="${usbHostScratchSyncScript}"
+            usb_host_store_mount_dropin="${usbHostStoreMountDropinFile}"
             usb_host_scratch_checkpoint_exec="${usbHostScratchCheckpointExec}"
             usb_shutdown_ramfs_store_paths="${usbShutdownRamfsStorePathsFile}"
             usb_tmpfiles_rules="${usbTmpfilesRulesFile}"
@@ -316,6 +320,10 @@ in {
             assert_file_contains "$usb_host_scratch_stop" "USB_HOST_SCRATCH_SHUTDOWN_BUDGET_SECONDS" "Expected automatic shutdown synchronization to have one explicit total budget."
             assert_file_contains "$usb_host_scratch_stop" "USB_HOST_SCRATCH_KILL_GRACE_SECONDS" "Expected a TERM-resistant shutdown sync to have a bounded kill grace."
             assert_file_contains "$usb_host_scratch_timeout_stop_sec" "60s" "Expected systemd to enforce the hard 60-second stop budget."
+            assert_file_contains "$usb_host_scratch_mount_dropin" "overrideStrategy=asDropin" "Expected /nix/.host-scratch ordering to extend the transient initrd mount unit."
+            assert_file_contains "$usb_host_scratch_mount_dropin" "DefaultDependencies=no" "Expected late shutdown cleanup to own /nix/.host-scratch instead of umount.target."
+            assert_file_contains "$usb_host_store_mount_dropin" "overrideStrategy=asDropin" "Expected /nix/.host-store ordering to extend the transient initrd mount unit."
+            assert_file_contains "$usb_host_store_mount_dropin" "DefaultDependencies=no" "Expected late shutdown cleanup to own /nix/.host-store instead of umount.target."
             assert_not_file_contains "$usb_host_scratch_stop" "umount -l" "Expected USB host scratch stop to avoid lazy-detaching live bind mounts."
             assert_file_contains "$usb_host_scratch_sync" '"$FLOCK" -x 9' "Expected USB host scratch synchronization to serialize checkpoints."
             assert_file_contains "$usb_host_scratch_sync" "Docker state and repositories remain temporary" "Expected USB host scratch synchronization to disclose excluded ephemeral data."

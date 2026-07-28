@@ -79,6 +79,16 @@
     builtins.concatStringsSep "\n" usbHostScratchService.before
   );
   usbHostScratchServiceTimeoutStopSecFile = builtins.toFile "usb-host-scratch-service-timeout-stop-sec" usbHostScratchService.serviceConfig.TimeoutStopSec;
+  usbHostScratchMountUnit = self.nixosConfigurations.usb.config.systemd.units."nix-.host-scratch.mount" or {};
+  usbHostScratchMountDropinFile = pkgs.writeText "usb-host-scratch-mount-dropin" ''
+    overrideStrategy=${usbHostScratchMountUnit.overrideStrategy or ""}
+    ${usbHostScratchMountUnit.text or ""}
+  '';
+  usbHostStoreMountUnit = self.nixosConfigurations.usb.config.systemd.units."nix-.host-store.mount" or {};
+  usbHostStoreMountDropinFile = pkgs.writeText "usb-host-store-mount-dropin" ''
+    overrideStrategy=${usbHostStoreMountUnit.overrideStrategy or ""}
+    ${usbHostStoreMountUnit.text or ""}
+  '';
   usbHostScratchStartScript = usbHostScratchService.serviceConfig.ExecStart;
   usbHostScratchStopScript = usbHostScratchService.serviceConfig.ExecStop;
   usbHostScratchCheckpointExec = self.nixosConfigurations.usb.config.systemd.services.usb-host-scratch-checkpoint.serviceConfig.ExecStart;
