@@ -125,7 +125,7 @@ For later shared-contract refactors, treat `nix flake check` plus `nixos-rebuild
 sudo update-usb /path/to/system-manifest/main
 ```
 
-`update-usb` uses prebuild mode by default, which builds locally and syncs the final squashfs image to the USB. Always pass the worktree path that contains `flake.nix`, not the repo container root. The default output shows concise percent progress; add `-v` or `--verbose` when you want full `nix build`, `nixos-install`, `mksquashfs`, and cleanup detail.
+`update-usb` uses prebuild mode by default, which builds locally and syncs the final squashfs image to the USB. It owns an ephemeral mount tree under `/run/update-usb`, serializes writers with a lock, and recovers stale mounts and desktop staging on the next invocation. Always pass the worktree path that contains `flake.nix`, not the repo container root. The default output shows concise percent progress; add `-v` or `--verbose` when you want full `nix build`, `nixos-install`, `mksquashfs`, and cleanup detail.
 
 The USB installer workflow is packaged from `modules/home/scripts/usb/`: Nix owns constants and host exposure, while the extracted `update-usb` shell fragments own runtime behavior.
 
@@ -137,7 +137,7 @@ sudo update-usb --in-place /path/to/system-manifest/<worktree>
 
 Use `--force` to rewrite the USB even when the existing squashfs already contains the desired system.
 
-The script handles preflight checks, safe cleanup on `Ctrl+C`, first-boot Home Manager activation, and revision verification. After booting the USB, confirm the running image with `nixos-version --json` and `readlink -f /run/current-system`.
+The script handles preflight checks, cleanup on terminal closure or cancellation, first-boot Home Manager activation, and revision verification. The completed `nix-store.squashfs` is persistent boot data: updates write and verify a `.tmp` candidate before atomically replacing it, while interruption cleanup removes only the candidate and host-side staging. The USB root therefore needs enough temporary free space for both the completed image and its replacement candidate. After booting the USB, confirm the running image with `nixos-version --json` and `readlink -f /run/current-system`.
 
 `update-usb` and `nix flake check` prove the image builds correctly, but USB-only runtime issues still require a real boot on target hardware to verify rendering, cursor, DMS, and similar session behavior.
 

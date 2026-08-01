@@ -24,6 +24,16 @@ verify_squashfs_contains_system() {
   verbose_log "usb squashfs timestamp: $(stat -c '%y' "$squashfs_path")"
 }
 
+publish_squashfs() {
+  local candidate="$1"
+  local final="$MOUNT_POINT/nix-store.squashfs"
+
+  verify_squashfs_contains_system "$candidate"
+  sync -f "$candidate"
+  mv -f "$candidate" "$final"
+  sync -f "$MOUNT_POINT"
+}
+
 skip_if_existing_squashfs_is_current() {
   local squashfs_path="$MOUNT_POINT/nix-store.squashfs"
 

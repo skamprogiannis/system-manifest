@@ -120,6 +120,10 @@ in {
         fi
       }
 
+      assert_file_contains "$desktop_home/bin/codex-state-sync" 'MOUNT_PARENT="/run/codex-state-sync"' "Expected Codex state sync to use an ephemeral runtime mountpoint."
+      assert_file_contains "$desktop_home/bin/codex-state-sync" 'MOUNT="$MOUNT_PARENT/root"' "Expected Codex state sync to keep its mount beneath the owned runtime directory."
+      assert_not_file_contains "$desktop_home/bin/codex-state-sync" 'MOUNT="/mnt/usb-sync"' "Expected Codex state sync not to leave a persistent /mnt mountpoint."
+
       codex_sync_test="$TMPDIR/codex-state-sync"
       codex_sync_local="$codex_sync_test/local-home/.codex"
       codex_sync_remote="$codex_sync_test/usb-root$codex_sync_test/local-home/.codex"
@@ -957,6 +961,17 @@ in {
         exit 1
       fi
 
+      assert_file_contains "$update_usb_source_dir/main.sh" 'RUNTIME_DIR="/run/update-usb"' "Expected update-usb to own a dedicated ephemeral runtime directory."
+      assert_file_contains "$update_usb_source_dir/main.sh" 'MOUNT_POINT="$RUNTIME_DIR/root"' "Expected update-usb to keep its mount beneath the owned runtime directory."
+      assert_not_file_contains "$update_usb_source_dir/main.sh" 'MOUNT_POINT="/mnt"' "Expected update-usb not to reserve the system-wide /mnt mountpoint."
+      assert_file_contains "$update_usb_source_dir/cleanup.sh" "prepare_update_workspace()" "Expected update-usb startup to recover its dedicated stale workspace."
+      assert_file_contains "$update_usb_source_dir/main.sh" "remove_obsolete_usb_mountpoint" "Expected the next USB update to remove the old persistent Codex sync mountpoint when empty."
+      assert_file_contains "$update_usb_source_dir/cleanup.sh" "stop_active_child()" "Expected interruption cleanup to stop the active updater child before unmounting its workspace."
+      assert_file_contains "$update_usb_source_dir/main.sh" "cancel_update HUP" "Expected terminal closure to use the updater cleanup lifecycle."
+      assert_not_file_contains "$update_usb_source_dir/main.sh" 'rm -f "$MOUNT_POINT/nix-store.squashfs.tmp" "$MOUNT_POINT/nix-store.squashfs"' "Expected update-usb to preserve the last valid squashfs while copying its replacement."
+      assert_not_file_contains "$update_usb_source_dir/main.sh" 'rm -f "$MOUNT_POINT/nix-store.squashfs"' "Expected in-place updates to preserve the last valid squashfs while building its replacement."
+      assert_file_contains "$update_usb_source_dir/squashfs.sh" "publish_squashfs()" "Expected squashfs verification and atomic publication to live behind one lifecycle interface."
+
       metadata_test="$TMPDIR/update-usb-metadata"
       mkdir -p "$metadata_test/bin"
       {
@@ -1044,6 +1059,31 @@ in {
         exit 1
       fi
 
+      runtime_permissions_test="$TMPDIR/update-usb-runtime-permissions"
+      runtime_permissions="$(${pkgs.bash}/bin/bash -c '
+        set -euo pipefail
+        RUNTIME_DIR="$1"
+        flock() { return 0; }
+        # shellcheck disable=SC1091
+        . "$2"
+        initialize_update_runtime
+        stat -c "%a %n" "$RUNTIME_DIR" "$RUNTIME_DIR/lock" "$RUNTIME_DIR/tmp"
+      ' _ "$runtime_permissions_test" "$update_usb_source_dir/cleanup.sh")"
+      expected_runtime_permissions="$(cat <<EOF
+      755 $runtime_permissions_test
+      600 $runtime_permissions_test/lock
+      700 $runtime_permissions_test/tmp
+      EOF
+      )"
+      if [ "$runtime_permissions" != "$expected_runtime_permissions" ]; then
+        echo "Expected a traversable update-usb runtime parent with private lock and temporary data." >&2
+        echo "Expected:" >&2
+        printf '%s\n' "$expected_runtime_permissions" | ${pkgs.gnused}/bin/sed 's/^/  /' >&2
+        echo "Actual:" >&2
+        printf '%s\n' "$runtime_permissions" | ${pkgs.gnused}/bin/sed 's/^/  /' >&2
+        exit 1
+      fi
+
       cleanup_test="$TMPDIR/update-usb-cleanup"
       mkdir -p "$cleanup_test/bin"
       {
@@ -1096,6 +1136,41 @@ in {
         fi
       done
 
+      artifact_cleanup_test="$TMPDIR/update-usb-artifact-cleanup"
+      mkdir -p "$artifact_cleanup_test/root" "$artifact_cleanup_test/run/tmp" "$artifact_cleanup_test/stage/store"
+      printf '%s\n' valid > "$artifact_cleanup_test/root/nix-store.squashfs"
+      printf '%s\n' incomplete > "$artifact_cleanup_test/root/nix-store.squashfs.tmp"
+      printf '%s\n' staged > "$artifact_cleanup_test/stage/store/path"
+      (
+        VERBOSE=0
+        CANCELED=0
+        CLOSE_MAPPER_ON_CLEANUP=0
+        MOUNTED_ROOT=0
+        MOUNTED_BOOT=0
+        MOUNTED_STAGE_STORE=0
+        WORKSPACE_PREPARED=1
+        MOUNT_POINT="$artifact_cleanup_test/root"
+        RUNTIME_DIR="$artifact_cleanup_test/run"
+        STAGE_DIR="$artifact_cleanup_test/stage"
+        # shellcheck disable=SC1091
+        . "$update_usb_source_dir/phases.sh"
+        # shellcheck disable=SC1091
+        . "$update_usb_source_dir/cleanup.sh"
+        cleanup
+      )
+      if [ ! -f "$artifact_cleanup_test/root/nix-store.squashfs" ]; then
+        echo "Expected interruption cleanup to preserve the last valid USB squashfs." >&2
+        exit 1
+      fi
+      if [ -e "$artifact_cleanup_test/root/nix-store.squashfs.tmp" ]; then
+        echo "Expected interruption cleanup to remove an incomplete USB squashfs candidate." >&2
+        exit 1
+      fi
+      if [ -e "$artifact_cleanup_test/stage" ]; then
+        echo "Expected interruption cleanup to remove desktop staging data." >&2
+        exit 1
+      fi
+
       if ! ${pkgs.gnugrep}/bin/grep -Fq "#nixosConfigurations.usb.config.system.build.toplevel" "$update_usb_source_dir/metadata.sh"; then
         echo "Expected update-usb to prebuild the USB system toplevel attribute directly." >&2
         ${pkgs.gnused}/bin/sed -n '1,80p' "$update_usb_source_dir/metadata.sh" >&2
@@ -1105,6 +1180,44 @@ in {
       if ! ${pkgs.gnugrep}/bin/grep -Fq "Existing USB squashfs already contains the desired system; skipping update." "$update_usb_source_dir/squashfs.sh"; then
         echo "Expected update-usb to skip duplicate squashfs copies when the desired system is already present." >&2
         ${pkgs.gnused}/bin/sed -n '1,120p' "$update_usb_source_dir/squashfs.sh" >&2
+        exit 1
+      fi
+
+      squashfs_publish_test="$TMPDIR/update-usb-squashfs-publish"
+      mkdir -p "$squashfs_publish_test/root"
+      printf '%s\n' previous > "$squashfs_publish_test/root/nix-store.squashfs"
+      printf '%s\n' candidate > "$squashfs_publish_test/root/nix-store.squashfs.tmp"
+      : > "$squashfs_publish_test/events"
+      (
+        MOUNT_POINT="$squashfs_publish_test/root"
+        FINAL_SQUASHFS=""
+        # shellcheck disable=SC1091
+        . "$update_usb_source_dir/squashfs.sh"
+        verify_squashfs_contains_system() {
+          printf 'verify %s\n' "$1" >> "$squashfs_publish_test/events"
+        }
+        sync() {
+          printf 'sync %s\n' "$*" >> "$squashfs_publish_test/events"
+        }
+        mv() {
+          printf 'move %s\n' "$*" >> "$squashfs_publish_test/events"
+          ${pkgs.coreutils}/bin/mv "$@"
+        }
+        publish_squashfs "$squashfs_publish_test/root/nix-store.squashfs.tmp"
+      )
+      cat > "$squashfs_publish_test/expected-events" <<EOF
+      verify $squashfs_publish_test/root/nix-store.squashfs.tmp
+      sync -f $squashfs_publish_test/root/nix-store.squashfs.tmp
+      move -f $squashfs_publish_test/root/nix-store.squashfs.tmp $squashfs_publish_test/root/nix-store.squashfs
+      sync -f $squashfs_publish_test/root
+      EOF
+      if ! cmp -s "$squashfs_publish_test/expected-events" "$squashfs_publish_test/events"; then
+        echo "Expected update-usb to verify and flush the candidate before publishing it atomically." >&2
+        ${pkgs.gnused}/bin/sed 's/^/  /' "$squashfs_publish_test/events" >&2
+        exit 1
+      fi
+      if [ "$(cat "$squashfs_publish_test/root/nix-store.squashfs")" != candidate ]; then
+        echo "Expected atomic squashfs publication to replace the completed image only after verification." >&2
         exit 1
       fi
 

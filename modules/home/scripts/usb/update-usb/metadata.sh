@@ -5,7 +5,7 @@ read_expected_config_revision() {
   local error_log=""
   local result=""
 
-  error_log=$(mktemp)
+  error_log=$(mktemp "${UPDATE_USB_TMP_DIR:-${TMPDIR:-/tmp}}/update-usb-metadata.XXXXXX")
   if ! result=$(nix eval --raw "$FLAKE_DIR#nixosConfigurations.usb.config.system.configurationRevision" 2>"$error_log"); then
     echo "Warning: failed to evaluate USB configurationRevision from $FLAKE_DIR" >&2
     if [ -s "$error_log" ]; then
@@ -23,7 +23,7 @@ read_desired_system_toplevel() {
   local error_log=""
   local result=""
 
-  error_log=$(mktemp)
+  error_log=$(mktemp "${UPDATE_USB_TMP_DIR:-${TMPDIR:-/tmp}}/update-usb-toplevel.XXXXXX")
   if ! result=$(nix eval --raw "$FLAKE_DIR#nixosConfigurations.usb.config.system.build.toplevel" 2>"$error_log"); then
     echo "Warning: failed to evaluate desired USB system toplevel from $FLAKE_DIR" >&2
     if [ -s "$error_log" ]; then
@@ -71,7 +71,7 @@ capture_target_system_metadata() {
     TARGET_INIT_RELATIVE="${TARGET_SYSTEM_TOPLEVEL#/nix/store/}/init"
   fi
 
-  version_error_log=$(mktemp)
+  version_error_log=$(mktemp "${UPDATE_USB_TMP_DIR:-${TMPDIR:-/tmp}}/update-usb-version.XXXXXX")
   if ! version_json="$(chroot "$MOUNT_POINT" /nix/var/nix/profiles/system/sw/bin/nixos-version --json 2>"$version_error_log")"; then
     echo "Warning: failed to read installed USB system metadata via nixos-version --json" >&2
     if [ -s "$version_error_log" ]; then

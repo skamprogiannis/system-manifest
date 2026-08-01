@@ -164,10 +164,11 @@ run_logged_progress() {
   local sleep_pid wait_status
   local poll_seconds="${PROGRESS_POLL_SECONDS:-60}"
 
-  log_file="$(mktemp)"
+  log_file="$(mktemp "${UPDATE_USB_TMP_DIR:-${TMPDIR:-/tmp}}/update-usb-progress.XXXXXX")"
   started_at="$(date +%s)"
   "$@" >"$log_file" 2>&1 &
   pid="$!"
+  ACTIVE_CHILD_PID="$pid"
 
   while kill -0 "$pid" 2>/dev/null; do
     sleep "$poll_seconds" &
@@ -205,6 +206,7 @@ run_logged_progress() {
   done
 
   if [ "$status" -ne 0 ]; then
+    ACTIVE_CHILD_PID=""
     echo "Error: $description failed." >&2
     if [ -s "$log_file" ]; then
       cat "$log_file" >&2
@@ -213,6 +215,7 @@ run_logged_progress() {
     return "$status"
   fi
 
+  ACTIVE_CHILD_PID=""
   rm -f "$log_file"
 }
 
@@ -233,6 +236,7 @@ copy_with_progress() {
   total_bytes="$(stat -c '%s' "$source")"
   cp "$source" "$target" &
   pid="$!"
+  ACTIVE_CHILD_PID="$pid"
 
   while kill -0 "$pid" 2>/dev/null; do
     sleep 1 &
@@ -265,9 +269,12 @@ copy_with_progress() {
   done
 
   if [ "$status" -ne 0 ]; then
+    ACTIVE_CHILD_PID=""
     echo "Error: $description failed." >&2
     return "$status"
   fi
+
+  ACTIVE_CHILD_PID=""
 }
 
 phase_begin() {

@@ -21,7 +21,8 @@ in {
       PREFERRED_MAPPER="${usb.mapperName}"
       MAPPER="$PREFERRED_MAPPER"
       MAPPER_DEV="/dev/mapper/$MAPPER"
-      MOUNT="/mnt/usb-sync"
+      MOUNT_PARENT="/run/codex-state-sync"
+      MOUNT="$MOUNT_PARENT/root"
 
       if [ "$TEST_MODE" -eq 1 ]; then
         if [ -z "$TEST_ROOT" ]; then
@@ -167,6 +168,10 @@ in {
           MOUNTED=0
         fi
 
+        if [ "$TEST_MODE" -ne 1 ]; then
+          run_root rmdir "$MOUNT" "$MOUNT_PARENT" 2>/dev/null || true
+        fi
+
         if [ "$OPENED_MAPPER" -eq 1 ]; then
           sync
           for _ in 1 2 3; do
@@ -189,6 +194,7 @@ in {
       }
 
       trap cleanup EXIT
+      trap 'exit 129' HUP
       trap 'exit 130' INT
       trap 'exit 143' TERM
 

@@ -18,6 +18,32 @@ run_cleanup_step() {
   fi
 }
 
+initialize_update_runtime() {
+  mkdir -p "$RUNTIME_DIR"
+  chmod 0755 "$RUNTIME_DIR"
+  exec 9>"$RUNTIME_DIR/lock"
+  chmod 0600 "$RUNTIME_DIR/lock"
+  if ! flock -n 9; then
+    echo "Error: another update-usb process is already running." >&2
+    return 1
+  fi
+
+  rm -rf "$RUNTIME_DIR/tmp"
+  mkdir -p "$RUNTIME_DIR/tmp"
+  chmod 0700 "$RUNTIME_DIR/tmp"
+  export UPDATE_USB_TMP_DIR="$RUNTIME_DIR/tmp"
+}
+
+stop_active_child() {
+  local pid="${ACTIVE_CHILD_PID:-}"
+
+  if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+    kill "$pid" 2>/dev/null || true
+    wait "$pid" 2>/dev/null || true
+  fi
+  ACTIVE_CHILD_PID=""
+}
+
 cleanup_mount_tree() {
   local target mount_targets
 
@@ -36,6 +62,38 @@ cleanup_mount_tree() {
       run_cleanup_step "failed to unmount $target" umount "$target"
     fi
   done
+}
+
+remove_pending_squashfs() {
+  local pending="$MOUNT_POINT/nix-store.squashfs.tmp"
+
+  if [ -e "$pending" ]; then
+    run_cleanup_step "failed to remove incomplete squashfs candidate $pending" rm -f "$pending"
+  fi
+}
+
+remove_update_stage() {
+  if [ -n "${STAGE_DIR:-}" ] && [ -d "$STAGE_DIR" ]; then
+    run_cleanup_step "failed to remove temporary stage directory $STAGE_DIR" rm -rf "$STAGE_DIR"
+  fi
+}
+
+remove_obsolete_usb_mountpoint() {
+  rmdir "$MOUNT_POINT/mnt/usb-sync" 2>/dev/null || true
+}
+
+prepare_update_workspace() {
+  WORKSPACE_PREPARED=1
+  remove_pending_squashfs
+  cleanup_mount_tree
+
+  if mountpoint -q "$MOUNT_POINT"; then
+    echo "Error: failed to recover stale update-usb mounts under $MOUNT_POINT." >&2
+    return 1
+  fi
+
+  remove_update_stage
+  mkdir -p "$MOUNT_POINT"
 }
 
 settle_usb_devices() {
@@ -94,7 +152,10 @@ cleanup() {
     verbose_log "Cleaning up mounts..."
   fi
 
-  if [ "$MOUNTED_STAGE_STORE" -eq 1 ] || [ "$MOUNTED_BOOT" -eq 1 ] || [ "$MOUNTED_ROOT" -eq 1 ]; then
+  stop_active_child
+
+  if [ "${WORKSPACE_PREPARED:-0}" -eq 1 ]; then
+    remove_pending_squashfs
     cleanup_mount_tree
     MOUNTED_STAGE_STORE=0
     MOUNTED_BOOT=0
@@ -104,9 +165,9 @@ cleanup() {
     close_usb_mapper || true
   fi
 
-  if [ -n "$STAGE_DIR" ] && [ -d "$STAGE_DIR" ]; then
-    run_cleanup_step "failed to remove temporary stage directory $STAGE_DIR" rm -rf "$STAGE_DIR"
-  fi
+  remove_update_stage
+  rm -rf "${RUNTIME_DIR:?}/tmp"
+  rmdir "$MOUNT_POINT" 2>/dev/null || true
 
   if [ "$CANCELED" -eq 1 ]; then
     echo "Canceled during phase: $CURRENT_PHASE"
@@ -117,9 +178,11 @@ cleanup() {
 cancel_update() {
   local signal="$1"
   local exit_code=130
-  if [ "$signal" = "TERM" ]; then
-    exit_code=143
-  fi
+  case "$signal" in
+    HUP) exit_code=129 ;;
+    INT) exit_code=130 ;;
+    TERM) exit_code=143 ;;
+  esac
 
   CANCELED=1
   echo

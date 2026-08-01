@@ -24,23 +24,27 @@ source "$USB_UPDATE_LIB_DIR/squashfs.sh"
 SCRIPT_NAME="$(basename "$0")"
 USB_MAPPER_NAME="$PREFERRED_USB_MAPPER_NAME"
 USB_ROOT_DEV="/dev/mapper/$USB_MAPPER_NAME"
-MOUNT_POINT="/mnt"
+RUNTIME_DIR="/run/update-usb"
+MOUNT_POINT="$RUNTIME_DIR/root"
+STAGE_DIR="/var/tmp/update-usb-stage"
 DEFAULT_MODE="prebuild"
 MODE="$DEFAULT_MODE"
 FLAKE_DIR="$PWD"
 NIX_SHELL_PACKAGES=(squashfsTools cryptsetup util-linux coreutils findutils gnused)
-REQUIRED_TOOLS=(nixos-install cryptsetup mount umount findmnt find rm du cut sort nproc mountpoint sed mktemp cp mv date chroot lsblk sleep sync stat cat tr tail)
+REQUIRED_TOOLS=(nixos-install cryptsetup mount umount findmnt find rm du cut sort nproc mountpoint sed mktemp cp mv date chroot lsblk sleep sync stat cat tr tail flock mkdir chmod rmdir)
 FORCE_UPDATE=0
 VERBOSE=0
 CLOSE_MAPPER_ON_CLEANUP=0
 MOUNTED_ROOT=0
 MOUNTED_BOOT=0
 MOUNTED_STAGE_STORE=0
+WORKSPACE_PREPARED=0
+ACTIVE_CHILD_PID=""
 CANCELED=0
 CURRENT_PHASE="startup"
-STAGE_DIR=""
 STAGE_STORE=""
 LOCAL_SQUASHFS=""
+CANDIDATE_SQUASHFS=""
 FINAL_SQUASHFS=""
 EXPECTED_CONFIG_REVISION=""
 DESIRED_SYSTEM_TOPLEVEL=""
@@ -85,6 +89,14 @@ for tool in nix "${REQUIRED_TOOLS[@]}"; do
   fi
 done
 
+if ! initialize_update_runtime; then
+  exit 1
+fi
+trap cleanup EXIT
+trap 'cancel_update HUP' HUP
+trap 'cancel_update INT' INT
+trap 'cancel_update TERM' TERM
+
 if [ ! -d "$FLAKE_DIR" ] || [ ! -f "$FLAKE_DIR/flake.nix" ]; then
   echo "Error: flake directory '$FLAKE_DIR' is invalid (missing flake.nix)."
   echo "Pass a worktree path containing flake.nix, for example /path/to/system-manifest/main."
@@ -118,18 +130,20 @@ if [ ! -e "$USB_BOOT_DEV" ]; then
   exit 1
 fi
 
-if mountpoint -q "$MOUNT_POINT"; then
-  echo "Error: $MOUNT_POINT is already mounted. Refusing to continue."
-  echo "Please unmount it first to avoid touching the wrong filesystem."
+if ! prepare_update_workspace; then
   exit 1
 fi
 
-trap cleanup EXIT
-trap 'cancel_update INT' INT
-trap 'cancel_update TERM' TERM
-
 phase_begin "opening-luks" "Opening LUKS" 0
 refresh_usb_mapper
+if [ -e "$USB_ROOT_DEV" ]; then
+  EXISTING_USB_MOUNTS="$(findmnt -rn -S "$USB_ROOT_DEV" -o TARGET 2>/dev/null || true)"
+  if [ -n "$EXISTING_USB_MOUNTS" ]; then
+    echo "Error: USB root mapper is already mounted outside update-usb:" >&2
+    printf '%s\n' "$EXISTING_USB_MOUNTS" >&2
+    exit 1
+  fi
+fi
 if [ ! -e "$USB_ROOT_DEV" ]; then
   cryptsetup open "$USB_ROOT_PART" "$PREFERRED_USB_MAPPER_NAME"
   refresh_usb_mapper
@@ -143,6 +157,7 @@ umount "$MOUNT_POINT" 2>/dev/null || true
 
 mount "$USB_ROOT_DEV" "$MOUNT_POINT"
 MOUNTED_ROOT=1
+remove_obsolete_usb_mountpoint
 mkdir -p "$MOUNT_POINT/boot"
 mount "$USB_BOOT_DEV" "$MOUNT_POINT/boot"
 MOUNTED_BOOT=1
@@ -169,7 +184,6 @@ phase_end
 
 if [ "$MODE" = "prebuild" ]; then
   phase_begin "preparing-prebuild-stage" "Preparing local prebuild stage" 5
-  STAGE_DIR="$(mktemp -d /var/tmp/update-usb-stage.XXXXXX)"
   STAGE_STORE="$STAGE_DIR/store"
   mkdir -p "$STAGE_STORE"
   mkdir -p "$MOUNT_POINT/nix/store"
@@ -233,30 +247,28 @@ if [ "$MODE" = "prebuild" ]; then
   phase_begin_estimated "syncing-squashfs" "Syncing squashfs to USB" 660
   umount "$MOUNT_POINT/nix/store"
   MOUNTED_STAGE_STORE=0
-  rm -f "$MOUNT_POINT/nix-store.squashfs.tmp" "$MOUNT_POINT/nix-store.squashfs"
+  CANDIDATE_SQUASHFS="$MOUNT_POINT/nix-store.squashfs.tmp"
+  rm -f "$CANDIDATE_SQUASHFS"
   echo "Copying $SQFS_SIZE squashfs image to USB; this can take several minutes."
   copy_with_progress "$LOCAL_SQUASHFS" "$MOUNT_POINT/nix-store.squashfs.tmp" "$PHASE_PROGRESS_START" "$PHASE_PROGRESS_END" "Syncing squashfs to USB"
-  mv "$MOUNT_POINT/nix-store.squashfs.tmp" "$MOUNT_POINT/nix-store.squashfs"
-  FINAL_SQUASHFS="$MOUNT_POINT/nix-store.squashfs"
-  SQFS_SIZE="$(du -sh "$MOUNT_POINT/nix-store.squashfs" | cut -f1)"
-  echo "USB squashfs image: $SQFS_SIZE"
   phase_end_estimated
 else
   phase_begin_estimated "building-squashfs" "Building squashfs in-place on USB (slow path)" 1800
-  rm -f "$MOUNT_POINT/nix-store.squashfs"
-  run_logged_progress "Building squashfs" "$PHASE_PROGRESS_START" "$PHASE_PROGRESS_END" "$PHASE_PROGRESS_ESTIMATE" mksquashfs "$MOUNT_POINT/nix/store" "$MOUNT_POINT/nix-store.squashfs" \
+  CANDIDATE_SQUASHFS="$MOUNT_POINT/nix-store.squashfs.tmp"
+  rm -f "$CANDIDATE_SQUASHFS"
+  run_logged_progress "Building squashfs" "$PHASE_PROGRESS_START" "$PHASE_PROGRESS_END" "$PHASE_PROGRESS_ESTIMATE" mksquashfs "$MOUNT_POINT/nix/store" "$CANDIDATE_SQUASHFS" \
     -comp zstd \
     -Xcompression-level 3 \
     -b 1048576 \
     -processors "$(nproc)"
-  FINAL_SQUASHFS="$MOUNT_POINT/nix-store.squashfs"
-  SQFS_SIZE="$(du -sh "$MOUNT_POINT/nix-store.squashfs" | cut -f1)"
-  echo "Squashfs image: $SQFS_SIZE"
   phase_end_estimated
 fi
 
-phase_begin_estimated "verifying-squashfs" "Verifying USB squashfs" 10
-verify_squashfs_contains_system "$FINAL_SQUASHFS"
+phase_begin_estimated "verifying-squashfs" "Verifying and publishing USB squashfs" 10
+publish_squashfs "$CANDIDATE_SQUASHFS"
+FINAL_SQUASHFS="$MOUNT_POINT/nix-store.squashfs"
+SQFS_SIZE="$(du -sh "$FINAL_SQUASHFS" | cut -f1)"
+echo "USB squashfs image: $SQFS_SIZE"
 phase_end_estimated
 
 if [ "$MODE" = "prebuild" ]; then
