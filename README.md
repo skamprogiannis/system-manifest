@@ -8,7 +8,7 @@ Managed via **Nix Flakes** and **Home Manager**.
 
 - **Multi-Host Configuration:** Shared common configuration with host-specific overrides for `desktop`, `usb` (live/portable system), and `laptop` (dual-boot/mobile workstation). `hostType` is intentionally kept to lightweight shared-module branches; host-owned runtime/session behavior stays in dedicated host modules.
 - **Hyprland Desktop:** Wayland tiling compositor with glassmorphism aesthetics powered by Hyprland's native blur and app-native transparency. Ghostty uses native `background-opacity` for glass-like terminal surfaces with fully opaque text.
-- **USB: Portable Hyprland** — USB host boots through the same DMS greeter path as desktop and keeps the portable Hyprland session lean for lab machines. By default it uses a **hybrid squashfs** Nix store mounted by NixOS fileSystems (compressed read-only image + tmpfs overlay) for near-ISO boot performance on slow USB media; only new `/nix/store` writes use the tmpfs upper layer, while `/home` stays on the persistent encrypted USB root filesystem. Manual `ram-store` and `host-auto-store` boot specialisations use small initrd preparation units before the same native mount path to move store pressure into host RAM or an automatically selected host partition. Host-auto routes the copied store image, writable store overlay, Docker state, local cache, Codex state, Brave profile, and scratch `repositories` directory through encrypted host-local scratch when available.
+- **USB: Portable Hyprland** — USB host boots through the same DMS greeter path as desktop and keeps the portable Hyprland session lean for lab machines. It includes declarative Steam, Gamemode, and portable Mesa graphics support. By default it uses a **hybrid squashfs** Nix store mounted by NixOS fileSystems (compressed read-only image + tmpfs overlay) for near-ISO boot performance on slow USB media; only new `/nix/store` writes use the tmpfs upper layer, while `/home` stays on the persistent encrypted USB root filesystem. Manual `ram-store` and `host-auto-store` boot specialisations use small initrd preparation units before the same native mount path to move store pressure into host RAM or an automatically selected host partition. Host-auto routes the copied store image, writable store overlay, Docker state, local cache, Codex state, Brave profile, the Steam library, and scratch `repositories` directory through encrypted host-local scratch when available.
 - **Laptop: Dual-Boot Hyprland** — Laptop host keeps the full desktop muscle-memory workflow with portable display detection, encrypted-root install labels, Caps-to-Escape, Greek/US layouts, Zellij, Neovim, Codex, and browser setup.
 - **Gaming Mode:** A dedicated specialisation (`gaming-box`) that boots directly into Steam Big Picture Mode with Gamescope.
 - **Media & Productivity:**
@@ -149,7 +149,7 @@ That mode improves steady-state store reads after boot, uses an encrypted USB-ro
 
 ### USB Host Auto Store Mode
 
-Choose the USB **`host-auto-store` specialisation** on lab machines where it is acceptable to use a writable host partition as temporary scratch storage. The USB scans non-removable Linux filesystems first (`ext2`, `ext3`, `ext4`, `xfs`, and `btrfs`), then tries `ntfs`/`ntfs3` and `exfat` as lower-priority fallbacks. A per-boot encrypted sparse image is created under `.nixos-usb/session/<boot-id>/` on the selected host filesystem, and only that encrypted image is used for the copied `nix-store.squashfs`, writable store overlay, Docker state, local cache, Codex state, Brave profile, and temporary `repositories` directory.
+Choose the USB **`host-auto-store` specialisation** on lab machines where it is acceptable to use a writable host partition as temporary scratch storage. The USB scans non-removable Linux filesystems first (`ext2`, `ext3`, `ext4`, `xfs`, and `btrfs`), then tries `ntfs`/`ntfs3` and `exfat` as lower-priority fallbacks. A per-boot encrypted sparse image is created under `.nixos-usb/session/<boot-id>/` on the selected host filesystem, and only that encrypted image is used for the copied `nix-store.squashfs`, writable store overlay, Docker state, local cache, Codex state, Brave profile, Steam library, and temporary `repositories` directory.
 
 After boot, check which path was used:
 
@@ -159,7 +159,7 @@ nixos-usb-store-status
 nixos-usb-host-scratch-status
 ```
 
-`writable-encrypted-host-auto-overlay` means store reads and writes are backed by the encrypted host scratch image. If no suitable partition can be mounted or copied to, the specialisation falls back to the USB-backed squashfs and encrypted USB-root scratch writable layer. `nixos-usb-store-status` prints the selected store mode, host candidates, mount diagnostics, and relevant initrd service logs. `nixos-usb-host-scratch-status` shows Docker/cache/Codex/Brave bind mounts and the active repositories path.
+`writable-encrypted-host-auto-overlay` means store reads and writes are backed by the encrypted host scratch image. If no suitable partition can be mounted or copied to, the specialisation falls back to the USB-backed squashfs and encrypted USB-root scratch writable layer. `nixos-usb-store-status` prints the selected store mode, host candidates, mount diagnostics, and relevant initrd service logs. `nixos-usb-host-scratch-status` shows Docker/cache/Codex/Brave/Steam bind mounts and the active repositories path.
 
 To make essential Codex and Brave changes durable before shutdown:
 
@@ -169,7 +169,7 @@ usb-host-scratch checkpoint --include-cache
 usb-host-scratch status
 ```
 
-Checkpoints are serialized and update phase, scope, and result diagnostics shown by `status`. The default checkpoint persists essential Codex session state and Brave profile state while excluding volatile caches and USB-local Codex authentication/configuration. Add `--include-cache` for an explicit, potentially slow full `~/.cache` copy. Docker state and everything under the host-scratch `repositories` directory remain intentionally temporary, so commit or push repository work before powering off.
+Checkpoints are serialized and update phase, scope, and result diagnostics shown by `status`. The default checkpoint persists essential Codex session state and Brave profile state while excluding volatile caches and USB-local Codex authentication/configuration. Add `--include-cache` for an explicit, potentially slow full `~/.cache` copy. Docker state, everything under the host-scratch `repositories` directory, and games installed in `~/games/SteamLibrary` remain intentionally temporary. Steam Cloud is the durability path for supported game saves; commit or push repository work before powering off.
 
 For fast temporary clones:
 

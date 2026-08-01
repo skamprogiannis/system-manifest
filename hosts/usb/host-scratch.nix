@@ -16,6 +16,7 @@
   hostSessionRelative = ".nixos-usb/session";
   userRoot = "${hostScratchMount}/user/${userName}";
   repoRoot = "${hostScratchMount}/repositories";
+  steamLibrary = "${userHome}/games/SteamLibrary";
   usbHomeBacking = "${stateDir}/usb-home";
   lastSyncState = "${userHome}/.local/state/system-manifest/host-scratch-last-sync";
   lastCleanupState = "${userHome}/.local/state/system-manifest/host-scratch-last-cleanup";
@@ -87,10 +88,10 @@
         printf 'result=%s\n' "$result"
         if [ "$scope" = include-cache ]; then
           printf 'targets=%s\n' "codex,brave,cache"
-          printf 'excluded=%s\n' "docker,repositories,volatile-codex,volatile-brave"
+          printf 'excluded=%s\n' "docker,repositories,steam-library,volatile-codex,volatile-brave"
         else
           printf 'targets=%s\n' "codex,brave"
-          printf 'excluded=%s\n' "cache,docker,repositories,volatile-codex,volatile-brave"
+          printf 'excluded=%s\n' "cache,docker,repositories,steam-library,volatile-codex,volatile-brave"
         fi
       } > "$target.tmp"
       "$MV" "$target.tmp" "$target"
@@ -208,7 +209,7 @@
     else
       echo "usb-host-scratch-sync: full user cache was skipped; use checkpoint --include-cache for the slow scope" >&2
     fi
-    echo "usb-host-scratch-sync: Docker state and repositories remain temporary and are not copied" >&2
+    echo "usb-host-scratch-sync: Docker state, repositories, and the Steam library remain temporary and are not copied" >&2
   '';
 
   hostScratchStart = pkgs.writeShellScript "usb-host-scratch-start" ''
@@ -251,7 +252,7 @@
       exit 0
     fi
 
-    ${pkgs.coreutils}/bin/mkdir -p "$user_root/cache" "$user_root/codex" "$user_root/brave-config" "$repo_root" "$active_root/docker"
+    ${pkgs.coreutils}/bin/mkdir -p "$user_root/cache" "$user_root/codex" "$user_root/brave-config" "$user_root/steam-library" "$repo_root" "$active_root/docker"
     ${pkgs.coreutils}/bin/chown -R ${userName}:${userGroup} "$user_root" "$repo_root"
     ${pkgs.coreutils}/bin/chmod 700 "$user_root" "$repo_root" "$active_root/docker"
 
@@ -261,6 +262,7 @@
 
     bind_mount "${userHome}" "$usb_home"
     ${pkgs.util-linux}/bin/mount --make-private "$usb_home"
+    bind_mount "$user_root/steam-library" "${steamLibrary}"
     bind_mount "$user_root/cache" "${userHome}/.cache"
     bind_mount "$user_root/codex" "${userHome}/.codex"
     bind_mount "$user_root/brave-config" "${userHome}/.config/BraveSoftware"
@@ -319,6 +321,7 @@
       [ "$cleanup_ran" -eq 0 ] || return 0
       cleanup_ran=1
       unmount_target "$docker_root" || true
+      unmount_target "${steamLibrary}" || true
       unmount_target "${userHome}/.config/BraveSoftware" || true
       unmount_target "${userHome}/.codex" || true
       unmount_target "${userHome}/.cache" || true
@@ -336,6 +339,7 @@
 
     if [ -f "$mode_file" ] && "$GREP" -qx "encrypted-host-scratch" "$mode_file"; then
       unmount_target "$docker_root" || true
+      unmount_target "${steamLibrary}" || true
       unmount_target "${userHome}/.config/BraveSoftware" || true
       unmount_target "${userHome}/.codex" || true
       unmount_target "${userHome}/.cache" || true
@@ -508,6 +512,7 @@
 
     for prefix in $PREFIXES; do
       unmount_tree "$(path_under_prefix "$prefix" ${dockerRoot})"
+      unmount_tree "$(path_under_prefix "$prefix" ${steamLibrary})"
       unmount_tree "$(path_under_prefix "$prefix" ${userHome}/.config/BraveSoftware)"
       unmount_tree "$(path_under_prefix "$prefix" ${userHome}/.codex)"
       unmount_tree "$(path_under_prefix "$prefix" ${userHome}/.cache)"
@@ -654,6 +659,7 @@ in {
       print_mount ${hostScratchMount}
       print_mount ${usbHomeBacking}
       print_mount ${dockerRoot}
+      print_mount ${steamLibrary}
       print_mount ${userHome}/.cache
       print_mount ${userHome}/.codex
       print_mount ${userHome}/.config/BraveSoftware
@@ -667,7 +673,7 @@ in {
       printf '== durability ==\n'
       printf '%s\n' "Automatic and default checkpoints persist essential Codex and Brave state."
       printf '%s\n' "Use usb-host-scratch checkpoint --include-cache to persist the full user cache explicitly."
-      printf '%s\n\n' "Docker state and repositories are temporary and are not copied to USB."
+      printf '%s\n\n' "Docker state, repositories, and the Steam library are temporary and are not copied to USB."
 
       if ${pkgs.systemd}/bin/journalctl --version >/dev/null 2>&1; then
         printf '== services ==\n'

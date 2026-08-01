@@ -56,7 +56,7 @@ pkgs.writeShellScriptBin "usb-host-scratch" ''
         if [ "$checkpoint_service" = usb-host-scratch-checkpoint-cache.service ]; then
           echo "usb-host-scratch: also checkpointing full user cache without a shutdown time budget" >&2
         fi
-        echo "usb-host-scratch: Docker state and repositories remain temporary and are not copied" >&2
+        echo "usb-host-scratch: Docker state, repositories, and the Steam library remain temporary and are not copied" >&2
         if [ "$("$ID" -u)" -eq 0 ]; then
           "$SYSTEMCTL" start --wait "$checkpoint_service"
         else

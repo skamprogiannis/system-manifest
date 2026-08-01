@@ -96,6 +96,30 @@ in {
         fi
       }
 
+      assert_file_contains() {
+        local file="$1"
+        local needle="$2"
+        local message="$3"
+
+        if ! ${pkgs.gnugrep}/bin/grep -Fq -- "$needle" "$file"; then
+          echo "$message" >&2
+          ${pkgs.gnused}/bin/sed 's/^/  /' "$file" >&2
+          exit 1
+        fi
+      }
+
+      assert_not_file_contains() {
+        local file="$1"
+        local needle="$2"
+        local message="$3"
+
+        if ${pkgs.gnugrep}/bin/grep -Fq -- "$needle" "$file"; then
+          echo "$message" >&2
+          ${pkgs.gnused}/bin/sed 's/^/  /' "$file" >&2
+          exit 1
+        fi
+      }
+
       codex_sync_test="$TMPDIR/codex-state-sync"
       codex_sync_local="$codex_sync_test/local-home/.codex"
       codex_sync_remote="$codex_sync_test/usb-root$codex_sync_test/local-home/.codex"
@@ -286,34 +310,12 @@ in {
         exit 1
       fi
 
-      assert_file_contains() {
-        local file="$1"
-        local needle="$2"
-        local message="$3"
-
-        if ! ${pkgs.gnugrep}/bin/grep -Fq -- "$needle" "$file"; then
-          echo "$message" >&2
-          ${pkgs.gnused}/bin/sed 's/^/  /' "$file" >&2
-          exit 1
-        fi
-      }
-
-      assert_not_file_contains() {
-        local file="$1"
-        local needle="$2"
-        local message="$3"
-
-        if ${pkgs.gnugrep}/bin/grep -Fq -- "$needle" "$file"; then
-          echo "$message" >&2
-          ${pkgs.gnused}/bin/sed 's/^/  /' "$file" >&2
-          exit 1
-        fi
-      }
-
       assert_file_contains "$usb_host_scratch_start" "mount --make-private" "Expected USB host scratch to preserve a private view of the underlying USB home."
+      assert_file_contains "$usb_host_scratch_start" 'bind_mount "$user_root/steam-library" "/home/stefan/games/SteamLibrary"' "Expected host-auto mode to bind encrypted scratch storage onto the stable Steam library path."
       assert_file_contains "$usb_host_scratch_before" "docker.service" "Expected USB host scratch to stop after Docker."
       assert_file_contains "$usb_host_scratch_before" "user@1000.service" "Expected USB host scratch to stop after the user manager."
       assert_file_contains "$usb_tmpfiles_rules" "d /run/usb-host-scratch 0700 root root" "Expected the private USB-home bind parent to remain root-only."
+      assert_file_contains "$usb_tmpfiles_rules" "d /home/stefan/games/SteamLibrary 0755 stefan users" "Expected the stable USB Steam library path to exist outside host-auto mode."
       assert_file_contains "$usb_host_scratch_stop" "shutdown sync failed" "Expected USB host scratch stop to report failed final synchronization."
       assert_file_contains "$usb_host_scratch_stop" "shutdown cleanup evidence" "Expected USB host scratch stop to preserve cleanup evidence after incomplete stops."
       assert_file_contains "$usb_host_scratch_stop" "USB_HOST_SCRATCH_SYNC_HELPER" "Expected USB host scratch stop to expose its final-sync test seam."
@@ -326,7 +328,7 @@ in {
       assert_file_contains "$usb_host_store_mount_dropin" "DefaultDependencies=no" "Expected late shutdown cleanup to own /nix/.host-store instead of umount.target."
       assert_not_file_contains "$usb_host_scratch_stop" "umount -l" "Expected USB host scratch stop to avoid lazy-detaching live bind mounts."
       assert_file_contains "$usb_host_scratch_sync" '"$FLOCK" -x 9' "Expected USB host scratch synchronization to serialize checkpoints."
-      assert_file_contains "$usb_host_scratch_sync" "Docker state and repositories remain temporary" "Expected USB host scratch synchronization to disclose excluded ephemeral data."
+      assert_file_contains "$usb_host_scratch_sync" "Docker state, repositories, and the Steam library remain temporary" "Expected USB host scratch synchronization to disclose excluded ephemeral data."
       if [ "$usb_host_scratch_checkpoint_exec" != "$usb_host_scratch_sync checkpoint" ]; then
         echo "Expected the manual checkpoint unit to use the shared synchronization helper." >&2
         printf '  %s\n' "$usb_host_scratch_checkpoint_exec" >&2
@@ -351,7 +353,7 @@ in {
       assert_file_contains "$usb_home/bin/nixos-usb-store-status" "Maybe the USB cable is bad?" "Expected USB store status to explain kernel USB transport warnings."
       assert_file_contains "$usb_home/bin/usb-host-scratch" "checkpoint)" "Expected usb-host-scratch to expose a manual checkpoint command."
       assert_file_contains "$usb_home/bin/usb-host-scratch" "--include-cache" "Expected usb-host-scratch to expose an explicit slow cache checkpoint."
-      assert_file_contains "$usb_home/bin/usb-host-scratch" "repositories remain temporary" "Expected checkpoint output to warn about temporary repositories."
+      assert_file_contains "$usb_home/bin/usb-host-scratch" "repositories, and the Steam library remain temporary" "Expected checkpoint output to warn about temporary host-scratch data."
 
       host_scratch_sync_test="$TMPDIR/usb-host-scratch-sync"
       mkdir -p \
@@ -403,7 +405,7 @@ in {
           USB_HOST_SCRATCH_TEST_USB_HOME="$host_scratch_sync_test/usb" \
           "$usb_host_scratch_sync" checkpoint
       assert_log_contains "checkpoint complete"
-      assert_log_contains "repositories remain temporary"
+      assert_log_contains "Steam library remain temporary"
 
       for synced_path in \
         .codex/current \
@@ -426,7 +428,7 @@ in {
       assert_file_contains "$last_sync_record" "scope=essential" "Expected checkpoint status to identify the bounded essential scope."
       assert_file_contains "$last_sync_record" "phase=complete" "Expected checkpoint status to expose its completed phase."
       assert_file_contains "$last_sync_record" "targets=codex,brave" "Expected checkpoint status to identify persistent targets."
-      assert_file_contains "$last_sync_record" "excluded=cache,docker,repositories,volatile-codex,volatile-brave" "Expected checkpoint status to record excluded temporary data."
+      assert_file_contains "$last_sync_record" "excluded=cache,docker,repositories,steam-library,volatile-codex,volatile-brave" "Expected checkpoint status to record excluded temporary data."
       assert_file_contains "$host_scratch_sync_test/last-attempt" "result=success" "Expected public runtime status to show the latest checkpoint result."
       for user_owned_path in \
         "$host_scratch_sync_test/usb/.codex" \
@@ -508,7 +510,7 @@ in {
           USB_HOST_SCRATCH_SYSTEMCTL="$host_scratch_sync_test/bin/systemctl" \
           USB_HOST_SCRATCH_TEST_SUDO_LOG="$host_scratch_sync_test/sudo.log" \
           "$usb_home/bin/usb-host-scratch" checkpoint
-      assert_log_contains "Docker state and repositories remain temporary"
+      assert_log_contains "Docker state, repositories, and the Steam library remain temporary"
       if ! ${pkgs.gnugrep}/bin/grep -Fxq "$host_scratch_sync_test/bin/systemctl start --wait usb-host-scratch-checkpoint.service" "$host_scratch_sync_test/sudo.log"; then
         echo "Expected usb-host-scratch checkpoint to start the checkpoint system unit." >&2
         ${pkgs.gnused}/bin/sed 's/^/  /' "$host_scratch_sync_test/sudo.log" >&2
@@ -532,6 +534,7 @@ in {
       printf '%s\n' encrypted-host-scratch > "$host_scratch_stop_test/mode"
       cat > "$host_scratch_stop_test/mounted" <<EOF
       /var/lib/docker
+      /home/stefan/games/SteamLibrary
       /home/stefan/.config/BraveSoftware
       /home/stefan/.codex
       /home/stefan/.cache
@@ -592,6 +595,7 @@ in {
       fi
       cat > "$host_scratch_stop_test/expected-events" <<EOF
       unmount /var/lib/docker
+      unmount /home/stefan/games/SteamLibrary
       unmount /home/stefan/.config/BraveSoftware
       unmount /home/stefan/.codex
       unmount /home/stefan/.cache
@@ -613,6 +617,7 @@ in {
       cat > "$host_scratch_cleanup_test/mounted" <<EOF
       $host_scratch_cleanup_test/root/nix/store
       $host_scratch_cleanup_test/root/var/lib/docker
+      $host_scratch_cleanup_test/root/home/stefan/games/SteamLibrary
       $host_scratch_cleanup_test/root/home/stefan/.config/BraveSoftware
       $host_scratch_cleanup_test/root/home/stefan/.codex
       $host_scratch_cleanup_test/root/home/stefan/.cache
@@ -706,6 +711,7 @@ in {
 
       cat > "$host_scratch_cleanup_test/expected-umounts" <<EOF
       normal $host_scratch_cleanup_test/root/var/lib/docker
+      normal $host_scratch_cleanup_test/root/home/stefan/games/SteamLibrary
       normal $host_scratch_cleanup_test/root/home/stefan/.config/BraveSoftware
       lazy $host_scratch_cleanup_test/root/home/stefan/.config/BraveSoftware
       normal $host_scratch_cleanup_test/root/home/stefan/.codex

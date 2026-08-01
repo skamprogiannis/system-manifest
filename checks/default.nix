@@ -11,6 +11,7 @@
   checks = mergeChecks [
     ./hosts.nix
     ./usb-initrd-ordering.nix
+    ./usb-steam.nix
     ./hyprland-keybinds.nix
     ./desktop-glass.nix
     ./spotify-runtime.nix

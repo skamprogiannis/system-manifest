@@ -41,6 +41,12 @@
   desktopZellijPostCommandDiscoveryHook = self.nixosConfigurations.desktop.config.home-manager.users.stefan.programs.zellij.settings.post_command_discovery_hook;
   updateUsbSourceDir = ../modules/home/scripts/usb/update-usb;
   usbHome = self.nixosConfigurations.usb.config.home-manager.users.stefan.home.path;
+  usbSystem = self.nixosConfigurations.usb.config.system.build.toplevel;
+  usbSteamEnabled = self.nixosConfigurations.usb.config.programs.steam.enable;
+  usbGamemodeEnabled = self.nixosConfigurations.usb.config.programs.gamemode.enable;
+  usbGraphics32Enabled = self.nixosConfigurations.usb.config.hardware.graphics.enable32Bit;
+  usbGraphics32Package = self.nixosConfigurations.usb.config.hardware.graphics.package32;
+  usbMesa32Package = self.nixosConfigurations.usb.pkgs.pkgsi686Linux.mesa;
   usbActivation = self.nixosConfigurations.usb.config.home-manager.users.stefan.home.activationPackage;
   usbSkwdDaemonExec = builtins.head self.nixosConfigurations.usb.config.home-manager.users.stefan.systemd.user.services.skwd-daemon.Service.ExecStart;
   usbSkwdWallExec = "${builtins.dirOf (builtins.dirOf usbSkwdDaemonExec)}/bin/skwd-wall";
