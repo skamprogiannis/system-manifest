@@ -1,19 +1,10 @@
 {
-  config,
-  lib,
   pkgs,
   inputs,
   ...
 }: let
   glass = import ./glass.nix;
-  spotifyPkgs = import inputs.spotify-nixpkgs {
-    system = pkgs.stdenv.hostPlatform.system;
-    config.allowUnfree = true;
-  };
   spicePkgs = inputs.spicetify-nix.legacyPackages.${pkgs.stdenv.system};
-  spotifyHybridPackage = pkgs.spotify.overrideAttrs (_: {
-    inherit (spotifyPkgs.spotify) version rev src;
-  });
   hazy = glass.spicetify.hazy;
   hazyGlassCss = ''
     :root {
@@ -132,14 +123,10 @@
       box-shadow: none !important;
     }
   '';
-  spotifyLauncher = import ./spotify/adaptive-launcher.nix {
-    inherit pkgs;
-    spotifyPackage = config.programs.spicetify.spicedSpotify;
-  };
 in {
   programs.spicetify = {
     enable = true;
-    spotifyPackage = spotifyHybridPackage;
+    spotifyPackage = pkgs.spotify;
     theme =
       spicePkgs.themes.hazy
       // {
@@ -224,25 +211,5 @@ in {
         document.querySelectorAll("[aria-label=\"Hazy Settings\"]").forEach((button) => button.remove());
         const homeEdit = new Spicetify.Topbar.Button("Hazy Settings", "edit", () => {'
     '';
-  };
-
-  home.packages = [
-    ((lib.hiPrio spotifyLauncher).overrideAttrs (_: {
-      passthru.systemManifestSpotifyLauncher = true;
-    }))
-  ];
-
-  xdg.desktopEntries.spotify = {
-    name = "Spotify";
-    genericName = "Music Player";
-    comment = "Music and podcast streaming client";
-    exec = "spotify %U";
-    icon = "spotify-client";
-    terminal = false;
-    categories = ["Audio" "Music" "Player" "AudioVideo"];
-    mimeType = ["x-scheme-handler/spotify"];
-    settings = {
-      StartupWMClass = "spotify";
-    };
   };
 }
