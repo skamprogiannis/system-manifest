@@ -4,20 +4,20 @@
   inputs,
   ...
 }: let
-  codexVersion = "0.145.0";
+  codexVersion = "0.148.0";
   codexUpstream = pkgs.stdenvNoCC.mkDerivation {
     pname = "codex-cli";
     version = codexVersion;
     src = pkgs.fetchurl {
-      url = "https://github.com/openai/codex/releases/download/rust-v${codexVersion}/codex-x86_64-unknown-linux-musl.tar.gz";
-      hash = "sha256-v68Tybo08q12TkqRbEnPcXeuujKc8PcZ4iJ1ZvyNZio=";
+      url = "https://github.com/openai/codex/releases/download/rust-v${codexVersion}/codex-package-x86_64-unknown-linux-musl.tar.gz";
+      hash = "sha256-jHkFAK8rpudM5JSP4mxlGsH3f227AFtHyNJv9xEUYmI=";
     };
     dontUnpack = true;
     installPhase = ''
-      mkdir -p "$out/bin"
-      tar -xzf "$src" -C "$out/bin"
-      mv "$out/bin/codex-x86_64-unknown-linux-musl" "$out/bin/upstream-codex"
-      chmod 755 "$out/bin/upstream-codex"
+      mkdir -p "$out"
+      tar -xzf "$src" -C "$out"
+      mv "$out/bin/codex" "$out/bin/upstream-codex"
+      test -x "$out/bin/codex-code-mode-host"
     '';
     meta = with lib; {
       description = "OpenAI Codex CLI";

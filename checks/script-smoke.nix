@@ -58,6 +58,11 @@ in {
       export XDG_RUNTIME_DIR="$TMPDIR/runtime"
       mkdir -p "$HOME" "$XDG_RUNTIME_DIR"
 
+      if [ ! -x "$desktop_home/bin/codex-code-mode-host" ]; then
+        echo "Expected the Codex package to provide an executable code-mode host." >&2
+        exit 1
+      fi
+
       run_expect() {
         local expected_status="$1"
         local label="$2"
