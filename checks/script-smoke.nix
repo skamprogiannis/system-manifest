@@ -125,6 +125,14 @@ in {
         fi
       }
 
+      zathura_config="$desktop_activation/home-files/.config/zathura/zathurarc"
+      if ! ${pkgs.gnused}/bin/sed -n '/^include skwd-colors$/,$p' "$zathura_config" \
+        | ${pkgs.gnugrep}/bin/grep -Fxq 'set recolor "false"'; then
+        echo "Expected Zathura to disable document recoloring after loading the dynamic UI palette." >&2
+        ${pkgs.gnused}/bin/sed 's/^/  /' "$zathura_config" >&2
+        exit 1
+      fi
+
       assert_file_contains "$desktop_home/bin/codex-state-sync" 'MOUNT_PARENT="/run/codex-state-sync"' "Expected Codex state sync to use an ephemeral runtime mountpoint."
       assert_file_contains "$desktop_home/bin/codex-state-sync" 'MOUNT="$MOUNT_PARENT/root"' "Expected Codex state sync to keep its mount beneath the owned runtime directory."
       assert_not_file_contains "$desktop_home/bin/codex-state-sync" 'MOUNT="/mnt/usb-sync"' "Expected Codex state sync not to leave a persistent /mnt mountpoint."

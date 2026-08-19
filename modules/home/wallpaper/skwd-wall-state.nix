@@ -153,13 +153,10 @@
   '';
 
   zathuraTemplate = pkgs.writeText "zathura-colors" ''
-    set recolor "true"
     set completion-bg "{{colors.surface.default.hex}}"
     set completion-fg "{{colors.on_surface.default.hex}}"
     set completion-highlight-bg "{{colors.primary.default.hex}}"
     set completion-highlight-fg "{{colors.surface.default.hex}}"
-    set recolor-lightcolor "{{colors.surface.default.hex}}"
-    set recolor-darkcolor "{{colors.on_surface.default.hex}}"
     set default-bg "{{colors.surface.default.hex}}"
     set default-fg "{{colors.on_surface.default.hex}}"
     set statusbar-bg "{{colors.surface.default.hex}}"
