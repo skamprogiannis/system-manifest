@@ -7,7 +7,7 @@ pkgs.rustPlatform.buildRustPackage {
   version = "unstable";
   src = inputs.skwd-wall.inputs.skwd-daemon.outPath;
 
-  cargoHash = "sha256-jAP1R2BV3uuNbTHZFsZ8KmvjRDiCpD9oPsD/XOIpN6o=";
+  cargoHash = "sha256-g2UbjQuhnVAYd5U5j88OKuoA2H2eFFaVYO3HK+okYL8=";
   patches = [
     ./wallpaper/skwd-paper-video-performance.patch
   ];

@@ -116,7 +116,8 @@
   services.gnome.gnome-keyring.enable = true;
   security.pam.services.login.enableGnomeKeyring = true;
   security.pam.services.greetd.enableGnomeKeyring = true;
-  security.pam.services.greetd.rules.session.unix.settings.quiet = true;
+  # greetd includes the login session stack, where the unix rule now lives.
+  security.pam.services.login.rules.session.unix.settings.quiet = true;
 
   # Enable sound with pipewire
   services.pulseaudio.enable = false;

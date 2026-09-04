@@ -1,66 +1,6 @@
 {skwdWallPackage}: let
   skwdBin = "\\\"${skwdWallPackage}/bin/skwd\\\"";
 
-  settingsModal = ''
-    root / "Modals/Settings/SettingsModal.qml": [
-        ("property bool disablePopupTransparency: true", "property bool disablePopupTransparency: false"),
-        ("color: Theme.surfaceContainer", "color: Theme.withAlpha(Theme.surfaceContainer, Theme.popupTransparency)"),
-        (
-            "                    color: Theme.surfaceContainer\n                    opacity: 0.5",
-            f"                    color: Theme.withAlpha(Theme.surfaceContainer, {settings_header_alpha})\n                    opacity: 1.0",
-        ),
-        (
-            "                color: Theme.surfaceContainerHigh",
-            f"                color: Theme.withAlpha(Theme.surfaceContainerHigh, {settings_shell_alpha})",
-        ),
-    ],
-  '';
-
-  settingsSidebar = ''
-    root / "Modals/Settings/SettingsSidebar.qml": [
-        (
-            "    color: Theme.surfaceContainer",
-            f"    color: Theme.withAlpha(Theme.surfaceContainer, {settings_shell_alpha})",
-        ),
-    ],
-  '';
-
-  settingsCard = ''
-    root / "Modules/Settings/Widgets/SettingsCard.qml": [
-        (
-            "    color: Theme.surfaceContainerHigh",
-            f"    color: Theme.withAlpha(Theme.surfaceContainerHigh, {settings_shell_alpha})",
-        ),
-    ],
-  '';
-
-  settingsSliderCard = ''
-    root / "Modules/Settings/Widgets/SettingsSliderCard.qml": [
-        (
-            "    color: Theme.surfaceContainerHigh",
-            f"    color: Theme.withAlpha(Theme.surfaceContainerHigh, {settings_shell_alpha})",
-        ),
-    ],
-  '';
-
-  settingsToggleCard = ''
-    root / "Modules/Settings/Widgets/SettingsToggleCard.qml": [
-        (
-            "    color: Theme.surfaceContainerHigh",
-            f"    color: Theme.withAlpha(Theme.surfaceContainerHigh, {settings_shell_alpha})",
-        ),
-    ],
-  '';
-
-  systemMonitorVariantCard = ''
-    root / "Modules/Settings/Widgets/SystemMonitorVariantCard.qml": [
-        (
-            "    color: Theme.surfaceContainerHigh",
-            f"    color: Theme.withAlpha(Theme.surfaceContainerHigh, {settings_shell_alpha})",
-        ),
-    ],
-  '';
-
   overviewCard = ''
     root / "Modules/DankDash/Overview/Card.qml": [
         (
@@ -222,30 +162,17 @@
     ),
   '';
 
-  sessionDataExternalWallpaper = ''
-    root / "Common/SessionData.qml": [
+  wallpaperCyclingExternalSet = ''
+    root / "Services/WallpaperCyclingService.qml": [
         (
-            "        function clear(): string {\n            root.setWallpaper(\"\");",
-            "        function externalSet(path: string, mode: string): string {\n            if (!path) {\n                return \"ERROR: No path provided\";\n            }\n\n            root.wallpaperCyclingEnabled = false;\n            root.perMonitorWallpaper = false;\n            root.perModeWallpaper = false;\n            root.monitorWallpapers = ({});\n            root.monitorWallpapersLight = ({});\n            root.monitorWallpapersDark = ({});\n            root.monitorCyclingSettings = ({});\n            root.isLightMode = mode === \"light\";\n            root.wallpaperPath = path;\n            root.wallpaperPathLight = path;\n            root.wallpaperPathDark = path;\n            saveSettings();\n\n            if (typeof Theme !== \"undefined\") {\n                Theme.generateSystemThemesFromCurrentTheme();\n            }\n\n            return \"SUCCESS: External wallpaper set to \" + path;\n        }\n\n        function clear(): string {\n            root.setWallpaper(\"\");",
+            "        function clear(): string {\n            SessionData.setWallpaper(\"\");",
+            "        function externalSet(path: string, mode: string): string {\n            if (!path) {\n                return \"ERROR: No path provided\";\n            }\n\n            SessionData.wallpaperCyclingEnabled = false;\n            SessionData.perMonitorWallpaper = false;\n            SessionData.perModeWallpaper = false;\n            SessionData.monitorWallpapers = ({});\n            SessionData.monitorWallpapersLight = ({});\n            SessionData.monitorWallpapersDark = ({});\n            SessionData.monitorCyclingSettings = ({});\n            SessionData.isLightMode = mode === \"light\";\n            SessionData.wallpaperPath = path;\n            SessionData.wallpaperPathLight = path;\n            SessionData.wallpaperPathDark = path;\n            SessionData.saveSettings();\n\n            if (typeof Theme !== \"undefined\") {\n                Theme.generateSystemThemesFromCurrentTheme();\n            }\n\n            return \"SUCCESS: External wallpaper set to \" + path;\n        }\n\n        function clear(): string {\n            SessionData.setWallpaper(\"\");",
         ),
     ],
   '';
 in {
-  pythonPrelude = ''
-    settings_shell_alpha = "Math.min(1.0, Theme.popupTransparency + 0.08)"
-    settings_header_alpha = "Math.min(1.0, Theme.popupTransparency + 0.10)"
-  '';
-
-  # These patches stay even when a setting with the same name exists below.
-  # Upstream DMS still hardcodes several surfaces and does not fully thread
-  # per-widget options like showSeconds through the components we rely on.
+  # Keep only behavior that upstream DMS does not expose declaratively.
   defaultReplacementsPython = ''
-    ${settingsModal}
-    ${settingsSidebar}
-    ${settingsCard}
-    ${settingsSliderCard}
-    ${settingsToggleCard}
-    ${systemMonitorVariantCard}
     root / "Widgets/DankPopoutStandalone.qml": [
       ${dankPopoutBase}
       ${popoutBorderFallback}
@@ -268,23 +195,15 @@ in {
     ${launcherSourceClassifier}
     ${commonLists}
     ${clockWidget}
-    ${sessionDataExternalWallpaper}
+    ${wallpaperCyclingExternalSet}
     # Expose a clearHistory IPC command so keybinds can wipe the History tab.
     # The built-in clearAll IPC only calls clearAllNotifications(); this adds
     # a sibling function that delegates to NotificationService.clearHistory().
     ${notificationModal}
   '';
 
-  # USB keeps the same settings-adjacent transparency patches because upstream
-  # still hardcodes those QML paths; the extra blocks below are specific to the
-  # software-rendered USB path and should not leak into desktop.
+  # USB-specific patches support the software-rendered portable session.
   usbReplacementsPython = ''
-    ${settingsModal}
-    ${settingsSidebar}
-    ${settingsCard}
-    ${settingsSliderCard}
-    ${settingsToggleCard}
-    ${systemMonitorVariantCard}
     root / "Widgets/DankPopoutStandalone.qml": [
       ${dankPopoutBase}
       ${popoutBorderFallback}
@@ -305,10 +224,11 @@ in {
     ${calendarOverviewCard}
     ${appSearchService}
     ${launcherSourceClassifier}
+    ${wallpaperCyclingExternalSet}
     root / "DankCommon/Widgets/CachingImage.qml": [
         (
-            "import QtQuick\nimport qs.Common",
-            "import QtQuick\nimport Quickshell\nimport qs.Common",
+            "import QtQuick\nimport qs.DankCommon.Common",
+            "import QtQuick\nimport Quickshell\nimport qs.DankCommon.Common",
         ),
         (
             "                if (root._fromCache || root.isRemoteUrl || !root.cachePath)",
@@ -379,10 +299,6 @@ in {
         (
             "    Process {\n        id: sessionWritableCheckProcess",
             "    Process {\n        id: _skwdWallApplyProcess\n        running: false\n    }\n    Process {\n        id: sessionWritableCheckProcess",
-        ),
-        (
-            "        function clear(): string {\n            root.setWallpaper(\"\");",
-            "        function externalSet(path: string, mode: string): string {\n            if (!path) {\n                return \"ERROR: No path provided\";\n            }\n\n            root.wallpaperCyclingEnabled = false;\n            root.perMonitorWallpaper = false;\n            root.perModeWallpaper = false;\n            root.monitorWallpapers = ({});\n            root.monitorWallpapersLight = ({});\n            root.monitorWallpapersDark = ({});\n            root.monitorCyclingSettings = ({});\n            root.isLightMode = mode === \"light\";\n            root.wallpaperPath = path;\n            root.wallpaperPathLight = path;\n            root.wallpaperPathDark = path;\n            saveSettings();\n\n            if (typeof Theme !== \"undefined\") {\n                Theme.generateSystemThemesFromCurrentTheme();\n            }\n\n            return \"SUCCESS: External wallpaper set to \" + path;\n        }\n\n        function clear(): string {\n            root.setWallpaper(\"\");",
         ),
         (
             "        saveSettings();\n\n        if (typeof Theme !== \"undefined\") {\n            Theme.generateSystemThemesFromCurrentTheme();\n        }\n    }\n\n    function setWallpaperColor",

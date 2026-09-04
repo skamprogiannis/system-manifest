@@ -9,7 +9,6 @@
   dmsPatches = import ./common-patches.nix {inherit skwdWallPackage;};
   dmsPatchedPackage = patchDmsPackage {
     package = dmsBasePackage;
-    pythonPrelude = dmsPatches.pythonPrelude;
     replacementsPython = dmsPatches.defaultReplacementsPython;
   };
 in {

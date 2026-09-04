@@ -11,21 +11,6 @@
  pub struct VideoSource {
      pub fbo: u32,
      pub fbo_texture: u32,
-@@ -84,9 +88,12 @@
-             let parameters = stream.parameters();
-             let mut ctx = ff::codec::context::Context::from_parameters(parameters)
-                 .with_context(|| "decoder context from parameters")?;
-+            let thread_count = std::thread::available_parallelism()
-+                .map(|n| n.get().clamp(2, 8))
-+                .unwrap_or(4);
-             ctx.set_threading(ff::codec::threading::Config {
--                kind: ff::codec::threading::Type::None,
--                count: 1,
-+                kind: ff::codec::threading::Type::Frame,
-+                count: thread_count,
-             });
-             let decoder = ctx
-                 .decoder()
 @@ -97,25 +104,25 @@
  
          let src_w = decoder.width().max(2);

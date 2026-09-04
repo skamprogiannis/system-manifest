@@ -22,7 +22,6 @@
   shortLockTimeout = lib.mkForce 600;
   usbDmsPackage = patchDmsPackage {
     package = dmsBasePackage;
-    pythonPrelude = dmsPatches.pythonPrelude;
     replacementsPython = dmsPatches.usbReplacementsPython;
   };
   dmsHyprlandEventWatchdog = pkgs.writeShellScript "dms-hyprland-event-watchdog" ''

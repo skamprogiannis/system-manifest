@@ -103,9 +103,26 @@ in {
     local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
     local text = table.concat(lines, "\n")
     local unknown = {}
+    local known_filetypes = vim.filetype._get_known_filetypes()
+
+    local function is_known_filetype(filetype)
+      if known_filetypes[filetype] then
+        return true
+      end
+
+      local has_separator = filetype:find(".", 1, true) ~= nil
+      for component in filetype:gmatch("[^.]+") do
+        if not known_filetypes[component] then
+          return false
+        end
+      end
+      return has_separator
+    end
 
     for filetype in text:gmatch("Unknown filetype '([^']+)'") do
-      table.insert(unknown, filetype)
+      if not is_known_filetype(filetype) then
+        table.insert(unknown, filetype)
+      end
     end
 
     if #unknown > 0 then

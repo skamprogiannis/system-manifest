@@ -682,12 +682,16 @@
               """  function applyVideo(path, outputs, audioMap, volumeMap) {
               var neighbors = _collectNeighbors(path)
               var screens = Quickshell.screens.map(function(s) { return s.name })
-              DaemonClient.applyVideo(path, outputs, neighbors, screens, audioMap, volumeMap)
+              DaemonClient.applyVideo(path, outputs, neighbors, screens, audioMap, volumeMap, function(result, error) {
+                service._handleApplyResult(result, error)
+              })
             }""",
               """  function applyVideo(path, outputs, audioMap, volumeMap) {
               var neighbors = _collectNeighbors(path)
               var screens = Quickshell.screens.map(function(s) { return s.name })
-              DaemonClient.applyVideo(path, outputs, neighbors, screens, audioMap, volumeMap)
+              DaemonClient.applyVideo(path, outputs, neighbors, screens, audioMap, volumeMap, function(result, error) {
+                service._handleApplyResult(result, error)
+              })
             }
 
             property var _pendingRename: null
@@ -1157,7 +1161,7 @@
                 if (callback) callback(false, "Enter a new name")
                 return
               }
-              if (trimmed === "." || trimmed === ".." || /[\/\0]/.test(trimmed)) {
+              if (trimmed === "." || trimmed === ".." || /[\\/\\0]/.test(trimmed)) {
                 if (callback) callback(false, "Name contains invalid characters")
                 return
               }

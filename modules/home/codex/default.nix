@@ -4,13 +4,13 @@
   inputs,
   ...
 }: let
-  codexVersion = "0.152.0";
+  codexVersion = "0.153.2";
   codexUpstream = pkgs.stdenvNoCC.mkDerivation {
     pname = "codex-cli";
     version = codexVersion;
     src = pkgs.fetchurl {
       url = "https://github.com/openai/codex/releases/download/rust-v${codexVersion}/codex-package-x86_64-unknown-linux-musl.tar.gz";
-      hash = "sha256-NSwk+9xa76/96cHfmRtTS2vHKgbklwh5T8aF/DVWyFU=";
+      hash = "sha256-4Q+gzueOnwvTlYgPA/1P0ifZA8p69km7wI0WSRAekiU=";
     };
     dontUnpack = true;
     installPhase = ''
@@ -58,7 +58,7 @@
       chmod +x "$out/bin/codex"
     '';
   };
-  pinchtabVersion = "0.14.1";
+  pinchtabVersion = "0.15.2";
   skillDir = source: {
     inherit source;
     force = true;
@@ -134,7 +134,7 @@
     version = pinchtabVersion;
     src = pkgs.fetchurl {
       url = "https://github.com/pinchtab/pinchtab/releases/download/v${pinchtabVersion}/pinchtab-linux-amd64";
-      hash = "sha256-+UM7p4ZGdX7zkLpywY4mNgM3BQY1wd26Rx+xGnLFcSI=";
+      hash = "sha256-C7T5ehyS+UvNut/8OdxphaR1fIineHa7y0IUIZHoIC0=";
     };
     dontUnpack = true;
     installPhase = ''

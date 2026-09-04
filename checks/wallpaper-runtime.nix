@@ -375,14 +375,15 @@ in {
             assert_contains '{ key: "Ctrl + S / H / W", action: "Switch Slices / Hex / Wall view" },' "$skwd_keybinds_qml" "patched skwd-wall keybind settings"
             assert_contains '{ key: "B then W / S",  action: "Open Wallhaven / Steam browser" },' "$skwd_keybinds_qml" "patched skwd-wall keybind settings"
             assert_before 'title: "Settings controls"' 'title: "Filters"' "$skwd_keybinds_qml" "patched skwd-wall keybind settings"
-            assert_contains "DaemonClient.applyVideo(path, outputs, neighbors, screens, audioMap, volumeMap)" ${../modules/home/wallpaper/qml-patches.nix} "skwd-wall QML patch module"
+            assert_contains "DaemonClient.applyVideo(path, outputs, neighbors, screens, audioMap, volumeMap, function(result, error)" ${../modules/home/wallpaper/qml-patches.nix} "skwd-wall QML patch module"
             assert_contains "music = false;" ${../modules/home/wallpaper/skwd-wall-state.nix} "skwd-wall declarative config"
 
             dms_pkg="${desktopDmsPackage}"
-            assert_contains 'function externalSet(path: string, mode: string): string' "$dms_pkg/share/quickshell/dms/Common/SessionData.qml" "patched DMS SessionData"
-            external_set_block="$(sed -n '/function externalSet(path: string, mode: string): string/,/function clear(): string/p' "$dms_pkg/share/quickshell/dms/Common/SessionData.qml")"
-            if printf '%s\n' "$external_set_block" | grep -Fq 'root.setWallpaper(path)'; then
-              echo "DMS externalSet must not call root.setWallpaper(path), because that re-enters skwd wall apply." >&2
+            dms_wallpaper_ipc="$dms_pkg/share/quickshell/dms/Services/WallpaperCyclingService.qml"
+            assert_contains 'function externalSet(path: string, mode: string): string' "$dms_wallpaper_ipc" "patched DMS wallpaper IPC"
+            external_set_block="$(sed -n '/function externalSet(path: string, mode: string): string/,/function clear(): string/p' "$dms_wallpaper_ipc")"
+            if printf '%s\n' "$external_set_block" | grep -Fq 'SessionData.setWallpaper(path)'; then
+              echo "DMS externalSet must not call SessionData.setWallpaper(path), because that re-enters skwd wall apply." >&2
               printf '%s\n' "$external_set_block" >&2
               exit 1
             fi
@@ -396,7 +397,7 @@ in {
               printf '%s\n' "$external_set_block" >&2
               exit 1
             fi
-            assert_contains 'target: "wallpaper"' "$dms_pkg/share/quickshell/dms/Common/SessionData.qml" "patched DMS SessionData"
+            assert_contains 'target: "wallpaper"' "$dms_wallpaper_ipc" "patched DMS wallpaper IPC"
 
             fake_dms="${fakeDmsFixture}"
 

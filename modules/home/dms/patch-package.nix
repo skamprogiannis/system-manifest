@@ -1,6 +1,5 @@
 {pkgs}: {
   package,
-  pythonPrelude ? "",
   replacementsPython,
 }:
 package.overrideAttrs (old: {
@@ -13,7 +12,6 @@ package.overrideAttrs (old: {
       import stat
 
       root = Path(os.environ["out"]) / "share/quickshell/dms"
-      ${pythonPrelude}
       replacements = {
       ${replacementsPython}
       }

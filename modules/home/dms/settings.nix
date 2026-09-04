@@ -241,6 +241,10 @@ in {
     blurBorderColor = "primary";
     blurBorderOpacity = 0.60;
     popupTransparency = glass.dms.popupTransparency;
+    floatingWindowSyncGlobal = false;
+    floatingWindowTransparency = glass.dms.floatingWindowTransparency;
+    floatingWindowForegroundLayers = true;
+    floatingWindowForegroundTransparency = glass.dms.floatingWindowForegroundTransparency;
     notepadTransparencyOverride = glass.dms.notepadTransparency;
     systemMonitorTransparency = glass.dms.systemMonitorTransparency;
 
