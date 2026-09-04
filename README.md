@@ -10,7 +10,7 @@ Managed via **Nix Flakes** and **Home Manager**.
 - **Hyprland Desktop:** Wayland tiling compositor with glassmorphism aesthetics powered by Hyprland's native blur and app-native transparency. Ghostty uses native `background-opacity` for glass-like terminal surfaces with fully opaque text.
 - **USB: Portable Hyprland** — USB host boots through the same DMS greeter path as desktop and keeps the portable Hyprland session lean for lab machines. It includes declarative Steam, Gamemode, and portable Mesa graphics support. By default it uses a **hybrid squashfs** Nix store mounted by NixOS fileSystems (compressed read-only image + tmpfs overlay) for near-ISO boot performance on slow USB media; only new `/nix/store` writes use the tmpfs upper layer, while `/home` stays on the persistent encrypted USB root filesystem. Manual `ram-store` and `host-auto-store` boot specialisations use small initrd preparation units before the same native mount path to move store pressure into host RAM or an automatically selected host partition. Host-auto routes the copied store image, writable store overlay, Docker state, local cache, Codex state, Brave profile, the Steam library, and scratch `repositories` directory through encrypted host-local scratch when available.
 - **Laptop: Dual-Boot Hyprland** — Laptop host keeps the full desktop muscle-memory workflow with portable display detection, encrypted-root install labels, Caps-to-Escape, Greek/US layouts, Zellij, Neovim, Codex, and browser setup.
-- **Gaming Mode:** A dedicated specialisation (`gaming-box`) that boots directly into Steam Big Picture Mode with Gamescope.
+- **Gaming Tools:** Steam and GameMode are available in the normal desktop, with Gamescope installed for opt-in per-game scaling, frame limiting, and compatibility workarounds.
 - **Media & Productivity:**
   - **Spotify GUI:** The current Nixpkgs Spotify client is styled with Spicetify and the Hazy translucent theme.
   - **Spotify Player:** Terminal-based Spotify client (`spotify_player`) with streaming support. The wrapper authenticates interactively before bootstrapping the background daemon so the login callback port is not stolen by a headless service on fresh setups, it does one safe re-auth pass when Spotify later rejects a cached refresh token, and it can read a personal Spotify app client ID from `~/.config/spotify-player/client_id` so Web API auth does not depend on a shared client ID when Spotify rate-limits it.
@@ -187,10 +187,6 @@ sudo setup-persistent-usb /dev/sdX
 ```
 
 `setup-persistent-usb` takes an explicit target disk path (for safety). It wipes the disk, creates `NIXOS_BOOT` + `NIXOS_USB_CRYPT` partitions, initializes LUKS, and formats the encrypted root as ext4.
-
-### Switch to Gaming Mode
-
-Select **"NixOS - desktop-gaming-box"** from the bootloader menu (GRUB).
 
 ### Sync Codex State (Desktop <-> USB)
 

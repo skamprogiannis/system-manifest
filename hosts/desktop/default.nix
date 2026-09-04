@@ -135,25 +135,12 @@
     ];
   };
 
-  # Enable Steam & Gamemode
+  # Gaming
   programs.steam = {
     enable = true;
     remotePlay.openFirewall = true; # Open ports for Steam Remote Play
     dedicatedServer.openFirewall = true; # Open ports for Source Dedicated Server
   };
+  programs.gamescope.enable = true;
   programs.gamemode.enable = true;
-
-  # Gaming Specialisation (Steam Big Picture Mode)
-  specialisation = {
-    gaming-box.configuration = {
-      system.nixos.tags = ["gaming-box"];
-      programs.hyprland.enable = lib.mkForce false;
-      programs.steam = {
-        enable = true;
-        gamescopeSession.enable = true;
-      };
-      programs.gamemode.enable = true;
-      environment.sessionVariables = lib.mkForce {};
-    };
-  };
 }

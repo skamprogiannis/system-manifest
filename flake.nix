@@ -138,7 +138,6 @@
               # CI validates the desktop config without forcing GitHub runners
               # to build desktop-only heavy closures on every push.
               services.ollama.package = lib.mkForce pkgs.ollama;
-              specialisation = lib.mkForce {};
             }
           ];
       };
