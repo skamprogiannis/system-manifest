@@ -94,6 +94,9 @@
     package = config.boot.kernelPackages.nvidiaPackages.production;
   };
 
+  # Build CUDA packages only for the desktop's RTX 3080 (Ampere).
+  nixpkgs.config.cudaCapabilities = ["8.6"];
+
   # Suppress kernel messages during boot (greeter handles the display)
   boot.consoleLogLevel = 0;
 
