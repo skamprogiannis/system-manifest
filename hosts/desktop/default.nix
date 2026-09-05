@@ -9,6 +9,7 @@
     ../../modules/desktop-enviroments/hyprland.nix
     ./hardware-configuration.nix
     ./dms-greeter.nix
+    ./gpu-screen-recorder.nix
   ];
 
   networking.hostName = "desktop";

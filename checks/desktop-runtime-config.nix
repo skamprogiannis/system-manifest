@@ -7,6 +7,8 @@
     desktopDmsLegacyProfileFile
     desktopDmsOutputsFile
     desktopGreeterPackage
+    desktopGpuScreenRecorderGtkPackage
+    desktopGpuScreenRecorderPackage
     desktopHome
     desktopHyprlandPackage
     desktopMimeDefaultApplicationsFile
@@ -18,6 +20,7 @@ in {
   desktop-runtime-config =
     pkgs.runCommand "desktop-runtime-config-checks" {
       nativeBuildInputs = [
+        pkgs.binutils
         pkgs.gnugrep
         pkgs.gnused
       ];
@@ -44,6 +47,16 @@ in {
         fi
       }
 
+      assert_elf_needs() {
+        local file="$1"
+        local library="$2"
+        if ! readelf -d "$file" | grep -Fq "Shared library: [$library]"; then
+          echo "Expected $file to require: $library" >&2
+          readelf -d "$file" | grep -F 'Shared library:' >&2
+          exit 1
+        fi
+      }
+
       assert_file_contains ${desktopHyprlandPackage}/bin/Hyprland '--config'
       assert_file_contains ${desktopHyprlandPackage}/bin/Hyprland 'hyprland.lua'
       assert_file_contains ${desktopHyprlandPackage}/bin/start-hyprland '/bin/start-hyprland --path'
@@ -54,6 +67,8 @@ in {
       assert_file_contains ${desktopHome}/share/applications/com.brave.Browser.desktop 'Exec=brave %U'
       assert_file_contains ${desktopHome}/share/applications/transmission.desktop 'Exec=torrent gui'
       assert_file_contains ${desktopHome}/share/applications/torrent-add.desktop 'Exec=torrent add %U'
+      assert_elf_needs ${desktopGpuScreenRecorderPackage}/bin/.wrapped/gpu-screen-recorder 'libavcodec.so.62'
+      assert_file_contains ${desktopGpuScreenRecorderGtkPackage}/bin/gpu-screen-recorder-gtk '${desktopGpuScreenRecorderPackage}/bin'
       assert_file_contains ${desktopMimeDefaultApplicationsFile} '"x-scheme-handler/magnet":["torrent-add.desktop"]'
       assert_file_contains ${desktopMimeDefaultApplicationsFile} '"application/x-bittorrent":["torrent-add.desktop"]'
       test -x ${desktopGreeterPackage}/bin/dms-greeter

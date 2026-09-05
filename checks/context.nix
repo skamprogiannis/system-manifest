@@ -10,6 +10,12 @@
 
   desktopHome = self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.path;
   desktopHomeFiles = self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.file;
+  desktopGpuScreenRecorderPackage = self.nixosConfigurations.desktop.config.programs.gpu-screen-recorder.package;
+  desktopGpuScreenRecorderGtkPackage = builtins.head (
+    builtins.filter
+    (package: (package.pname or "") == "gpu-screen-recorder-gtk")
+    self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.packages
+  );
   desktopCodexSkillsRoot = pkgs.linkFarm "desktop-codex-skills" (
     map
     (name: {
