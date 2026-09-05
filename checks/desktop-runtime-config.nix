@@ -12,12 +12,22 @@
     desktopHome
     desktopHyprlandPackage
     desktopMimeDefaultApplicationsFile
+    desktopNvidiaDriverVersion
     laptopDmsOutputsFile
     pkgs
     usbDmsOutputsFile
     ;
+  minimumCompatibleNvidiaDriver = "610";
 in {
-  desktop-runtime-config =
+  desktop-runtime-config = assert pkgs.lib.assertMsg
+  (pkgs.lib.versionOlder desktopNvidiaDriverVersion minimumCompatibleNvidiaDriver)
+  ''
+    GPU Screen Recorder compatibility pin review required: desktop NVIDIA
+    driver ${desktopNvidiaDriverVersion} is ${minimumCompatibleNvidiaDriver}
+    or newer. Retest the stock FFmpeg 9 backend with
+    `gpu-screen-recorder --info`, then remove the FFmpeg 8 overlay and this
+    guard.
+  '';
     pkgs.runCommand "desktop-runtime-config-checks" {
       nativeBuildInputs = [
         pkgs.binutils

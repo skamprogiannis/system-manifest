@@ -10,6 +10,7 @@
 
   desktopHome = self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.path;
   desktopHomeFiles = self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.file;
+  desktopNvidiaDriverVersion = self.nixosConfigurations.desktop.config.hardware.nvidia.package.version;
   desktopGpuScreenRecorderPackage = self.nixosConfigurations.desktop.config.programs.gpu-screen-recorder.package;
   desktopGpuScreenRecorderGtkPackage = builtins.head (
     builtins.filter
