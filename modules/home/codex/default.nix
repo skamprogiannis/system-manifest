@@ -4,13 +4,13 @@
   inputs,
   ...
 }: let
-  codexVersion = "0.153.2";
+  codexVersion = "0.153.4";
   codexUpstream = pkgs.stdenvNoCC.mkDerivation {
     pname = "codex-cli";
     version = codexVersion;
     src = pkgs.fetchurl {
       url = "https://github.com/openai/codex/releases/download/rust-v${codexVersion}/codex-package-x86_64-unknown-linux-musl.tar.gz";
-      hash = "sha256-4Q+gzueOnwvTlYgPA/1P0ifZA8p69km7wI0WSRAekiU=";
+      hash = "sha256-qCIYfhokIMYcWSZyG/vYeHAe2VVHybsNTeRJiha6GCE=";
     };
     dontUnpack = true;
     installPhase = ''
