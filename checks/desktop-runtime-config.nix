@@ -25,8 +25,8 @@ in {
     GPU Screen Recorder compatibility pin review required: desktop NVIDIA
     driver ${desktopNvidiaDriverVersion} is ${minimumCompatibleNvidiaDriver}
     or newer. Retest the stock FFmpeg 9 backend with
-    `gpu-screen-recorder --info`, then remove the FFmpeg 8 overlay and this
-    guard.
+    `gpu-screen-recorder --info`, then remove the FFmpeg 8 compatibility
+    overrides and this guard. Keep the independent GTK tray icon path fix.
   '';
     pkgs.runCommand "desktop-runtime-config-checks" {
       nativeBuildInputs = [
@@ -79,6 +79,12 @@ in {
       assert_file_contains ${desktopHome}/share/applications/torrent-add.desktop 'Exec=torrent add %U'
       assert_elf_needs ${desktopGpuScreenRecorderPackage}/bin/.wrapped/gpu-screen-recorder 'libavcodec.so.62'
       assert_file_contains ${desktopGpuScreenRecorderGtkPackage}/bin/gpu-screen-recorder-gtk '${desktopGpuScreenRecorderPackage}/bin'
+      for state in idle recording paused; do
+        recorder_icon="/share/icons/hicolor/32x32/status/com.dec05eba.gpu_screen_recorder.tray-$state.png"
+        test -s "${desktopGpuScreenRecorderGtkPackage}$recorder_icon"
+        assert_file_contains ${desktopGpuScreenRecorderGtkPackage}/bin/.gpu-screen-recorder-gtk-wrapped "${desktopGpuScreenRecorderGtkPackage}$recorder_icon"
+        assert_file_not_contains ${desktopGpuScreenRecorderGtkPackage}/bin/.gpu-screen-recorder-gtk-wrapped "/usr$recorder_icon"
+      done
       assert_file_contains ${desktopMimeDefaultApplicationsFile} '"x-scheme-handler/magnet":["torrent-add.desktop"]'
       assert_file_contains ${desktopMimeDefaultApplicationsFile} '"application/x-bittorrent":["torrent-add.desktop"]'
       test -x ${desktopGreeterPackage}/bin/dms-greeter
