@@ -141,7 +141,6 @@ assert lib.assertMsg (builtins.elem hostType ["desktop" "usb" "laptop"]) "hostTy
       "--enable-features=${lib.concatStringsSep "," braveEnabledFeatures}"
     ]
     ++ lib.optionals (hostType != "usb") [
-      "--use-gl=egl"
       "--enable-gpu-rasterization"
       "--enable-zero-copy"
     ]
