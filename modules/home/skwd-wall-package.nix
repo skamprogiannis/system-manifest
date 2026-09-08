@@ -9,13 +9,16 @@ assert pkgs.lib.assertMsg (builtins.elem qsgRhiBackend ["opengl" "vulkan"]) "qsg
   quickshellInput = skwdWallInput.inputs.quickshell;
   qsPkgs = quickshellInput.inputs.nixpkgs.legacyPackages.${system};
 
-  quickshellWithModules = quickshellInput.packages.${system}.default.withModules (with qsPkgs.qt6; [
-    qtimageformats
-    qtmultimedia
-    qtsvg
-    qt5compat
-    qtwayland
-  ]);
+  quickshellWithModules = assert pkgs.lib.assertMsg
+  (qsPkgs.stdenv.cc.libc.outPath == pkgs.stdenv.cc.libc.outPath)
+  "skwd-wall's Quickshell must use the system libc to load the host graphics drivers.";
+    quickshellInput.packages.${system}.default.withModules (with qsPkgs.qt6; [
+      qtimageformats
+      qtmultimedia
+      qtsvg
+      qt5compat
+      qtwayland
+    ]);
 
   daemon = import ./skwd-daemon-package.nix {inherit pkgs inputs;};
 

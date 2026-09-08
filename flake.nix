@@ -25,7 +25,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    skwd-wall.url = "github:liixini/skwd-wall";
+    skwd-wall = {
+      url = "github:liixini/skwd-wall";
+      # Quickshell loads the host's Mesa drivers, so its libc must match the system.
+      inputs.quickshell.inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     pearpass-app-desktop = {
       url = "github:tetherto/pearpass-app-desktop";

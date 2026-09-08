@@ -21,7 +21,7 @@
     set -eu
 
     case "''${ADAPTIVE_RENDER_MODE:-ok}" in
-      rhi|init)
+      rhi|init|both|late)
         trap 'exit 0' TERM INT
         ;;
       wait)
@@ -30,18 +30,41 @@
         ;;
     esac
 
+    render_message() {
+      if [ "''${ADAPTIVE_RENDER_STREAM:-stderr}" = stdout ]; then
+        printf '%s\n' "$1"
+      else
+        printf '%s\n' "$1" >&2
+      fi
+    }
+
     printf '%s:%s\n' "''${QSG_RHI_BACKEND:-}" "''${QT_QUICK_BACKEND:-}" >> "$ADAPTIVE_CALLS"
     case "''${ADAPTIVE_RENDER_MODE:-ok}:''${QT_QUICK_BACKEND:-}" in
       rhi:)
-        echo "Failed to create RHI (backend 2)" >&2
+        render_message "Failed to create RHI (backend 2)"
         while true; do sleep 1; done
         ;;
       init:)
-        echo "Failed to initialize graphics backend for OpenGL" >&2
+        render_message "Failed to initialize graphics backend for OpenGL"
+        while true; do sleep 1; done
+        ;;
+      both:*|late:)
+        render_message "Failed to create RHI (backend 2)"
+        while true; do sleep 1; done
+        ;;
+      late:software)
+        for _ in $(seq 1 100); do
+          if grep -q '^backend=software$' "$ADAPTIVE_CACHE" 2>/dev/null; then
+            printf '%s\n' cached-before-failure >> "$ADAPTIVE_CALLS"
+            break
+          fi
+          sleep 0.05
+        done
+        render_message "Failed to initialize graphics backend for software"
         while true; do sleep 1; done
         ;;
       egl:)
-        echo "EGL not available" >&2
+        render_message "EGL not available"
         ;;
       wait:*)
         while true; do sleep 1; done
@@ -209,6 +232,7 @@ in {
             adaptive_renderer="${adaptiveRendererFixture}"
             mkdir -p "$adaptive_home" "$adaptive_state"
             printf '%s\n' 'dd2dc6c539f98758ce36c9cc6540f4de97413a1f71d98368d2e18c859d5fced4' > "$adaptive_fingerprint"
+            adaptive_cache="$adaptive_state/system-manifest/render-compat/skwd-wall-$(cat "$adaptive_fingerprint").conf"
 
             run_adaptive_wall() {
               HOME="$adaptive_home" \
@@ -216,27 +240,60 @@ in {
                 SYSTEM_MANIFEST_HOST_FINGERPRINT_FILE="$adaptive_fingerprint" \
                 SKWD_WALL_RENDERER_BIN="$adaptive_renderer" \
                 ADAPTIVE_CALLS="$adaptive_calls" \
+                ADAPTIVE_CACHE="$adaptive_cache" \
                 ADAPTIVE_RENDER_MODE="$1" \
-                "$usb_skwd_wall"
+                ADAPTIVE_RENDER_STREAM="''${2:-stderr}" \
+                timeout --kill-after=2 30 "$usb_skwd_wall"
             }
 
+            for adaptive_stream in stdout stderr; do
+              for adaptive_mode in rhi init; do
+                rm -f "$adaptive_cache"
+                : > "$adaptive_calls"
+                run_adaptive_wall "$adaptive_mode" "$adaptive_stream"
+                if [ "$(cat "$adaptive_calls")" != $'opengl:\nopengl:software' ]; then
+                  echo "Expected live $adaptive_mode failure on $adaptive_stream to retry once with Qt software rendering." >&2
+                  cat "$adaptive_calls" >&2
+                  exit 1
+                fi
+
+                : > "$adaptive_calls"
+                run_adaptive_wall ok
+                if [ "$(cat "$adaptive_calls")" != "opengl:software" ]; then
+                  echo "Expected the successful software backend to be cached for this host." >&2
+                  cat "$adaptive_calls" >&2
+                  exit 1
+                fi
+              done
+            done
+
+            adaptive_primary_fingerprint="$(cat "$adaptive_fingerprint")"
+            printf '%s\n' 'b10678843e2537e2d70eb3ba502fe529207efc0d693473d2fb7b6276868097bb' > "$adaptive_fingerprint"
             : > "$adaptive_calls"
-            run_adaptive_wall rhi
-            if [ "$(cat "$adaptive_calls")" != $'opengl:\nopengl:software' ]; then
-              echo "Expected an exact RHI failure to retry with Qt software rendering." >&2
+            run_adaptive_wall ok
+            if [ "$(cat "$adaptive_calls")" != "opengl:" ]; then
+              echo "Expected a different physical host to probe OpenGL independently of this host's software cache." >&2
               cat "$adaptive_calls" >&2
               exit 1
             fi
-
+            printf '%s\n' "$adaptive_primary_fingerprint" > "$adaptive_fingerprint"
             : > "$adaptive_calls"
             run_adaptive_wall ok
             if [ "$(cat "$adaptive_calls")" != "opengl:software" ]; then
-              echo "Expected the successful software backend to be cached for this host." >&2
+              echo "Expected returning to the original physical host to retain its software cache." >&2
               cat "$adaptive_calls" >&2
               exit 1
             fi
 
-            adaptive_cache="$(find "$adaptive_state/system-manifest/render-compat" -type f -name 'skwd-wall-*.conf' -print -quit)"
+            sed -i 's|^package=.*|package=/nix/store/outdated-skwd-wall|' "$adaptive_cache"
+            : > "$adaptive_calls"
+            run_adaptive_wall ok
+            if [ "$(cat "$adaptive_calls")" != "opengl:" ]; then
+              echo "Expected a changed launcher package to invalidate the previous software cache and re-probe OpenGL." >&2
+              cat "$adaptive_calls" >&2
+              exit 1
+            fi
+
             printf '%s\n' 'malformed' > "$adaptive_cache"
             : > "$adaptive_calls"
             run_adaptive_wall init
@@ -246,15 +303,52 @@ in {
               exit 1
             fi
 
-            rm -rf "$adaptive_state"
-            mkdir -p "$adaptive_state"
-            : > "$adaptive_calls"
-            run_adaptive_wall egl
-            if [ "$(cat "$adaptive_calls")" != "opengl:" ]; then
-              echo "An EGL warning alone must not trigger software rendering." >&2
-              cat "$adaptive_calls" >&2
-              exit 1
-            fi
+            for adaptive_stream in stdout stderr; do
+              rm -f "$adaptive_cache"
+              : > "$adaptive_calls"
+              run_adaptive_wall egl "$adaptive_stream"
+              if [ "$(cat "$adaptive_calls")" != "opengl:" ]; then
+                echo "An EGL warning alone on $adaptive_stream must not trigger software rendering." >&2
+                cat "$adaptive_calls" >&2
+                exit 1
+              fi
+
+              for adaptive_mode in both late; do
+                rm -f "$adaptive_cache"
+                : > "$adaptive_calls"
+                if run_adaptive_wall "$adaptive_mode" "$adaptive_stream"; then
+                  adaptive_status=0
+                else
+                  adaptive_status=$?
+                fi
+                adaptive_expected=$'opengl:\nopengl:software'
+                if [ "$adaptive_mode" = late ]; then
+                  adaptive_expected+=$'\ncached-before-failure'
+                fi
+                if [ "$adaptive_status" -ne 70 ] \
+                  || [ "$(cat "$adaptive_calls")" != "$adaptive_expected" ] \
+                  || [ -e "$adaptive_cache" ]; then
+                  echo "Expected $adaptive_mode failure on $adaptive_stream to stop after software fails and clear any provisional cache (status $adaptive_status)." >&2
+                  cat "$adaptive_calls" >&2
+                  exit 1
+                fi
+              done
+
+              run_adaptive_wall rhi "$adaptive_stream"
+              : > "$adaptive_calls"
+              if run_adaptive_wall both "$adaptive_stream"; then
+                adaptive_status=0
+              else
+                adaptive_status=$?
+              fi
+              if [ "$adaptive_status" -ne 70 ] \
+                || [ "$(cat "$adaptive_calls")" != "opengl:software" ] \
+                || [ -e "$adaptive_cache" ]; then
+                echo "Expected a cached software backend failure to stop without retrying and clear its cache." >&2
+                cat "$adaptive_calls" >&2
+                exit 1
+              fi
+            done
 
             rm -rf "$adaptive_state"
             mkdir -p "$adaptive_state"

@@ -79,7 +79,7 @@
       ${pkgs.gnugrep}/bin/grep -Fq \
         -e "Failed to create RHI" \
         -e "Failed to initialize graphics backend" \
-        "$attempt_dir/stderr.log"
+        "$attempt_dir/renderer.log"
     }
 
     run_attempt() {
@@ -102,23 +102,24 @@
       )
 
       attempt_dir="$(${pkgs.coreutils}/bin/mktemp -d "''${TMPDIR:-/tmp}/skwd-wall-render.XXXXXX")" || return 1
-      fifo="$attempt_dir/stderr.fifo"
-      : > "$attempt_dir/stderr.log"
+      fifo="$attempt_dir/renderer.fifo"
+      : > "$attempt_dir/renderer.log"
       ${pkgs.coreutils}/bin/mkfifo "$fifo"
       ${pkgs.util-linux}/bin/setpriv --pdeathsig KILL -- \
-        ${pkgs.coreutils}/bin/tee "$attempt_dir/stderr.log" < "$fifo" >&2 &
+        ${pkgs.coreutils}/bin/tee "$attempt_dir/renderer.log" < "$fifo" >&2 &
       tee_pid=$!
 
+      # Quickshell also reports fatal graphics errors on stdout.
       if [ "$backend" = software ]; then
         ${pkgs.coreutils}/bin/env \
           QSG_RHI_BACKEND=opengl \
           QT_QUICK_BACKEND=software \
-          "''${renderer_command[@]}" 2> "$fifo" &
+          "''${renderer_command[@]}" > "$fifo" 2>&1 &
       else
         ${pkgs.coreutils}/bin/env \
           -u QT_QUICK_BACKEND \
           QSG_RHI_BACKEND=opengl \
-          "''${renderer_command[@]}" 2> "$fifo" &
+          "''${renderer_command[@]}" > "$fifo" 2>&1 &
       fi
       child_pid=$!
 
@@ -178,7 +179,11 @@
       attempt_dir=""
 
       if [ "$render_failure" -eq 1 ]; then
-        return "$render_failure_status"
+        status="$render_failure_status"
+      fi
+      if [ "$status" -eq "$render_failure_status" ]; then
+        render_policy_clear
+        return "$status"
       fi
       if [ "$status" -eq 0 ] && [ "$cached" -eq 0 ] && [ "$terminate_requested" -eq 0 ]; then
         render_policy_write "$backend"
@@ -191,11 +196,8 @@
     status=$?
 
     if [ "$status" -eq "$render_failure_status" ] && [ "$backend" = opengl ] && [ "$terminate_requested" -eq 0 ]; then
-      render_policy_clear
       run_attempt software "$@"
       status=$?
-    elif [ "$status" -eq "$render_failure_status" ]; then
-      render_policy_clear
     fi
 
     exit "$status"
