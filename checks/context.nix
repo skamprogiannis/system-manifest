@@ -50,6 +50,9 @@
   usbHome = self.nixosConfigurations.usb.config.home-manager.users.stefan.home.path;
   usbSystem = self.nixosConfigurations.usb.config.system.build.toplevel;
   usbSteamEnabled = self.nixosConfigurations.usb.config.programs.steam.enable;
+  usbSteamLauncher = "${self.nixosConfigurations.usb.config.programs.steam.package}/bin/steam";
+  usbHostAutoSteamLauncher = "${self.nixosConfigurations.usb.config.specialisation.host-auto-store.configuration.programs.steam.package}/bin/steam";
+  usbSteamHostScratchPrepareScript = self.nixosConfigurations.usb.config.systemManifest.usb.steamHostScratch.prepareScript;
   usbGamemodeEnabled = self.nixosConfigurations.usb.config.programs.gamemode.enable;
   usbGraphics32Enabled = self.nixosConfigurations.usb.config.hardware.graphics.enable32Bit;
   usbGraphics32Package = self.nixosConfigurations.usb.config.hardware.graphics.package32;
@@ -154,6 +157,8 @@
     "${updateUsbSourceDir}/phases.sh"
     "${updateUsbSourceDir}/squashfs.sh"
     "${usbHome}/bin/usb-host-scratch"
+    "${usbHome}/bin/steam-host-scratch"
+    "${usbSteamHostScratchPrepareScript}"
     "${usbHome}/bin/nixos-usb-store-status"
     "${usbSkwdWallExec}"
     "${usbHostScratchStartScript}"

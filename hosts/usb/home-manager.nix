@@ -13,6 +13,8 @@
   # a lightweight mode without changing desktop behavior.
   xdg.configFile."system-manifest/usb-light-mode-enabled".text = "1\n";
 
+  system_manifest.scripts.enableSteamHostScratch = true;
+
   programs.zellij.settings = {
     pane_frames = false;
     simplified_ui = true;

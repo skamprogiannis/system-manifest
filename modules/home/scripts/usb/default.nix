@@ -8,6 +8,12 @@
   cfg = config.system_manifest.scripts;
 in {
   options.system_manifest.scripts = {
+    enableSteamHostScratch = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Expose the temporary Steam client and state checkpoint helper on USB hosts.";
+    };
+
     enableSetupPersistentUsb = lib.mkOption {
       type = lib.types.bool;
       default = true;
@@ -25,6 +31,9 @@ in {
     [
       (import ./host-scratch.nix {inherit pkgs;})
       (import ./store-status.nix {inherit pkgs;})
+    ]
+    ++ lib.optionals cfg.enableSteamHostScratch [
+      (import ./steam-host-scratch.nix {inherit pkgs;})
     ]
     ++ lib.optionals cfg.enableSetupPersistentUsb [
       (import ./setup-persistent-usb.nix {inherit pkgs usb;})

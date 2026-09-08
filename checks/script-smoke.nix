@@ -23,6 +23,9 @@
     usbHostScratchSyncScript
     usbHostStoreMountDropinFile
     usbShutdownRamfsStorePathsFile
+    usbSteamLauncher
+    usbHostAutoSteamLauncher
+    usbSteamHostScratchPrepareScript
     usbTmpfilesRulesFile
     ;
 in {
@@ -42,6 +45,10 @@ in {
       update_usb_source_dir="${updateUsbSourceDir}"
       usb_activation="${usbActivation}"
       usb_home="${usbHome}"
+      steam_host_scratch="$usb_home/bin/steam-host-scratch"
+      usb_steam_launcher="${usbSteamLauncher}"
+      usb_host_auto_steam_launcher="${usbHostAutoSteamLauncher}"
+      usb_steam_host_scratch_prepare="${usbSteamHostScratchPrepareScript}"
       usb_host_scratch_description="${usbHostScratchServiceDescriptionFile}"
       usb_host_scratch_mount_dropin="${usbHostScratchMountDropinFile}"
       usb_host_scratch_before="${usbHostScratchServiceBeforeFile}"
@@ -326,6 +333,113 @@ in {
         ${pkgs.gnused}/bin/sed 's/^/  /' "$usb_host_scratch_description" >&2
         exit 1
       fi
+
+      steam_test="$TMPDIR/steam-host-scratch"
+      steam_mode_file="$steam_test/mode"
+      steam_dir="$steam_test/host scratch/Steam"
+      steam_persistent_dir="$steam_test/persistent/Steam"
+      mkdir -p "$steam_test"
+
+      run_expect 1 steam-host-scratch-inactive \
+        env \
+          STEAM_HOST_SCRATCH_MODE_FILE="$steam_mode_file" \
+          STEAM_HOST_SCRATCH_STEAM_DIR="$steam_dir" \
+          STEAM_HOST_SCRATCH_PERSISTENT_DIR="$steam_persistent_dir" \
+          "$steam_host_scratch" prepare
+      assert_log_contains "encrypted host scratch is not active"
+      if [ -e "$steam_dir" ]; then
+        echo "Expected inactive host scratch not to create a Steam data root." >&2
+        exit 1
+      fi
+
+      printf '%s\n' encrypted-host-scratch > "$steam_mode_file"
+      run_expect 0 steam-host-scratch-prepare \
+        env \
+          STEAM_HOST_SCRATCH_MODE_FILE="$steam_mode_file" \
+          STEAM_HOST_SCRATCH_STEAM_DIR="$steam_dir" \
+          STEAM_HOST_SCRATCH_PERSISTENT_DIR="$steam_persistent_dir" \
+          "$steam_host_scratch" prepare
+      assert_log_contains "Steam client and default library: $steam_dir"
+      assert_log_contains "redirects its mutable client and default steamapps library automatically"
+      assert_log_contains "temporary and will be erased"
+      assert_log_contains "Steam Cloud"
+      if [ ! -d "$steam_dir" ]; then
+        echo "Expected host-scratch setup to create the Steam data root." >&2
+        exit 1
+      fi
+
+      run_expect 0 steam-host-scratch-path \
+        env \
+          STEAM_HOST_SCRATCH_MODE_FILE="$steam_mode_file" \
+          STEAM_HOST_SCRATCH_STEAM_DIR="$steam_dir" \
+          STEAM_HOST_SCRATCH_PERSISTENT_DIR="$steam_persistent_dir" \
+          "$steam_host_scratch" path
+      if [ "$(${pkgs.coreutils}/bin/cat "$LAST_LOG")" != "$steam_dir" ]; then
+        echo "Expected path mode to print only the Steam data root." >&2
+        exit 1
+      fi
+
+      run_expect 0 steam-host-scratch-status \
+        env \
+          STEAM_HOST_SCRATCH_MODE_FILE="$steam_mode_file" \
+          STEAM_HOST_SCRATCH_STEAM_DIR="$steam_dir" \
+          STEAM_HOST_SCRATCH_PERSISTENT_DIR="$steam_persistent_dir" \
+          "$steam_host_scratch" status
+      assert_log_contains "Steam host-scratch: active"
+      assert_log_contains "State: ready"
+      assert_log_contains "Durability: temporary"
+
+      mkdir -p "$steam_dir/config" "$steam_dir/userdata"
+      printf '%s\n' account-state > "$steam_dir/config/loginusers.vdf"
+      printf '%s\n' user-state > "$steam_dir/userdata/localconfig.vdf"
+      printf '%s\n' sentry-state > "$steam_dir/ssfn12345"
+      mkdir -p "$steam_dir/steamapps/compatdata" "$steam_dir/package"
+      printf '%s\n' game-data > "$steam_dir/steamapps/game.bin"
+      printf '%s\n' prefix-data > "$steam_dir/steamapps/compatdata/prefix"
+      printf '%s\n' client-data > "$steam_dir/package/client.bin"
+      run_expect 0 steam-host-scratch-checkpoint \
+        env \
+          STEAM_HOST_SCRATCH_MODE_FILE="$steam_mode_file" \
+          STEAM_HOST_SCRATCH_STEAM_DIR="$steam_dir" \
+          STEAM_HOST_SCRATCH_PERSISTENT_DIR="$steam_persistent_dir" \
+          STEAM_HOST_SCRATCH_PGREP="${pkgs.coreutils}/bin/false" \
+          "$steam_host_scratch" checkpoint
+      assert_log_contains "checkpointed to persistent USB home"
+      assert_file_contains "$steam_persistent_dir/config/loginusers.vdf" \
+        "account-state" \
+        "Expected Steam checkpoint to persist account configuration."
+      assert_file_contains "$steam_persistent_dir/userdata/localconfig.vdf" \
+        "user-state" \
+        "Expected Steam checkpoint to persist userdata."
+      assert_file_contains "$steam_persistent_dir/ssfn12345" \
+        "sentry-state" \
+        "Expected Steam checkpoint to persist Steam Guard sentry files."
+      if [ -e "$steam_persistent_dir/steamapps" ] || [ -e "$steam_persistent_dir/package" ]; then
+        echo "Steam checkpoint must exclude games, compatibility prefixes, and the mutable client." >&2
+        exit 1
+      fi
+
+      run_expect 1 steam-host-scratch-checkpoint-running \
+        env \
+          STEAM_HOST_SCRATCH_MODE_FILE="$steam_mode_file" \
+          STEAM_HOST_SCRATCH_STEAM_DIR="$steam_dir" \
+          STEAM_HOST_SCRATCH_PERSISTENT_DIR="$steam_persistent_dir" \
+          STEAM_HOST_SCRATCH_PGREP="${pkgs.coreutils}/bin/true" \
+          "$steam_host_scratch" checkpoint
+      assert_log_contains "exit Steam before checkpointing"
+
+      assert_not_file_contains "$usb_steam_launcher" \
+        "/nix/.host-scratch/user/stefan/steam/Steam" \
+        "Expected normal USB Steam to keep its persistent data-home behavior."
+      assert_file_contains "$usb_host_auto_steam_launcher" \
+        "$usb_steam_host_scratch_prepare" \
+        "Expected host-auto Steam to invoke its host-scratch preparation script."
+      assert_file_contains "$usb_steam_host_scratch_prepare" \
+        "/nix/.host-scratch/user/stefan/steam/Steam" \
+        "Expected host-auto Steam to redirect its mutable client and default library to host scratch."
+      assert_file_contains "$usb_steam_host_scratch_prepare" \
+        "bootstraplinux_ubuntu12_32.tar.xz" \
+        "Expected host-auto Steam to bootstrap its temporary client before entering the FHS runtime."
 
       assert_file_contains "$usb_host_scratch_start" "mount --make-private" "Expected USB host scratch to preserve a private view of the underlying USB home."
       assert_file_contains "$usb_host_scratch_start" 'bind_mount "$user_root/steam-library" "/home/stefan/games/SteamLibrary"' "Expected host-auto mode to bind encrypted scratch storage onto the stable Steam library path."

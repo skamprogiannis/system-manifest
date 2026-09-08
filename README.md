@@ -84,6 +84,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 | `nixos-usb-host-scratch-status` | Shows encrypted host-scratch mounts plus the last checkpoint/shutdown sync result |
 | `specify` | Spec Kit CLI wrapper — scaffolds spec-driven development for new projects |
 | `setup-persistent-usb` | Initialises a fresh LUKS-encrypted persistent NixOS USB drive |
+| `steam-host-scratch` | Reports host-auto Steam paths and checkpoints account/config/userdata state |
 | `usb-host-scratch` | Opens the temporary repositories path, checkpoints persistent app state, or shows host-scratch status |
 | `update-usb` | Updates the USB image using prebuild mode by default, with `--in-place` as a lower-disk-space fallback |
 
@@ -177,6 +178,20 @@ For fast temporary clones:
 cd "$(usb-host-scratch)"
 git clone https://github.com/OWNER/REPO.git
 ```
+
+Steam is included with the USB's portable 32-bit graphics runtime and GameMode. When encrypted host scratch is active, launching Steam in `host-auto-store` automatically bootstraps its mutable client and default `steamapps` library on the host SSD. The existing `~/games/SteamLibrary` location remains available too. Inspect the client path with:
+
+```bash
+steam-host-scratch status
+```
+
+Both locations are temporary and erased at shutdown. Account configuration, Steam Guard sentry files, and userdata are imported from persistent USB home on first launch. After exiting Steam, save changes explicitly with:
+
+```bash
+steam-host-scratch checkpoint
+```
+
+Games and compatibility prefixes are not checkpointed. Wait for Steam Cloud to finish syncing supported saves before powering off; saves outside Steam userdata need their own backup. Normal USB boots and host-auto fallback retain Steam's persistent data-home behavior.
 
 On clean shutdown, the USB first detaches live Docker and user-state bind mounts, then gives the essential Codex/Brave sync 50 seconds plus at most five seconds to terminate, leaving cleanup time inside systemd's hard 60-second stop budget. The two initrd-created host mounts bypass systemd's generic `umount.target`; the shutdown-ramfs hook owns their dependency-sensitive teardown so it can unmount scratch, close the mapper, and only then unmount the host backing filesystem without misleading failed-unmount messages. Cleanup still removes host-side encrypted session files after a sync failure or timeout. A forced power-off cannot guarantee the final sync; use `usb-host-scratch checkpoint` first when recent state matters. If power is cut, the host may retain ciphertext under `.nixos-usb/session/`, but the key only lived in RAM and stale session files are removed on the next successful host-auto boot.
 
