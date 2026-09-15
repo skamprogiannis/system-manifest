@@ -17,6 +17,7 @@
     "wallpaper-runtime"
     "codex-skills"
     "bannerlord-codex"
+    "bannerlord-speech"
     "script-smoke"
     "shellcheck"
     "ci-registry"

@@ -20,6 +20,7 @@
     ./wallpaper-runtime.nix
     ./codex-skills.nix
     ./bannerlord-codex.nix
+    ./bannerlord-speech.nix
     ./script-smoke.nix
     ./shellcheck.nix
     ./ci-registry.nix

@@ -8,6 +8,7 @@
     ../../modules/home/scripts/usb.nix
     ../../modules/home/player2-ai-influence
     ../../modules/home/bannerlord-codex
+    ../../modules/home/bannerlord-speech
   ];
 
   system_manifest.scripts.enableSetupPersistentUsb = false;

@@ -138,6 +138,8 @@
   usbDmsOutputsFile = pkgs.writeText "usb-dms-outputs.lua" self.nixosConfigurations.usb.config.home-manager.users.stefan.xdg.configFile."hypr/dms/outputs.lua".text;
   shellcheckScripts = [
     "${desktopHome}/bin/bannerlord-codex"
+    "${desktopHome}/bin/bannerlord-speech"
+    "${desktopHome}/bin/bannerlord-speech-service"
     "${desktopHome}/bin/codex-state-sync"
     "${desktopHome}/bin/gsr-record"
     "${desktopHome}/bin/hypr-quit-active"
