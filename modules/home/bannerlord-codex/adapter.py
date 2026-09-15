@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+from collections import deque
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
@@ -17,6 +18,7 @@ from codex_runner import DEFAULT_MODEL, GenerationError, generate
 ALIAS = "bannerlord-codex"
 MAX_BODY = 512 * 1024
 MAX_TEXT = 120000
+MAX_ADMITTED = 4  # Includes the active generation.
 
 
 class RequestError(Exception):
@@ -69,49 +71,76 @@ def normalize(path: str, data: dict) -> tuple[list[dict], dict]:
 class Engine:
     def __init__(self, *, model=DEFAULT_MODEL, timeout=85, metrics=None, generator=generate):
         self.model, self.timeout, self.metrics, self.generator = model, timeout, metrics, generator
-        self.lock = threading.Lock()
+        self.condition = threading.Condition()
+        self.pending = deque()
+        self.metrics_lock = threading.Lock()
         self.cooldown_until = 0.0
         self.last_error = None
 
     def record(self, row):
         # Metadata only: never prompts, generated dialogue, CLI output, or credentials.
         if self.metrics:
-            with self.metrics.open("a", encoding="utf-8") as stream:
+            with self.metrics_lock, self.metrics.open("a", encoding="utf-8") as stream:
                 stream.write(json.dumps(row, ensure_ascii=False) + "\n")
 
     def run(self, messages, *, require_json=False, ignored_options=None):
-        if not self.lock.acquire(blocking=False):
-            raise RequestError(429, "Another request is running; no generation was started")
         request_id = uuid.uuid4().hex
         started = time.monotonic()
+        deadline = started + self.timeout
+        admitted = False
         row = {"id": request_id, "time": datetime.now(timezone.utc).isoformat(), "model": self.model,
                "characters": sum(len(m["content"]) for m in messages),
-               "ignored_ollama_options": sorted(ignored_options or {})}
+               "ignored_ollama_options": sorted(ignored_options or {}),
+               "generated": False, "queue_wait_seconds": 0.0}
         try:
-            if time.monotonic() < self.cooldown_until:
-                row.update(status="cooldown", error=self.last_error, generated=False)
-                raise RequestError(503, "Previous Codex request failed (%s); retry cooldown prevents duplicate generation" % self.last_error)
+            with self.condition:
+                row["queue_ahead"] = len(self.pending)
+                if time.monotonic() < self.cooldown_until:
+                    row.update(status="cooldown", error=self.last_error)
+                    raise RequestError(503, "Previous Codex request failed (%s); retry cooldown prevents duplicate generation" % self.last_error)
+                if len(self.pending) >= MAX_ADMITTED:
+                    row.update(status="queue_full")
+                    raise RequestError(429, "Request queue is full; no generation was started")
+                self.pending.append(request_id)
+                admitted = True
+                while True:
+                    if time.monotonic() < self.cooldown_until:
+                        row.update(status="cooldown", error=self.last_error)
+                        raise RequestError(503, "Previous Codex request failed (%s); retry cooldown prevents duplicate generation" % self.last_error)
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
+                        row.update(status="queue_timeout")
+                        raise RequestError(504, "Request deadline expired in the queue; no generation was started")
+                    if self.pending[0] == request_id:
+                        break
+                    self.condition.wait(timeout=remaining)
+            row["queue_wait_seconds"] = round(time.monotonic() - started, 3)
             try:
-                result = self.generator(messages, model=self.model, timeout=self.timeout)
+                row["generated"] = True
+                result = self.generator(messages, model=self.model, timeout=remaining)
                 if require_json:
                     try:
                         json.loads(result["response"])
                     except (ValueError, TypeError):
                         raise GenerationError("schema", "Requested JSON was not valid; no retry was made")
             except GenerationError as error:
-                self.last_error = error.kind
-                self.cooldown_until = time.monotonic() + (60 if error.kind == "quota" else 30)
-                row.update(status="error", error=error.kind, generated=True)
+                with self.condition:
+                    self.last_error = error.kind
+                    self.cooldown_until = time.monotonic() + (60 if error.kind == "quota" else 30)
+                row.update(status="error", error=error.kind)
                 status = 429 if error.kind == "quota" else 504 if error.kind == "timeout" else 502
                 raise RequestError(status, str(error)) from error
-            row.update(status="ok", generated=True, usage=result["usage"], seconds=result["seconds"], warnings=result.get("warnings", []))
+            row.update(status="ok", usage=result["usage"], seconds=result["seconds"], warnings=result.get("warnings", []))
             return result
         finally:
             row["wall_seconds"] = round(time.monotonic() - started, 3)
-            try:
-                self.record(row)
-            finally:
-                self.lock.release()
+            if admitted:
+                if not row["generated"]:
+                    row["queue_wait_seconds"] = row["wall_seconds"]
+                with self.condition:
+                    self.pending.remove(request_id)
+                    self.condition.notify_all()
+            self.record(row)
 
 
 class Handler(BaseHTTPRequestHandler):

@@ -1,4 +1,5 @@
 """Offline regression tests. No account, Codex inference, or game is needed."""
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
 import http.client
 import json
 import os
@@ -106,20 +107,188 @@ class HttpContract(unittest.TestCase):
                 self.assertIn("cooldown", body["error"])
                 self.assertEqual(len(calls), 1)
 
-    def test_busy_rejected_and_lock_released(self):
-        self.server.engine.lock.acquire()
-        try:
-            self.assertEqual(self.request("/api/chat", self.chat())[0], 429)
-        finally:
-            self.server.engine.lock.release()
-        self.assertEqual(self.request("/api/chat", self.chat())[0], 200)
-        self.assertEqual(len(self.calls), 1)
+    def test_overlapping_identical_requests_complete_separately_and_serially(self):
+        entered, release = threading.Event(), threading.Event()
+        active, maximum_active, calls = 0, 0, []
+        timeouts = []
+        state_lock = threading.Lock()
+
+        def blocked(messages, **kwargs):
+            nonlocal active, maximum_active
+            with state_lock:
+                active += 1
+                maximum_active = max(maximum_active, active)
+                calls.append(messages)
+                timeouts.append(kwargs["timeout"])
+                number = len(calls)
+            try:
+                if number == 1:
+                    entered.set()
+                    if not release.wait(2):
+                        raise AssertionError("Test did not release first generation")
+                return {**answer(messages, **kwargs), "response": "reply %d" % number}
+            finally:
+                with state_lock:
+                    active -= 1
+
+        self.server.engine = adapter.Engine(generator=blocked)
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            first = pool.submit(self.request, "/api/chat", self.chat())
+            try:
+                self.assertTrue(entered.wait(1))
+                second = pool.submit(self.request, "/api/chat", self.chat())
+                with self.assertRaises(FutureTimeout):
+                    second.result(timeout=0.1)
+            finally:
+                release.set()
+            first_status, first_body = first.result(timeout=1)
+            second_status, second_body = second.result(timeout=1)
+        self.assertEqual((first_status, second_status), (200, 200))
+        self.assertEqual(first_body["message"]["content"], "reply 1")
+        self.assertEqual(second_body["message"]["content"], "reply 2")
+        self.assertEqual(calls, [self.chat()["messages"], self.chat()["messages"]])
+        self.assertEqual(maximum_active, 1)
+        self.assertLessEqual(timeouts[0], 85)
+        self.assertLess(timeouts[1], timeouts[0] - 0.05)
 
     def test_invalid_requested_json_not_returned_as_success(self):
         def malformed(*args, **kwargs):
             return {**answer(*args, **kwargs), "response": "not json"}
         self.server.engine = adapter.Engine(generator=malformed)
         self.assertEqual(self.request("/api/chat", self.chat(format="json"))[0], 502)
+
+
+class EngineQueue(unittest.TestCase):
+    def test_four_admitted_in_order_and_overflow_is_recorded_without_payload(self):
+        entered, release = threading.Event(), threading.Event()
+        calls = []
+
+        def blocked(messages, **kwargs):
+            calls.append(messages)
+            if len(calls) == 1:
+                entered.set()
+                if not release.wait(3):
+                    raise AssertionError("Test did not release first generation")
+            return answer(messages, **kwargs)
+
+        with tempfile.TemporaryDirectory() as directory:
+            metrics = Path(directory) / "metrics.jsonl"
+            engine = adapter.Engine(generator=blocked, metrics=metrics)
+            messages = [[{"role": "user", "content": "PRIVATE QUEUE CANARY %d" % i}] for i in range(5)]
+            with ThreadPoolExecutor(max_workers=4) as pool:
+                futures = [pool.submit(engine.run, messages[0])]
+                try:
+                    self.assertTrue(entered.wait(1))
+                    for index in range(1, 4):
+                        future = pool.submit(engine.run, messages[index])
+                        futures.append(future)
+                        with self.assertRaises(FutureTimeout):
+                            future.result(timeout=0.05)
+                    with self.assertRaises(adapter.RequestError) as rejected:
+                        engine.run(messages[4])
+                    self.assertEqual(rejected.exception.status, 429)
+                    self.assertIn("queue is full", str(rejected.exception))
+                finally:
+                    release.set()
+                for future in futures:
+                    future.result(timeout=1)
+            self.assertEqual(calls, messages[:4])
+            rows = [json.loads(line) for line in metrics.read_text().splitlines()]
+            self.assertEqual(len(rows), 5)
+            rejected_row = next(row for row in rows if row["status"] == "queue_full")
+            self.assertFalse(rejected_row["generated"])
+            self.assertEqual(rejected_row["queue_ahead"], 4)
+            self.assertEqual(rejected_row["queue_wait_seconds"], 0)
+            completed = sorted((row for row in rows if row["status"] == "ok"), key=lambda row: row["queue_ahead"])
+            self.assertEqual([row["queue_ahead"] for row in completed], [0, 1, 2, 3])
+            self.assertTrue(all(row["queue_wait_seconds"] >= 0.04 for row in completed[1:]))
+            self.assertNotIn("PRIVATE QUEUE CANARY", metrics.read_text())
+            self.assertNotIn("No gift", metrics.read_text())
+            engine.run(messages[4])
+            self.assertEqual(calls, messages)
+
+    def test_waiting_deadline_expires_without_generation_and_releases_slot(self):
+        entered, release = threading.Event(), threading.Event()
+        calls = []
+
+        def blocked(messages, **kwargs):
+            calls.append(messages)
+            if len(calls) == 1:
+                entered.set()
+                # Keep the slot occupied while testing only the waiting deadline.
+                if not release.wait(2):
+                    raise AssertionError("Test did not release first generation")
+            return answer(messages, **kwargs)
+
+        with tempfile.TemporaryDirectory() as directory:
+            metrics = Path(directory) / "metrics.jsonl"
+            engine = adapter.Engine(generator=blocked, timeout=0.1, metrics=metrics)
+            first_messages = [{"role": "user", "content": "active"}]
+            waiting_messages = [{"role": "user", "content": "expires"}]
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                first = pool.submit(engine.run, first_messages)
+                try:
+                    self.assertTrue(entered.wait(1))
+                    second = pool.submit(engine.run, waiting_messages)
+                    with self.assertRaises(adapter.RequestError) as expired:
+                        second.result(timeout=0.5)
+                    self.assertEqual(expired.exception.status, 504)
+                    self.assertIn("deadline expired in the queue", str(expired.exception))
+                    self.assertEqual(calls, [first_messages])
+                finally:
+                    release.set()
+                first.result(timeout=1)
+            row = next(json.loads(line) for line in metrics.read_text().splitlines()
+                       if json.loads(line)["status"] == "queue_timeout")
+            self.assertFalse(row["generated"])
+            self.assertEqual(row["queue_ahead"], 1)
+            self.assertGreaterEqual(row["queue_wait_seconds"], 0.09)
+            self.assertLess(row["wall_seconds"], 0.5)
+            engine.run(first_messages)
+            self.assertEqual(calls, [first_messages, first_messages])
+
+    def test_queued_request_observes_generation_failure_cooldown(self):
+        for kind, status in (("quota", 429), ("timeout", 504)):
+            with self.subTest(kind=kind), tempfile.TemporaryDirectory() as directory:
+                entered, release = threading.Event(), threading.Event()
+                calls = []
+
+                def fail(messages, **kwargs):
+                    calls.append(messages)
+                    entered.set()
+                    if not release.wait(2):
+                        raise AssertionError("Test did not release first generation")
+                    raise codex_runner.GenerationError(kind, "Synthetic failure")
+
+                metrics = Path(directory) / "metrics.jsonl"
+                engine = adapter.Engine(generator=fail, metrics=metrics)
+                messages = [{"role": "user", "content": "task"}]
+                with ThreadPoolExecutor(max_workers=2) as pool:
+                    first = pool.submit(engine.run, messages)
+                    try:
+                        self.assertTrue(entered.wait(1))
+                        second = pool.submit(engine.run, messages)
+                        with self.assertRaises(FutureTimeout):
+                            second.result(timeout=0.05)
+                    finally:
+                        release.set()
+                    with self.assertRaises(adapter.RequestError) as failed:
+                        first.result(timeout=1)
+                    self.assertEqual(failed.exception.status, status)
+                    with self.assertRaises(adapter.RequestError) as queued:
+                        second.result(timeout=1)
+                    self.assertEqual(queued.exception.status, 503)
+                with self.assertRaises(adapter.RequestError) as fallback:
+                    engine.run(messages)
+                self.assertEqual(fallback.exception.status, 503)
+                self.assertEqual(calls, [messages])
+                rows = [json.loads(line) for line in metrics.read_text().splitlines()]
+                self.assertEqual(len(rows), 3)
+                cooldowns = [row for row in rows if row["status"] == "cooldown"]
+                self.assertEqual(len(cooldowns), 2)
+                self.assertTrue(all(not row["generated"] and row["error"] == kind for row in cooldowns))
+                queued_row = next(row for row in cooldowns if row["queue_ahead"] == 1)
+                self.assertGreaterEqual(queued_row["queue_wait_seconds"], 0.04)
 
 
 class RunnerIsolation(unittest.TestCase):
