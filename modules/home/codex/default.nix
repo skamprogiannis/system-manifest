@@ -400,6 +400,8 @@
     '';
   };
 in {
+  _module.args.codexCliPackage = codexCli;
+
   home.packages = [
     pkgs.bubblewrap
     codexCli

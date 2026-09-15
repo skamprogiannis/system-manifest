@@ -19,6 +19,7 @@
     ./neovim.nix
     ./wallpaper-runtime.nix
     ./codex-skills.nix
+    ./bannerlord-codex.nix
     ./script-smoke.nix
     ./shellcheck.nix
     ./ci-registry.nix

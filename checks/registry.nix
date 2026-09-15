@@ -16,6 +16,7 @@
     "neovim-lsp-health"
     "wallpaper-runtime"
     "codex-skills"
+    "bannerlord-codex"
     "script-smoke"
     "shellcheck"
     "ci-registry"

@@ -137,6 +137,7 @@
   laptopDmsOutputsFile = pkgs.writeText "laptop-dms-outputs.lua" self.nixosConfigurations.laptop.config.home-manager.users.stefan.xdg.configFile."hypr/dms/outputs.lua".text;
   usbDmsOutputsFile = pkgs.writeText "usb-dms-outputs.lua" self.nixosConfigurations.usb.config.home-manager.users.stefan.xdg.configFile."hypr/dms/outputs.lua".text;
   shellcheckScripts = [
+    "${desktopHome}/bin/bannerlord-codex"
     "${desktopHome}/bin/codex-state-sync"
     "${desktopHome}/bin/gsr-record"
     "${desktopHome}/bin/hypr-quit-active"

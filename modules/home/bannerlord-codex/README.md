@@ -1,0 +1,13 @@
+# Bannerlord Codex adapter
+
+The desktop-only `bannerlord-codex.service` exposes a bounded text subset of the Ollama API at `http://127.0.0.1:11435`. The model name presented to AI Influence is `bannerlord-codex`; the runner uses `gpt-5.6-sol` with low reasoning effort through the existing official Codex CLI 0.154.0 and saved ChatGPT sign-in. Requests use the account's shared Codex allowance. No API key or separate API billing is accepted.
+
+`bannerlord-codex start|stop|status` controls the service. It starts only on demand, checks the CLI version and saved login locally, and waits for the HTTP listener. A healthy listener does not establish current account access or remaining quota. There is no automatic startup generation. Failed starts are limited to three attempts per minute so a failed sign-in preflight cannot restart indefinitely. Stopping the service terminates its whole process group, including Codex request children.
+
+The service preserves the normal home directory so Codex can manage its own authentication and refresh. Credentials are never copied into this module or the Nix store. Only private usage metadata is written to `~/.local/state/bannerlord-codex/metrics.jsonl`; prompts and replies are not written there. `journalctl --user -u bannerlord-codex.service` shows service/preflight diagnostics without exposing raw login status.
+
+Each request uses a fresh temporary working directory and ephemeral Codex execution, ignores user/project coding configuration, disables tools and browser access, and has an 85-second deadline. Requests are serialized. Failures are explicit and put the adapter into a short cooldown to prevent AI Influence's chat-to-generate fallback from immediately repeating a failed request. The adapter accepts only nonstreaming text. Ollama sampling options are recorded as unsupported controls rather than applied to Codex; its selected model/effort controls generation. Image input, speech, audio and embeddings are unavailable through this adapter.
+
+Player2 remains a separate service and fallback. This module does not change Bannerlord's mod configuration or choose its backend. The adapter and model quality are experimental; a successful HTTP or schema test does not prove gameplay or memory fidelity.
+
+Only the four runtime prototype files are copied from the game workspace; fixtures, game saves, evidence and account data are excluded. `test_adapter.py` exercises fake models only; its generated fake CLI shebang uses the Nix test interpreter. Additional service tests check lifecycle calls, credential-output suppression, readiness and the exact installed file list. Run `nix build .#checks.x86_64-linux.bannerlord-codex` to validate without login or network inference.
