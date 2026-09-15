@@ -6,6 +6,7 @@
     ../../home.nix
     ../../modules/home/dms/desktop.nix
     ../../modules/home/scripts/usb.nix
+    ../../modules/home/player2-ai-influence
   ];
 
   system_manifest.scripts.enableSetupPersistentUsb = false;
