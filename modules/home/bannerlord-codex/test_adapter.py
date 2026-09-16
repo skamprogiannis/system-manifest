@@ -323,6 +323,51 @@ class RunnerIsolation(unittest.TestCase):
             self.assertEqual(caught.exception.kind, "timeout")
             self.assertLess(time.monotonic() - start, 4)
 
+    def test_timeout_preserves_only_progress_metadata_not_private_output(self):
+        events = [
+            {"type": "thread.started", "thread_id": "PRIVATE-THREAD"},
+            {"type": "turn.started"},
+            {"type": "item.completed", "item": {"type": "reasoning", "text": "PRIVATE-REASONING"}},
+            {"type": "item.completed", "item": {"type": "agent_message", "text": "PRIVATE-REPLY"}},
+        ]
+        code = "import time\n" + "\n".join("print(" + repr(json.dumps(event)) + ", flush=True)" for event in events)
+        code += "\nprint('PRIVATE-INCOMPLETE-EVENT', flush=True)\ntime.sleep(30)\n"
+        with tempfile.TemporaryDirectory() as directory:
+            executable = self.fake_cli(directory, code)
+            with self.assertRaises(codex_runner.GenerationError) as caught:
+                codex_runner.generate([{"role": "user", "content": "PRIVATE-PROMPT"}], timeout=0.7, executable=executable)
+            self.assertEqual(caught.exception.kind, "timeout")
+            diagnostic = caught.exception.diagnostic
+            self.assertTrue(diagnostic["turn_started"])
+            self.assertFalse(diagnostic["turn_completed"])
+            self.assertEqual(diagnostic["item_counts"], {"reasoning": 1, "agent_message": 1})
+            self.assertEqual(diagnostic["invalid_event_lines"], 1)
+            self.assertGreaterEqual(diagnostic["elapsed_seconds"], 0.6)
+            self.assertGreaterEqual(diagnostic["login_seconds"], 0)
+            self.assertNotIn("PRIVATE", json.dumps(diagnostic))
+
+    def test_timeout_metrics_distinguish_completed_turn_from_cli_shutdown_stall(self):
+        events = [
+            {"type": "turn.started"},
+            {"type": "item.completed", "item": {"type": "agent_message", "text": "PRIVATE-REPLY"}},
+            {"type": "turn.completed", "usage": {"input_tokens": 99, "output_tokens": 21}},
+        ]
+        code = "import time\n" + "\n".join("print(" + repr(json.dumps(event)) + ", flush=True)" for event in events) + "\ntime.sleep(30)\n"
+        with tempfile.TemporaryDirectory() as directory:
+            executable = self.fake_cli(directory, code)
+            metrics = Path(directory) / "metrics.jsonl"
+            def bounded(messages, **kwargs):
+                return codex_runner.generate(messages, executable=executable, **kwargs)
+            engine = adapter.Engine(generator=bounded, timeout=0.7, metrics=metrics)
+            with self.assertRaises(adapter.RequestError) as caught:
+                engine.run([{"role": "user", "content": "PRIVATE-PROMPT"}])
+            self.assertEqual(caught.exception.status, 504)
+            row = json.loads(metrics.read_text())
+            self.assertTrue(row["failure_diagnostic"]["turn_completed"])
+            self.assertTrue(row["failure_diagnostic"]["turn_started"])
+            self.assertEqual(row["failure_diagnostic"]["event_counts"]["turn.completed"], 1)
+            self.assertNotIn("PRIVATE", metrics.read_text())
+
     def test_saved_api_key_login_is_rejected_without_inference(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "fake-codex"

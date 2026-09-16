@@ -77,6 +77,35 @@ def environment() -> dict[str, str]:
     return {key: value for key, value in os.environ.items() if key in allowed}
 
 
+def timeout_diagnostic(stdout: str, *, started: float, login_seconds: float) -> dict:
+    """Keep only bounded counters/flags from a stopped CLI; never its content."""
+    known_events = {"thread.started", "turn.started", "turn.completed", "turn.failed", "error",
+                    "item.started", "item.updated", "item.completed"}
+    known_items = {"agent_message", "reasoning", "error", "command_execution", "tool_call"}
+    events, items = {}, {}
+    invalid_lines = 0
+    for line in stdout.splitlines():
+        try:
+            event = json.loads(line)
+            if not isinstance(event, dict):
+                raise ValueError()
+        except (ValueError, TypeError):
+            invalid_lines += 1
+            continue
+        event_type = event.get("type")
+        event_type = event_type if isinstance(event_type, str) and event_type in known_events else "other"
+        events[event_type] = events.get(event_type, 0) + 1
+        if event_type == "item.completed" and isinstance(event.get("item"), dict):
+            item_type = event["item"].get("type")
+            item_type = item_type if isinstance(item_type, str) and item_type in known_items else "other"
+            items[item_type] = items.get(item_type, 0) + 1
+    return {"phase": "generation", "login_seconds": round(login_seconds, 3),
+            "elapsed_seconds": round(time.monotonic() - started, 3),
+            "turn_started": bool(events.get("turn.started")),
+            "turn_completed": bool(events.get("turn.completed")),
+            "event_counts": events, "item_counts": items, "invalid_event_lines": invalid_lines}
+
+
 def generate(messages: list[dict], *, model: str = DEFAULT_MODEL, timeout: float = 110,
              executable: str = "codex") -> dict:
     payload = json.dumps({"messages": messages}, ensure_ascii=False)
@@ -92,7 +121,8 @@ def generate(messages: list[dict], *, model: str = DEFAULT_MODEL, timeout: float
             raise GenerationError("auth", "Could not verify Codex ChatGPT sign-in; no generation started.")
         if login.returncode or not any(line.strip() == "Logged in using ChatGPT" for line in login.stdout.splitlines()):
             raise GenerationError("auth", "A saved ChatGPT login is required; API-key authentication is not accepted.")
-        remaining = timeout - (time.monotonic() - started)
+        login_seconds = time.monotonic() - started
+        remaining = timeout - login_seconds
         if remaining <= 0:
             raise GenerationError("timeout", "Sign-in check exhausted the request deadline; no generation started.")
         proc = subprocess.Popen(command(model, workdir, executable), stdin=subprocess.PIPE,
@@ -103,11 +133,13 @@ def generate(messages: list[dict], *, model: str = DEFAULT_MODEL, timeout: float
         except subprocess.TimeoutExpired:
             os.killpg(proc.pid, signal.SIGTERM)
             try:
-                proc.communicate(timeout=3)
+                stdout, _stderr = proc.communicate(timeout=3)
             except subprocess.TimeoutExpired:
                 os.killpg(proc.pid, signal.SIGKILL)
-                proc.communicate()
-            raise GenerationError("timeout", "Codex exceeded the request deadline; no retry was made.")
+                stdout, _stderr = proc.communicate()
+            error = GenerationError("timeout", "Codex exceeded the request deadline; no retry was made.")
+            error.diagnostic = timeout_diagnostic(stdout, started=started, login_seconds=login_seconds)
+            raise error
     elapsed = time.monotonic() - started
     events = []
     for line in stdout.splitlines():

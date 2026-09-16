@@ -128,6 +128,8 @@ class Engine:
                     self.last_error = error.kind
                     self.cooldown_until = time.monotonic() + (60 if error.kind == "quota" else 30)
                 row.update(status="error", error=error.kind)
+                if getattr(error, "diagnostic", None) is not None:
+                    row["failure_diagnostic"] = error.diagnostic
                 status = 429 if error.kind == "quota" else 504 if error.kind == "timeout" else 502
                 raise RequestError(status, str(error)) from error
             row.update(status="ok", usage=result["usage"], seconds=result["seconds"], warnings=result.get("warnings", []))
