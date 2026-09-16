@@ -14,6 +14,41 @@ import time
 import wave
 
 
+class SpeechCancelled(Exception):
+    pass
+
+
+def split_speech_text(text, limit=120):
+    parts = []
+    remaining = text.strip()
+    while len(remaining) > limit:
+        prefix = remaining[:limit + 1]
+        punctuation = max((prefix.rfind(mark) + 1 for mark in ('. ', '? ', '! ', '; ', ': ', ', ')), default=0)
+        end = punctuation if punctuation >= limit // 3 else prefix.rfind(' ')
+        if end <= 0:
+            end = limit
+        parts.append(remaining[:end].strip())
+        remaining = remaining[end:].lstrip()
+    if remaining:
+        parts.append(remaining)
+    return parts
+
+
+def render_speech_parts(pipeline, text, voice, speed, cancelled):
+    chunks = []
+    for part in split_speech_text(text):
+        if cancelled():
+            raise SpeechCancelled()
+        for result in pipeline(part, voice=voice, speed=speed):
+            if cancelled():
+                raise SpeechCancelled()
+            if result.audio is not None:
+                chunks.append(result.audio.numpy())
+    if cancelled():
+        raise SpeechCancelled()
+    return chunks
+
+
 class NativeEngine:
     def __init__(self, runtime_dir):
         self.runtime_dir = Path(runtime_dir)
@@ -93,18 +128,30 @@ class NativeEngine:
         if response.get('ready') is not True:
             raise RuntimeError('Speech preparation failed')
 
-    def synthesize(self, text, voice, speed):
-        response = self._worker_request({'text': text, 'voice': voice, 'speed': speed})
+    def synthesize(self, text, voice, speed, cancel_event=None, audio_format='wav'):
+        with tempfile.TemporaryDirectory(prefix='speech-', dir=self.runtime_dir) as temporary:
+            cancel_path = Path(temporary) / 'cancel'
+            response = self._worker_request({'text': text, 'voice': voice, 'speed': speed, 'cancel_path': str(cancel_path), 'format': audio_format}, cancel_event=cancel_event, cancel_path=cancel_path)
         if 'audio' not in response:
             raise RuntimeError('Synthesis failed')
         return base64.b64decode(response['audio'], validate=True)
 
-    def _worker_request(self, request):
+    def _worker_request(self, request, *, cancel_event=None, cancel_path=None):
         # Preparation and synthesis share one process and its line protocol.
         deadline = time.monotonic() + 45
-        if not self.worker_lock.acquire(timeout=45):
+        if cancel_event is None:
+            acquired = self.worker_lock.acquire(timeout=45)
+        else:
+            acquired = False
+            while not acquired and time.monotonic() < deadline:
+                if cancel_event.is_set():
+                    raise SpeechCancelled()
+                acquired = self.worker_lock.acquire(timeout=min(.1, max(0, deadline - time.monotonic())))
+        if not acquired:
             raise TimeoutError('Speech preparation exceeded deadline')
         try:
+            if cancel_event is not None and cancel_event.is_set():
+                raise SpeechCancelled()
             if self.worker is None or self.worker.poll() is not None:
                 self.worker = subprocess.Popen([sys.executable, __file__, '--tts-worker'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=sys.stderr, text=True, bufsize=1)
             try:
@@ -112,13 +159,25 @@ class NativeEngine:
                 self.worker.stdin.flush()
                 with selectors.DefaultSelector() as selector:
                     selector.register(self.worker.stdout, selectors.EVENT_READ)
-                    if not selector.select(max(0, deadline - time.monotonic())):
-                        raise TimeoutError('Synthesis exceeded deadline')
+                    while True:
+                        remaining = deadline - time.monotonic()
+                        if remaining <= 0:
+                            raise TimeoutError('Synthesis exceeded deadline')
+                        if cancel_event is not None and cancel_event.is_set():
+                            cancel_path.touch(exist_ok=True)
+                        if selector.select(min(.1, remaining) if cancel_event is not None else remaining):
+                            break
+                        if cancel_event is None:
+                            raise TimeoutError('Synthesis exceeded deadline')
                     line = self.worker.stdout.readline()
                 response = json.loads(line)
+                if response.get('cancelled') is True:
+                    raise SpeechCancelled()
                 if 'error' in response:
                     raise RuntimeError('Synthesis failed')
                 return response
+            except SpeechCancelled:
+                raise
             except Exception:
                 self.worker.kill()
                 self.worker.wait()
@@ -161,12 +220,18 @@ def tts_worker():
                 continue
             pipeline = pipeline_for_voice(request['voice'], pipelines, model, KPipeline)
             voice = Path(os.environ['KOKORO_VOICES']) / (request['voice'] + '.pt')
-            chunks = [result.audio.numpy() for result in pipeline(request['text'], voice=str(voice), speed=request['speed']) if result.audio is not None]
+            cancel_path = Path(request['cancel_path']) if request.get('cancel_path') else None
+            chunks = render_speech_parts(pipeline, request['text'], str(voice), request['speed'], lambda: cancel_path is not None and cancel_path.exists())
             if not chunks:
                 raise ValueError('No audio')
             buffer = io.BytesIO()
-            sf.write(buffer, np.concatenate(chunks), 24000, format='WAV', subtype='PCM_16')
+            audio_format = request.get('format', 'wav')
+            if audio_format not in ('wav', 'ogg'):
+                raise ValueError('Unsupported audio format')
+            sf.write(buffer, np.concatenate(chunks), 24000, format='OGG' if audio_format == 'ogg' else 'WAV', subtype='VORBIS' if audio_format == 'ogg' else 'PCM_16')
             response = {'audio': base64.b64encode(buffer.getvalue()).decode('ascii')}
+        except SpeechCancelled:
+            response = {'cancelled': True}
         except Exception as error:
             response = {'error': type(error).__name__}
         protocol.write(json.dumps(response) + '\n')

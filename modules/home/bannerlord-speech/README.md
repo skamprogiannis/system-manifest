@@ -20,10 +20,10 @@ American Fenrir, Michael, Onyx, Puck, Heart and Bella. The game companion owns
 character casting and explicit voice overrides.
 Explicit cast overrides take priority; the voice prefix selects the matching
 English phonemizer, with both phonemizers sharing one CPU model. Existing Player2
-voice assignments and AI memories are unchanged. AI Influence supplies audio conversion/playback and
-animations; synthesis is deferred so text does not wait for audio. Ordinary
-Bannerlord lines, ambient NPC conversations and image generation are outside
-this feature. Late speech is discarded after conversation closure.
+voice assignments and AI memories are unchanged. Synthesis is deferred so text
+does not wait for audio. The game companion owns NPC playback and cancels it when
+the player advances or closes a conversation. Ambient NPC conversations and
+image generation are separate systems. Late speech is discarded after conversation closure.
 
 Both engines run on CPU with two inference threads, one inference job at a time,
 and service memory thresholds of 2 GiB/3 GiB. Starting the on-demand service now
@@ -55,3 +55,38 @@ Verification includes HTTP behavior tests, actual mod calls through Proton,
 deferred/cancelled playback contracts, actual author audio conversion with
 playback intercepted, fixture transcription and local synthesis. It deliberately
 does not record the microphone or play sound during unattended testing.
+
+
+## Short dialogue audio and cache
+
+`POST /v1/speech` accepts `text`, `voice`, `speed`, optional `request_id`, and
+optional `format` (`wav` by default, or `ogg`). OGG responses use Vorbis directly
+in the existing native encoder, avoiding a Windows WAV-to-OGG conversion.
+Responses use `audio/wav` or `audio/ogg` and an `X-Speech-Cache: hit|miss` header.
+The game can request an initial phrase of roughly 25–96 characters, then phrases
+up to 120 characters, and begin playback while later phrases are prepared.
+The worker also splits long legacy requests into parts of at most 120 characters.
+
+The private cache lives at `~/.local/state/bannerlord-speech/audio-cache`, bounded
+to 256 MiB and 2,048 entries. It stores audio under hash filenames, without a
+plaintext dialogue index. Model/configuration, voice embedding, Python library
+environment, text, speed and format all participate in the key. Hits avoid model
+inference and survive service restarts. Corrupt entries are regenerated. Cache
+creation or write failure does not disable speech; the request remains uncached.
+The cache directory is 0700 and audio files are 0600.
+
+Use a unique `request_id` for each phrase (1–80 ASCII letters, digits, hyphens or
+underscores). `POST /v1/speech/cancel` with that ID responds immediately with
+`{ "cancelled": true, "active": true|false }`. IDs cancelled before arrival are
+rejected too, with tombstones bounded to 120 seconds and 1,024 IDs. A cancelled
+request returns HTTP409 with `code: "cancelled"`; a busy uncached request returns
+HTTP409 with `code: "busy"`. There is no generation queue. The companion should
+retry only the current phrase while busy, and discard every stale response.
+Cached audio can be returned while an obsolete inference finishes.
+
+Cancellation is cooperative between short synthesis parts, not an immediate
+abort of the current model operation. It leaves model weights loaded and stops
+remaining parts. The game must stop current playback immediately itself; it
+must not wait for the native cancellation acknowledgement to advance dialogue.
+The existing 45-second bound remains as the failure deadline. `/health` advertises
+`audio_formats`, `speech_cancel_supported` and `cache_enabled` for client checks.

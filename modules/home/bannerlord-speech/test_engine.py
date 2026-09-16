@@ -1,6 +1,9 @@
 """Worker preparation is silent and both English frontends share one model."""
 import io
+import json
 import tempfile
+import threading
+from pathlib import Path
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -66,6 +69,60 @@ class WorkerPreparationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             engine.pipeline_for_voice('xx_unknown', {}, object(), factory)
         factory.assert_not_called()
+
+
+class ShortSpeechTests(unittest.TestCase):
+    def test_short_phrases_preserve_words_and_bound_synthesis_units(self):
+        text = 'My household requires loyal service. ' + 'Honour must be earned by deeds, not promises. ' * 8
+        parts = engine.split_speech_text(text)
+        self.assertTrue(all(0 < len(part) <= 120 for part in parts))
+        self.assertEqual(' '.join(parts).split(), text.split())
+
+    def test_cancel_between_chunks_does_not_generate_the_remaining_text(self):
+        calls = []
+        cancelled = False
+        def pipeline(text, **kwargs):
+            nonlocal cancelled
+            calls.append(text)
+            result = MagicMock(); result.audio.numpy.return_value = [0]
+            yield result
+            cancelled = True
+        with self.assertRaises(engine.SpeechCancelled):
+            engine.render_speech_parts(pipeline, 'A loyal household needs brave service. ' * 9, 'fixture', 1, lambda: cancelled)
+        self.assertEqual(len(calls), 1)
+
+    def test_pre_cancelled_request_does_not_start_a_worker(self):
+        with tempfile.TemporaryDirectory() as directory:
+            native = engine.NativeEngine(directory)
+            cancelled = threading.Event(); cancelled.set()
+            with patch.object(engine.subprocess, 'Popen') as popen:
+                with self.assertRaises(engine.SpeechCancelled):
+                    native.synthesize('Obsolete.', 'bm_lewis', 1, cancel_event=cancelled)
+                popen.assert_not_called()
+            self.assertEqual(list(Path(directory).iterdir()), [])
+
+    def test_worker_cancel_response_preserves_loaded_worker_and_removes_marker(self):
+        with tempfile.TemporaryDirectory() as directory:
+            native = engine.NativeEngine(directory)
+            worker = MagicMock(); worker.poll.return_value = None
+            worker.stdin = io.StringIO(); worker.stdout = io.StringIO('{"cancelled":true}\n')
+            native.worker = worker
+            cancelled = threading.Event()
+            selector = MagicMock(); selector.__enter__.return_value = selector
+            def ready(timeout):
+                if not cancelled.is_set():
+                    cancelled.set()
+                    return []
+                request = json.loads(worker.stdin.getvalue())
+                self.assertTrue(Path(request['cancel_path']).exists())
+                return [True]
+            selector.select.side_effect = ready
+            with patch.object(engine.selectors, 'DefaultSelector', return_value=selector):
+                with self.assertRaises(engine.SpeechCancelled):
+                    native.synthesize('Obsolete.', 'bm_lewis', 1, cancel_event=cancelled)
+            worker.kill.assert_not_called()
+            self.assertIs(native.worker, worker)
+            self.assertEqual(list(Path(directory).iterdir()), [])
 
 
 if __name__ == '__main__':
