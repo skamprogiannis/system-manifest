@@ -1,11 +1,53 @@
-"""English voice frontends share one CPU model."""
+"""Worker preparation is silent and both English frontends share one model."""
+import io
+import tempfile
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import engine
 
 
-class VoicePipelineTests(unittest.TestCase):
+class WorkerPreparationTests(unittest.TestCase):
+    def test_warmup_initializes_worker_without_an_utterance_or_recorder(self):
+        with tempfile.TemporaryDirectory() as folder:
+            native = engine.NativeEngine(folder)
+            worker = MagicMock()
+            worker.poll.return_value = None
+            worker.stdin = io.StringIO()
+            worker.stdout = io.StringIO('{"ready": true}\n')
+            selector = MagicMock()
+            selector.__enter__.return_value = selector
+            selector.select.return_value = [True]
+            with patch.object(engine.subprocess, 'Popen', return_value=worker) as popen, patch.object(engine.selectors, 'DefaultSelector', return_value=selector):
+                native.warmup()
+            self.assertEqual(worker.stdin.getvalue(), '{"operation": "prepare"}\n')
+            self.assertEqual(popen.call_count, 1)
+            self.assertEqual(popen.call_args.args[0][-1], '--tts-worker')
+            self.assertIsNone(native.record_process)
+            self.assertIsNone(native.record_dir)
+
+    def test_preparation_and_synthesis_share_the_same_total_deadline(self):
+        with tempfile.TemporaryDirectory() as folder:
+            native = engine.NativeEngine(folder)
+            native.worker_lock = MagicMock()
+            native.worker_lock.acquire.return_value = True
+            worker = MagicMock()
+            worker.poll.return_value = None
+            worker.stdin = io.StringIO()
+            worker.stdout = io.StringIO()
+            native.worker = worker
+            selector = MagicMock()
+            selector.__enter__.return_value = selector
+            selector.select.return_value = []
+            with patch.object(engine.time, 'monotonic', side_effect=[100, 140]), patch.object(engine.selectors, 'DefaultSelector', return_value=selector):
+                with self.assertRaises(TimeoutError):
+                    native.synthesize('A short reply.', 'bm_lewis', 1.0)
+            native.worker_lock.acquire.assert_called_once_with(timeout=45)
+            selector.select.assert_called_once_with(5)
+            worker.kill.assert_called_once()
+            native.worker_lock.release.assert_called_once()
+            self.assertIsNone(native.worker)
+
     def test_american_and_british_voices_use_matching_cached_frontends_and_shared_weights(self):
         model = object()
         pipelines = {}

@@ -20,6 +20,7 @@ class NativeEngine:
         self.record_process = None
         self.record_dir = None
         self.worker = None
+        self.worker_lock = threading.Lock()
         self.record_lock = threading.RLock()
         self.timer = None
 
@@ -86,26 +87,45 @@ class NativeEngine:
         finally:
             recording.cleanup()
 
+    def warmup(self):
+        # Load model/frontend only: no microphone, utterance or playback.
+        response = self._worker_request({'operation': 'prepare'})
+        if response.get('ready') is not True:
+            raise RuntimeError('Speech preparation failed')
+
     def synthesize(self, text, voice, speed):
-        if self.worker is None or self.worker.poll() is not None:
-            self.worker = subprocess.Popen([sys.executable, __file__, '--tts-worker'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=sys.stderr, text=True, bufsize=1)
+        response = self._worker_request({'text': text, 'voice': voice, 'speed': speed})
+        if 'audio' not in response:
+            raise RuntimeError('Synthesis failed')
+        return base64.b64decode(response['audio'], validate=True)
+
+    def _worker_request(self, request):
+        # Preparation and synthesis share one process and its line protocol.
+        deadline = time.monotonic() + 45
+        if not self.worker_lock.acquire(timeout=45):
+            raise TimeoutError('Speech preparation exceeded deadline')
         try:
-            self.worker.stdin.write(json.dumps({'text': text, 'voice': voice, 'speed': speed}) + '\n')
-            self.worker.stdin.flush()
-            with selectors.DefaultSelector() as selector:
-                selector.register(self.worker.stdout, selectors.EVENT_READ)
-                if not selector.select(45):
-                    raise TimeoutError('Synthesis exceeded deadline')
-                line = self.worker.stdout.readline()
-            response = json.loads(line)
-            if 'audio' not in response:
-                raise RuntimeError('Synthesis failed')
-            return base64.b64decode(response['audio'], validate=True)
-        except Exception:
-            self.worker.kill()
-            self.worker.wait()
-            self.worker = None
-            raise
+            if self.worker is None or self.worker.poll() is not None:
+                self.worker = subprocess.Popen([sys.executable, __file__, '--tts-worker'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=sys.stderr, text=True, bufsize=1)
+            try:
+                self.worker.stdin.write(json.dumps(request) + '\n')
+                self.worker.stdin.flush()
+                with selectors.DefaultSelector() as selector:
+                    selector.register(self.worker.stdout, selectors.EVENT_READ)
+                    if not selector.select(max(0, deadline - time.monotonic())):
+                        raise TimeoutError('Synthesis exceeded deadline')
+                    line = self.worker.stdout.readline()
+                response = json.loads(line)
+                if 'error' in response:
+                    raise RuntimeError('Synthesis failed')
+                return response
+            except Exception:
+                self.worker.kill()
+                self.worker.wait()
+                self.worker = None
+                raise
+        finally:
+            self.worker_lock.release()
 
 
 def pipeline_for_voice(voice, pipelines, model, factory):
@@ -135,6 +155,10 @@ def tts_worker():
     for line in sys.stdin:
         try:
             request = json.loads(line)
+            if request.get('operation') == 'prepare':
+                protocol.write(json.dumps({'ready': True}) + '\n')
+                protocol.flush()
+                continue
             pipeline = pipeline_for_voice(request['voice'], pipelines, model, KPipeline)
             voice = Path(os.environ['KOKORO_VOICES']) / (request['voice'] + '.pt')
             chunks = [result.audio.numpy() for result in pipeline(request['text'], voice=str(voice), speed=request['speed']) if result.audio is not None]

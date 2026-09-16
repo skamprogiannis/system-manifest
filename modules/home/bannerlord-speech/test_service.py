@@ -98,6 +98,39 @@ class SpeechInterfaceTests(unittest.TestCase):
         self.assertNotIn(b'/private/path', data)
         self.assertEqual(self.request('POST', '/v1/dictation/cancel', {})[0], 200)
 
+    def test_model_preparation_does_not_block_health_or_dictation(self):
+        started, release = threading.Event(), threading.Event()
+        def prepare():
+            started.set()
+            if not release.wait(3):
+                raise TimeoutError('Fixture was not released')
+        self.engine.warmup = prepare
+        try:
+            self.server.start_warmup()
+            self.assertTrue(started.wait(1))
+            status, data = self.request('GET', '/health')
+            self.assertEqual(status, 200)
+            self.assertEqual(json.loads(data)['speech_status'], 'preparing')
+            self.assertFalse(self.engine.recording)
+            self.assertEqual(self.request('POST', '/v1/dictation/start', {})[0], 200)
+            self.assertEqual(self.request('POST', '/v1/dictation/stop', {})[0], 200)
+        finally:
+            release.set()
+            self.server.warmup_thread.join(2)
+        self.assertEqual(self.server.warmup_status, 'ready')
+        self.assertEqual(self.engine.calls, [])
+
+    def test_failed_preparation_keeps_dictation_and_speech_recovery_available(self):
+        def fail():
+            raise RuntimeError('Fixture load failed')
+        self.engine.warmup = fail
+        self.server.start_warmup()
+        self.server.warmup_thread.join(2)
+        self.assertEqual(self.server.warmup_status, 'failed')
+        self.assertEqual(self.request('POST', '/v1/dictation/start', {})[0], 200)
+        self.assertEqual(self.request('POST', '/v1/dictation/stop', {})[0], 200)
+        self.assertEqual(self.request('POST', '/v1/speech', {'text': 'Welcome.'})[0], 200)
+
     def test_invalid_speech_is_not_generated(self):
         for payload in ({'text': ''}, {'text': 'x' * 4001}, {'text': 'Hello', 'speed': float('nan')}):
             self.assertEqual(self.request('POST', '/v1/speech', payload)[0], 400)

@@ -24,7 +24,7 @@ def main():
         deadline = time.monotonic() + 15
         while time.monotonic() < deadline:
             if healthy():
-                print('Local speech ready; microphone idle.')
+                print('Local speech connected; voices prepare in the background; microphone idle.')
                 return 0
             time.sleep(0.25)
         print('Local speech did not become ready.', file=sys.stderr)

@@ -22,7 +22,26 @@ class SpeechServer(ThreadingHTTPServer):
         self.generation = 0
         self.state_lock = threading.Lock()
         self.job_lock = threading.Lock()
+        self.warmup_status = 'pending'
+        self.warmup_thread = None
         super().__init__(address, SpeechHandler)
+
+    def start_warmup(self):
+        if self.warmup_thread is not None:
+            return
+        self.warmup_thread = threading.Thread(target=self._warmup, daemon=True)
+        self.warmup_thread.start()
+
+    def _warmup(self):
+        started = time.monotonic()
+        self.warmup_status = 'preparing'
+        try:
+            self.engine.warmup()
+            self.warmup_status = 'ready'
+        except Exception as error:
+            self.warmup_status = 'failed'
+            print(json.dumps({'operation': 'prepare', 'error_type': type(error).__name__}), flush=True)
+        print(json.dumps({'operation': 'prepare', 'status': self.warmup_status, 'seconds': round(time.monotonic()-started, 3)}), flush=True)
 
 
 VOICES = tuple('af_heart af_bella am_fenrir am_michael am_onyx am_puck bf_alice bf_emma bf_isabella bf_lily bm_daniel bm_fable bm_george bm_lewis'.split())
@@ -104,6 +123,7 @@ class SpeechHandler(BaseHTTPRequestHandler):
                 started = time.monotonic()
                 try:
                     audio = server.engine.synthesize(text.strip(), voice, float(speed))
+                    server.warmup_status = 'ready'
                     print(json.dumps({'operation': 'synthesize', 'seconds': round(time.monotonic()-started, 3), 'characters': len(text), 'voice': voice}), flush=True)
                     return self.reply(200, audio, 'audio/wav')
                 finally:
@@ -115,7 +135,7 @@ class SpeechHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path == '/health':
-            return self.reply(200, {'service': 'bannerlord-speech', 'version': 1, 'recording': self.server.recording})
+            return self.reply(200, {'service': 'bannerlord-speech', 'version': 1, 'recording': self.server.recording, 'speech_status': self.server.warmup_status})
         if self.path == '/v1/voices':
             return self.reply(200, {'voices': [{'id': name, 'gender': 'female' if name[1] == 'f' else 'male', 'language': 'en-US' if name.startswith('a') else 'en-GB'} for name in VOICES]})
         return self.reply(404, {'error': 'Unknown operation'})
@@ -133,6 +153,7 @@ def main():
     engine = NativeEngine(args.runtime_dir)
     server = SpeechServer(('127.0.0.1', args.port), engine, args.runtime_dir, token)
     (args.runtime_dir / 'token').write_text(token)
+    server.start_warmup()
     try:
         server.serve_forever()
     finally:
