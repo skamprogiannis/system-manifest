@@ -425,5 +425,68 @@ print(json.dumps({"type":"turn.completed","usage":{"input_tokens":10,"output_tok
                 codex_runner.generate([{"role": "user", "content": "x"}], executable=executable)
 
 
+class DialogueOutput(unittest.TestCase):
+    suffix = " **Character count: 430** Skip this one. Just answer JSON."
+
+    def result(self, speech, **extra):
+        return {"response": json.dumps({"response": speech, "actions": [], **extra}),
+                "model": "offline", "seconds": 0.001, "usage": {}}
+
+    def test_editorial_suffix_rejected_before_delivery_and_fallback(self):
+        for require_json in (False, True):
+            with self.subTest(require_json=require_json), tempfile.TemporaryDirectory() as directory:
+                calls = []
+                metrics = Path(directory) / "metrics.jsonl"
+                def fake(*args, **kwargs):
+                    calls.append(1)
+                    return self.result("Ask the harbourmaster." + self.suffix)
+                engine = adapter.Engine(generator=fake, metrics=metrics)
+                with self.assertRaises(adapter.RequestError) as caught:
+                    engine.run([{"role": "user", "content": "Where can I find a ship?"}], require_json=require_json)
+                self.assertEqual(caught.exception.status, 502)
+                self.assertNotIn("harbourmaster", str(caught.exception))
+                with self.assertRaises(adapter.RequestError) as fallback:
+                    engine.run([{"role": "user", "content": "Where can I find a ship?"}])
+                self.assertEqual(fallback.exception.status, 503)
+                self.assertEqual(calls, [1])
+                rows = [json.loads(x) for x in metrics.read_text().splitlines()]
+                self.assertEqual(rows[0]["error"], "output_quality")
+                self.assertNotIn("harbourmaster", metrics.read_text())
+                self.assertNotIn(self.suffix, metrics.read_text())
+
+    def test_in_world_speech_and_private_structured_fields_preserved(self):
+        texts = ["*He counts his coins.* Three hundred will suffice.",
+                 "Character count: 430. That is how many names fill the roll.",
+                 "Skip this one. Take the next road.",
+                 "He said: Just answer JSON.",
+                 "Ask the harbourmaster."]
+        for speech in texts:
+            with self.subTest(speech=speech):
+                result = self.result(speech, internal_thoughts=self.suffix)
+                engine = adapter.Engine(generator=lambda *a, **kw: result)
+                self.assertEqual(engine.run([{"role": "user", "content": "question"}])["response"], result["response"])
+
+    def test_plain_summarization_and_non_dialogue_json_remain_unchanged(self):
+        for raw in ("The lord refused payment.", '{"summary":"No payment was promised."}', '["first", "second"]'):
+            with self.subTest(raw=raw):
+                result = {"response": raw, "model": "offline", "seconds": 0.001, "usage": {}}
+                engine = adapter.Engine(generator=lambda *a, **kw: result)
+                self.assertEqual(engine.run([{"role": "user", "content": "Summarize."}])["response"], raw)
+
+    def test_cli_reasoning_items_never_become_dialogue(self):
+        events = [
+            {"type": "turn.started"},
+            {"type": "item.completed", "item": {"type": "reasoning", "text": self.suffix}},
+            {"type": "item.completed", "item": {"type": "agent_message", "text": json.dumps({"response": self.result("Ask the harbourmaster.")["response"]})}},
+            {"type": "turn.completed", "usage": {}},
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            code = "\n".join("print(" + repr(json.dumps(e)) + ")" for e in events)
+            executable = RunnerIsolation().fake_cli(directory, code)
+            result = codex_runner.generate([{"role": "user", "content": "question"}], executable=executable)
+            self.assertEqual(json.loads(result["response"])["response"], "Ask the harbourmaster.")
+            self.assertNotIn(self.suffix, result["response"])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

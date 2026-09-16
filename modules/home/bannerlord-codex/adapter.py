@@ -8,6 +8,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import math
 import os
+import re
 from pathlib import Path
 import threading
 import time
@@ -68,6 +69,28 @@ def normalize(path: str, data: dict) -> tuple[list[dict], dict]:
     return messages, options
 
 
+# This narrowly recognizes a generated drafting annotation followed by a JSON
+# instruction, not arbitrary in-character mentions of counting or commands.
+EDITORIAL_SUFFIX = re.compile(
+    r"\*\*\s*(?:character|word|token)\s+count\s*:\s*\d+\s*\*\*\s*"
+    r"(?:Skip this one\.\s*)?(?:Just|Only)\s+(?:answer|return|output)\s+JSON\.?\s*$",
+    re.IGNORECASE,
+)
+
+
+def validate_dialogue_output(raw: str) -> None:
+    """Reject recognized drafting residue before any mod actions or persistence."""
+    try:
+        value = json.loads(raw)
+    except (ValueError, TypeError):
+        return  # Plain-text summary tasks are supported; JSON format checks are separate.
+    if not isinstance(value, dict) or not isinstance(value.get("response"), str):
+        return
+    if EDITORIAL_SUFFIX.search(value["response"]):
+        # Do not trim dialogue or return the accompanying actions as successful.
+        raise GenerationError("output_quality", "Generated dialogue contained an editorial instruction; result rejected without retry.")
+
+
 class Engine:
     def __init__(self, *, model=DEFAULT_MODEL, timeout=85, metrics=None, generator=generate):
         self.model, self.timeout, self.metrics, self.generator = model, timeout, metrics, generator
@@ -118,6 +141,7 @@ class Engine:
             try:
                 row["generated"] = True
                 result = self.generator(messages, model=self.model, timeout=remaining)
+                validate_dialogue_output(result["response"])
                 if require_json:
                     try:
                         json.loads(result["response"])
