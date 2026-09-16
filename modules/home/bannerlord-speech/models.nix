@@ -7,6 +7,12 @@
   whisperRevision = "5359861c739e955e79d9a303bcbc70fb988958b1";
   kokoroUrl = "https://huggingface.co/hexgrad/Kokoro-82M/resolve/${kokoroRevision}";
   voiceHashes = {
+    af_bella = "sha256-jLZOAvzI3gMnqOE4F+ScdslF7PAFLOrJfTCBSA6OSNY=";
+    af_heart = "sha256-CrVwm4/6sZv9hJzRHZj3W2CvdzMlOtDWexI4KhAstP8=";
+    am_fenrir = "sha256-mOUH7KHbCCMK47YjLVnBCuyWMAItGazKxPXRL87Dw3o=";
+    am_michael = "sha256-mkQ7eaSyJImlsKt8ZRoLzRowvvZ1woMz8Glxq71HvTc=";
+    am_onyx = "sha256-6EUr4WzQ9tp7RXnq97HkUG6SUkiCBT2G1yuWuaf+1YQ=";
+    am_puck = "sha256-3R2Jc/TOS32K5AfHekNfSF2rwFIIG4DqdcTzC4TzYiM=";
     bf_alice = "sha256-0pJlG2r2wNgXBcJYDctEY/zMD/e41hikcdu05FZVs/M=";
     bf_emma = "sha256-0KQj3qv0pStPSTGMUXQsVOIbuJu76aEhQed1jdtdpwE=";
     bf_isabella = "sha256-zdTDcAOAUQTR0I+x4FhVyPssaN4kym5x8mSjCqpZ7v0=";

@@ -14,6 +14,7 @@ in {
       export OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2
       mkdir tests
       cp ${../modules/home/bannerlord-speech/test_service.py} tests/test_service.py
+      cp ${../modules/home/bannerlord-speech/test_engine.py} tests/test_engine.py
       python3 -m unittest discover -s tests -v
       python3 - ${serviceJson} ${environmentJson} ${runtime} <<'PY'
       import json
@@ -40,7 +41,7 @@ in {
       for key in ("WHISPER_BIN", "WHISPER_MODEL", "KOKORO_MODEL", "KOKORO_CONFIG", "KOKORO_VOICES", "PW_RECORD_BIN"):
           assert Path(environment[key]).exists(), key
       voices = sorted(p.stem for p in Path(environment["KOKORO_VOICES"]).glob("*.pt"))
-      assert voices == ["bf_alice", "bf_emma", "bf_isabella", "bf_lily", "bm_daniel", "bm_fable", "bm_george", "bm_lewis"]
+      assert voices == ["af_bella", "af_heart", "am_fenrir", "am_michael", "am_onyx", "am_puck", "bf_alice", "bf_emma", "bf_isabella", "bf_lily", "bm_daniel", "bm_fable", "bm_george", "bm_lewis"]
       assert {p.name for p in (Path(sys.argv[3]) / "lib").iterdir()} == {"service.py", "engine.py", "control.py"}
       g2p = en.G2P(trf=False, british=True, fallback=espeak.EspeakFallback(british=True), unk="")
       assert g2p("What service would earn your trust?")[0]

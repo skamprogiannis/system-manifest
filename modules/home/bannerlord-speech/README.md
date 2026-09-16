@@ -15,9 +15,12 @@ The service uses PipeWire's default microphone. Closing the query cancels pendin
 dictation. US/Greek keyboard behavior and the actual microphone require a user
 check; fixture tests cannot prove those properties.
 
-Kokoro supplies eight English voices, with a stable cast keyed by character ID.
-Explicit cast overrides take priority. Existing Player2 voice assignments and
-AI memories are unchanged. AI Influence supplies audio conversion/playback and
+Kokoro supplies fourteen English voices: the original eight British voices plus
+American Fenrir, Michael, Onyx, Puck, Heart and Bella. The game companion owns
+character casting and explicit voice overrides.
+Explicit cast overrides take priority; the voice prefix selects the matching
+English phonemizer, with both phonemizers sharing one CPU model. Existing Player2
+voice assignments and AI memories are unchanged. AI Influence supplies audio conversion/playback and
 animations; synthesis is deferred so text does not wait for audio. Ordinary
 Bannerlord lines, ambient NPC conversations and image generation are outside
 this feature. Late speech is discarded after conversation closure.

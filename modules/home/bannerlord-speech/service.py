@@ -25,7 +25,7 @@ class SpeechServer(ThreadingHTTPServer):
         super().__init__(address, SpeechHandler)
 
 
-VOICES = tuple('bf_alice bf_emma bf_isabella bf_lily bm_daniel bm_fable bm_george bm_lewis'.split())
+VOICES = tuple('af_heart af_bella am_fenrir am_michael am_onyx am_puck bf_alice bf_emma bf_isabella bf_lily bm_daniel bm_fable bm_george bm_lewis'.split())
 
 
 class SpeechHandler(BaseHTTPRequestHandler):
@@ -117,7 +117,7 @@ class SpeechHandler(BaseHTTPRequestHandler):
         if self.path == '/health':
             return self.reply(200, {'service': 'bannerlord-speech', 'version': 1, 'recording': self.server.recording})
         if self.path == '/v1/voices':
-            return self.reply(200, {'voices': [{'id': name, 'gender': 'female' if name[1] == 'f' else 'male', 'language': 'en-GB'} for name in VOICES]})
+            return self.reply(200, {'voices': [{'id': name, 'gender': 'female' if name[1] == 'f' else 'male', 'language': 'en-US' if name.startswith('a') else 'en-GB'} for name in VOICES]})
         return self.reply(404, {'error': 'Unknown operation'})
 
 

@@ -108,6 +108,15 @@ class NativeEngine:
             raise
 
 
+def pipeline_for_voice(voice, pipelines, model, factory):
+    language = voice[:1]
+    if language not in ('a', 'b'):
+        raise ValueError('Unsupported English voice')
+    if language not in pipelines:
+        pipelines[language] = factory(lang_code=language, model=model, device='cpu', repo_id='hexgrad/Kokoro-82M')
+    return pipelines[language]
+
+
 def tts_worker():
     # Restrict numerical libraries before importing Torch.
     os.environ['OMP_NUM_THREADS'] = '2'
@@ -121,10 +130,12 @@ def tts_worker():
     torch.set_num_threads(2)
     torch.set_num_interop_threads(1)
     model = KModel(repo_id='hexgrad/Kokoro-82M', config=os.environ['KOKORO_CONFIG'], model=os.environ['KOKORO_MODEL']).eval().to('cpu')
-    pipeline = KPipeline(lang_code='b', model=model, device='cpu', repo_id='hexgrad/Kokoro-82M')
+    pipelines = {}
+    pipeline_for_voice('bm_george', pipelines, model, KPipeline)
     for line in sys.stdin:
         try:
             request = json.loads(line)
+            pipeline = pipeline_for_voice(request['voice'], pipelines, model, KPipeline)
             voice = Path(os.environ['KOKORO_VOICES']) / (request['voice'] + '.pt')
             chunks = [result.audio.numpy() for result in pipeline(request['text'], voice=str(voice), speed=request['speed']) if result.audio is not None]
             if not chunks:

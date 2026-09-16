@@ -80,7 +80,9 @@ class SpeechInterfaceTests(unittest.TestCase):
         status, data = self.request('GET', '/v1/voices')
         self.assertEqual(status, 200)
         voices = json.loads(data)['voices']
-        self.assertEqual(len(voices), 8)
+        self.assertEqual(len(voices), 14)
+        self.assertEqual({voice["id"]: voice["language"] for voice in voices}["am_fenrir"], "en-US")
+        self.assertEqual({voice["id"]: voice["language"] for voice in voices}["bm_lewis"], "en-GB")
         self.assertEqual(self.request('POST', '/v1/speech', {'text': 'Welcome.', 'voice': '../../file'})[0], 400)
         status, wav = self.request('POST', '/v1/speech', {'text': 'Welcome.', 'voice': 'bm_george'})
         self.assertEqual(status, 200)
