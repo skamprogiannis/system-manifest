@@ -78,17 +78,39 @@ EDITORIAL_SUFFIX = re.compile(
 )
 
 
-def validate_dialogue_output(raw: str) -> None:
-    """Reject recognized drafting residue before any mod actions or persistence."""
+MAX_UNPUNCTUATED_WORDS = 120
+SENTENCE_END = re.compile(r'[.!?](?:["’”*]+)?(?=\s|$)')
+
+
+def sanitize_dialogue_output(raw: str) -> str:
+    """Reject drafting residue and trim a clearly degenerate dialogue tail."""
     try:
         value = json.loads(raw)
     except (ValueError, TypeError):
-        return  # Plain-text summary tasks are supported; JSON format checks are separate.
+        return raw  # Plain-text summary tasks are supported; JSON checks are separate.
     if not isinstance(value, dict) or not isinstance(value.get("response"), str):
-        return
-    if EDITORIAL_SUFFIX.search(value["response"]):
-        # Do not trim dialogue or return the accompanying actions as successful.
+        return raw
+    speech = value["response"]
+    if EDITORIAL_SUFFIX.search(speech):
         raise GenerationError("output_quality", "Generated dialogue contained an editorial instruction; result rejected without retry.")
+
+    previous_end = 0
+    corrupt_start = None
+    for sentence_end in list(SENTENCE_END.finditer(speech)) + [None]:
+        end = sentence_end.end() if sentence_end is not None else len(speech)
+        if len(speech[previous_end:end].split()) > MAX_UNPUNCTUATED_WORDS:
+            corrupt_start = previous_end
+            break
+        previous_end = end
+    if corrupt_start is None:
+        return raw
+    prefix = speech[:corrupt_start].strip()
+    # Never apply actions from a response whose natural-language result is corrupt.
+    # An action-free answer can retain its complete, sentence-bounded prefix.
+    if value.get("actions") != [] or not prefix:
+        raise GenerationError("output_quality", "Generated dialogue degenerated into an unpunctuated word sequence; result rejected without retry.")
+    value["response"] = prefix
+    return json.dumps(value, ensure_ascii=False)
 
 
 class Engine:
@@ -141,7 +163,7 @@ class Engine:
             try:
                 row["generated"] = True
                 result = self.generator(messages, model=self.model, timeout=remaining)
-                validate_dialogue_output(result["response"])
+                result["response"] = sanitize_dialogue_output(result["response"])
                 if require_json:
                     try:
                         json.loads(result["response"])

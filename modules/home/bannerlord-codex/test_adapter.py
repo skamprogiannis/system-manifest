@@ -488,5 +488,39 @@ class DialogueOutput(unittest.TestCase):
             self.assertNotIn(self.suffix, result["response"])
 
 
+    def test_lexical_avalanche_keeps_only_complete_coherent_prefix(self):
+        prefix = "Finish the forage and report to your captain. What provisions have you gathered?"
+        avalanche = " ".join("word%d" % index for index in range(180))
+        raw = self.result(prefix + " " + avalanche)["response"]
+        cleaned = adapter.sanitize_dialogue_output(raw)
+        self.assertEqual(json.loads(cleaned), {"response": prefix, "actions": []})
+
+    def test_corrupt_dialogue_with_actions_is_rejected_instead_of_partially_applied(self):
+        prefix = "The bargain is acceptable."
+        avalanche = " ".join("word%d" % index for index in range(180))
+        raw = json.dumps({"response": prefix + " " + avalanche,
+                          "actions": ["relation:5"]})
+        with self.assertRaises(codex_runner.GenerationError) as caught:
+            adapter.sanitize_dialogue_output(raw)
+        self.assertEqual(caught.exception.kind, "output_quality")
+
+    def test_long_well_punctuated_dialogue_is_not_truncated(self):
+        speech = " ".join(
+            "Sentence %d describes an ordinary in-world event clearly." % index
+            for index in range(35)
+        )
+        raw = self.result(speech)["response"]
+        self.assertEqual(adapter.sanitize_dialogue_output(raw), raw)
+
+    def test_plain_text_and_non_dialogue_json_are_not_sanitized(self):
+        samples = [
+            " ".join("word%d" % index for index in range(180)),
+            json.dumps({"summary": " ".join("word%d" % index for index in range(180))}),
+        ]
+        for raw in samples:
+            with self.subTest(raw=raw[:20]):
+                self.assertEqual(adapter.sanitize_dialogue_output(raw), raw)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
