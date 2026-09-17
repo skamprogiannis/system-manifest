@@ -228,7 +228,12 @@ def tts_worker():
             audio_format = request.get('format', 'wav')
             if audio_format not in ('wav', 'ogg'):
                 raise ValueError('Unsupported audio format')
-            sf.write(buffer, np.concatenate(chunks), 24000, format='OGG' if audio_format == 'ogg' else 'WAV', subtype='VORBIS' if audio_format == 'ogg' else 'PCM_16')
+            audio = np.concatenate(chunks)
+            # Lift only synthesized conversation audio, keeping headroom for encoding.
+            # Limit the whole phrase uniformly rather than clipping individual peaks.
+            peak = float(np.max(np.abs(audio))) if audio.size else 0.0
+            gain = min(10 ** (3.0 / 20), 0.90 / peak) if peak > 0 else 1.0
+            sf.write(buffer, audio * gain, 24000, format='OGG' if audio_format == 'ogg' else 'WAV', subtype='VORBIS' if audio_format == 'ogg' else 'PCM_16')
             response = {'audio': base64.b64encode(buffer.getvalue()).decode('ascii')}
         except SpeechCancelled:
             response = {'cancelled': True}

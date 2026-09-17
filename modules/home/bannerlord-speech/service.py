@@ -30,7 +30,7 @@ class SpeechCache:
 
     def key(self, text, voice, speed, audio_format):
         voice_file = Path(os.environ.get('KOKORO_VOICES', '')) / (voice + '.pt')
-        identity = [1, sys.executable, os.environ.get('KOKORO_MODEL'), os.environ.get('KOKORO_CONFIG'), str(voice_file.resolve()), text, voice, speed, audio_format]
+        identity = [2, str(Path(__file__).resolve().parent), sys.executable, os.environ.get('KOKORO_MODEL'), os.environ.get('KOKORO_CONFIG'), str(voice_file.resolve()), text, voice, speed, audio_format]
         return hashlib.sha256(json.dumps(identity, ensure_ascii=False, separators=(',', ':')).encode()).hexdigest()
 
     @staticmethod

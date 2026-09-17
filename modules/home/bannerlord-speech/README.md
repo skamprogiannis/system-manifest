@@ -90,3 +90,9 @@ remaining parts. The game must stop current playback immediately itself; it
 must not wait for the native cancellation acknowledgement to advance dialogue.
 The existing 45-second bound remains as the failure deadline. `/health` advertises
 `audio_formats`, `speech_cancel_supported` and `cache_enabled` for client checks.
+
+Synthesized conversation audio receives up to +3 dB of gain before encoding.
+A uniform per-phrase peak limit caps samples at 0.90 full scale, leaving
+headroom for Vorbis encoding overshoot without clipping individual samples. This does not affect microphone input, music or battle sounds.
+The cache key includes the immutable Nix runtime path, so rebuilding the engine
+invalidates quieter cached audio without deleting the cache during a session.
