@@ -93,19 +93,27 @@ class HttpContract(unittest.TestCase):
         self.assertEqual(self.request("/api/version", method="GET")[0], 200)
         self.assertEqual(self.calls, [])
 
-    def test_error_blocks_mod_fallback_generation(self):
-        for kind in ("quota", "timeout"):
-            with self.subTest(kind=kind):
-                calls = []
-                def fail(*args, **kwargs):
-                    calls.append(1)
-                    raise codex_runner.GenerationError(kind, "Synthetic failure")
-                self.server.engine = adapter.Engine(generator=fail)
-                self.assertIn(self.request("/api/chat", self.chat())[0], (429, 504))
-                status, body = self.request("/api/generate", {"model": adapter.ALIAS, "stream": False, "prompt": "same task"})
-                self.assertEqual(status, 503)
-                self.assertIn("cooldown", body["error"])
-                self.assertEqual(len(calls), 1)
+    def test_quota_error_blocks_mod_fallback_generation(self):
+        calls = []
+        def fail(*args, **kwargs):
+            calls.append(1)
+            raise codex_runner.GenerationError("quota", "Synthetic failure")
+        self.server.engine = adapter.Engine(generator=fail)
+        self.assertEqual(self.request("/api/chat", self.chat())[0], 429)
+        status, body = self.request("/api/generate", {"model": adapter.ALIAS, "stream": False, "prompt": "same task"})
+        self.assertEqual(status, 503)
+        self.assertIn("cooldown", body["error"])
+        self.assertEqual(len(calls), 1)
+
+    def test_timeout_allows_a_fresh_manual_retry(self):
+        calls = []
+        def fail(*args, **kwargs):
+            calls.append(1)
+            raise codex_runner.GenerationError("timeout", "Synthetic failure")
+        self.server.engine = adapter.Engine(generator=fail)
+        self.assertEqual(self.request("/api/chat", self.chat())[0], 504)
+        self.assertEqual(self.request("/api/chat", self.chat())[0], 504)
+        self.assertEqual(len(calls), 2)
 
     def test_overlapping_identical_requests_complete_separately_and_serially(self):
         entered, release = threading.Event(), threading.Event()
@@ -247,48 +255,48 @@ class EngineQueue(unittest.TestCase):
             engine.run(first_messages)
             self.assertEqual(calls, [first_messages, first_messages])
 
-    def test_queued_request_observes_generation_failure_cooldown(self):
-        for kind, status in (("quota", 429), ("timeout", 504)):
-            with self.subTest(kind=kind), tempfile.TemporaryDirectory() as directory:
-                entered, release = threading.Event(), threading.Event()
-                calls = []
+    def test_queued_request_observes_quota_cooldown(self):
+        with tempfile.TemporaryDirectory() as directory:
+            entered, release = threading.Event(), threading.Event()
+            calls = []
 
-                def fail(messages, **kwargs):
-                    calls.append(messages)
-                    entered.set()
-                    if not release.wait(2):
-                        raise AssertionError("Test did not release first generation")
-                    raise codex_runner.GenerationError(kind, "Synthetic failure")
+            def fail(messages, **kwargs):
+                calls.append(messages)
+                entered.set()
+                if not release.wait(2):
+                    raise AssertionError("Test did not release first generation")
+                raise codex_runner.GenerationError("quota", "Synthetic failure")
 
-                metrics = Path(directory) / "metrics.jsonl"
-                engine = adapter.Engine(generator=fail, metrics=metrics)
-                messages = [{"role": "user", "content": "task"}]
-                with ThreadPoolExecutor(max_workers=2) as pool:
-                    first = pool.submit(engine.run, messages)
-                    try:
-                        self.assertTrue(entered.wait(1))
-                        second = pool.submit(engine.run, messages)
-                        with self.assertRaises(FutureTimeout):
-                            second.result(timeout=0.05)
-                    finally:
-                        release.set()
-                    with self.assertRaises(adapter.RequestError) as failed:
-                        first.result(timeout=1)
-                    self.assertEqual(failed.exception.status, status)
-                    with self.assertRaises(adapter.RequestError) as queued:
-                        second.result(timeout=1)
-                    self.assertEqual(queued.exception.status, 503)
-                with self.assertRaises(adapter.RequestError) as fallback:
-                    engine.run(messages)
-                self.assertEqual(fallback.exception.status, 503)
-                self.assertEqual(calls, [messages])
-                rows = [json.loads(line) for line in metrics.read_text().splitlines()]
-                self.assertEqual(len(rows), 3)
-                cooldowns = [row for row in rows if row["status"] == "cooldown"]
-                self.assertEqual(len(cooldowns), 2)
-                self.assertTrue(all(not row["generated"] and row["error"] == kind for row in cooldowns))
-                queued_row = next(row for row in cooldowns if row["queue_ahead"] == 1)
-                self.assertGreaterEqual(queued_row["queue_wait_seconds"], 0.04)
+            metrics = Path(directory) / "metrics.jsonl"
+            engine = adapter.Engine(generator=fail, metrics=metrics)
+            messages = [{"role": "user", "content": "task"}]
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                first = pool.submit(engine.run, messages)
+                try:
+                    self.assertTrue(entered.wait(1))
+                    second = pool.submit(engine.run, messages)
+                    with self.assertRaises(FutureTimeout):
+                        second.result(timeout=0.05)
+                finally:
+                    release.set()
+                with self.assertRaises(adapter.RequestError) as failed:
+                    first.result(timeout=1)
+                self.assertEqual(failed.exception.status, 429)
+                with self.assertRaises(adapter.RequestError) as queued:
+                    second.result(timeout=1)
+                self.assertEqual(queued.exception.status, 503)
+            with self.assertRaises(adapter.RequestError) as fallback:
+                engine.run(messages)
+            self.assertEqual(fallback.exception.status, 503)
+            self.assertEqual(calls, [messages])
+            rows = [json.loads(line) for line in metrics.read_text().splitlines()]
+            self.assertEqual(len(rows), 3)
+            cooldowns = [row for row in rows if row["status"] == "cooldown"]
+            self.assertEqual(len(cooldowns), 2)
+            self.assertTrue(all(not row["generated"] and row["error"] == "quota" for row in cooldowns))
+            queued_row = next(row for row in cooldowns if row["queue_ahead"] == 1)
+            self.assertGreaterEqual(queued_row["queue_wait_seconds"], 0.04)
+
 
 
 class RunnerIsolation(unittest.TestCase):

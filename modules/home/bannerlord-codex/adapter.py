@@ -180,7 +180,8 @@ class Engine:
             except GenerationError as error:
                 with self.condition:
                     self.last_error = error.kind
-                    self.cooldown_until = time.monotonic() + (60 if error.kind == "quota" else 30)
+                    cooldown = 60 if error.kind == "quota" else 0 if error.kind == "timeout" else 30
+                    self.cooldown_until = time.monotonic() + cooldown
                 row.update(status="error", error=error.kind)
                 if getattr(error, "diagnostic", None) is not None:
                     row["failure_diagnostic"] = error.diagnostic
@@ -216,7 +217,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
         self.send_header("Connection", "close")
-        if status in (429, 503, 504):
+        if status in (429, 503):
             self.send_header("Retry-After", "60")
         self.end_headers()
         self.wfile.write(body)
