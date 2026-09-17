@@ -94,6 +94,14 @@ def sanitize_dialogue_output(raw: str) -> str:
     if EDITORIAL_SUFFIX.search(speech):
         raise GenerationError("output_quality", "Generated dialogue contained an editorial instruction; result rejected without retry.")
 
+    changed = False
+    actions = value.get("actions")
+    if isinstance(actions, list) and "leave" in actions:
+        # AI Influence locks this technical close action for about 30 seconds.
+        # The player can leave immediately through the ordinary Return option.
+        value["actions"] = [action for action in actions if action != "leave"]
+        changed = True
+
     previous_end = 0
     corrupt_start = None
     for sentence_end in list(SENTENCE_END.finditer(speech)) + [None]:
@@ -103,7 +111,7 @@ def sanitize_dialogue_output(raw: str) -> str:
             break
         previous_end = end
     if corrupt_start is None:
-        return raw
+        return json.dumps(value, ensure_ascii=False) if changed else raw
     prefix = speech[:corrupt_start].strip()
     # Never apply actions from a response whose natural-language result is corrupt.
     # An action-free answer can retain its complete, sentence-bounded prefix.

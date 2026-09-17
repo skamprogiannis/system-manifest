@@ -522,5 +522,27 @@ class DialogueOutput(unittest.TestCase):
                 self.assertEqual(adapter.sanitize_dialogue_output(raw), raw)
 
 
+    def test_exact_leave_action_is_suppressed_without_touching_gameplay_actions(self):
+        raw = json.dumps({
+            "response": "Farewell.",
+            "actions": [
+                "transfer_item:horse,amount:1,mode:give,target_hero:main_hero",
+                "leave",
+                "leave_kingdom",
+                "leave_mercenary_service",
+            ],
+        })
+        cleaned = json.loads(adapter.sanitize_dialogue_output(raw))
+        self.assertEqual(cleaned["actions"], [
+            "transfer_item:horse,amount:1,mode:give,target_hero:main_hero",
+            "leave_kingdom",
+            "leave_mercenary_service",
+        ])
+
+    def test_non_dialogue_payloads_with_leave_text_remain_unchanged(self):
+        raw = json.dumps({"summary": "The lord asked us to leave", "actions": ["leave"]})
+        self.assertEqual(adapter.sanitize_dialogue_output(raw), raw)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
