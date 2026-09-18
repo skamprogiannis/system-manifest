@@ -1,9 +1,8 @@
 # Desktop local dictation
 
-Hold `Super+Shift+T` to start an English recording and release it to transcribe
+Hold `Super+T` to start an English recording and release it to transcribe
 locally with Whisper. The completed transcription is copied to the Wayland
-clipboard; it is not typed into the focused application. `Super+T` keeps its
-existing Notes binding.
+clipboard; it is not typed into the focused application. Notes uses `Super+N`.
 
 The desktop-only service starts only while the key is held and stops after the
 result is copied. It writes no recording or plaintext transcription to a

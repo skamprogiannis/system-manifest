@@ -12,7 +12,7 @@
   bind = key: dispatcher: options: {
     _args = [key dispatcher options];
   };
-  shortcut = lua ''mod .. " + SHIFT + t"'';
+  shortcut = lua ''mod .. " + t"'';
 in {
   home.packages = [desktopDictation];
 

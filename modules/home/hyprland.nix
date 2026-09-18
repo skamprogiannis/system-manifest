@@ -435,7 +435,7 @@ in {
             (bind (modKey "f") (fullscreen "fullscreen"))
             (bind (modKey "SHIFT + f") (fullscreen "maximized"))
             (execBind (modKey "d") "dms ipc call spotlight toggle")
-            (execBind (modKey "t") "dms ipc call notepad toggle")
+            (execBind (modKey "n") "dms ipc call notepad toggle")
             (execBind (modKey "SHIFT + v") "dms ipc call clipboard toggle")
             (bind (modKey "p") (lua "hl.dsp.window.pseudo()"))
             (bind (modKey "backslash") (lua ''hl.dsp.layout("togglesplit")''))
@@ -488,8 +488,8 @@ in {
             (execBind (modKey "SHIFT + r") "gsr-record stop")
 
             # --- DMS IPC Controls ---
-            (execBind (modKey "n") "dms ipc call notifications toggle")
-            (execBind (modKey "SHIFT + n") "dms ipc call notifications clearAll; dms ipc call notifications clearHistory")
+            (execBind (modKey "a") "dms ipc call notifications toggle")
+            (execBind (modKey "SHIFT + a") "dms ipc call notifications clearAll; dms ipc call notifications clearHistory")
             (execBind (modKey "BackSpace") "dms ipc call notifications dismissAllPopups")
             (execBind (modKey "o") "dms ipc call hypr toggleOverview")
             (execBind (modKey "Escape") "dms ipc call lock lock")
