@@ -312,6 +312,7 @@ def main():
     parser.add_argument('--port', type=int, default=11436)
     parser.add_argument('--runtime-dir', type=Path, required=True)
     parser.add_argument('--cache-dir', type=Path)
+    parser.add_argument('--dictation-only', action='store_true')
     args = parser.parse_args()
     os.umask(0o077)
     args.runtime_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -320,7 +321,8 @@ def main():
     engine = NativeEngine(args.runtime_dir)
     server = SpeechServer(('127.0.0.1', args.port), engine, args.runtime_dir, token, cache_dir=args.cache_dir)
     (args.runtime_dir / 'token').write_text(token)
-    server.start_warmup()
+    if not args.dictation_only:
+        server.start_warmup()
     try:
         server.serve_forever()
     finally:

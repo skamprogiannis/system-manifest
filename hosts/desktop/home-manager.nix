@@ -9,6 +9,7 @@
     ../../modules/home/player2-ai-influence
     ../../modules/home/bannerlord-codex
     ../../modules/home/bannerlord-speech
+    ../../modules/home/desktop-dictation
   ];
 
   system_manifest.scripts.enableSetupPersistentUsb = false;
