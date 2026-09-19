@@ -4,7 +4,7 @@ import sys
 
 from codex_runner import environment
 
-EXPECTED_VERSION = "codex-cli 0.154.0"
+EXPECTED_VERSION = "codex-cli 0.155.1"
 
 
 class PreflightError(Exception):
@@ -13,7 +13,7 @@ class PreflightError(Exception):
 
 def check(executable="codex"):
     for args, expected, message in (
-        (["--version"], EXPECTED_VERSION, "Codex CLI 0.154.0 is required for this adapter."),
+        (["--version"], EXPECTED_VERSION, "Codex CLI 0.155.1 is required for this adapter."),
         (["login", "status"], "Logged in using ChatGPT",
          "Sign into Codex with your ChatGPT account first; API-key authentication is not accepted."),
     ):

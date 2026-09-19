@@ -134,8 +134,9 @@
         };
     });
     loadModels = [
-      "qwen2.5-coder:14b"
       "gemma3:4b"
+      "huihui_ai/qwen2.5-abliterate:3b-instruct"
+      "qwen3:8b"
     ];
   };
 

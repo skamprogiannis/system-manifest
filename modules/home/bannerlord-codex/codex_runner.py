@@ -11,7 +11,7 @@ import time
 
 ROOT = Path(__file__).resolve().parent
 DEFAULT_MODEL = "gpt-5.6-sol"
-# CLI 0.154.0 emits this even with code_mode=false. The host is intentionally
+# The CLI emits this even with code_mode=false. The host is intentionally
 # unavailable; retain the diagnostic, accept it only before generation starts.
 DISABLED_CODE_HOST_NOTICE = "Code Mode is unavailable because code-mode host is disabled. Code mode will fail closed; enable `features.code_mode_host` and install `codex-code-mode-host`."
 

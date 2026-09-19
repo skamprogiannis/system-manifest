@@ -1,6 +1,6 @@
 # Bannerlord Codex adapter
 
-The desktop-only `bannerlord-codex.service` exposes a bounded text subset of the Ollama API at `http://127.0.0.1:11435`. The model name presented to AI Influence is `bannerlord-codex`; the runner uses `gpt-5.6-sol` with low reasoning effort through the existing official Codex CLI 0.154.0 and saved ChatGPT sign-in. Requests use the account's shared Codex allowance. No API key or separate API billing is accepted.
+The desktop-only `bannerlord-codex.service` exposes a bounded text subset of the Ollama API at `http://127.0.0.1:11435`. The model name presented to AI Influence is `bannerlord-codex`; the runner uses `gpt-5.6-sol` with low reasoning effort through the existing official Codex CLI 0.155.1 and saved ChatGPT sign-in. Requests use the account's shared Codex allowance. No API key or separate API billing is accepted.
 
 `bannerlord-codex start|stop|status` controls the service. It starts only on demand, checks the CLI version and saved login locally, and waits for the HTTP listener. A healthy listener does not establish current account access or remaining quota. There is no automatic startup generation. Failed starts are limited to three attempts per minute so a failed sign-in preflight cannot restart indefinitely. Stopping the service terminates its whole process group, including Codex request children.
 
