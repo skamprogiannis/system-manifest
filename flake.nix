@@ -61,6 +61,21 @@
       flake = false;
     };
 
+    pinchtab-src = {
+      url = "github:pinchtab/pinchtab/96d1508b44721674e3bff2f3bbd21401ec270a63";
+      flake = false;
+    };
+
+    typesafe-skills = {
+      url = "github:typesafe-ai/skills/65a39f393687675ce170e6094757de20370365b9";
+      flake = false;
+    };
+
+    jev-mcp = {
+      url = "github:burnigtm/jev-mcp/4f4ae11a5e1e9a502cdc432550d878f728851820";
+      flake = false;
+    };
+
     dms = {
       url = "github:AvengeMedia/DankMaterialShell";
       inputs.nixpkgs.follows = "nixpkgs";

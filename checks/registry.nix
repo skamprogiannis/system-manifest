@@ -16,6 +16,7 @@
     "neovim-lsp-health"
     "wallpaper-runtime"
     "codex-skills"
+    "jev-mcp"
     "bannerlord-codex"
     "bannerlord-speech"
     "script-smoke"

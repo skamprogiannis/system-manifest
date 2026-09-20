@@ -37,7 +37,7 @@ Always check the local repository for `AGENTS.md` first. Local repository instru
 | Skill | What it does | Trigger |
 |-------|-------------|---------|
 | `visual-explainer` | Generate HTML diagrams, diff reviews, plan reviews, architecture overviews | Ask for any diagram, visualization, or complex table |
-| `technical-debt` | Analyze codebase health, quantify debt, generate refactoring roadmaps | Ask for debt audit, code health check, or refactoring plan |
+| `technical-debt` | Audit code health using repository evidence and prioritize refactoring work | Ask for debt audit, code health check, or refactoring plan |
 | `browser-automation` | Control Chrome via PinchTab for testing, scraping, form filling | Ask to test a web UI, extract page content, or automate browser tasks |
 | `static-analysis` | Run CodeQL, Semgrep, and SARIF workflows | Ask for scanner-backed security audit, CodeQL/Semgrep scan, or SARIF interpretation |
 | `impeccable` | Frontend design skill covering typography, color, layout, motion, and anti-patterns | Any frontend/UI work |
@@ -47,18 +47,12 @@ Always check the local repository for `AGENTS.md` first. Local repository instru
 | `diagnose` | Disciplined reproduce/minimize/hypothesize/instrument/fix loop | Hard bugs, broken behavior, or performance regressions |
 | `grilling` | Stress-test a plan or design one decision at a time | Ask to be grilled about a plan or design |
 | `domain-modeling` | Sharpen domain terminology and record durable decisions | Ask to define domain language or an architectural decision |
-| `grill-with-docs` | Stress-test plans while maintaining domain docs | Ask to be grilled against project docs and language |
 | `codebase-design` | Design deep modules, small interfaces, and clean seams | Ask to design or deepen a module interface |
 | `code-review` | Review changes against repository standards and their originating spec | Ask to review a branch, PR, or work-in-progress diff |
-| `triage` | Issue workflow and triage role state machine | Ask to create, review, or prepare issues |
-| `improve-codebase-architecture` | Find architectural refactoring opportunities | Ask to improve architecture, testability, or codebase navigation |
-| `setup-matt-pocock-skills` | Configure issue-tracker and domain context for engineering workflows | Ask to set up project context for these skills |
 | `tdd` | Red-green-refactor feature and bug-fix workflow | Ask for TDD, test-first work, or integration-test-driven changes |
-| `implement` | Implement a specification or ticket through testing and review | Ask to implement planned work |
-| `zoom-out` | Explain a code area from a higher level | Ask for broader context or unfamiliar module maps |
 | `prototype` | Build throwaway prototypes for design validation | Ask to prototype UI, state, or data-model choices |
-| `to-issues` | Convert plans/specs into implementation issues | Ask to break plans into issues |
-| `to-prd` | Convert current context into a PRD | Ask to write a PRD |
+| `typesafe-ai` | Design typed, calibrated AI decisions with TypeSafe System One models | Ask to add or design a TypeSafe/Jev application capability |
+| `jev-mcp` | Make typed Jev decisions, reviews, screening, and shadow-route recommendations | Explicitly ask for Jev or the Jev pilot |
 
 ## Available Custom Agents
 

@@ -1,5 +1,5 @@
 {ctx}: let
-  inherit (ctx) desktopCodexSkillsRoot pkgs;
+  inherit (ctx) desktopCodexSkillsRoot desktopHome desktopPinchtabConfigActivationFile pkgs;
   expectedSkills = [
     "browser-automation"
     "caveman"
@@ -9,21 +9,15 @@
     "codebase-design"
     "diagnose"
     "domain-modeling"
-    "grill-with-docs"
     "grilling"
     "impeccable"
-    "implement"
-    "improve-codebase-architecture"
+    "jev-mcp"
     "prototype"
-    "setup-matt-pocock-skills"
     "static-analysis"
     "tdd"
     "technical-debt"
-    "to-issues"
-    "to-prd"
-    "triage"
+    "typesafe-ai"
     "visual-explainer"
-    "zoom-out"
   ];
   expectedSkillsJson = builtins.toFile "expected-codex-skills.json" (builtins.toJSON expectedSkills);
 in {
@@ -90,16 +84,55 @@ in {
                   raise SystemExit(
                       f"Missing relative skill resource in {skill_file}: {raw_target}"
                   )
+
+          if name in {"code-review", "tdd"} and "Skill tool" in text:
+              raise SystemExit(f"Codex-incompatible Skill tool instruction in {skill_file}")
+          if name == "code-review" and "/setup-matt-pocock-skills" in text:
+              raise SystemExit(f"Obsolete setup workflow in {skill_file}")
+          if name == "jev-mcp":
+              policy_file = skill_dir / "agents/openai.yaml"
+              if not policy_file.is_file() or "allow_implicit_invocation: false" not in policy_file.read_text(encoding="utf-8"):
+                  raise SystemExit("jev-mcp must remain explicit-only")
       PY
 
-      impeccable_log="$TMPDIR/impeccable-context.log"
-      HOME="$TMPDIR/home" node "$skills_root/impeccable/scripts/context.mjs" \
-        --target "$TMPDIR" >"$impeccable_log"
-      if ! grep -Eq 'NO_PRODUCT_MD|RESOLVED_CONTEXT' "$impeccable_log"; then
-        echo "Impeccable Codex context script did not produce a recognized result." >&2
-        sed 's/^/  /' "$impeccable_log" >&2
+      test -x "$skills_root/impeccable/scripts/impeccable"
+      test -f "$skills_root/impeccable/reference/generate.md"
+      test -f "$skills_root/browser-automation/references/safety.md"
+      test -f "$skills_root/browser-automation/agents/openai.yaml"
+
+      pinchtab_seed="$(sed -n 's|^[[:space:]]*cp \(/nix/store/[^ ]*pinchtab-config.json\) .*|\1|p' ${desktopPinchtabConfigActivationFile})"
+      test -n "$pinchtab_seed"
+      PINCHTAB_CONFIG="$pinchtab_seed" "${desktopHome}/bin/pinchtab" config validate
+
+      mock_doctor="$TMPDIR/jev-mock-doctor.json"
+      HOME="$TMPDIR/home" JEV_MCP_MOCK=1 "${desktopHome}/bin/jev-mcp" doctor --json >"$mock_doctor"
+      python3 - "$mock_doctor" <<'PY'
+      import json
+      import sys
+
+      report = json.load(open(sys.argv[1], encoding="utf-8"))
+      if not report.get("ready") or report.get("model") != "jev-1.13" or not report.get("mock"):
+          raise SystemExit(f"Jev mock doctor failed: {report}")
+      PY
+
+      if HOME="$TMPDIR/no-key-home" "${desktopHome}/bin/jev-mcp" doctor --json >"$TMPDIR/jev-no-key.json" 2>/dev/null; then
+        echo "Jev doctor unexpectedly accepted a missing API key." >&2
         exit 1
       fi
+      grep -q 'CONFIG_ERROR' "$TMPDIR/jev-no-key.json"
+
+      XDG_STATE_HOME="$TMPDIR/state" "${desktopHome}/bin/jev-shadow-route" \
+        --task-kind research --proposed-tier reasoning --effort high \
+        --probability 0.82 --latency-ms 180 --usage-tokens 120
+      python3 - "$TMPDIR/state/codex-jev/shadow.jsonl" <<'PY'
+      import json
+      import sys
+
+      entry = json.loads(open(sys.argv[1], encoding="utf-8").readline())
+      allowed = {"timestamp", "task_kind", "proposed_tier", "effort", "probability", "latency_ms", "usage_tokens", "estimated_cost_usd"}
+      if not set(entry).issubset(allowed) or "task_kind" not in entry:
+          raise SystemExit(f"Unsafe Jev shadow log entry: {entry}")
+      PY
 
       touch "$out"
     '';

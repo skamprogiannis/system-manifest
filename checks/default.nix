@@ -19,6 +19,7 @@
     ./neovim.nix
     ./wallpaper-runtime.nix
     ./codex-skills.nix
+    ./jev-mcp.nix
     ./bannerlord-codex.nix
     ./bannerlord-speech.nix
     ./script-smoke.nix

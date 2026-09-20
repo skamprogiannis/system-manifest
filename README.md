@@ -25,7 +25,7 @@ Managed via **Nix Flakes** and **Home Manager**.
   - **Brave + Vimium C:** Declarative browser setup with preseeded extension settings and portable keymaps.
 - **Vesktop:** Discord client with declarative Translucence theming and a wallpaper-aware QuickCSS bridge.
 - **Dev Ready:** Pre-configured environment for Node.js, Python, Go, Playwright, and Neovim (via nixvim), plus Clang build essentials. Neovim is also registered as the default text editor via an `nvim-text` desktop entry.
-- **AI Integrated:** Built-in configuration for **Codex CLI** with per-repo `AGENTS.md` instructions, global defaults in `~/.codex/AGENTS.md`, custom agents in `~/.codex/agents`, Linear/Context7/Etsy/OpenAI Docs MCP servers, and explicitly enabled curated skills in `~/.agents/skills` for visualization, browser automation, static analysis, frontend design, plan grilling, domain and module design, architecture improvement, code review, implementation, diagnosis, TDD, issue triage, PRDs, prototyping, codebase zoom-out, and concise response modes.
+- **AI Integrated:** Built-in configuration for **Codex CLI** with per-repo `AGENTS.md` instructions, global defaults in `~/.codex/AGENTS.md`, custom agents in `~/.codex/agents`, Linear/Context7/Etsy/OpenAI Docs MCP servers, and curated skills for visualization, browser automation, security analysis, frontend work, review, diagnosis, TDD, design, prototyping, and concise response modes. The opt-in Jev MCP pilot adds typed advisory decisions, review, screening, verification, and metadata-only shadow model-routing recommendations; it never switches models automatically.
   Linear MCP auth is local per machine; after first enabling a host, run `codex mcp login linear` once if Codex reports that Linear is not logged in. Context7 uses a local API key from `~/.config/context7/api-key` when present.
 - **Modular Architecture:** Configuration split across `hosts/` (system-level) and `modules/home/` (user-level) for maintainability.
 - **Voiden:** Declarative AppImage wrapper for the Voiden offline-first API client.
@@ -48,8 +48,11 @@ Packages tracked independently of nixpkgs for tighter version control:
 | `visual-explainer` | `github:nicobailon/visual-explainer` | HTML visualization generator for architecture diagrams and code explanations |
 | `impeccable` | `github:pbakaus/impeccable` | Frontend design skill bundle for typography, color, layout, and motion |
 | `caveman` | `github:JuliusBrussee/caveman` | Skill suite for concise low-token responses plus terse commit/review helpers |
-| `mattpocock-skills` | `github:mattpocock/skills` | Planning and engineering skills for diagnosis, grilling, domain and module design, architecture improvement, review, implementation, TDD, issue workflows, prototyping, and codebase zoom-out |
+| `mattpocock-skills` | `github:mattpocock/skills` | Engineering skills used here for diagnosis, grilling, domain and module design, review, TDD, and prototyping |
 | `trailofbits-skills` | `github:trailofbits/skills` | Security and analysis skill marketplace used here as the upstream source for the compact `static-analysis` skill |
+| `pinchtab-src` | `github:pinchtab/pinchtab` | Release-matched PinchTab skill and safety references for browser automation |
+| `typesafe-skills` | `github:typesafe-ai/skills` | Official TypeSafe System One and Jev application-design skill |
+| `jev-mcp` | `github:burnigtm/jev-mcp` | Local stdio MCP adapter for explicit TypeSafe Jev pilot calls |
 | `dms` | `github:AvengeMedia/DankMaterialShell` | Fast-moving shell UI |
 
 ## Workflow & UI
@@ -67,7 +70,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 - **DMS Shell:** Core shell layout, widget placement, and launcher behavior are managed declaratively in Nix.
 - **Screenshots:** `dms screenshot` handles region/window/full capture with image-to-clipboard. `screenshot-path-copy` wraps it to copy the file path instead (useful for sharing with AI agents).
 - **Screen Recording:** GPU Screen Recorder's GTK UI handles capture setup, backed by GPU Screen Recorder. `gsr-record stop` is kept as an emergency stop helper for finalizing active clips under `~/videos/screencasts`.
-- **Codex CLI:** Codex is integrated into the Neovim + terminal workflow with repository-specific instructions, `/goal` enabled, explicit declarative skill enablement, Linear/Context7/Etsy/OpenAI Docs MCP servers, custom reviewer agents, BEL-based terminal urgency, and a dedicated Zellij tab.
+- **Codex CLI:** Codex is integrated into the Neovim + terminal workflow with repository-specific instructions, `/goal` enabled, explicit declarative skill enablement, Linear/Context7/Etsy/OpenAI Docs/Jev MCP servers, custom reviewer agents, BEL-based terminal urgency, and a dedicated Zellij tab. Jev uses `TYPESAFE_API_KEY` or `~/.config/typesafe/api-key` locally; credentials and raw prompts are never declared in Nix or written to its shadow-routing log.
 - **Browser Automation:** PinchTab is installed declaratively so the browser-automation skill has the CLI it documents.
 - **Static Analysis:** CodeQL, Semgrep, and SARIF tooling are installed declaratively to back the compact `static-analysis` skill.
 - **DNS:** Quad9 (`9.9.9.9`) for privacy-focused DNS resolution.

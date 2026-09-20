@@ -27,6 +27,12 @@
       (name: pkgs.lib.hasPrefix ".agents/skills/" name)
       (builtins.attrNames desktopHomeFiles))
   );
+  desktopPinchtabConfigActivationFile = pkgs.writeText "desktop-pinchtab-config-activation" self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.activation.ensurePinchTabConfig.data;
+  desktopJevMcpWrapper = builtins.head (
+    builtins.filter
+    (package: (package.name or "") == "jev-mcp")
+    self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.packages
+  );
   desktopActivation = self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.activationPackage;
   desktopSkwdDmsSyncHook = self.nixosConfigurations.desktop.config.home-manager.users.stefan.xdg.configFile."skwd-wall/scripts/sync-dms-wallpaper.sh".source;
   desktopSkwdDmsScheduleHook = self.nixosConfigurations.desktop.config.home-manager.users.stefan.xdg.configFile."skwd-wall/scripts/schedule-dms-wallpaper-sync.sh".source;
