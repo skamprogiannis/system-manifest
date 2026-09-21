@@ -133,10 +133,15 @@
           CUDAToolkit_ROOT = "${old.env.CUDA_PATH}-${lib.versions.major pkgs.cudaPackages.cuda_cudart.version}";
         };
     });
+    environmentVariables = {
+      # Coding agents need significantly more context than Ollama's default 4K allocation
+      OLLAMA_CONTEXT_LENGTH = "65536";
+    };
     loadModels = [
       "gemma3:4b"
       "huihui_ai/qwen2.5-abliterate:3b-instruct"
       "qwen3:8b"
+      "qwen3-coder:30b"
     ];
   };
 
