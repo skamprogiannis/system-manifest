@@ -131,7 +131,9 @@ Linear MCP auth is local to each machine. If Codex says Linear is not logged in,
 Wallpaper integration is split between the upstream skwd-wall v2 service and DMS session state.
 
 - `services.skwd-deck` is enabled system-wide from the upstream `github:liixini/skwd-wall/nix` module. It installs `skwd-wall-v2` and runs `skwd-walld`; do not reintroduce the retired v1 `skwd-daemon`/Quickshell patch stack.
-- `modules/home/wallpaper/default.nix` is intentionally thin and only composes the DMS side of the wallpaper contract.
+- `modules/home/wallpaper/default.nix` stays the thin shared entrypoint; `modules/home/wallpaper/skwd-wall-v2.nix` owns the declarative v2 colour contract.
+- skwd-wall v2 uses wallpaper-driven Matugen with skwd-wall as colour authority and DMS as a palette target. `skwd-walld` therefore needs `matugen` in its service PATH.
+- DMS watches `~/.cache/DankMaterialShell/dms-colors.json`; skwd-wall v2 publishes that full Material palette. Vesktop consumes `dms-colors.json` directly, normalizes the active dark/light roles into its legacy token contract, and a systemd path unit regenerates its Translucence/QuickCSS bridge after palette changes.
 - `modules/home/dms/session-state.nix` owns the baseline `~/.local/state/DankMaterialShell/session.json`. The DMS greeter reads wallpaper paths from that session file; do not write the removed `greeterWallpaperPath` setting.
 - `Super+W` launches `skwd-wall-v2`; the old custom skwd-wall keybind layer is intentionally abandoned.
 - Validation floor for wallpaper changes: run `nix flake check`, `nixos-rebuild dry-build --flake .#desktop`, and a manual wallpaper/greeter smoke test. If USB behavior changes, also run `update-usb` and boot the stick on real hardware.

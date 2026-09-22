@@ -76,7 +76,11 @@
     openssl
   ];
   programs.gpu-screen-recorder.enable = true;
-  services.skwd-deck.enable = true;
+  services.skwd-deck = {
+    enable = true;
+    # skwd-walld invokes Matugen directly when wallpaper-driven theming is active.
+    extraPackages = [pkgs.matugen];
+  };
 
   # Allow the user to rebuild the system without a password
   security.sudo.extraRules = [

@@ -26,6 +26,16 @@ in {
         exit 1
       fi
 
+      if ! grep -Fq 'engine = "matugen";' ${../modules/home/wallpaper/skwd-wall-v2.nix}; then
+        echo "Expected skwd-wall v2 to remain the Matugen colour authority." >&2
+        exit 1
+      fi
+
+      if ! grep -Fq 'targets = ["dms"];' ${../modules/home/wallpaper/skwd-wall-v2.nix}; then
+        echo "Expected skwd-wall v2 to publish its palette to DMS." >&2
+        exit 1
+      fi
+
       touch "$out"
     '';
 }
