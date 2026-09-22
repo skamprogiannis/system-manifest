@@ -128,14 +128,11 @@ Linear MCP auth is local to each machine. If Codex says Linear is not logged in,
 
 ## Wallpaper System Architecture
 
-Wallpaper state lives under `modules/home/wallpaper/`, `modules/home/skwd-wall.nix`, and `modules/home/dms/{session-state,settings}.nix`.
+Wallpaper integration is split between the upstream skwd-wall v2 service and DMS session state.
 
-- `modules/home/wallpaper/default.nix` is the shared wallpaper contract entrypoint only. Keep `hostType` branches lightweight there; host-owned services, runtime/session files, or heavier overrides belong in dedicated host imports or per-module `desktop.nix` / `usb.nix`.
-- `skwd-wall` + `skwd-daemon` own wallpaper selection, restore, and Matugen color generation.
-- Home Manager activation owns the baseline copies of `~/.config/skwd-wall/config.json` and `~/.local/state/DankMaterialShell/session.json`.
-- `sync-dms-wallpaper.sh` is the bridge: it mirrors skwd-wall's selected wallpaper into DMS runtime state and the greeter cache after skwd-wall has already resolved the active wallpaper.
-- `awww`, `mpvpaper`, and `linux-wallpaperengine` handle static, video, and Wallpaper Engine rendering.
-- Matugen feeds DMS/Hyprland colors, Zathura colors, and Vesktop's current Translucence flow via `~/.config/vesktop/themes/Translucence.theme.css` plus `~/.config/vesktop/settings/quickCss.css`.
-- Malformed JSON policy: activation-owned JSON heals/resets to declarative defaults during activation; runtime writers fail closed before overwriting malformed authoritative targets; best-effort reads from optional/cache inputs should warn and continue.
-- Validation floor for later shared-contract waves: run `nix flake check`, `nixos-rebuild dry-build --flake .#desktop`, and a manual wallpaper-switch smoke test. If USB-only runtime/session behavior changes, also run `update-usb` and boot the stick on real hardware.
+- `services.skwd-deck` is enabled system-wide from the upstream `github:liixini/skwd-wall/nix` module. It installs `skwd-wall-v2` and runs `skwd-walld`; do not reintroduce the retired v1 `skwd-daemon`/Quickshell patch stack.
+- `modules/home/wallpaper/default.nix` is intentionally thin and only composes the DMS side of the wallpaper contract.
+- `modules/home/dms/session-state.nix` owns the baseline `~/.local/state/DankMaterialShell/session.json`. The DMS greeter reads wallpaper paths from that session file; do not write the removed `greeterWallpaperPath` setting.
+- `Super+W` launches `skwd-wall-v2`; the old custom skwd-wall keybind layer is intentionally abandoned.
+- Validation floor for wallpaper changes: run `nix flake check`, `nixos-rebuild dry-build --flake .#desktop`, and a manual wallpaper/greeter smoke test. If USB behavior changes, also run `update-usb` and boot the stick on real hardware.
 - `Super+Shift+W` (`dms ipc call dash toggle wallpaper`) still toggles the DMS wallpaper dashboard widget.

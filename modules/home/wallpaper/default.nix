@@ -1,12 +1,7 @@
-{lib, ...}: {
-  # Shared wallpaper entrypoint only: compose the common DMS/skwd-wall contract
-  # here, but keep host-owned runtime behavior in host imports or per-module
-  # `desktop.nix` / `usb.nix` files instead of growing `hostType` branches.
+{
+  # DMS remains the shell-side wallpaper/theme consumer. skwd-wall v2 itself is
+  # provided by the system-level services.skwd-deck module.
   imports = [
     ../dms
-    ../skwd-wall.nix
   ];
-
-  _module.args.skwdAdaptiveRhi = lib.mkDefault false;
-  _module.args.skwdQsgRhiBackend = lib.mkDefault "vulkan";
 }

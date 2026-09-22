@@ -34,11 +34,9 @@
     self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.packages
   );
   desktopActivation = self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.activationPackage;
-  desktopSkwdDmsSyncHook = self.nixosConfigurations.desktop.config.home-manager.users.stefan.xdg.configFile."skwd-wall/scripts/sync-dms-wallpaper.sh".source;
-  desktopSkwdDmsScheduleHook = self.nixosConfigurations.desktop.config.home-manager.users.stefan.xdg.configFile."skwd-wall/scripts/schedule-dms-wallpaper-sync.sh".source;
-  desktopSkwdDaemonExec = builtins.head self.nixosConfigurations.desktop.config.home-manager.users.stefan.systemd.user.services.skwd-daemon.Service.ExecStart;
+  desktopSkwdWalldService = self.nixosConfigurations.desktop.config.systemd.user.services.skwd-walld;
+  desktopSkwdWalldExec = desktopSkwdWalldService.serviceConfig.ExecStart;
   desktopDmsPackage = self.nixosConfigurations.desktop.config.home-manager.users.stefan.programs.dank-material-shell.package;
-  desktopSkwdPrepareStateActivationFile = pkgs.writeText "desktop-skwd-prepare-state-activation" self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.activation.ensureWritableSkwdConfig.data;
   desktopDmsSettingsFile = pkgs.writeText "desktop-dms-settings.json" (builtins.toJSON self.nixosConfigurations.desktop.config.home-manager.users.stefan.programs.dank-material-shell.settings);
   desktopGtk4ExtraCssFile = pkgs.writeText "desktop-gtk4-extra.css" self.nixosConfigurations.desktop.config.home-manager.users.stefan.gtk.gtk4.extraCss;
   desktopSpicetifyAdditionalCssFile = pkgs.writeText "desktop-spicetify-additional.css" self.nixosConfigurations.desktop.config.home-manager.users.stefan.programs.spicetify.theme.additionalCss;
@@ -64,12 +62,6 @@
   usbGraphics32Package = self.nixosConfigurations.usb.config.hardware.graphics.package32;
   usbMesa32Package = self.nixosConfigurations.usb.pkgs.pkgsi686Linux.mesa;
   usbActivation = self.nixosConfigurations.usb.config.home-manager.users.stefan.home.activationPackage;
-  usbSkwdDaemonExec = builtins.head self.nixosConfigurations.usb.config.home-manager.users.stefan.systemd.user.services.skwd-daemon.Service.ExecStart;
-  usbSkwdWallExec = "${builtins.dirOf (builtins.dirOf usbSkwdDaemonExec)}/bin/skwd-wall";
-  usbSkwdDaemonEnvironmentFile = pkgs.writeText "usb-skwd-daemon-environment" (
-    builtins.concatStringsSep "\n"
-    self.nixosConfigurations.usb.config.home-manager.users.stefan.systemd.user.services.skwd-daemon.Service.Environment
-  );
   desktopHostFingerprintService = self.nixosConfigurations.desktop.config.systemd.services.system-manifest-host-fingerprint;
   laptopHostFingerprintService = self.nixosConfigurations.laptop.config.systemd.services.system-manifest-host-fingerprint;
   usbHostFingerprintService = self.nixosConfigurations.usb.config.systemd.services.system-manifest-host-fingerprint;
@@ -150,7 +142,6 @@
     "${desktopHome}/bin/gsr-record"
     "${desktopHome}/bin/hypr-quit-active"
     "${desktopHome}/bin/screenshot-path-copy"
-    "${desktopHome}/bin/skwd-we-capture-still"
     "${desktopHome}/bin/spotify_player"
     "${desktopHome}/bin/torrent"
     "${desktopHome}/bin/transmission-port-sync"
@@ -158,7 +149,6 @@
     "${desktopHome}/bin/zellij-sessionizer"
     "${desktopZellijLegacyArgsScrubActivationFile}"
     "${desktopZellijPostCommandDiscoveryHook}"
-    "${desktopSkwdDmsSyncHook}"
     "${updateUsbSourceDir}/args.sh"
     "${updateUsbSourceDir}/cleanup.sh"
     "${updateUsbSourceDir}/main.sh"
@@ -169,7 +159,6 @@
     "${usbHome}/bin/steam-host-scratch"
     "${usbSteamHostScratchPrepareScript}"
     "${usbHome}/bin/nixos-usb-store-status"
-    "${usbSkwdWallExec}"
     "${usbHostScratchStartScript}"
     "${usbHostScratchStopScript}"
     "${usbHostScratchSyncScript}"

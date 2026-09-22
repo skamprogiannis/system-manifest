@@ -2,16 +2,11 @@
   pkgs,
   lib,
   inputs,
-  skwdQsgRhiBackend,
   ...
 }: let
   dmsBasePackage = inputs.dms.packages.${pkgs.stdenv.hostPlatform.system}.dms-shell;
-  skwdWallPackage = import ../skwd-wall-package.nix {
-    inherit pkgs inputs;
-    qsgRhiBackend = skwdQsgRhiBackend;
-  };
   patchDmsPackage = import ./patch-package.nix {inherit pkgs;};
-  dmsPatches = import ./common-patches.nix {inherit skwdWallPackage;};
+  dmsPatches = import ./common-patches.nix {};
   emptyScreenPreferences = lib.genAttrs [
     "notifications"
     "osd"
