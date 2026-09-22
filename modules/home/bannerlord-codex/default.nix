@@ -14,10 +14,11 @@
     '';
   };
 in {
-  home.packages = [control];
+  config = lib.mkIf config.system_manifest.bannerlord.enable {
+    home.packages = [control];
 
-  # Started explicitly by the game launcher; no login-time model requests.
-  systemd.user.services.bannerlord-codex = {
+    # Started explicitly by the game launcher; no login-time model requests.
+    systemd.user.services.bannerlord-codex = {
     Unit = {
       Description = "Experimental AI Influence text adapter for Codex";
       StartLimitIntervalSec = 60;
@@ -46,6 +47,7 @@ in {
       SendSIGKILL = true;
       Restart = "on-failure";
       RestartSec = 3;
+      };
     };
   };
 }

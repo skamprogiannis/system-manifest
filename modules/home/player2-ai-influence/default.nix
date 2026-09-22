@@ -31,10 +31,11 @@
     '';
   };
 in {
-  home.packages = [control];
+  config = lib.mkIf config.system_manifest.bannerlord.enable {
+    home.packages = [control];
 
-  # Start on demand from Bannerlord. No desktop app or idle game heartbeat.
-  systemd.user.services.player2-ai-influence = {
+    # Start on demand from Bannerlord. No desktop app or idle game heartbeat.
+    systemd.user.services.player2-ai-influence = {
     Unit = {
       Description = "AI Influence connection to the Player2 Web API";
       ConditionPathExists = credentials;
@@ -47,6 +48,7 @@ in {
       NoNewPrivileges = true;
       PrivateTmp = true;
       MemoryMax = "256M";
+      };
     };
   };
 }

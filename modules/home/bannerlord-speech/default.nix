@@ -1,14 +1,16 @@
 {
   config,
+  lib,
   pkgs,
   ...
 }: let
   runtime = pkgs.callPackage ./package.nix {};
 in {
-  home.packages = [runtime];
+  config = lib.mkIf config.system_manifest.bannerlord.enable {
+    home.packages = [runtime];
 
-  # The game launcher owns the service lifecycle; login never opens the microphone.
-  systemd.user.services.bannerlord-speech = {
+    # The game launcher owns the service lifecycle; login never opens the microphone.
+    systemd.user.services.bannerlord-speech = {
     Unit = {
       Description = "Local English speech for Bannerlord AI dialogue";
       StartLimitIntervalSec = 60;
@@ -34,6 +36,7 @@ in {
       Restart = "on-failure";
       RestartSec = 3;
       NoNewPrivileges = true;
+      };
     };
   };
 }
