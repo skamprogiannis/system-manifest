@@ -286,6 +286,10 @@ in {
             force_default_wallpaper = 0;
             enable_anr_dialog = false;
             anr_missed_pings = 20;
+            # Keep delayed GUI launches on the workspace where they were invoked.
+            # Electron apps can take longer than Hyprland's 10s default token lifetime.
+            initial_workspace_tracking = 1;
+            initial_workspace_token_timeout = 60;
             # Solid black background before wallpaper loads - avoids the
             # default grey/teal flash during login transition.
             background_color = "rgb(000000)";
