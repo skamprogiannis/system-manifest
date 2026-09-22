@@ -3,5 +3,6 @@
   # provided by the system-level services.skwd-deck module.
   imports = [
     ../dms
+    ./skwd-wall-v2.nix
   ];
 }

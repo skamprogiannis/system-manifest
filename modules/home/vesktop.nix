@@ -72,45 +72,81 @@ assert lib.assertMsg (builtins.elem hostType ["desktop" "usb" "laptop"]) "hostTy
         SETTINGS_DIR="$HOME/.config/vesktop/settings"
         OUT="$THEME_DIR/${translucenceThemeName}"
         QUICKCSS_OUT="$SETTINGS_DIR/quickCss.css"
-        SRC_JSON="$HOME/.cache/skwd-wall/colors.json"
+        SRC_JSON="$HOME/.cache/DankMaterialShell/dms-colors.json"
+        SESSION_JSON="$HOME/.local/state/DankMaterialShell/session.json"
         OVERLAY_STORE="${./vesktop/transluence-matugen.overlay.css}"
 
         mkdir -p "$THEME_DIR" "$SETTINGS_DIR"
         [ -f "$SRC_JSON" ] || exit 0
         [ -f "$OVERLAY_STORE" ] || exit 0
 
-        # DMS can rewrite palette state in bursts. Wait for a stable snapshot.
+        normalize_palette() {
+          ${pkgs.python3}/bin/python3 - "$SRC_JSON" "$SESSION_JSON" <<'PY'
+    import json
+    import sys
+
+    source_path, session_path = sys.argv[1:3]
+    with open(source_path, encoding="utf-8") as fh:
+        document = json.load(fh)
+
+    mode = "dark"
+    try:
+        with open(session_path, encoding="utf-8") as fh:
+            if json.load(fh).get("isLightMode") is True:
+                mode = "light"
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        pass
+
+    roles = document.get("colors", {}).get(mode, {})
+    role_map = {
+        "background": "background",
+        "error": "error",
+        "inversePrimary": "inverse_primary",
+        "onPrimary": "on_primary",
+        "outline": "outline",
+        "primary": "primary",
+        "primaryContainer": "primary_container",
+        "surface": "surface",
+        "surfaceContainer": "surface_container",
+        "surfaceText": "on_surface",
+        "surfaceVariant": "surface_variant",
+        "surfaceVariantText": "on_surface_variant",
+        "tertiary": "tertiary",
+        "tertiaryContainer": "tertiary_container",
+    }
+    palette = {target: roles.get(source) for target, source in role_map.items()
+               if isinstance(roles.get(source), str)}
+    contract = json.loads(${lib.escapeShellArg vesktopColorContractJson})
+    missing = [key for key in contract["requiredTokens"] if key not in palette]
+    if missing:
+        raise SystemExit("DMS palette is missing required roles: " + ", ".join(missing))
+    json.dump(palette, sys.stdout)
+    PY
+        }
+
         stable_hash=""
         for _ in $(${pkgs.coreutils}/bin/seq 1 40); do
           hash_a=$(${pkgs.coreutils}/bin/md5sum "$SRC_JSON" | ${pkgs.coreutils}/bin/cut -d' ' -f1)
           ${pkgs.coreutils}/bin/sleep 0.05
           hash_b=$(${pkgs.coreutils}/bin/md5sum "$SRC_JSON" | ${pkgs.coreutils}/bin/cut -d' ' -f1)
-          if [ "$hash_a" = "$hash_b" ] && ${pkgs.python3}/bin/python3 - "$SRC_JSON" <<'PY'
-    import json
-    import sys
-
-    with open(sys.argv[1], encoding="utf-8") as fh:
-        data = json.load(fh)
-    contract = json.loads(${lib.escapeShellArg vesktopColorContractJson})
-    missing = [key for key in contract["requiredTokens"] if key not in data]
-    raise SystemExit(0 if not missing else 1)
-    PY
-          then
+          if [ "$hash_a" = "$hash_b" ] && normalize_palette >/dev/null; then
             stable_hash="$hash_a"
             break
           fi
         done
-
         if [ -z "$stable_hash" ]; then
-          echo "regen-vesktop-transluence-theme: skipped because skwd-wall colors.json never reached the expected schema" >&2
+          echo "regen-vesktop-transluence-theme: skipped because DMS colors never reached the expected schema" >&2
           exit 0
         fi
+        PALETTE_JSON=$(${pkgs.coreutils}/bin/mktemp)
+        trap '${pkgs.coreutils}/bin/rm -f "$PALETTE_JSON"' EXIT
+        normalize_palette > "$PALETTE_JSON"
 
         accent_hue="220"
         accent_saturation="82%"
         accent_lightness="76%"
 
-        accent_hex=$(${pkgs.python3}/bin/python3 - "$SRC_JSON" <<'PY'
+        accent_hex=$(${pkgs.python3}/bin/python3 - "$PALETTE_JSON" <<'PY'
     import json
     import sys
 
@@ -148,7 +184,7 @@ assert lib.assertMsg (builtins.elem hostType ["desktop" "usb" "laptop"]) "hostTy
         fi
 
         render_quickcss_source_root() {
-          ${pkgs.python3}/bin/python3 - "$SRC_JSON" <<'PY'
+          ${pkgs.python3}/bin/python3 - "$PALETTE_JSON" <<'PY'
     import json
     import sys
 
@@ -157,7 +193,7 @@ assert lib.assertMsg (builtins.elem hostType ["desktop" "usb" "laptop"]) "hostTy
     contract = json.loads(${lib.escapeShellArg vesktopColorContractJson})
     missing = [key for key in contract["requiredTokens"] if key not in data]
     if missing:
-        raise SystemExit("Invalid skwd-wall colors JSON schema")
+        raise SystemExit("Invalid normalized DMS colors JSON schema")
 
     for entry in contract["vesktopMappings"]:
         name = entry["cssVar"]
@@ -215,7 +251,7 @@ assert lib.assertMsg (builtins.elem hostType ["desktop" "usb" "laptop"]) "hostTy
         theme_tmp=$(mktemp)
         quickcss_tmp=$(mktemp)
         src_hash="$stable_hash"
-        trap 'rm -f "$theme_tmp" "$quickcss_tmp"' EXIT
+        trap 'rm -f "$PALETTE_JSON" "$theme_tmp" "$quickcss_tmp"' EXIT
 
         cat > "$theme_tmp" <<EOF
     /**
@@ -235,7 +271,7 @@ assert lib.assertMsg (builtins.elem hostType ["desktop" "usb" "laptop"]) "hostTy
         cat ${vesktopGlassOverrides} >> "$theme_tmp"
 
         cat > "$quickcss_tmp" <<EOF
-    /* Source hash: $src_hash (~/.cache/skwd-wall/colors.json, skwd-wall Vesktop token mapping) */
+    /* Source hash: $src_hash (~/.cache/DankMaterialShell/dms-colors.json, active-mode DMS palette) */
 
     /* ----- QuickCSS source vars for the static Translucence bridge ----- */
     :root {
@@ -406,7 +442,32 @@ in {
     ${vesktopStateSync} heal
   '';
 
-  xdg.configFile."skwd-wall/scripts/reload-vesktop.sh".source = vesktopReloadHook;
+  # DMS exposes the complete Material palette published by skwd-wall v2.
+  # Regenerate Vesktop from that exact palette so shell, borders, and Discord
+  # cannot drift onto separate colour sources.
+  systemd.user.services.vesktop-palette-sync = {
+    Unit = {
+      Description = "Regenerate Vesktop theme from DMS palette";
+    };
+    Service = {
+      Type = "oneshot";
+      ExecStart = "${vesktopReloadHook}";
+    };
+  };
+
+  systemd.user.paths.vesktop-palette-sync = {
+    Unit = {
+      Description = "Watch DMS palette for Vesktop";
+    };
+    Path = {
+      # DMS publication is the reliable completion signal; its palette is atomically replaced.
+      PathChanged = "%h/.cache/DankMaterialShell";
+      Unit = "vesktop-palette-sync.service";
+    };
+    Install = {
+      WantedBy = ["graphical-session.target"];
+    };
+  };
 
   xdg.desktopEntries.vesktop = {
     name = "Vesktop";
