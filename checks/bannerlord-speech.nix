@@ -1,9 +1,15 @@
 {ctx}: let
   inherit (ctx) pkgs self;
   runtime = pkgs.callPackage ../modules/home/bannerlord-speech/package.nix {};
-  service = self.nixosConfigurations.desktop.config.home-manager.users.stefan.systemd.user.services.bannerlord-speech;
+  dictationRuntime = pkgs.callPackage ../modules/home/bannerlord-speech/package.nix {dictationOnly = true;};
+  enabled = self.nixosConfigurations.desktop.config.home-manager.users.stefan.system_manifest.bannerlord.enable;
+  service =
+    if enabled
+    then self.nixosConfigurations.desktop.config.home-manager.users.stefan.systemd.user.services.bannerlord-speech
+    else {};
   serviceJson = pkgs.writeText "bannerlord-speech-service.json" (builtins.toJSON service);
   environmentJson = pkgs.writeText "bannerlord-speech-environment.json" (builtins.toJSON runtime.engineEnvironment);
+  dictationEnvironmentJson = pkgs.writeText "desktop-dictation-environment.json" (builtins.toJSON dictationRuntime.engineEnvironment);
 in {
   bannerlord-speech =
     pkgs.runCommand "bannerlord-speech-check" {
@@ -16,7 +22,7 @@ in {
       cp ${../modules/home/bannerlord-speech/test_service.py} tests/test_service.py
       cp ${../modules/home/bannerlord-speech/test_engine.py} tests/test_engine.py
       python3 -m unittest discover -s tests -v
-      python3 - ${serviceJson} ${environmentJson} ${runtime} <<'PY'
+      python3 - ${serviceJson} ${environmentJson} ${dictationEnvironmentJson} ${runtime} ${dictationRuntime} <<'PY'
       import json
       from pathlib import Path
       import sys
@@ -25,24 +31,33 @@ in {
 
       unit = json.loads(Path(sys.argv[1]).read_text())
       environment = json.loads(Path(sys.argv[2]).read_text())
-      service = unit["Service"]
-      assert not unit.get("Install", {}).get("WantedBy"), "must stay on demand"
-      assert service["MemoryHigh"] == "2G" and service["MemoryMax"] == "3G"
-      assert service["RuntimeDirectoryMode"] == service["StateDirectoryMode"] == "0700"
-      assert service["UMask"] == "0077"
-      assert service["KillMode"] == "control-group"
-      commands = service["ExecStart"] if isinstance(service["ExecStart"], list) else [service["ExecStart"]]
-      assert len(commands) == 1
-      assert "--port 11436" in commands[0]
-      assert "--runtime-dir %t/bannerlord-speech" in commands[0]
+      dictation_environment = json.loads(Path(sys.argv[3]).read_text())
+      service = unit.get("Service", {})
+      if unit:
+          assert not unit.get("Install", {}).get("WantedBy"), "must stay on demand"
+          assert service["MemoryHigh"] == "2G" and service["MemoryMax"] == "3G"
+          assert service["RuntimeDirectoryMode"] == service["StateDirectoryMode"] == "0700"
+          assert service["UMask"] == "0077"
+          assert service["KillMode"] == "control-group"
+          commands = service["ExecStart"] if isinstance(service["ExecStart"], list) else [service["ExecStart"]]
+          assert len(commands) == 1
+          assert "--port 11436" in commands[0]
+          assert "--runtime-dir %t/bannerlord-speech" in commands[0]
       assert environment["HF_HUB_OFFLINE"] == environment["TRANSFORMERS_OFFLINE"] == "1"
       assert all(environment[k] == "2" for k in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"))
+      assert "WHISPER_MODEL" in dictation_environment
+      assert not any(key.startswith("KOKORO_") for key in dictation_environment)
+      assert "TRANSFORMERS_OFFLINE" not in dictation_environment
       assert torch.version.cuda is None, "speech Python closure must use CPU Torch"
       for key in ("WHISPER_BIN", "WHISPER_MODEL", "KOKORO_MODEL", "KOKORO_CONFIG", "KOKORO_VOICES", "PW_RECORD_BIN"):
           assert Path(environment[key]).exists(), key
       voices = sorted(p.stem for p in Path(environment["KOKORO_VOICES"]).glob("*.pt"))
       assert voices == ["af_bella", "af_heart", "am_fenrir", "am_michael", "am_onyx", "am_puck", "bf_alice", "bf_emma", "bf_isabella", "bf_lily", "bm_daniel", "bm_fable", "bm_george", "bm_lewis"]
-      assert {p.name for p in (Path(sys.argv[3]) / "lib").iterdir()} == {"service.py", "engine.py", "control.py"}
+      assert {p.name for p in (Path(sys.argv[4]) / "lib").iterdir()} == {"service.py", "engine.py", "control.py"}
+      dictation_runtime = Path(sys.argv[5])
+      assert {p.name for p in (dictation_runtime / "lib").iterdir()} == {"service.py", "engine.py"}
+      assert not (dictation_runtime / "bin/bannerlord-speech").exists()
+      assert not (dictation_runtime / "share/bannerlord-speech").exists()
       g2p = en.G2P(trf=False, british=True, fallback=espeak.EspeakFallback(british=True), unk="")
       assert g2p("What service would earn your trust?")[0]
       print("Speech service, CPU closure and offline English front-end checks passed; no recording or model generation.")

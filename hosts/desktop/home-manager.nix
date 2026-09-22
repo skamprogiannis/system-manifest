@@ -6,13 +6,12 @@
     ../../home.nix
     ../../modules/home/dms/desktop.nix
     ../../modules/home/scripts/usb.nix
-    ../../modules/home/player2-ai-influence
-    ../../modules/home/bannerlord-codex
-    ../../modules/home/bannerlord-speech
+    ../../modules/home/bannerlord
     ../../modules/home/desktop-dictation
   ];
 
   system_manifest.scripts.enableSetupPersistentUsb = false;
+  system_manifest.bannerlord.enable = true;
 
   wayland.windowManager.hyprland.settings = {
     workspace_rule = [

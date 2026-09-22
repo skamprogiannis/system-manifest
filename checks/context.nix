@@ -34,6 +34,7 @@
     self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.packages
   );
   desktopActivation = self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.activationPackage;
+  desktopBannerlordEnabled = self.nixosConfigurations.desktop.config.home-manager.users.stefan.system_manifest.bannerlord.enable;
   desktopSkwdWalldService = self.nixosConfigurations.desktop.config.systemd.user.services.skwd-walld;
   desktopSkwdWalldExec = desktopSkwdWalldService.serviceConfig.ExecStart;
   desktopDmsPackage = self.nixosConfigurations.desktop.config.home-manager.users.stefan.programs.dank-material-shell.package;
@@ -134,10 +135,13 @@
   desktopDmsLegacyProfileFile = pkgs.writeText "desktop-dms-profile.conf" self.nixosConfigurations.desktop.config.home-manager.users.stefan.xdg.configFile."hypr/dms/profiles/desktop.conf".text;
   laptopDmsOutputsFile = pkgs.writeText "laptop-dms-outputs.lua" self.nixosConfigurations.laptop.config.home-manager.users.stefan.xdg.configFile."hypr/dms/outputs.lua".text;
   usbDmsOutputsFile = pkgs.writeText "usb-dms-outputs.lua" self.nixosConfigurations.usb.config.home-manager.users.stefan.xdg.configFile."hypr/dms/outputs.lua".text;
-  shellcheckScripts = [
-    "${desktopHome}/bin/bannerlord-codex"
-    "${desktopHome}/bin/bannerlord-speech"
-    "${desktopHome}/bin/bannerlord-speech-service"
+  shellcheckScripts =
+    pkgs.lib.optionals desktopBannerlordEnabled [
+      "${desktopHome}/bin/bannerlord-codex"
+      "${desktopHome}/bin/bannerlord-speech"
+      "${desktopHome}/bin/bannerlord-speech-service"
+    ]
+    ++ [
     "${desktopHome}/bin/codex-state-sync"
     "${desktopHome}/bin/gsr-record"
     "${desktopHome}/bin/hypr-quit-active"

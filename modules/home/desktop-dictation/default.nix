@@ -1,5 +1,5 @@
 {pkgs, lib, ...}: let
-  runtime = pkgs.callPackage ../bannerlord-speech/package.nix {};
+  runtime = pkgs.callPackage ../bannerlord-speech/package.nix {dictationOnly = true;};
   desktopDictation = pkgs.writeShellApplication {
     name = "desktop-dictation";
     runtimeInputs = [pkgs.libnotify pkgs.procps pkgs.systemd pkgs.wl-clipboard];

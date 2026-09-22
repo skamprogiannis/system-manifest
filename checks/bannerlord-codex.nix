@@ -1,7 +1,11 @@
 {ctx}: let
   inherit (ctx) pkgs self;
   runtime = pkgs.callPackage ../modules/home/bannerlord-codex/package.nix {};
-  service = self.nixosConfigurations.desktop.config.home-manager.users.stefan.systemd.user.services.bannerlord-codex;
+  enabled = self.nixosConfigurations.desktop.config.home-manager.users.stefan.system_manifest.bannerlord.enable;
+  service =
+    if enabled
+    then self.nixosConfigurations.desktop.config.home-manager.users.stefan.systemd.user.services.bannerlord-codex
+    else {};
   serviceJson = pkgs.writeText "bannerlord-codex-service.json" (builtins.toJSON service);
 in {
   bannerlord-codex =
@@ -20,6 +24,9 @@ in {
       import sys
 
       unit = json.loads(Path(sys.argv[1]).read_text())
+      if not unit:
+          print("Bannerlord profile disabled; runtime tests passed and service contract is intentionally absent.")
+          raise SystemExit(0)
       service = unit["Service"]
       assert not unit.get("Install", {}).get("WantedBy"), "must stay on demand"
       assert unit["Unit"]["StartLimitIntervalSec"] == 60
