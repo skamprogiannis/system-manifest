@@ -38,6 +38,7 @@
     # GUI
     gpu-screen-recorder-gtk
     imv
+    libreoffice-qt
     linux-wallpaperengine
     mpv
     pkgs.mailspring
@@ -368,6 +369,8 @@
       "image/tiff" = ["imv.desktop"];
       "image/svg+xml" = ["imv.desktop"];
       "application/pdf" = ["org.pwmt.zathura.desktop"];
+      "application/msword" = ["libreoffice-writer.desktop"];
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document" = ["libreoffice-writer.desktop"];
       "text/plain" = ["nvim-text.desktop"];
       "text/markdown" = ["nvim-text.desktop"];
       "text/css" = ["nvim-text.desktop"];
