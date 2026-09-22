@@ -495,7 +495,7 @@ in {
             (execBind (modKey "Escape") "dms ipc call lock lock")
             (execBind (modKey "s") "dms ipc call settings toggle")
             (execBind (modKey "q") "dms ipc call powermenu toggle")
-            (execBind (modKey "w") "skwd wall toggle")
+            (execBind (modKey "w") "skwd-wall-v2")
             (execBind (modKey "SHIFT + w") "dms ipc call dash toggle wallpaper")
             (execBind (modKey "SHIFT + o") "dms ipc call dash toggle overview")
             (execBind (modKey "SHIFT + m") "dms ipc call dash toggle media")

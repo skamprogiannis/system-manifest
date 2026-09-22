@@ -848,20 +848,21 @@
     },
     "skwd-wall": {
       "inputs": {
-        "nixpkgs": "nixpkgs_3",
-        "quickshell": "quickshell",
-        "skwd-daemon": "skwd-daemon"
+        "nixpkgs": [
+          "nixpkgs"
+        ]
       },
       "locked": {
-        "lastModified": 1787134573,
-        "narHash": "sha256-TZ1oFqgfGgwEfvWnb7xc8gW6GwHXmN5gLVVS3k5AgXA=",
+        "lastModified": 1790013649,
+        "narHash": "sha256-4zvYULaLts9reCVTPm6/5suqwc7kcGYkqAgR4qRxcOc=",
         "owner": "liixini",
         "repo": "skwd-wall",
-        "rev": "49a2f5c0bdc711cde5b70f145ff659380954882a",
+        "rev": "aa346448e81a056c5a46e17dd1624bc05842e88e",
         "type": "github"
       },
       "original": {
         "owner": "liixini",
+        "ref": "nix",
         "repo": "skwd-wall",
         "type": "github"
       }

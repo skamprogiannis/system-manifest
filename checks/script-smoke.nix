@@ -133,13 +133,6 @@ in {
       }
 
       zathura_config="$desktop_activation/home-files/.config/zathura/zathurarc"
-      if ! ${pkgs.gnused}/bin/sed -n '/^include skwd-colors$/,$p' "$zathura_config" \
-        | ${pkgs.gnugrep}/bin/grep -Fxq 'set recolor "false"'; then
-        echo "Expected Zathura to disable document recoloring after loading the dynamic UI palette." >&2
-        ${pkgs.gnused}/bin/sed 's/^/  /' "$zathura_config" >&2
-        exit 1
-      fi
-
       assert_file_contains "$desktop_home/bin/codex-state-sync" 'MOUNT_PARENT="/run/codex-state-sync"' "Expected Codex state sync to use an ephemeral runtime mountpoint."
       assert_file_contains "$desktop_home/bin/codex-state-sync" 'MOUNT="$MOUNT_PARENT/root"' "Expected Codex state sync to keep its mount beneath the owned runtime directory."
       assert_not_file_contains "$desktop_home/bin/codex-state-sync" 'MOUNT="/mnt/usb-sync"' "Expected Codex state sync not to leave a persistent /mnt mountpoint."
@@ -1732,12 +1725,6 @@ in {
         ${pkgs.bash}/bin/bash "$desktop_zellij_legacy_args_scrub_activation"
       if ! cmp -s "$zellij_scrub_test/corrupt.scrubbed" "$corrupt_layout"; then
         echo "Expected repeated Zellij legacy argument scrubbing to be idempotent." >&2
-        exit 1
-      fi
-
-      if ! ${pkgs.gnugrep}/bin/grep -Fq "skwd-daemon.service.d/livefix.conf" "$desktop_activation/activate"; then
-        echo "Expected Home Manager activation to remove stale skwd-daemon livefix drop-ins." >&2
-        ${pkgs.gnused}/bin/sed -n '/cleanupLegacySkwdDaemonLivefix/,/fi/p' "$desktop_activation/activate" >&2
         exit 1
       fi
 

@@ -23,7 +23,7 @@ Managed via **Nix Flakes** and **Home Manager**.
   - **Obsidian:** Note-taking application with Home Manager plugin management.
   - **PearPass:** Declarative wrapper for the PearPass P2P password manager AppImage.
   - **Brave + Vimium C:** Declarative browser setup with preseeded extension settings and portable keymaps.
-- **Vesktop:** Discord client with declarative Translucence theming and a wallpaper-aware QuickCSS bridge.
+- **Vesktop:** Discord client with declarative Translucence theming and QuickCSS customization.
 - **Dev Ready:** Pre-configured environment for Node.js, Python, Go, Playwright, and Neovim (via nixvim), plus Clang build essentials. Neovim is also registered as the default text editor via an `nvim-text` desktop entry.
 - **AI Integrated:** Built-in configuration for **Codex CLI** with per-repo `AGENTS.md` instructions, global defaults in `~/.codex/AGENTS.md`, custom agents in `~/.codex/agents`, Linear/Context7/Etsy/OpenAI Docs MCP servers, and curated skills for visualization, browser automation, security analysis, frontend work, review, diagnosis, TDD, design, prototyping, and concise response modes. The opt-in Jev MCP pilot adds typed advisory decisions, review, screening, verification, and metadata-only shadow model-routing recommendations; it never switches models automatically.
   Linear MCP auth is local per machine; after first enabling a host, run `codex mcp login linear` once if Codex reports that Linear is not logged in. Context7 uses a local API key from `~/.config/context7/api-key` when present.
@@ -43,7 +43,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 | `home-manager` | `github:nix-community/home-manager` | Tracks nixpkgs-unstable |
 | `nixvim` | `github:nix-community/nixvim` | Full Neovim config in Nix |
 | `spicetify-nix` | `github:Gerg-L/spicetify-nix` | Declarative Spicetify wrapper for the themed Spotify GUI |
-| `skwd-wall` | `github:liixini/skwd-wall` | Quickshell wallpaper selector with built-in matugen, Wallhaven, Steam Workshop, and color sorting |
+| `skwd-wall` | `github:liixini/skwd-wall/nix` | skwd-wall v2 wallpaper selector/engine, daemon, and semantic model suite |
 | `pearpass-app-desktop` | `github:tetherto/pearpass-app-desktop` | PearPass AppImage source for NixOS wrapper |
 | `visual-explainer` | `github:nicobailon/visual-explainer` | HTML visualization generator for architecture diagrams and code explanations |
 | `impeccable` | `github:pbakaus/impeccable` | Frontend design skill bundle for typography, color, layout, and motion |
@@ -58,10 +58,8 @@ Packages tracked independently of nixpkgs for tighter version control:
 ## Workflow & UI
 
 - **Glassmorphism Aesthetics:** Vesktop is the visual reference for glass surfaces: transparent enough to carry wallpaper context, but dark enough to keep text readable. The shared glass contract lives in `modules/home/glass.nix` and is documented in `DESIGN.md`. Ghostty uses native RGBA transparency with `background-opacity = 0.40`, applies it to colored cells, and keeps compositor opacity at `1.0` so text remains fully opaque. Hyprland uses a restrained native blur profile for Ghostty, Vesktop, DMS layers, and Hazy/Spicetify surfaces instead of heavy global blur.
-- **Theming:** `modules/home/catppuccin.nix` centralizes the static Mocha palette for Brave, Bat, Ghostty, Zellij, Nixvim, and GTK 3. Wallpaper-driven Matugen theming via [skwd-wall](https://github.com/liixini/skwd-wall) keeps Hyprland, Zathura, Vesktop, and DMS visually in sync. Vesktop consumes the generated palette through `Translucence.theme.css` plus `~/.config/vesktop/settings/quickCss.css`, Spotify uses a Spicetify Hazy theme with local glass polish from `modules/home/glass.nix`, and the current wallpaper cache is reused to keep DMS and the greeter aligned during switches. For Wallpaper Engine scenes with weak workshop previews, `skwd-we-capture-still --current-live` can save a faithful live still into the transition cache.
-- **Wallpaper Integration:** `modules/home/wallpaper/` is the shared wallpaper entrypoint. `skwd-wall` owns wallpaper selection plus `~/.cache/skwd-wall/*`; `modules/home/dms/session-state.nix` owns the baseline `~/.local/state/DankMaterialShell/session.json`; and the sync hook in `modules/home/skwd-wall.nix` mirrors the selected wallpaper into DMS runtime state and the greeter cache. Hyprland stays a downstream consumer of that state. Quickshell uses the system's Nixpkgs so its runtime stays compatible with host graphics drivers. On USB boots, the same `skwd-wall` command and daemon detect fatal OpenGL initialization errors on either output stream, retry with Qt software rendering, and remember the result when stable physical-host identity is available; otherwise they re-probe. Failed rendering attempts invalidate the remembered backend. Desktop remains on Vulkan.
-- **skwd-wall State:** `skwd-wall` UI settings write to `~/.config/skwd-wall/config.json`, but each Home Manager activation resets that file back to the declarative defaults from Nix. Local API keys can live outside git in `~/.config/skwd-wall/secrets.env`.
-- **Malformed JSON Policy:** Activation-owned JSON (`~/.config/skwd-wall/config.json`, `~/.local/state/DankMaterialShell/session.json`) is healed/reset to declarative defaults during activation. Runtime sync code fails closed before overwriting malformed authoritative targets, but only warns and continues for optional/cache-like inputs.
+- **Theming:** `modules/home/catppuccin.nix` centralizes the static Mocha palette for Brave, Bat, Ghostty, Zellij, Nixvim, and GTK 3. DMS and app-specific glass styling remain declarative; skwd-wall v2 handles wallpaper selection/rendering and supports DMS as a wallpaper-color integration.
+- **Wallpaper Integration:** skwd-wall v2 is installed through its upstream Nix module and runs `skwd-walld` as a user service. `Super+W` launches `skwd-wall-v2`; the retired v1 Quickshell daemon and custom keybind layer are no longer active. The DMS greeter consumes wallpaper paths from DMS `session.json`, not the removed `greeterWallpaperPath` setting.
 - **Zellij Navigation:** `Alt`-based keybindings for all multiplexer actions with Zellij's simplified non-powerline UI; `Escape` exits any mode back to Normal and is unbound in Normal mode so it passes through to terminal apps (Vim, Codex CLI, etc.).
 - **Keyboard Layout:** `us altgr-intl` + `gr simple`. `Super+Space` toggles layouts, and IBus is started with the Hyprland session for Greek dead-key composition.
 - **Window Controls:** Super-based Hyprland keybindings cover moving, resizing, grouped-window tabs, monitor focus, and monitor-to-monitor window moves.
@@ -84,7 +82,6 @@ Packages tracked independently of nixpkgs for tighter version control:
 | `screenshot-path-copy` | Wraps `dms screenshot` to copy the saved file path to clipboard (instead of image) |
 | `hypr-quit-active` | Force-quits the active app process when a client minimizes to tray instead of exiting |
 | `gsr-record` | Emergency stop helper for active GPU Screen Recorder captures; `stop` finalizes recordings and clears stale runtime state |
-| `skwd-we-capture-still` | Captures a Wallpaper Engine still image into `~/.cache/skwd-wall/wallpaper/we-captures/`, with `--current-live` for a faithful live-screen fallback |
 | `torrent` | Manages the local Transmission daemon with readable `gui`, `list`, `add`, `start`, `stop`, `remove`, and guarded `delete --yes` commands |
 | `transmission-port-sync` | Syncs Transmission's configured peer port (for example after a VPN-forwarded port change) |
 | `codex-state-sync` | Safely merges active Codex sessions between desktop and USB (`to-usb` / `from-usb`) while leaving machine-local state alone |

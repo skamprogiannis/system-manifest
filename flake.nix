@@ -26,9 +26,8 @@
     };
 
     skwd-wall = {
-      url = "github:liixini/skwd-wall";
-      # Quickshell loads the host's Mesa drivers, so its libc must match the system.
-      inputs.quickshell.inputs.nixpkgs.follows = "nixpkgs";
+      url = "github:liixini/skwd-wall/nix";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
 
     pearpass-app-desktop = {
@@ -111,6 +110,7 @@
     desktopModules = [
       ./hosts/desktop/default.nix
       inputs.dank-greeter.nixosModules.default
+      inputs.skwd-wall.nixosModules.default
       home-manager.nixosModules.home-manager
       {
         home-manager.useGlobalPkgs = true;
@@ -167,6 +167,7 @@
         modules = [
           ./hosts/usb/default.nix
           inputs.dank-greeter.nixosModules.default
+          inputs.skwd-wall.nixosModules.default
           home-manager.nixosModules.home-manager
           {
             home-manager.useGlobalPkgs = true;
@@ -197,6 +198,7 @@
         modules = [
           ./hosts/laptop/default.nix
           inputs.dank-greeter.nixosModules.default
+          inputs.skwd-wall.nixosModules.default
           home-manager.nixosModules.home-manager
           {
             home-manager.useGlobalPkgs = true;
