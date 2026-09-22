@@ -92,7 +92,7 @@ def start():
         request('/v1/dictation/start', {}, timeout=8)
         state_path().write_text('recording\n')
         state_path().chmod(0o600)
-        notify('Listening…', 'Release Super+Shift+T when you are finished.')
+        notify('Listening…', 'Release Super+T when you are finished.')
         return 0
     except RuntimeError:
         stop_service()
