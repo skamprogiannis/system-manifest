@@ -168,6 +168,15 @@
         ),
     ],
   '';
+
+  niriScreenshotDirectory = ''
+    root / "Services/NiriService.qml": [
+        (
+            'readonly property string screenshotsDir: Paths.strip(StandardPaths.writableLocation(StandardPaths.PicturesLocation)) + "/Screenshots"',
+            'readonly property string screenshotsDir: Paths.strip(StandardPaths.writableLocation(StandardPaths.PicturesLocation)) + "/screenshots"',
+        ),
+    ],
+  '';
 in {
   # Keep only behavior that upstream DMS does not expose declaratively.
   defaultReplacementsPython = ''
@@ -194,6 +203,7 @@ in {
     ${commonLists}
     ${clockWidget}
     ${wallpaperCyclingExternalSet}
+    ${niriScreenshotDirectory}
     # Expose a clearHistory IPC command so keybinds can wipe the History tab.
     # The built-in clearAll IPC only calls clearAllNotifications(); this adds
     # a sibling function that delegates to NotificationService.clearHistory().
@@ -223,6 +233,7 @@ in {
     ${appSearchService}
     ${launcherSourceClassifier}
     ${wallpaperCyclingExternalSet}
+    ${niriScreenshotDirectory}
     root / "DankCommon/Widgets/CachingImage.qml": [
         (
             "import QtQuick\nimport qs.DankCommon.Common",

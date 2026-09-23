@@ -15,6 +15,7 @@
     desktopNvidiaDriverVersion
     laptopDmsOutputsFile
     pkgs
+    usbDmsPackage
     usbDmsOutputsFile
     ;
   minimumCompatibleNvidiaDriver = "610";
@@ -90,6 +91,18 @@ in {
       test -x ${desktopGreeterPackage}/bin/dms-greeter
       assert_file_not_contains ${desktopDmsPackage}/share/quickshell/dms/Modals/DankLauncherV2/DankLauncherV2ModalStandalone.qml 'sourceRect.antialiasing'
       assert_file_not_contains ${desktopDmsPackage}/share/quickshell/dms/Modals/DankLauncherV2/DankLauncherV2ModalStandalone.qml 'sourceRect.smooth'
+      for dms_package in ${desktopDmsPackage} ${usbDmsPackage}; do
+        niri_service="$dms_package/share/quickshell/dms/Services/NiriService.qml"
+        if ! grep -Fq 'readonly property string screenshotsDir: Paths.strip(StandardPaths.writableLocation(StandardPaths.PicturesLocation)) + "/screenshots"' "$niri_service"; then
+          echo "Expected lowercase screenshotsDir in $niri_service" >&2
+          grep -n 'screenshotsDir:' "$niri_service" >&2 || true
+          exit 1
+        fi
+        if grep -Fq '"/Screenshots"' "$niri_service"; then
+          echo "Unexpected uppercase Screenshots path in $niri_service" >&2
+          exit 1
+        fi
+      done
       assert_file_contains ${desktopAccountsServiceAvatarScript} '/var/lib/AccountsService/icons/stefan'
       assert_file_contains ${desktopAccountsServiceAvatarScript} '/var/lib/dms-greeter/users/stefan/profile.png'
       assert_file_contains ${desktopDmsOutputsFile} 'hl.monitor({ output = "desc:Samsung Electric Company S24E510C 0x3042524B", mode = "1920x1080@60.000", position = "0x0", scale = "1", vrr = 0 })'

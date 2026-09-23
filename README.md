@@ -63,7 +63,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 - **Hard Quit:** `Super+Shift+X` force-terminates the active app process for clients like Vesktop or ProtonVPN that minimize to tray on normal close.
 - **Launcher Shortcuts:** Common launch actions cover Yazi, wallpapers, screenshots, and the DMS notepad.
 - **DMS Shell:** Core shell layout, widget placement, and launcher behavior are managed declaratively in Nix.
-- **Screenshots:** `dms screenshot` handles region/window/full capture with image-to-clipboard. `screenshot-path-copy` wraps it to copy the file path instead (useful for sharing with AI agents).
+- **Screenshots:** Region/window/full keybinds use `dms screenshot` to save under `~/pictures/screenshots` and copy the image to the clipboard. `screenshot-path-copy` copies the file path instead (useful for sharing with AI agents).
 - **Screen Recording:** GPU Screen Recorder's GTK UI handles capture setup, backed by GPU Screen Recorder. `gsr-record stop` is kept as an emergency stop helper for finalizing active clips under `~/videos/screencasts`.
 - **Codex CLI:** Codex is integrated into the Neovim + terminal workflow with repository-specific instructions, `/goal` enabled, explicit declarative skill enablement, Linear/Context7/Etsy/OpenAI Docs/Jev MCP servers, custom reviewer agents, BEL-based terminal urgency, and a dedicated Zellij tab. Jev uses `TYPESAFE_API_KEY` or `~/.config/typesafe/api-key` locally; credentials and raw prompts are never declared in Nix or written to its shadow-routing log.
 - **Browser Automation:** PinchTab is installed declaratively so the browser-automation skill has the CLI it documents.
