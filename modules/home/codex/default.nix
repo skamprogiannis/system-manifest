@@ -156,6 +156,8 @@
   pinchtab = pkgs.stdenvNoCC.mkDerivation {
     pname = "pinchtab";
     version = pinchtabVersion;
+    nativeBuildInputs = [pkgs.autoPatchelfHook];
+    buildInputs = [pkgs.glibc];
     src = pkgs.fetchurl {
       url = "https://github.com/pinchtab/pinchtab/releases/download/v${pinchtabVersion}/pinchtab-linux-amd64";
       hash = "sha256-C7T5ehyS+UvNut/8OdxphaR1fIineHa7y0IUIZHoIC0=";
