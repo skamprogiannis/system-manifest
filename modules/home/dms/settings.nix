@@ -364,7 +364,7 @@ in {
     runDmsMatugenTemplates = true;
     runUserMatugenTemplates = true;
     matugenTemplateGtk = true;
-    matugenTemplateHyprland = true;
+    matugenTemplateHyprland = false;
     matugenTemplateFirefox = false;
     matugenTemplateVesktop = false;
     matugenTemplateGhostty = false;
