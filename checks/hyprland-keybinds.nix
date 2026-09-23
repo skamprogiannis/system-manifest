@@ -74,7 +74,7 @@ in {
       assert_contains 'hl.dsp.window.move({ workspace = "special:music", follow = false })'
       assert_contains 'hl.bind((mod .. " + r"), (hl.dsp.exec_cmd("gpu-screen-recorder-gtk")))'
       assert_contains 'hl.bind((mod .. " + SHIFT + r"), (hl.dsp.exec_cmd("gsr-record stop")))'
-      assert_contains 'require_optional("dms.colors")'
+      assert_not_contains 'require_optional("dms.colors")'
       assert_contains 'require_optional("dms.outputs")'
       assert_contains 'require_optional("dms.binds-user")'
       assert_not_contains 'gsr-record region'

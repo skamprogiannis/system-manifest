@@ -192,6 +192,67 @@
     (bind (modKey "mouse:272") (lua "hl.dsp.window.drag()"))
     (bind (modKey "mouse:273") (lua "hl.dsp.window.resize()"))
   ];
+  syncHyprlandDmsBorders = pkgs.writeShellScript "sync-hyprland-dms-borders" ''
+    set -euo pipefail
+
+    cache_home="''${XDG_CACHE_HOME:-$HOME/.cache}"
+    state_home="''${XDG_STATE_HOME:-$HOME/.local/state}"
+    colors="$cache_home/DankMaterialShell/dms-colors.json"
+    session="$state_home/DankMaterialShell/session.json"
+    [ -s "$colors" ] || exit 0
+
+    mode="dark"
+    if [ -s "$session" ] && ${pkgs.jq}/bin/jq -e '.isLightMode == true' "$session" >/dev/null 2>&1; then
+      mode="light"
+    fi
+
+    read_color() {
+      ${pkgs.jq}/bin/jq -er --arg mode "$mode" --arg key "$1" '
+        .colors[$mode][$key]
+        | strings
+        | select(test("^#[0-9A-Fa-f]{6}$"))
+        | ltrimstr("#")
+      ' "$colors"
+    }
+
+    primary="$(read_color primary)"
+    outline="$(read_color outline)"
+    error="$(read_color error)"
+
+    hyprctl=(${hyprland-pkg}/bin/hyprctl)
+    if [ -z "''${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+      instance="$(${hyprland-pkg}/bin/hyprctl -j instances 2>/dev/null \
+        | ${pkgs.jq}/bin/jq -er 'sort_by(.time) | last | .instance')"
+      hyprctl+=(--instance "$instance")
+    fi
+
+    expression="hl.config({
+      general = {
+        col = {
+          active_border = \"rgb($primary)\",
+          inactive_border = \"rgb($outline)\",
+        },
+      },
+      group = {
+        col = {
+          border_active = \"rgb($primary)\",
+          border_inactive = \"rgb($outline)\",
+          border_locked_active = \"rgb($error)\",
+          border_locked_inactive = \"rgb($outline)\",
+        },
+        groupbar = {
+          col = {
+            active = \"rgb($primary)\",
+            inactive = \"rgb($outline)\",
+            locked_active = \"rgb($error)\",
+            locked_inactive = \"rgb($outline)\",
+          },
+        },
+      },
+    })"
+
+    "''${hyprctl[@]}" --quiet eval "$expression"
+  '';
   dmsBlurNamespaces = lib.concatStringsSep "|" glass.dms.blurNamespaces;
 in {
   config = {
@@ -220,6 +281,37 @@ in {
       GTK_IM_MODULE = "ibus";
       QT_IM_MODULE = "ibus";
       XMODIFIERS = "@im=ibus";
+    };
+
+    systemd.user.services.hyprland-dms-border-sync = {
+      Unit = {
+        Description = "Sync Hyprland borders from the DMS palette";
+        After = ["hyprland-session.target"];
+        PartOf = ["hyprland-session.target"];
+      };
+      Service = {
+        Type = "oneshot";
+        ExecStart = "${syncHyprlandDmsBorders}";
+      };
+      Install = {
+        WantedBy = ["hyprland-session.target"];
+      };
+    };
+
+    systemd.user.paths.hyprland-dms-border-sync = {
+      Unit = {
+        Description = "Watch DMS palette for Hyprland border changes";
+        After = ["hyprland-session.target"];
+        PartOf = ["hyprland-session.target"];
+      };
+      Path = {
+        # Watch the directory because DMS/skwd publish colors.json atomically via rename.
+        PathChanged = "%h/.cache/DankMaterialShell";
+        Unit = "hyprland-dms-border-sync.service";
+      };
+      Install = {
+        WantedBy = ["hyprland-session.target"];
+      };
     };
 
     systemd.user.services.ibus-daemon = {
@@ -327,7 +419,7 @@ in {
             gaps_out = 10;
             border_size = 2;
             layout = "dwindle";
-            # col.active_border and col.inactive_border are set dynamically by dms.colors.
+            # Border colours are updated live from DMS's wallpaper palette without a config reload.
           };
 
           group = {
@@ -591,7 +683,6 @@ in {
           end
         end
 
-        require_optional("dms.colors")
         require_optional("dms.cursor")
         require_optional("dms.layout")
         require_optional("dms.outputs")
