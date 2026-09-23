@@ -8,7 +8,15 @@
   serviceExec = service:
     builtins.head (pkgs.lib.splitString " " service.serviceConfig.ExecStart);
 
+  checkBinEnv = name: packages:
+    pkgs.buildEnv {
+      inherit name;
+      paths = builtins.filter (package: pkgs.lib.getName package != "voiden") packages;
+      pathsToLink = ["/bin"];
+      ignoreCollisions = true;
+    };
   desktopHome = self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.path;
+  desktopCheckHome = checkBinEnv "desktop-check-bin-env" self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.packages;
   desktopHomeFiles = self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.file;
   desktopNvidiaDriverVersion = self.nixosConfigurations.desktop.config.hardware.nvidia.package.version;
   desktopGpuScreenRecorderPackage = self.nixosConfigurations.desktop.config.programs.gpu-screen-recorder.package;
@@ -53,6 +61,7 @@
   desktopZellijPostCommandDiscoveryHook = self.nixosConfigurations.desktop.config.home-manager.users.stefan.programs.zellij.settings.post_command_discovery_hook;
   updateUsbSourceDir = ../modules/home/scripts/usb/update-usb;
   usbHome = self.nixosConfigurations.usb.config.home-manager.users.stefan.home.path;
+  usbCheckHome = checkBinEnv "usb-check-bin-env" self.nixosConfigurations.usb.config.home-manager.users.stefan.home.packages;
   usbSystem = self.nixosConfigurations.usb.config.system.build.toplevel;
   usbSteamEnabled = self.nixosConfigurations.usb.config.programs.steam.enable;
   usbSteamLauncher = "${self.nixosConfigurations.usb.config.programs.steam.package}/bin/steam";
@@ -137,20 +146,20 @@
   usbDmsOutputsFile = pkgs.writeText "usb-dms-outputs.lua" self.nixosConfigurations.usb.config.home-manager.users.stefan.xdg.configFile."hypr/dms/outputs.lua".text;
   shellcheckScripts =
     pkgs.lib.optionals desktopBannerlordEnabled [
-      "${desktopHome}/bin/bannerlord-codex"
-      "${desktopHome}/bin/bannerlord-speech"
-      "${desktopHome}/bin/bannerlord-speech-service"
+      "${desktopCheckHome}/bin/bannerlord-codex"
+      "${desktopCheckHome}/bin/bannerlord-speech"
+      "${desktopCheckHome}/bin/bannerlord-speech-service"
     ]
     ++ [
-    "${desktopHome}/bin/codex-state-sync"
-    "${desktopHome}/bin/gsr-record"
-    "${desktopHome}/bin/hypr-quit-active"
-    "${desktopHome}/bin/screenshot-path-copy"
-    "${desktopHome}/bin/spotify_player"
-    "${desktopHome}/bin/torrent"
-    "${desktopHome}/bin/transmission-port-sync"
-    "${desktopHome}/bin/update-usb"
-    "${desktopHome}/bin/zellij-sessionizer"
+    "${desktopCheckHome}/bin/codex-state-sync"
+    "${desktopCheckHome}/bin/gsr-record"
+    "${desktopCheckHome}/bin/hypr-quit-active"
+    "${desktopCheckHome}/bin/screenshot-path-copy"
+    "${desktopCheckHome}/bin/spotify_player"
+    "${desktopCheckHome}/bin/torrent"
+    "${desktopCheckHome}/bin/transmission-port-sync"
+    "${desktopCheckHome}/bin/update-usb"
+    "${desktopCheckHome}/bin/zellij-sessionizer"
     "${desktopZellijLegacyArgsScrubActivationFile}"
     "${desktopZellijPostCommandDiscoveryHook}"
     "${updateUsbSourceDir}/args.sh"
@@ -159,15 +168,15 @@
     "${updateUsbSourceDir}/metadata.sh"
     "${updateUsbSourceDir}/phases.sh"
     "${updateUsbSourceDir}/squashfs.sh"
-    "${usbHome}/bin/usb-host-scratch"
-    "${usbHome}/bin/steam-host-scratch"
+    "${usbCheckHome}/bin/usb-host-scratch"
+    "${usbCheckHome}/bin/steam-host-scratch"
     "${usbSteamHostScratchPrepareScript}"
-    "${usbHome}/bin/nixos-usb-store-status"
+    "${usbCheckHome}/bin/nixos-usb-store-status"
     "${usbHostScratchStartScript}"
     "${usbHostScratchStopScript}"
     "${usbHostScratchSyncScript}"
     "${usbHostScratchShutdownCleanupScript}"
-    "${usbHome}/bin/spotify_player"
-    "${usbHome}/bin/setup-persistent-usb"
+    "${usbCheckHome}/bin/spotify_player"
+    "${usbCheckHome}/bin/setup-persistent-usb"
   ];
 }

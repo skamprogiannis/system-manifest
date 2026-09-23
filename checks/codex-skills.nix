@@ -1,5 +1,5 @@
 {ctx}: let
-  inherit (ctx) desktopCodexSkillsRoot desktopHome desktopPinchtabConfigActivationFile pkgs;
+  inherit (ctx) desktopCheckHome desktopCodexSkillsRoot desktopPinchtabConfigActivationFile pkgs;
   expectedSkills = [
     "browser-automation"
     "caveman"
@@ -102,10 +102,10 @@ in {
 
       pinchtab_seed="$(sed -n 's|^[[:space:]]*cp \(/nix/store/[^ ]*pinchtab-config.json\) .*|\1|p' ${desktopPinchtabConfigActivationFile})"
       test -n "$pinchtab_seed"
-      PINCHTAB_CONFIG="$pinchtab_seed" "${desktopHome}/bin/pinchtab" config validate
+      PINCHTAB_CONFIG="$pinchtab_seed" "${desktopCheckHome}/bin/pinchtab" config validate
 
       mock_doctor="$TMPDIR/jev-mock-doctor.json"
-      HOME="$TMPDIR/home" JEV_MCP_MOCK=1 "${desktopHome}/bin/jev-mcp" doctor --json >"$mock_doctor"
+      HOME="$TMPDIR/home" JEV_MCP_MOCK=1 "${desktopCheckHome}/bin/jev-mcp" doctor --json >"$mock_doctor"
       python3 - "$mock_doctor" <<'PY'
       import json
       import sys
@@ -115,13 +115,13 @@ in {
           raise SystemExit(f"Jev mock doctor failed: {report}")
       PY
 
-      if HOME="$TMPDIR/no-key-home" "${desktopHome}/bin/jev-mcp" doctor --json >"$TMPDIR/jev-no-key.json" 2>/dev/null; then
+      if HOME="$TMPDIR/no-key-home" "${desktopCheckHome}/bin/jev-mcp" doctor --json >"$TMPDIR/jev-no-key.json" 2>/dev/null; then
         echo "Jev doctor unexpectedly accepted a missing API key." >&2
         exit 1
       fi
       grep -q 'CONFIG_ERROR' "$TMPDIR/jev-no-key.json"
 
-      XDG_STATE_HOME="$TMPDIR/state" "${desktopHome}/bin/jev-shadow-route" \
+      XDG_STATE_HOME="$TMPDIR/state" "${desktopCheckHome}/bin/jev-shadow-route" \
         --task-kind research --proposed-tier reasoning --effort high \
         --probability 0.82 --latency-ms 180 --usage-tokens 120
       python3 - "$TMPDIR/state/codex-jev/shadow.jsonl" <<'PY'

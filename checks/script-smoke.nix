@@ -3,7 +3,7 @@
     (ctx)
     codexConfigPython
     desktopActivation
-    desktopHome
+    desktopCheckHome
     desktopZellijDevLayoutFile
     desktopZellijLegacyArgsScrubActivationFile
     desktopZellijPostCommandDiscoveryHook
@@ -11,7 +11,7 @@
     updateUsbSourceDir
     usbActivation
     usbDmsServiceEnvironmentFile
-    usbHome
+    usbCheckHome
     usbHostScratchCheckpointExec
     usbHostScratchMountDropinFile
     usbHostScratchServiceBeforeFile
@@ -38,13 +38,13 @@ in {
     } ''
       set -euo pipefail
 
-      desktop_home="${desktopHome}"
+      desktop_home="${desktopCheckHome}"
       desktop_activation="${desktopActivation}"
       desktop_zellij_legacy_args_scrub_activation="${desktopZellijLegacyArgsScrubActivationFile}"
       desktop_zellij_post_command_discovery_hook="${desktopZellijPostCommandDiscoveryHook}"
       update_usb_source_dir="${updateUsbSourceDir}"
       usb_activation="${usbActivation}"
-      usb_home="${usbHome}"
+      usb_home="${usbCheckHome}"
       steam_host_scratch="$usb_home/bin/steam-host-scratch"
       usb_steam_launcher="${usbSteamLauncher}"
       usb_host_auto_steam_launcher="${usbHostAutoSteamLauncher}"
