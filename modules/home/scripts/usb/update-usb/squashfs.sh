@@ -6,7 +6,7 @@ profile_store_target() {
   local link=""
   local i
 
-  for i in 1 2 3; do
+  for ((i = 0; i < 3; i++)); do
     [ -L "$current" ] || return 1
     link="$(readlink "$current")"
     case "$link" in
@@ -47,7 +47,7 @@ prepare_generation_state() {
     return 0
   fi
 
-  init_relative="''${profile_target#/nix/store/}/init"
+  init_relative="${profile_target#/nix/store/}/init"
   if ! unsquashfs -cat "$squashfs_path" "$init_relative" >/dev/null 2>&1; then
     echo "Warning: existing USB profile is not present in the current squashfs; dropping rollback state." >&2
     rm -rf "$MOUNT_POINT/nix/var/nix/db" "$MOUNT_POINT/nix/var/nix/profiles"
