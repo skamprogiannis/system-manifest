@@ -18,7 +18,7 @@ class ServiceGlue(unittest.TestCase):
 
     def test_preflight_accepts_expected_cli_and_chatgpt(self):
         with patch.object(preflight.subprocess, "run", side_effect=[
-            self.result("codex-cli 0.155.1\n"), self.result("Logged in using ChatGPT\n")
+            self.result("codex-cli 0.156.1\n"), self.result("Logged in using ChatGPT\n")
         ]) as run:
             preflight.check()
         self.assertEqual([c.args[0] for c in run.call_args_list],
@@ -34,7 +34,7 @@ class ServiceGlue(unittest.TestCase):
 
     def test_preflight_never_exposes_login_output(self):
         with patch.object(preflight.subprocess, "run", side_effect=[
-            self.result("codex-cli 0.155.1"), self.result("Logged in using an API key PRIVATE-CANARY")
+            self.result("codex-cli 0.156.1"), self.result("Logged in using an API key PRIVATE-CANARY")
         ]):
             with self.assertRaises(preflight.PreflightError) as caught:
                 preflight.check()
