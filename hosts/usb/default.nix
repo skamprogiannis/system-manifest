@@ -16,6 +16,8 @@
     device = "nodev";
     efiSupport = true;
     useOSProber = false;
+    # Keep the current USB build plus one bootable rollback generation.
+    configurationLimit = 2;
     # Ensure it installs to the removable media path for maximum USB compatibility
     # (EFI/BOOT/BOOTX64.EFI) so any BIOS picks it up.
     efiInstallAsRemovable = true;

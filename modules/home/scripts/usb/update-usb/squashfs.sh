@@ -1,5 +1,88 @@
 #!/usr/bin/env bash
 
+profile_store_target() {
+  local profile="$1"
+  local current="$profile"
+  local link=""
+  local i
+
+  for i in 1 2 3; do
+    [ -L "$current" ] || return 1
+    link="$(readlink "$current")"
+    case "$link" in
+      /nix/store/*)
+        printf '%s\n' "$link"
+        return 0
+        ;;
+      /*)
+        return 1
+        ;;
+      *)
+        current="$(dirname "$current")/$link"
+        ;;
+    esac
+  done
+
+  return 1
+}
+
+prepare_generation_state() {
+  local squashfs_path="$MOUNT_POINT/nix-store.squashfs"
+  local system_profile="$MOUNT_POINT/nix/var/nix/profiles/system"
+  local profile_target=""
+  local init_relative=""
+
+  PRESERVE_PREVIOUS_GENERATION=0
+
+  if [ ! -f "$squashfs_path" ] || [ ! -L "$system_profile" ]; then
+    verbose_log "No complete previous USB generation found; starting with clean Nix profile state."
+    rm -rf "$MOUNT_POINT/nix/var/nix/db" "$MOUNT_POINT/nix/var/nix/profiles"
+    return 0
+  fi
+
+  profile_target="$(profile_store_target "$system_profile" 2>/dev/null || true)"
+  if [ -z "$profile_target" ]; then
+    echo "Warning: existing USB system profile is invalid; dropping rollback state." >&2
+    rm -rf "$MOUNT_POINT/nix/var/nix/db" "$MOUNT_POINT/nix/var/nix/profiles"
+    return 0
+  fi
+
+  init_relative="''${profile_target#/nix/store/}/init"
+  if ! unsquashfs -cat "$squashfs_path" "$init_relative" >/dev/null 2>&1; then
+    echo "Warning: existing USB profile is not present in the current squashfs; dropping rollback state." >&2
+    rm -rf "$MOUNT_POINT/nix/var/nix/db" "$MOUNT_POINT/nix/var/nix/profiles"
+    return 0
+  fi
+
+  PRESERVE_PREVIOUS_GENERATION=1
+  echo "Previous USB generation validated for rollback."
+  verbose_log "Rollback generation: $profile_target"
+}
+
+hydrate_store_from_existing_squashfs() {
+  local destination="$1"
+  local squashfs_path="$MOUNT_POINT/nix-store.squashfs"
+
+  mkdir -p "$destination"
+  if [ "$PRESERVE_PREVIOUS_GENERATION" -ne 1 ]; then
+    return 0
+  fi
+
+  echo "Hydrating previous generation into the update store..."
+  unsquashfs -f -d "$destination" "$squashfs_path" >/dev/null
+}
+
+prune_usb_system_generations() {
+  local nix_env="/nix/var/nix/profiles/system/sw/bin/nix-env"
+  local nix_store="/nix/var/nix/profiles/system/sw/bin/nix-store"
+  local profile="/nix/var/nix/profiles/system"
+
+  nixos-enter --root "$MOUNT_POINT" -c "$nix_env --profile $profile --delete-generations +2"
+  nixos-enter --root "$MOUNT_POINT" -c "$nix_store --gc"
+  echo "Retained USB generations:"
+  nixos-enter --root "$MOUNT_POINT" -c "$nix_env --profile $profile --list-generations"
+}
+
 verify_squashfs_contains_system() {
   local squashfs_path="$1"
 

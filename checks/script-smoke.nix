@@ -34,6 +34,7 @@ in {
       nativeBuildInputs = [
         pkgs.gnugrep
         pkgs.gnused
+        pkgs.squashfsTools
       ];
     } ''
       set -euo pipefail
@@ -1091,6 +1092,14 @@ in {
       assert_not_file_contains "$update_usb_source_dir/main.sh" 'rm -f "$MOUNT_POINT/nix-store.squashfs.tmp" "$MOUNT_POINT/nix-store.squashfs"' "Expected update-usb to preserve the last valid squashfs while copying its replacement."
       assert_not_file_contains "$update_usb_source_dir/main.sh" 'rm -f "$MOUNT_POINT/nix-store.squashfs"' "Expected in-place updates to preserve the last valid squashfs while building its replacement."
       assert_file_contains "$update_usb_source_dir/squashfs.sh" "publish_squashfs()" "Expected squashfs verification and atomic publication to live behind one lifecycle interface."
+      assert_file_contains "$update_usb_source_dir/squashfs.sh" "prepare_generation_state()" "Expected update-usb to validate rollback state before preserving it."
+      assert_file_contains "$update_usb_source_dir/squashfs.sh" "hydrate_store_from_existing_squashfs()" "Expected update-usb to hydrate the previous generation into the next squashfs."
+      assert_file_contains "$update_usb_source_dir/squashfs.sh" '--delete-generations +2' "Expected update-usb to retain the current and previous system generations."
+      assert_file_contains "$update_usb_source_dir/squashfs.sh" 'nixos-enter --root "$MOUNT_POINT"' "Expected generation pruning to use nixos-enter so /proc, /sys, and /dev exist inside the target."
+      assert_not_file_contains "$update_usb_source_dir/squashfs.sh" 'nix-env --store "$MOUNT_POINT"' "Expected generation pruning not to use a local chroot store directly."
+      assert_not_file_contains "$update_usb_source_dir/squashfs.sh" 'chroot "$MOUNT_POINT" "$nix_env"' "Expected generation pruning not to run Nix inside a bare chroot."
+      assert_not_file_contains "$update_usb_source_dir/main.sh" 'rm -rf "$MOUNT_POINT/nix/var/nix/db"' "Expected normal USB updates not to discard the previous Nix database unconditionally."
+      assert_file_contains ${../hosts/usb/default.nix} 'configurationLimit = 2;' "Expected USB GRUB to expose only current and rollback generations."
 
       metadata_test="$TMPDIR/update-usb-metadata"
       mkdir -p "$metadata_test/bin"
@@ -1152,7 +1161,7 @@ in {
       for expected_progress_call in \
         'phase_begin "opening-luks" "Opening LUKS" 0' \
         'phase_begin "preparing-prebuild-stage" "Preparing local prebuild stage" 5' \
-        'progress_plan_init 1080 120 10 5 10 360 660 10 5' \
+        'progress_plan_init 1080 120 10 5 10 120 360 660 10 5' \
         'phase_begin_estimated "building-usb-system" "Building USB system" 1080 6' \
         'phase_begin_estimated "installing-nixos" "Installing NixOS" 120' \
         'phase_begin_estimated "building-squashfs" "Building squashfs locally (desktop SSD)" 360' \
@@ -1294,6 +1303,41 @@ in {
       if ! ${pkgs.gnugrep}/bin/grep -Fq "#nixosConfigurations.usb.config.system.build.toplevel" "$update_usb_source_dir/metadata.sh"; then
         echo "Expected update-usb to prebuild the USB system toplevel attribute directly." >&2
         ${pkgs.gnused}/bin/sed -n '1,80p' "$update_usb_source_dir/metadata.sh" >&2
+        exit 1
+      fi
+
+      rollback_profile_test="$TMPDIR/update-usb-rollback-profile"
+      mkdir -p "$rollback_profile_test/root/nix/var/nix/profiles" "$rollback_profile_test/old-store/abcd-old-system"
+      printf '%s\n' previous > "$rollback_profile_test/old-store/abcd-old-system/init"
+      mksquashfs "$rollback_profile_test/old-store" "$rollback_profile_test/root/nix-store.squashfs" -noappend -no-progress >/dev/null
+      ln -s system-7-link "$rollback_profile_test/root/nix/var/nix/profiles/system"
+      ln -s /nix/store/abcd-old-system "$rollback_profile_test/root/nix/var/nix/profiles/system-7-link"
+      (
+        MOUNT_POINT="$rollback_profile_test/root"
+        PRESERVE_PREVIOUS_GENERATION=0
+        verbose_log() { :; }
+        # shellcheck disable=SC1091
+        . "$update_usb_source_dir/squashfs.sh"
+        prepare_generation_state
+        if [ "$PRESERVE_PREVIOUS_GENERATION" -ne 1 ]; then
+          echo "Expected target-root profile symlinks to validate without dereferencing the host /nix/store." >&2
+          exit 1
+        fi
+      )
+
+      rollback_hydration_test="$TMPDIR/update-usb-rollback-hydration"
+      mkdir -p "$rollback_hydration_test/root" "$rollback_hydration_test/old-store/abcd-old-system"
+      printf '%s\n' previous > "$rollback_hydration_test/old-store/abcd-old-system/init"
+      mksquashfs "$rollback_hydration_test/old-store" "$rollback_hydration_test/root/nix-store.squashfs" -noappend -no-progress >/dev/null
+      (
+        MOUNT_POINT="$rollback_hydration_test/root"
+        PRESERVE_PREVIOUS_GENERATION=1
+        # shellcheck disable=SC1091
+        . "$update_usb_source_dir/squashfs.sh"
+        hydrate_store_from_existing_squashfs "$rollback_hydration_test/new-store"
+      )
+      if [ "$(cat "$rollback_hydration_test/new-store/abcd-old-system/init")" != previous ]; then
+        echo "Expected rollback hydration to carry the previous squashfs store into the next image." >&2
         exit 1
       fi
 

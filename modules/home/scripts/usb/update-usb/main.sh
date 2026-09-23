@@ -31,7 +31,7 @@ DEFAULT_MODE="prebuild"
 MODE="$DEFAULT_MODE"
 FLAKE_DIR="$PWD"
 NIX_SHELL_PACKAGES=(squashfsTools cryptsetup util-linux coreutils findutils gnused)
-REQUIRED_TOOLS=(nixos-install cryptsetup mount umount findmnt find rm du cut sort nproc mountpoint sed mktemp cp mv date chroot lsblk sleep sync stat cat tr tail flock mkdir chmod rmdir)
+REQUIRED_TOOLS=(nix nixos-install nixos-enter cryptsetup mount umount findmnt find rm du cut sort nproc mountpoint sed mktemp cp mv date chroot lsblk sleep sync stat cat tr tail flock mkdir chmod rmdir)
 FORCE_UPDATE=0
 VERBOSE=0
 CLOSE_MAPPER_ON_CLEANUP=0
@@ -39,6 +39,7 @@ MOUNTED_ROOT=0
 MOUNTED_BOOT=0
 MOUNTED_STAGE_STORE=0
 WORKSPACE_PREPARED=0
+PRESERVE_PREVIOUS_GENERATION=0
 ACTIVE_CHILD_PID=""
 CANCELED=0
 CURRENT_PHASE="startup"
@@ -172,13 +173,13 @@ if ! skip_if_existing_squashfs_is_current; then
 fi
 phase_end
 
-phase_begin "cleaning-stale-nix-state" "Cleaning stale Nix state" 4
-rm -rf "$MOUNT_POINT/nix/var/nix/db"
-rm -rf "$MOUNT_POINT/nix/var/nix/profiles"
+phase_begin "preparing-generation-state" "Preparing rollback generation" 4
+prepare_generation_state
 if [ "$MODE" = "in-place" ]; then
   find "$MOUNT_POINT/nix/store" -mindepth 1 -maxdepth 1 -exec rm -rf {} + 2>/dev/null || true
+  hydrate_store_from_existing_squashfs "$MOUNT_POINT/nix/store"
 else
-  verbose_log "Prebuild mode: skipping ext4 /nix/store wipe (slow USB random I/O)."
+  verbose_log "Prebuild mode: preserving target Nix database and profile generations for rollback."
 fi
 phase_end
 
@@ -186,6 +187,7 @@ if [ "$MODE" = "prebuild" ]; then
   phase_begin "preparing-prebuild-stage" "Preparing local prebuild stage" 5
   STAGE_STORE="$STAGE_DIR/store"
   mkdir -p "$STAGE_STORE"
+  hydrate_store_from_existing_squashfs "$STAGE_STORE"
   mkdir -p "$MOUNT_POINT/nix/store"
   mount --bind "$STAGE_STORE" "$MOUNT_POINT/nix/store"
   MOUNTED_STAGE_STORE=1
@@ -193,9 +195,9 @@ if [ "$MODE" = "prebuild" ]; then
 fi
 
 if [ "$MODE" = "prebuild" ]; then
-  progress_plan_init 1080 120 10 5 10 360 660 10 5
+  progress_plan_init 1080 120 10 5 10 120 360 660 10 5
 else
-  progress_plan_init 1080 120 10 5 10 1800 10 600
+  progress_plan_init 1080 120 10 5 10 120 1800 10 600
 fi
 
 phase_begin_estimated "building-usb-system" "Building USB system" 1080 6
@@ -229,6 +231,10 @@ chroot "$MOUNT_POINT" /nix/var/nix/profiles/system/sw/bin/install -d -m 0755 -o 
   /home/stefan/.local/state/home-manager/gcroots \
   /home/stefan/.local/state/nix \
   /home/stefan/.local/state/nix/profiles
+phase_end_estimated
+
+phase_begin_estimated "pruning-system-generations" "Keeping current and rollback generations" 120
+prune_usb_system_generations
 phase_end_estimated
 
 if [ "$MODE" = "prebuild" ]; then
