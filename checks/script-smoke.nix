@@ -1841,10 +1841,15 @@ in {
         '--api-key' \
         "Context7 wrapper must not expose the API key in process arguments."
 
+      if ${pkgs.gnugrep}/bin/grep -Fq 'experimental_use_rmcp_client' "$codex_seed_path"; then
+        echo "Codex config must not set the removed remote MCP client flag." >&2
+        exit 1
+      fi
+
       assert_log_contains_file \
-        "experimental_use_rmcp_client = true" \
+        'remote_plugin = false' \
         "$codex_seed_path" \
-        "Expected Codex config to enable the remote MCP client required by Linear OAuth."
+        "Expected Codex config to avoid the remote plugin request that delays resume."
 
       assert_log_contains_file \
         'url = "https://mcp.linear.app/mcp"' \
@@ -1852,9 +1857,9 @@ in {
         "Expected Codex config to include the Linear MCP server."
 
       assert_log_contains_file \
-        'model = "gpt-5.6-terra"' \
+        'model = "gpt-6-sol"' \
         "$codex_seed_path" \
-        "Expected Codex config to use the GPT-5.6 Terra model."
+        "Expected Codex config to use the GPT-6 Sol model."
 
       if ${pkgs.gnugrep}/bin/grep -Fq 'model = "gpt-5.6"' "$codex_seed_path"; then
         echo "Codex config must not use the unsupported bare GPT-5.6 model alias." >&2
@@ -1862,9 +1867,9 @@ in {
       fi
 
       assert_log_contains_file \
-        'model_reasoning_effort = "high"' \
+        'model_reasoning_effort = "medium"' \
         "$codex_seed_path" \
-        "Expected Codex config to retain high reasoning for normal work."
+        "Expected Codex config to use medium reasoning for normal work."
 
       assert_log_contains_file \
         'plan_mode_reasoning_effort = "xhigh"' \
@@ -1932,6 +1937,7 @@ in {
       [features]
       local_flag = true
       goals = false
+      experimental_use_rmcp_client = true
 
       [projects."/home/stefan/system-manifest"]
       trust_level = "untrusted"
@@ -1964,6 +1970,7 @@ in {
       assert data["local_only"] == "kept"
       assert data["features"]["goals"] is True
       assert data["features"]["local_flag"] is True
+      assert "experimental_use_rmcp_client" not in data["features"]
       assert data["projects"]["/home/stefan/system-manifest"]["trust_level"] == "trusted"
       assert data["projects"]["/tmp/other"]["trust_level"] == "trusted"
       assert data["mcp_servers"]["context7"] == {

@@ -3,7 +3,7 @@
 
 This installed MCP is **explicit-only**: use it only when the user asks for
 Jev or the Jev pilot. It must not silently alter normal
-Codex behavior. The active Codex model remains `gpt-5.6-terra` with its
+Codex behavior. The active Codex model remains `gpt-6-sol` with its
 configured reasoning effort.
 
 For a shadow-routing recommendation, send Jev only a compact, sanitized state:

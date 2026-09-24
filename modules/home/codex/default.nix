@@ -409,8 +409,8 @@
     exec ${pkgs.nodejs}/bin/npx -y @upstash/context7-mcp
   '';
   codexConfigText = ''
-    model = "gpt-5.6-terra"
-    model_reasoning_effort = "high"
+    model = "gpt-6-sol"
+    model_reasoning_effort = "medium"
     plan_mode_reasoning_effort = "xhigh"
     approval_policy = "on-request"
     sandbox_mode = "workspace-write"
@@ -428,9 +428,9 @@
 
     [features]
     goals = true
-    experimental_use_rmcp_client = true
     multi_agent = true
     plugins = true
+    remote_plugin = false
 
     ${skillConfigToml}
 

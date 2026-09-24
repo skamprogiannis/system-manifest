@@ -75,6 +75,8 @@ def main():
         seed = tomllib.load(f)
 
     merged = merge(seed, load_current_config(config_path))
+    if isinstance(merged.get("features"), dict):
+        merged["features"].pop("experimental_use_rmcp_client", None)
     atomic_write(config_path, tomli_w.dumps(merged))
     return 0
 
