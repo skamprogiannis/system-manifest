@@ -1916,6 +1916,7 @@ in {
           data = tomllib.load(f)
 
       assert data["model"] == "gpt-5.6-terra"
+      assert "memories" not in data["features"]
       assert data["projects"]["/home/stefan/system-manifest"]["trust_level"] == "trusted"
       assert data["mcp_servers"]["context7"] == {
           "command": "/nix/store/context7-mcp/bin/context7-mcp",
@@ -1938,6 +1939,8 @@ in {
       local_flag = true
       goals = false
       experimental_use_rmcp_client = true
+      memory_tool = true
+      memories = true
 
       [projects."/home/stefan/system-manifest"]
       trust_level = "untrusted"
@@ -1971,6 +1974,8 @@ in {
       assert data["features"]["goals"] is True
       assert data["features"]["local_flag"] is True
       assert "experimental_use_rmcp_client" not in data["features"]
+      assert "memory_tool" not in data["features"]
+      assert data["features"]["memories"] is True
       assert data["projects"]["/home/stefan/system-manifest"]["trust_level"] == "trusted"
       assert data["projects"]["/tmp/other"]["trust_level"] == "trusted"
       assert data["mcp_servers"]["context7"] == {
@@ -1984,6 +1989,33 @@ in {
           "path": "/home/stefan/.agents/skills/grilling",
           "enabled": True,
       }]
+      PY
+
+      ${codexConfigPython}/bin/python3 - ${../modules/home/codex/merge-config.py} "$codex_seed" "$TMPDIR/codex" <<'PY'
+      from pathlib import Path
+      import subprocess
+      import sys
+      import tomllib
+
+      import tomli_w
+
+      merger, seed, directory = sys.argv[1:]
+      cases = [
+          ({"memory_tool": True}, {"memories": True}),
+          ({"memory_tool": False}, {"memories": False}),
+          ({"memory_tool": True, "memories": False}, {"memories": False}),
+          ({"memory_tool": False, "memories": True}, {"memories": True}),
+          ({"memories": False}, {"memories": False}),
+          ({}, {}),
+      ]
+      for index, (features, expected) in enumerate(cases):
+          path = Path(directory) / f"memory-migration-{index}.toml"
+          path.write_text(tomli_w.dumps({"features": features}))
+          for _ in range(2):
+              subprocess.run([sys.executable, merger, seed, str(path)], check=True)
+              actual = tomllib.loads(path.read_text())["features"]
+              assert "memory_tool" not in actual, actual
+              assert {key: value for key, value in actual.items() if key == "memories"} == expected
       PY
 
       symlink_dir="$TMPDIR/codex/symlink"

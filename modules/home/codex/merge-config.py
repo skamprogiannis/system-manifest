@@ -63,6 +63,12 @@ def atomic_write(path, text):
             os.unlink(tmp_name)
 
 
+def migrate_memory_feature(config):
+    features = config.get("features")
+    if isinstance(features, dict) and "memory_tool" in features:
+        features.setdefault("memories", features.pop("memory_tool"))
+
+
 def main():
     if len(sys.argv) != 3:
         print("usage: merge-config.py SEED_CONFIG TARGET_CONFIG", file=sys.stderr)
@@ -77,6 +83,7 @@ def main():
     merged = merge(seed, load_current_config(config_path))
     if isinstance(merged.get("features"), dict):
         merged["features"].pop("experimental_use_rmcp_client", None)
+    migrate_memory_feature(merged)
     atomic_write(config_path, tomli_w.dumps(merged))
     return 0
 
