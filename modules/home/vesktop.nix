@@ -448,6 +448,8 @@ in {
   systemd.user.services.vesktop-palette-sync = {
     Unit = {
       Description = "Regenerate Vesktop theme from DMS palette";
+      # Preview bursts must not disable the watcher before the final restore.
+      StartLimitIntervalSec = 0;
     };
     Service = {
       Type = "oneshot";

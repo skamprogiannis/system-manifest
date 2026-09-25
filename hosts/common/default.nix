@@ -78,8 +78,8 @@
   programs.gpu-screen-recorder.enable = true;
   services.skwd-deck = {
     enable = true;
-    # skwd-walld invokes Matugen directly when wallpaper-driven theming is active.
-    extraPackages = [pkgs.matugen];
+    # The daemon invokes Matugen plus shell/setsid for integration reload hooks.
+    extraPackages = [pkgs.bash pkgs.matugen pkgs.util-linux];
   };
 
   # Allow the user to rebuild the system without a password

@@ -286,6 +286,8 @@ in {
     systemd.user.services.hyprland-dms-border-sync = {
       Unit = {
         Description = "Sync Hyprland borders from the DMS palette";
+        # A picker can publish many previews within systemd's default interval.
+        StartLimitIntervalSec = 0;
         After = ["hyprland-session.target"];
         PartOf = ["hyprland-session.target"];
       };
@@ -306,7 +308,7 @@ in {
       };
       Path = {
         # Watch the directory because DMS/skwd publish colors.json atomically via rename.
-        PathChanged = "%h/.cache/DankMaterialShell";
+        PathChanged = ["%h/.cache/DankMaterialShell" "%h/.local/state/DankMaterialShell/session.json"];
         Unit = "hyprland-dms-border-sync.service";
       };
       Install = {
