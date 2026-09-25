@@ -34,6 +34,7 @@ in {
       nativeBuildInputs = [
         pkgs.gnugrep
         pkgs.gnused
+        pkgs.procps
         pkgs.squashfsTools
       ];
     } ''
@@ -66,10 +67,9 @@ in {
       export XDG_RUNTIME_DIR="$TMPDIR/runtime"
       mkdir -p "$HOME" "$XDG_RUNTIME_DIR"
 
-      if [ ! -x "$desktop_home/bin/codex-code-mode-host" ]; then
-        echo "Expected the Codex package to provide an executable code-mode host." >&2
-        exit 1
-      fi
+      ${pkgs.python3}/bin/python3 ${./codex-package-smoke.py} \
+        "$desktop_home/bin/codex" \
+        "${pkgs.lib.removeSuffix "\n" (builtins.readFile ../modules/home/codex/version.txt)}"
 
       run_expect() {
         local expected_status="$1"

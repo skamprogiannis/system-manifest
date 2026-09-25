@@ -2,7 +2,9 @@
 from contextlib import redirect_stdout, redirect_stderr
 import io
 import json
+import os
 import subprocess
+import tempfile
 import threading
 import unittest
 from unittest.mock import patch
@@ -16,9 +18,19 @@ class ServiceGlue(unittest.TestCase):
     def result(self, text, code=0):
         return subprocess.CompletedProcess([], code, text)
 
+    @unittest.skipUnless(os.environ.get("CODEX_TEST_EXECUTABLE"), "configured Codex binary supplied by Nix check")
+    def test_preflight_matches_configured_codex_version(self):
+        with tempfile.TemporaryDirectory() as home:
+            result = subprocess.run(
+                [os.environ["CODEX_TEST_EXECUTABLE"], "--version"],
+                env={**preflight.environment(), "HOME": home, "CODEX_HOME": home},
+                capture_output=True, text=True, check=True, timeout=10,
+            )
+        self.assertEqual(preflight.EXPECTED_VERSION, result.stdout.strip())
+
     def test_preflight_accepts_expected_cli_and_chatgpt(self):
         with patch.object(preflight.subprocess, "run", side_effect=[
-            self.result("codex-cli 0.156.1\n"), self.result("Logged in using ChatGPT\n")
+            self.result(preflight.EXPECTED_VERSION + "\n"), self.result("Logged in using ChatGPT\n")
         ]) as run:
             preflight.check()
         self.assertEqual([c.args[0] for c in run.call_args_list],
@@ -34,7 +46,7 @@ class ServiceGlue(unittest.TestCase):
 
     def test_preflight_never_exposes_login_output(self):
         with patch.object(preflight.subprocess, "run", side_effect=[
-            self.result("codex-cli 0.156.1"), self.result("Logged in using an API key PRIVATE-CANARY")
+            self.result(preflight.EXPECTED_VERSION), self.result("Logged in using an API key PRIVATE-CANARY")
         ]):
             with self.assertRaises(preflight.PreflightError) as caught:
                 preflight.check()

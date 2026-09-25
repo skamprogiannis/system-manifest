@@ -4,7 +4,7 @@
   inputs,
   ...
 }: let
-  codexVersion = "0.157.0";
+  codexVersion = lib.removeSuffix "\n" (builtins.readFile ./version.txt);
   codexUpstream = pkgs.stdenvNoCC.mkDerivation {
     pname = "codex-cli";
     version = codexVersion;
@@ -16,8 +16,11 @@
     installPhase = ''
       mkdir -p "$out"
       tar -xzf "$src" -C "$out"
-      mv "$out/bin/codex" "$out/bin/upstream-codex"
+      test -f "$out/codex-package.json"
+      test -x "$out/bin/codex"
       test -x "$out/bin/codex-code-mode-host"
+      test -x "$out/codex-path/rg"
+      test -x "$out/codex-resources/bwrap"
     '';
     meta = with lib; {
       description = "OpenAI Codex CLI";
@@ -53,7 +56,7 @@
         fi
       fi
 
-      exec "$(dirname "$0")/upstream-codex" "$@"
+      exec ${codexUpstream}/bin/codex "$@"
       EOF
       chmod +x "$out/bin/codex"
     '';

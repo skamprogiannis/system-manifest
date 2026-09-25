@@ -27,6 +27,8 @@
 - **System Git:** Ensure `git` stays in `hosts/common/default.nix` under `environment.systemPackages` (required for Flakes).
 - **Git Push:** Always `git push` (or force push if history was rewritten) immediately after creating a new commit.
 - **Codex Instruction Source:** Repository-wide Codex defaults are edited in `modules/home/codex/instructions.md`, which is synced to `~/.codex/AGENTS.md` via Home Manager when you run `nixos-rebuild switch`.
+- **Codex Upgrades:** Update the shared version in `modules/home/codex/version.txt` and the release hash in `modules/home/codex/default.nix`. The Bannerlord adapter must use that same version: keep its packaged preflight expectation, tests, and README consistent on every Codex upgrade. Run the `bannerlord-codex` and `script-smoke` checks before deployment; do not leave a separate stale version pin in the adapter.
+- **Codex Package Layout:** Preserve the upstream release package, including `codex-package.json`, `bin/codex`, `bin/codex-code-mode-host`, `codex-path/rg`, and `codex-resources/bwrap`. Keep the direnv wrapper outside that package and execute its absolute `bin/codex` path. Verify actual daemon start, managed-package copy, version, and stop in isolated test state; `--version` and `exec` alone do not test interactive daemon startup.
 - **Squash Fix Chains:** If you need multiple attempts to fix something, squash them into a single commit before pushing (`git rebase -i` or `git commit --amend`). Avoid pushing fix→fix→fix chains that clutter history.
 
 - **Git Hygiene:** Always commit before `nixos-rebuild switch` so `nixos-rebuild list-generations` records a clean configuration revision for rollback and history tracking.

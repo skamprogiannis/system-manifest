@@ -1,10 +1,16 @@
 """Read-only CLI/auth checks. Never emit account status output or credentials."""
+from pathlib import Path
 import subprocess
 import sys
 
 from codex_runner import environment
 
-EXPECTED_VERSION = "codex-cli 0.156.1"
+# Nix installs the shared pin beside this module; source tests use its repository path.
+_version_file = Path(__file__).with_name("codex-version.txt")
+if not _version_file.is_file():
+    _version_file = Path(__file__).parent.parent / "codex" / "version.txt"
+CODEX_VERSION = _version_file.read_text(encoding="utf-8").strip()
+EXPECTED_VERSION = f"codex-cli {CODEX_VERSION}"
 
 
 class PreflightError(Exception):
@@ -13,7 +19,7 @@ class PreflightError(Exception):
 
 def check(executable="codex"):
     for args, expected, message in (
-        (["--version"], EXPECTED_VERSION, "Codex CLI 0.156.1 is required for this adapter."),
+        (["--version"], EXPECTED_VERSION, f"Codex CLI {CODEX_VERSION} is required for this adapter."),
         (["login", "status"], "Logged in using ChatGPT",
          "Sign into Codex with your ChatGPT account first; API-key authentication is not accepted."),
     ):

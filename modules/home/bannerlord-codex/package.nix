@@ -11,6 +11,7 @@ runCommand "bannerlord-codex-runtime-0.1" {
   cp ${./model-instructions.txt} "$out/lib/model-instructions.txt"
   cp ${./response.schema.json} "$out/lib/response.schema.json"
   cp ${./preflight.py} "$out/lib/preflight.py"
+  cp ${../codex/version.txt} "$out/lib/codex-version.txt"
   cp ${./control.py} "$out/lib/control.py"
   python3 -m py_compile "$out"/lib/*.py
 ''
