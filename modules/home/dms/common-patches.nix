@@ -39,6 +39,19 @@
     ],
   '';
 
+  lockedIdleWake = ''
+    root / "Services/IdleService.qml": [
+        (
+            '    // Wakes monitors powered off by the "power off monitors on lock" path.',
+            '    // Locking rearms the normal idle listeners and can lose their wake transition.\n    // Keep seat-level wake active for every locked monitor-off path, including idle.',
+        ),
+        (
+            '        enabled: root.enabled && root.isShellLocked && root.monitorsOff && (SettingsData.lockScreenPowerOffMonitorsOnLock || root.lockPowerOffRequested)',
+            '        enabled: root.enabled && root.isShellLocked && root.monitorsOff',
+        ),
+    ],
+  '';
+
   commonLists = ''
     root / "Common/settings/Lists.qml": [
         (
@@ -200,6 +213,7 @@ in {
     ${calendarOverviewCard}
     ${appSearchService}
     ${launcherSourceClassifier}
+    ${lockedIdleWake}
     ${commonLists}
     ${clockWidget}
     ${wallpaperCyclingExternalSet}

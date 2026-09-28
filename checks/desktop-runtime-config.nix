@@ -91,6 +91,20 @@ in {
       test -x ${desktopGreeterPackage}/bin/dms-greeter
       assert_file_not_contains ${desktopDmsPackage}/share/quickshell/dms/Modals/DankLauncherV2/DankLauncherV2ModalStandalone.qml 'sourceRect.antialiasing'
       assert_file_not_contains ${desktopDmsPackage}/share/quickshell/dms/Modals/DankLauncherV2/DankLauncherV2ModalStandalone.qml 'sourceRect.smooth'
+      # Guard the packaged wake listener; real input/session-lock behavior
+      # still requires a monitor-off-then-lock trial on hardware.
+      lock_wake_monitor="$TMPDIR/lock-wake-monitor.qml"
+      sed -n '/id: lockWakeMonitor/,/^    }/p' \
+        ${desktopDmsPackage}/share/quickshell/dms/Services/IdleService.qml > "$lock_wake_monitor"
+      if ! grep -Fxq '        enabled: root.enabled && root.isShellLocked && root.monitorsOff' "$lock_wake_monitor"; then
+        echo "Expected locked monitor wake for every monitor-off path, including automatic idle." >&2
+        cat "$lock_wake_monitor" >&2
+        exit 1
+      fi
+      assert_file_contains "$lock_wake_monitor" 'timeout: 1'
+      assert_file_contains "$lock_wake_monitor" 'respectInhibitors: false'
+      assert_file_contains "$lock_wake_monitor" 'if (!isIdle && root.monitorsOff)'
+      assert_file_contains "$lock_wake_monitor" 'root.requestMonitorOn();'
       for dms_package in ${desktopDmsPackage} ${usbDmsPackage}; do
         niri_service="$dms_package/share/quickshell/dms/Services/NiriService.qml"
         if ! grep -Fq 'readonly property string screenshotsDir: Paths.strip(StandardPaths.writableLocation(StandardPaths.PicturesLocation)) + "/screenshots"' "$niri_service"; then
