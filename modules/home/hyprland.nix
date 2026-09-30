@@ -534,7 +534,7 @@ in {
             (bind (modKey "SHIFT + f") (fullscreen "maximized"))
             (execBind (modKey "d") "dms ipc call spotlight toggle")
             (execBind (modKey "n") "dms ipc call notepad toggle")
-            (execBind (modKey "SHIFT + v") "dms ipc call clipboard toggle")
+            (execBind (modKey "y") "dms ipc call clipboard toggle")
             (bind (modKey "p") (lua "hl.dsp.window.pseudo()"))
             (bind (modKey "backslash") (lua ''hl.dsp.layout("togglesplit")''))
             (bind (modKey "g") (lua "hl.dsp.group.toggle()"))
