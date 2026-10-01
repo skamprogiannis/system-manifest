@@ -19,6 +19,60 @@ local function append_content(content, part)
   end
 end
 
+local function compact_dividers(part)
+  local code, remove = {}, {}
+  for _, block in ipairs(part.code_blocks) do
+    for row = block.start_line, block.end_line do
+      code[row] = true
+    end
+  end
+  -- Full-document Markdown margins are unnecessary around hover dividers.
+  -- Identify rendered rules by their highlight, preserving literal code rows.
+  for _, highlight in ipairs(part.highlights) do
+    local row = highlight.line
+    local line = part.lines[row + 1]
+    if not code[row] and line:find('─', 1, true) and line:gsub('─', ''):match('^%s*$') then
+      for _, group in ipairs(highlight.groups) do
+        if group.hl == 'FloatBorder' then
+          for _, step in ipairs({ -1, 1 }) do
+            local adjacent = row + step
+            while
+              part.lines[adjacent + 1]
+              and part.lines[adjacent + 1]:match('^%s*$')
+              and not code[adjacent]
+            do
+              remove[adjacent] = true
+              adjacent = adjacent + step
+            end
+          end
+        end
+      end
+    end
+  end
+  local lines, rows = {}, {}
+  for index, line in ipairs(part.lines) do
+    if not remove[index - 1] then
+      rows[index - 1] = #lines
+      table.insert(lines, line)
+    end
+  end
+  part.lines = lines
+  for _, key in ipairs({ 'highlights', 'link_metadata' }) do
+    local entries = {}
+    for _, entry in ipairs(part[key]) do
+      if rows[entry.line] ~= nil then
+        entry.line = rows[entry.line]
+        table.insert(entries, entry)
+      end
+    end
+    part[key] = entries
+  end
+  for _, block in ipairs(part.code_blocks) do
+    block.start_line, block.end_line = rows[block.start_line], rows[block.end_line]
+  end
+  return part
+end
+
 local function render(results, width)
   local Builder = require('md-render.content_builder').ContentBuilder
   local content = { lines = {}, highlights = {}, link_metadata = {}, code_blocks = {} }
@@ -40,7 +94,7 @@ local function render(results, width)
           -- Scaled headings reserve extra rows for terminal glyph painting;
           -- a documentation hover uses ordinary text cells.
           builder:render_document(lines, { max_width = width, indent = '', text_scale = false })
-          append_content(content, builder:result())
+          append_content(content, compact_dividers(builder:result()))
         end
       end
     end
