@@ -10,9 +10,12 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # Refresh editor packages independently of the desktop package set.
+    neovim-nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+
     nixvim = {
       url = "github:nix-community/nixvim";
-      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.nixpkgs.follows = "neovim-nixpkgs";
     };
 
     catppuccin = {

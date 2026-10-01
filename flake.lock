@@ -200,11 +200,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1787559586,
-        "narHash": "sha256-onL0VLf9vPllmT0H/OlURIU5r5t5WIEl7t4tVNKT0Nw=",
+        "lastModified": 1788450739,
+        "narHash": "sha256-glZLQlzIn1fXH6PazR2iUmTo7kzzyYSshrWhLS9TqCU=",
         "owner": "hercules-ci",
         "repo": "flake-parts",
-        "rev": "9d0d87172c374f89da73c1cfe6d81ae62feac1f1",
+        "rev": "31729ca8cbdb4fa927b34e5f4353e6a83f39e993",
         "type": "github"
       },
       "original": {
@@ -647,6 +647,22 @@
         "type": "github"
       }
     },
+    "neovim-nixpkgs": {
+      "locked": {
+        "lastModified": 1790689126,
+        "narHash": "sha256-ilerN1WLSvF+HMjziC/Wv99J5y02maDH+6hZPwsORKg=",
+        "owner": "nixos",
+        "repo": "nixpkgs",
+        "rev": "b4fd65b198c599cbe814fcb9f42d25d021595ec9",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nixos",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1787424095,
@@ -676,52 +692,20 @@
         "type": "github"
       }
     },
-    "nixpkgs_3": {
-      "locked": {
-        "lastModified": 1788316716,
-        "narHash": "sha256-bc7rSpXIdn9QWGNqfWcPZWOhEVF8NoeAZkWq0XWnf/k=",
-        "owner": "nixos",
-        "repo": "nixpkgs",
-        "rev": "3ed67ec0a4d3c7ab4ae1f04f8ee8df07bfa506a2",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nixos",
-        "ref": "nixos-unstable",
-        "repo": "nixpkgs",
-        "type": "github"
-      }
-    },
-    "nixpkgs_4": {
-      "locked": {
-        "lastModified": 1788316716,
-        "narHash": "sha256-bc7rSpXIdn9QWGNqfWcPZWOhEVF8NoeAZkWq0XWnf/k=",
-        "owner": "nixos",
-        "repo": "nixpkgs",
-        "rev": "3ed67ec0a4d3c7ab4ae1f04f8ee8df07bfa506a2",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nixos",
-        "ref": "nixos-unstable",
-        "repo": "nixpkgs",
-        "type": "github"
-      }
-    },
     "nixvim": {
       "inputs": {
         "flake-parts": "flake-parts",
         "nixpkgs": [
-          "nixpkgs"
+          "neovim-nixpkgs"
         ],
         "systems": "systems_3"
       },
       "locked": {
-        "lastModified": 1788190018,
-        "narHash": "sha256-59BAfH0txPAZrPBF4QJqwvUWppD+ICrcjA1LZAmPnrQ=",
+        "lastModified": 1790541651,
+        "narHash": "sha256-/496IQz8qNWHHLnc3Zvr0l4uxJ34igNhJhn7ZKAefFk=",
         "owner": "nix-community",
         "repo": "nixvim",
-        "rev": "41844750e55f17b1385d5b09ca7ade5f11f49506",
+        "rev": "5980a626794486abad69fca7667f9c11dfbc3bd7",
         "type": "github"
       },
       "original": {
@@ -785,26 +769,6 @@
         "type": "github"
       }
     },
-    "quickshell": {
-      "inputs": {
-        "nixpkgs": [
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1787994703,
-        "narHash": "sha256-6SUZyyALo19heYPa/Xmu2H4zV+wvdfVX4fTcqbgHRnI=",
-        "owner": "quickshell-mirror",
-        "repo": "quickshell",
-        "rev": "2d3b3e9c70ef380dff751b61d334dc88df016c29",
-        "type": "github"
-      },
-      "original": {
-        "owner": "quickshell-mirror",
-        "repo": "quickshell",
-        "type": "github"
-      }
-    },
     "root": {
       "inputs": {
         "catppuccin": "catppuccin",
@@ -817,6 +781,7 @@
         "impeccable": "impeccable",
         "jev-mcp": "jev-mcp",
         "mattpocock-skills": "mattpocock-skills",
+        "neovim-nixpkgs": "neovim-nixpkgs",
         "nixpkgs": "nixpkgs_2",
         "nixvim": "nixvim",
         "pearpass-app-desktop": "pearpass-app-desktop",
@@ -826,24 +791,6 @@
         "trailofbits-skills": "trailofbits-skills",
         "typesafe-skills": "typesafe-skills",
         "visual-explainer": "visual-explainer"
-      }
-    },
-    "skwd-daemon": {
-      "inputs": {
-        "nixpkgs": "nixpkgs_4"
-      },
-      "locked": {
-        "lastModified": 1787519816,
-        "narHash": "sha256-MqJbWqIJg33UZYbKJ04mpFiYVSCkmWnV2XeQl0yzdhk=",
-        "owner": "liixini",
-        "repo": "skwd-daemon",
-        "rev": "d5f46c462c2a5270a915a85cd68fc00e34c05c8e",
-        "type": "github"
-      },
-      "original": {
-        "owner": "liixini",
-        "repo": "skwd-daemon",
-        "type": "github"
       }
     },
     "skwd-wall": {

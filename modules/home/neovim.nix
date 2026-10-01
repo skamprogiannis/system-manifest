@@ -1,19 +1,21 @@
 {
   config,
   lib,
+  inputs,
   pkgs,
   ...
 }: let
-  hover-docs = pkgs.vimUtils.buildVimPlugin {
+  editorPkgs = import ./neovim/packages.nix {inherit inputs pkgs;};
+  hover-docs = editorPkgs.vimUtils.buildVimPlugin {
     pname = "hover-docs";
     version = "1";
-    src = pkgs.writeTextDir "lua/hover_docs.lua" (builtins.readFile ./neovim/hover.lua);
+    src = editorPkgs.writeTextDir "lua/hover_docs.lua" (builtins.readFile ./neovim/hover.lua);
     dependencies = [md-render];
   };
-  md-render = pkgs.vimUtils.buildVimPlugin {
+  md-render = editorPkgs.vimUtils.buildVimPlugin {
     pname = "md-render.nvim";
     version = "2026-10-01";
-    src = pkgs.fetchFromGitHub {
+    src = editorPkgs.fetchFromGitHub {
       owner = "delphinus";
       repo = "md-render.nvim";
       rev = "cb79d5a1c4cd929fe0144c4d75be50a1ad4c2c74";
@@ -23,7 +25,7 @@
 in {
   programs.nixvim = {
     enable = true;
-    nixpkgs.source = pkgs.path;
+    nixpkgs.pkgs = editorPkgs;
     defaultEditor = true;
     viAlias = true;
     vimAlias = true;
@@ -243,6 +245,8 @@ in {
       vim.api.nvim_set_hl(0, "BlinkCmpDocBorder", { link = "FloatBorder" })
       vim.api.nvim_set_hl(0, "BlinkCmpSignatureHelp", { link = "NormalFloat" })
       vim.api.nvim_set_hl(0, "BlinkCmpSignatureHelpBorder", { link = "FloatBorder" })
+
+      require("nvim-treesitter-textobjects").setup({ select = { lookahead = true } })
 
       vim.o.winblend = 0
       if vim.fn.exists("+winborder") == 1 then
@@ -579,15 +583,9 @@ in {
 
       treesitter = {
         enable = true;
-        settings = {
-          ensure_installed = "all";
-          highlight.enable = true;
-        };
+        highlight.enable = true;
       };
-      treesitter-textobjects = {
-        enable = true;
-        settings.select.lookahead = true;
-      };
+      treesitter-textobjects.enable = true;
       snacks = {
         enable = true;
         settings = {
@@ -608,7 +606,7 @@ in {
       };
     };
 
-    extraPlugins = with pkgs.vimPlugins; [
+    extraPlugins = with editorPkgs.vimPlugins; [
       vim-be-good
       git-worktree-nvim
       md-render

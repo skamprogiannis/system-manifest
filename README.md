@@ -38,6 +38,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 | `hyprland` | `github:hyprwm/Hyprland` | nixpkgs lags behind Hyprland releases; tracked directly for current compositor blur, rules, and Lua-config behavior |
 | `ghostty` | `github:ghostty-org/ghostty` | Stays on latest release; uses `ghostty.cachix.org` for fast installs |
 | `home-manager` | `github:nix-community/home-manager` | Tracks nixpkgs-unstable |
+| `neovim-nixpkgs` | `github:nixos/nixpkgs/nixos-unstable` | Editor and plugin packages can be refreshed independently of desktop packages |
 | `nixvim` | `github:nix-community/nixvim` | Full Neovim config in Nix |
 | `spicetify-nix` | `github:Gerg-L/spicetify-nix` | Declarative Spicetify wrapper for the themed Spotify GUI |
 | `skwd-wall` | `github:liixini/skwd-wall/nix` | skwd-wall v2 wallpaper selector/engine, daemon, and semantic model suite |
