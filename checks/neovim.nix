@@ -130,54 +130,16 @@ in {
       vim.cmd("cquit")
     end
 
-    local ok, pretty_hover = pcall(require, "pretty_hover")
-    if not ok then
-      io.stderr:write("pretty_hover must be available for LSP hover rendering\n")
-      vim.cmd("cquit")
-    end
-
-    local hover_config = pretty_hover.get_config()
-    if hover_config.border ~= "rounded" or hover_config.wrap ~= true or hover_config.toggle ~= false then
-      io.stderr:write("pretty_hover configuration regressed\n")
-      vim.cmd("cquit")
-    end
-
-    local hover_map = vim.fn.maparg("K", "n", false, true)
-    if type(hover_map) ~= "table" or not hover_map.rhs or not hover_map.rhs:find("pretty_hover", 1, true) then
-      io.stderr:write("K must use pretty_hover for LSP hover rendering\n")
-      vim.cmd("cquit")
-    end
-
     local diagnostic_config = vim.diagnostic.config()
     if type(diagnostic_config.float) ~= "table" or diagnostic_config.float.focusable ~= true then
       io.stderr:write("Neovim diagnostic floats must be focusable\n")
       vim.cmd("cquit")
     end
 
-    local parsed = require("pretty_hover.parser").parse({ "@brief Hover docs keep readable prose." })
-    if type(parsed.text) ~= "table" or #parsed.text == 0 then
-      io.stderr:write("pretty_hover parser returned no hover text\n")
-      vim.cmd("cquit")
-    end
-
-    local _, hover_win = vim.lsp.util.open_floating_preview(
-      parsed.text,
-      "markdown",
-      { focusable = true, wrap = hover_config.wrap, border = hover_config.border }
-    )
-
-    if not vim.api.nvim_win_is_valid(hover_win) then
-      io.stderr:write("Neovim LSP hover float was not created\n")
-      vim.cmd("cquit")
-    end
-
-    if not vim.wo[hover_win].wrap then
-      io.stderr:write("Neovim LSP hover floats must wrap readable prose\n")
-      vim.cmd("cquit")
-    end
-
     vim.cmd("qa!")
     LUA
+
+    cp ${./neovim-hover.lua} check-hover.lua
 
     cat > check-web-tooling.lua <<'LUA'
     local function fail(message)
@@ -442,6 +404,10 @@ in {
     ${pkgs.coreutils}/bin/timeout 20s \
       ${desktopHome}/bin/nvim --headless -n -i NONE -u ${desktopNeovimInitFile} \
       +"lua dofile('$PWD/check-lsp-health.lua')"
+
+    ${pkgs.coreutils}/bin/timeout 20s \
+      ${desktopHome}/bin/nvim --headless -n -i NONE --cmd 'set columns=97 lines=40' -u ${desktopNeovimInitFile} \
+      +"lua local ok, err = pcall(dofile, '$PWD/check-hover.lua'); if not ok then vim.api.nvim_err_writeln(err); vim.cmd('cquit'); end"
 
     ${pkgs.coreutils}/bin/timeout 20s \
       ${desktopHome}/bin/nvim --headless -n -i NONE -u ${desktopNeovimInitFile} \

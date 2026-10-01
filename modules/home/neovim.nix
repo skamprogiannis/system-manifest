@@ -4,14 +4,20 @@
   pkgs,
   ...
 }: let
-  pretty-hover = pkgs.vimUtils.buildVimPlugin {
-    pname = "pretty-hover";
-    version = "2026-05-22";
+  hover-docs = pkgs.vimUtils.buildVimPlugin {
+    pname = "hover-docs";
+    version = "1";
+    src = pkgs.writeTextDir "lua/hover_docs.lua" (builtins.readFile ./neovim/hover.lua);
+    dependencies = [md-render];
+  };
+  md-render = pkgs.vimUtils.buildVimPlugin {
+    pname = "md-render.nvim";
+    version = "2026-10-01";
     src = pkgs.fetchFromGitHub {
-      owner = "Fildo7525";
-      repo = "pretty_hover";
-      rev = "934df974ef6158b100fe910e8556e6c4a66614c2";
-      sha256 = "1yqpvqmn71b4jga1b9sf0h4rknydv1xsgqqzyqg7famxg952rg72";
+      owner = "delphinus";
+      repo = "md-render.nvim";
+      rev = "cb79d5a1c4cd929fe0144c4d75be50a1ad4c2c74";
+      hash = "sha256-+b/PNIz9sVX1AyLR0BDvL2clfqNSzXpiTfKxo/cTGGE=";
     };
   };
 in {
@@ -242,13 +248,6 @@ in {
       if vim.fn.exists("+winborder") == 1 then
         vim.o.winborder = "rounded"
       end
-
-      require("pretty_hover").setup({
-        border = "rounded",
-        wrap = true,
-        toggle = false,
-      })
-
 
       do
         local clang_format = "${pkgs.clang-tools}/bin/clang-format"
@@ -612,7 +611,8 @@ in {
     extraPlugins = with pkgs.vimPlugins; [
       vim-be-good
       git-worktree-nvim
-      pretty-hover
+      md-render
+      hover-docs
     ];
 
     keymaps = [
@@ -640,7 +640,7 @@ in {
       {
         mode = "n";
         key = "K";
-        action = "<cmd>lua require('pretty_hover').hover()<CR>";
+        action = "<cmd>lua require('hover_docs').hover()<CR>";
         options.desc = "LSP hover";
       }
       {
