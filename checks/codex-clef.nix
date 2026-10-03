@@ -6,7 +6,7 @@
   version = pkgs.lib.removeSuffix "\n" (builtins.readFile ../modules/home/codex/version.txt);
   python = pkgs.python3.withPackages (ps: [ps.jsonschema ps.pillow ps.tomli-w]);
 in {
-  codex-clef = pkgs.runCommand "codex-clef-check" {nativeBuildInputs = [python];} ''
+  codex-clef = pkgs.runCommand "codex-clef-check" {nativeBuildInputs = [python pkgs.git pkgs.procps];} ''
     export HOME="$TMPDIR/home"
     export XDG_STATE_HOME="$TMPDIR/state"
     export XDG_CONFIG_HOME="$TMPDIR/config"
@@ -22,6 +22,7 @@ in {
     PY
     # Match the real installed package, not only a mocked protocol transport.
     python3 ${./codex-package-smoke.py} ${codex}/bin/codex ${version}
+    python3 ${./codex-clef-launch-smoke.py} ${codex}/bin/codex ${clef}/bin/codex-auto
     touch "$out"
   '';
 }

@@ -3,6 +3,7 @@
 import argparse
 import base64
 from collections import Counter
+from dataclasses import dataclass
 import io
 import json
 import os
@@ -67,20 +68,171 @@ def bounded_json(path: Path, limit=24000):
         raise ClefError("invalid_json") from None
 
 
+# Pinned native CLI: codex-rs/{cli/src/main.rs,tui/src/cli.rs,utils/cli/src/shared_options.rs}.
+# Unknown options disable routing rather than allowing their values to become task context.
+_NATIVE_COMMANDS = {
+    "agents",
+    "exec",
+    "e",
+    "review",
+    "login",
+    "logout",
+    "mcp",
+    "plugin",
+    "app-server",
+    "remote-control",
+    "app",
+    "completion",
+    "update",
+    "doctor",
+    "sandbox",
+    "debug",
+    "execpolicy",
+    "apply",
+    "a",
+    "resume",
+    "queue",
+    "archive",
+    "delete",
+    "migrate-rollouts",
+    "unarchive",
+    "fork",
+    "cloud",
+    "cloud-tasks",
+    "responses-api-proxy",
+    "stdio-to-uds",
+    "exec-server",
+    "features",
+    "help",
+    "tcp-tunnel",
+}
+_NATIVE_VALUES = {
+    "--config",
+    "--model",
+    "--profile",
+    "--cd",
+    "--image",
+    "--sandbox",
+    "--ask-for-approval",
+    "--enable",
+    "--disable",
+    "--remote",
+    "--remote-auth-token-env",
+    "--local-provider",
+    "--add-dir",
+}
+_NATIVE_SHORT_VALUES = {
+    "-c": "--config",
+    "-m": "--model",
+    "-p": "--profile",
+    "-C": "--cd",
+    "-i": "--image",
+    "-s": "--sandbox",
+    "-a": "--ask-for-approval",
+}
+_NATIVE_FLAGS = {
+    "--strict-config",
+    "--oss",
+    "--approve-for-me",
+    "--not-so-yolo",
+    "--yolo",
+    "--dangerously-bypass-approvals-and-sandbox",
+    "--dangerously-bypass-hook-trust",
+    "--worktree",
+    "--search",
+    "--no-alt-screen",
+    "--no-daemon",
+    "--last",
+    "--all",
+    "--include-non-interactive",
+}
+
+
+@dataclass(frozen=True)
+class LaunchContext:
+    interactive: bool
+    prompt: str | None
+    explicit: bool
+    no_daemon: bool
+
+
+def launch_context(arguments: list[str]) -> LaunchContext:
+    """Identify eligible local interactive context without rewriting native arguments."""
+    command = None
+    positionals = []
+    flags = set()
+    explicit = False
+    remote = False
+    known = True
+    index = 0
+    while index < len(arguments):
+        token = arguments[index]
+        index += 1
+        if token == "--":
+            positionals.extend(arguments[index:])
+            break
+        if token in {"-h", "--help", "-V", "--version"}:
+            return LaunchContext(False, None, explicit, False)
+        if token in _NATIVE_FLAGS:
+            flags.add(token)
+            explicit |= token == "--oss"
+            continue
+        option, separator, value = token.partition("=")
+        if token.startswith("-") and not token.startswith("--"):
+            option = _NATIVE_SHORT_VALUES.get(token[:2], token)
+            value = token[2:].removeprefix("=")
+            separator = bool(value)
+        if option in _NATIVE_VALUES:
+            if not separator:
+                if index == len(arguments):
+                    known = False
+                    continue
+                value = arguments[index]
+                index += 1
+            if option == "--remote":
+                remote = True
+            if option in {"--model", "--profile", "--local-provider"}:
+                explicit = True
+            elif option == "--config":
+                key = value.partition("=")[0].strip()
+                explicit |= bool(
+                    re.fullmatch(
+                        r"(?:[\w-]+\.)*(?:model|model_reasoning_effort|plan_mode_reasoning_effort)",
+                        key,
+                    )
+                )
+            elif option == "--image" and not separator:
+                # Only separated image options consume additional values before the next option.
+                while index < len(arguments) and not arguments[index].startswith("-"):
+                    index += 1
+            continue
+        if token.startswith("-"):
+            known = False
+            continue
+        if command is None and not positionals and token in _NATIVE_COMMANDS:
+            command = token
+            if command not in {"resume", "fork"}:
+                return LaunchContext(False, None, explicit, False)
+        else:
+            positionals.append(token)
+    # Native Codex rejects --no-daemon with --remote; local hooks cannot opt in a remote server.
+    if remote:
+        return LaunchContext(False, None, explicit, False)
+    prompt = None
+    if command in {"resume", "fork"}:
+        # With --last, native Codex reinterprets the first positional as a prompt.
+        expected = 1 if "--last" in flags else 2
+        if len(positionals) == expected:
+            prompt = positionals[-1]
+    elif len(positionals) == 1:
+        prompt = positionals[0]
+    if not known or not prompt or not prompt.strip():
+        prompt = None
+    return LaunchContext(True, prompt, explicit, "--no-daemon" in flags)
+
+
 def explicit_settings(arguments: list[str]) -> bool:
-    for value in arguments:
-        if value in {"-m", "--model", "-p", "--profile"} or value.startswith(
-            ("--model=", "--profile=")
-        ):
-            return True
-        if value.startswith(("-m", "-p")) and not value.startswith("--"):
-            return True
-        if re.search(
-            r"(?:^|[ .])(?:model|model_reasoning_effort|plan_mode_reasoning_effort)\s*=",
-            value.removeprefix("-c"),
-        ):
-            return True
-    return False
+    return launch_context(arguments).explicit
 
 
 def launch_arguments(arguments: list[str], selected: dict | None) -> list[str]:
@@ -114,6 +266,7 @@ def doctor(store: Store, policy: dict) -> dict:
         "credentials": credential_status,
         "catalog": catalog_status,
         "approval_mode": policy["approval_mode"],
+        "automatic_approval_supported": False,
         "completion_mode": policy["completion_mode"],
         "state_directory": str(store.root),
         "log": str(store.root / "decisions.jsonl"),
@@ -263,12 +416,16 @@ def run(args) -> object:
         )
         if args.brief_file and not args.acknowledge_upload:
             raise ClefError("brief_requires_upload_consent")
+        context = launch_context(arguments)
+        if not context.interactive:
+            os.execvpe(args.codex, [args.codex, *arguments], dict(os.environ))
         selected = None
         try:
+            # Refresh also primes the cache for later subagent routing without a startup task.
             available = catalog.refresh(args.codex, policy, store)
-            if not explicit_settings(arguments):
+            if not context.explicit and (context.prompt or args.brief_file):
                 state = {
-                    "task_signals": signals(" ".join(arguments)),
+                    "task_signals": signals(context.prompt or ""),
                     "context": "coarse_metadata_only",
                 }
                 if args.brief_file:
@@ -309,6 +466,7 @@ def run(args) -> object:
             args.codex,
             [
                 args.codex,
+                *([] if context.no_daemon else ["--no-daemon"]),
                 *launch_arguments(
                     arguments, selected if args.mode == "apply" else None
                 ),

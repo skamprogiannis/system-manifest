@@ -99,10 +99,14 @@ effort, while subsequent main-thread TUI messages retain Codex's own settings.
 Native hooks can independently route named subagents, recommend skills and checks,
 flag repeated failure signals, and suggest one bounded completion review.
 
-Plain `codex` remains available without active Clef hooks. Approval recommendations
-start in **shadow mode**, and completion suggestions are advisory. Unknown,
-sensitive, privileged or destructive requests remain with the user. Required tests
-and independent code review are not replaced by model confidence.
+Bare startup and resume preserve their model/effort settings; main routing needs
+a task prompt or explicitly approved brief. Assisted interactive sessions run
+independently of the shared daemon, so plain `codex` keeps its hooks inactive.
+Approval recommendations start in **shadow mode** and never automatically approve
+native requests; optional enforcement applies only explicit installed denials.
+Completion suggestions are advisory. Unknown, sensitive, privileged or destructive
+requests remain with the user. Required tests and independent code review are not
+replaced by model confidence.
 
 Install a scoped Workers AI token locally, review the hooks through Codex's `/hooks`,
 and use `codex-clef status` to check credentials, model-catalog state and log paths.

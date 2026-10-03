@@ -53,9 +53,11 @@ causes conservative routing fallback. Read and trust the managed commands throug
 Codex's `/hooks` interface before relying on hooks. The module does not forge hook
 trust or bypass approval settings.
 
-Use `codex-auto -- "task"` to apply valid model/effort choices. Plain `codex`
-keeps hooks inert. `--mode shadow` leaves main/subagent model settings untouched
-while recording recommendations; approval behavior is independently controlled
+Use `codex-auto -- "task"` to apply valid model/effort choices. Assisted local
+interactive launches use native `--no-daemon` execution so hook activation belongs
+to that invocation. Plain `codex` keeps hooks inert, regardless of launch order.
+`--mode shadow` leaves main/subagent model settings untouched while recording
+recommendations; approval behavior is independently controlled
 by the installed Nix policy, not the launch-mode flag.
 
 ## Routing and roles
@@ -67,9 +69,27 @@ starting preferences, not measured benchmarks. Unavailable or hidden models are
 not candidates. New model IDs require a reviewed allowlist change; newly supported
 efforts for allowed models are discovered automatically.
 
-Explicit `--model`, `--profile`, and model/effort `-c` overrides bypass main routing.
+Bare `codex-auto` preserves the normal configured model and effort. Bare resume
+commands preserve the resumed session's settings while enabling Clef hooks:
+
+```bash
+codex-auto resume
+codex-auto resume --last
+codex-auto resume SESSION_ID
+```
+
+Main routing requires a nonempty task prompt or an explicitly authorized brief.
+Resume selectors and option values are not task context. A resume with a new
+prompt can route from that prompt; it does not upload the saved conversation.
+Catalog discovery may still prime subagent routing on a bare launch. Remote and
+noninteractive native commands pass through without local Clef activation or routing.
+
+Explicit `--model`, `--profile`, and model/effort `-c` or `--config` overrides,
+including compact `--config=key=value` forms, bypass main routing.
 Native agent-spawn arguments with an explicit model or effort, unknown roles, or
-forked/inlined context are not rewritten. Supported named roles are explorer,
+forked/inlined context are not rewritten. Native V2 roles route only with explicit
+`fork_turns = "none"`; omitted V2 fork settings inherit all history and abstain.
+Supported named roles are explorer,
 researcher, worker, architect, plan-reviewer and security-reviewer. All except
 worker are read-only, and none pins model/effort. The existing plan reviewer
 remains interactive; architect supplies a bounded noninteractive critique.
@@ -101,26 +121,24 @@ Malformed input, missing context/credentials, timeouts, quota exhaustion and
 unrecognized actions abstain. This does not invoke Sol or Astra merely to call
 Clef. Nor does it replace Codex's built-in auto-review model through a config alias.
 
-Only an extremely narrow, immutable grammar is eligible for semantic review:
-pinned Git metadata commands within a trusted root, with pager, optional locks,
-fsmonitor, untracked cache, external diff and textconv controlled. Arbitrary shell
-commands, tests, network grants, external writes, credential operations, deployment,
-sudo and disk/USB operations are not auto-approved. Command labels/descriptions
-provided by an agent are not evidence of authorization. Eligibility is computed
-locally and only fixed categories are sent to Cloudflare.
+The native 0.160.0 permission contract does not expose a trustworthy execution
+directory and complete requested permissions. Its `cwd` can be the session
+directory even when a command uses another `workdir`, and a network grant can
+carry the same Bash command as a shell escalation. Command descriptions do not
+establish authorization. Therefore ordinary native requests always remain with
+the normal user approval flow, regardless of the classifier's confidence.
 
-After separately reviewing real shadow examples, a human may change Home Manager:
+A narrow pinned-Git grammar is retained only for advisory triage under configured
+session roots. Even `git diff --no-ext-diff --no-textconv` can execute configured
+clean filters, so this grammar does not certify a metadata-only operation. Only
+fixed categories and the fact that execution context is unverified go to Clef.
 
-```nix
-system_manifest.codex.clef.approvalMode = "enforce";
-```
-
-This promotes only the installed exact grammar, not arbitrary high-confidence
-commands. Decisions are per-request; no session-wide permission is granted. The
-probability/margin thresholds are conservative starting gates, **not calibration
-claims**. A compromised user account or mutable environment outside Codex's
-sandbox is not made safe by this classifier. Agent tasks must not modify or
-promote their own policy.
+`approvalMode = "enforce"` enforces only exact commands in the immutable installed
+`denied_commands` list; it never applies classifier allow or deny suggestions.
+The default list is empty. `codex-clef status` reports
+`automatic_approval_supported: false`. There is no automatic promotion from
+shadow examples, probability thresholds or confidence. Agent tasks must not
+modify the installed policy or expand permissions.
 
 ## Workflow and completion support
 
@@ -194,7 +212,8 @@ nixos-rebuild dry-build --flake .#desktop
 ```
 
 The check uses offline provider fixtures, upstream 0.160.0 hook output schemas,
-concurrent state tests, migration tests, and real packaged daemon start/copy/stop.
+concurrent state tests, migration tests, real packaged daemon start/copy/stop,
+and installed launcher isolation in both modes and daemon startup orders.
 It does not certify live Clef routing quality or account-specific model access.
 Perform a bounded, non-destructive live smoke test after configuring the runtime
 key and trusting hooks. A package upgrade needs refreshed hook contract fixtures
@@ -203,9 +222,11 @@ when the native contract changes.
 The config migration removes only retired Jev/TypeSafe entries and preserves
 unrelated MCP servers, user hook handlers, credentials and historical logs. The
 hook merger replaces only its own Nix-store command handlers and is idempotent.
-`codex-auto` is never installed as a transparent replacement for `codex`. Returning
-to plain `codex` disables the decision hooks immediately. No new system daemon,
-background monitoring, custom inference proxy or local GPU workload is installed.
+`codex-auto` is never installed as a transparent replacement for `codex`. Assisted
+interactive launches stay outside the shared daemon, including shadow mode and
+routing fallback; plain `codex` does not inherit their hook activation. No new
+system daemon, background monitoring, custom inference proxy or local GPU workload
+is installed.
 
 ## Primary contracts
 

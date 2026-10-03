@@ -1,5 +1,5 @@
 {
-  "version": "1",
+  "version": "2",
   "codex_version": "0.160.0",
   "provider_model": "clef",
   "timeout_seconds": 3,
@@ -10,8 +10,6 @@
   "route_probability": 0.70,
   "route_margin": 0.10,
   "approval_mode": "shadow",
-  "approval_probability": 0.99,
-  "approval_margin": 0.98,
   "completion_mode": "advisory",
   "completion_probability": 0.90,
   "max_stop_continuations": 1,

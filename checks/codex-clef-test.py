@@ -281,6 +281,9 @@ class RoutingTests(Base):
             '-cmodel="gpt-6-astra"',
             '-cmodel_reasoning_effort="ultra"',
             '-cplan_mode_reasoning_effort="high"',
+            '--config=model="gpt-6-astra"',
+            '--config=model_reasoning_effort="ultra"',
+            '--config=plan_mode_reasoning_effort="high"',
         ]:
             with self.subTest(option=option):
                 self.assertTrue(explicit_settings([option]))
@@ -298,7 +301,7 @@ class RoutingTests(Base):
         ):
             with self.assertRaises(SystemExit):
                 run(args)
-            self.assertEqual(execute.call_args.args[1], ["codex", "task"])
+            self.assertEqual(execute.call_args.args[1], ["codex", "--no-daemon", "task"])
 
     def test_unnamed_role_not_silently_treated_as_worker(self):
         result = self.hooks.handle(
@@ -447,7 +450,301 @@ class RoutingTests(Base):
         self.assertEqual(result["hookSpecificOutput"]["permissionDecision"], "deny")
 
 
+class LauncherTests(Base):
+    def launch(self, arguments, options=(), catalog_error=None, route_error=None):
+        args = parser().parse_args(
+            [
+                "--policy",
+                str(SOURCE / "clef/policy.json"),
+                "launch",
+                *options,
+                "--",
+                *arguments,
+            ]
+        )
+        selected = dict(self.available()[1], decision_id="a" * 32)
+        with (
+            patch(
+                "clef.cli.catalog.refresh",
+                return_value=self.available(),
+                side_effect=catalog_error,
+            ) as refresh,
+            patch(
+                "clef.cli.Decisions.route",
+                return_value=selected,
+                side_effect=route_error,
+            ) as route,
+            patch("clef.cli.os.execvpe", side_effect=SystemExit(0)) as execute,
+        ):
+            with self.assertRaises(SystemExit):
+                run(args)
+        return execute.call_args.args, route, refresh
+
+    def test_bare_startup_resume_and_fork_preserve_settings(self):
+        cases = [
+            [],
+            ["  \t"],
+            ["--search"],
+            ["-C", "resume"],
+            ["--cd=/tmp/fix"],
+            ["-c", "features.some_feature=true"],
+            ["--enable", "some_feature"],
+            ["-i", "fix.png"],
+            ["--image", "first.png", "second.png"],
+            ["resume"],
+            ["resume", "--last"],
+            ["resume", "saved-session"],
+            ["resume", "--all", "--include-non-interactive"],
+            ["resume", "saved-session", "  "],
+            ["resume", "--last", "  "],
+            ["fork"],
+            ["fork", "--last"],
+            ["fork", "saved-session"],
+        ]
+        for arguments in cases:
+            with self.subTest(arguments=arguments):
+                executed, route, _ = self.launch(arguments)
+                route.assert_not_called()
+                self.assertEqual(executed[1], ["codex", "--no-daemon", *arguments])
+                self.assertEqual(executed[2]["CODEX_CLEF_ENABLED"], "1")
+
+    def test_only_native_prompt_supplies_task_signals(self):
+        cases = [
+            (
+                ["-C", "architect", "--sandbox", "workspace-write", "Fix parser"],
+                "Fix parser",
+            ),
+            (["resume", "saved-session", "Fix parser"], "Fix parser"),
+            (["resume", "--last", "Fix parser"], "Fix parser"),
+            (["fork", "--last", "Fix parser"], "Fix parser"),
+            (["--image", "first.png", "second.png", "--", "Fix parser"], "Fix parser"),
+            (["--image=/tmp/first.png", "Fix parser"], "Fix parser"),
+            (["-i/tmp/first.png", "Fix parser"], "Fix parser"),
+            (["-i=/tmp/first.png", "Fix parser"], "Fix parser"),
+            (["--enable=some_feature", "Fix parser"], "Fix parser"),
+            (["--", "--model=literal prompt"], "--model=literal prompt"),
+            (['Explain model="gpt-6-astra"'], 'Explain model="gpt-6-astra"'),
+        ]
+        for arguments, prompt in cases:
+            with self.subTest(arguments=arguments):
+                executed, route, _ = self.launch(arguments)
+                route.assert_called_once()
+                self.assertEqual(
+                    route.call_args.args[1]["task_signals"], signals(prompt)
+                )
+                self.assertIn("--no-daemon", executed[1])
+                self.assertIn('model_reasoning_effort="low"', executed[1])
+
+    def test_approved_brief_routes_bare_resume(self):
+        brief = self.root / "brief.json"
+        brief.write_text(json.dumps({"task": "Fix parser"}))
+        executed, route, _ = self.launch(
+            ["resume", "--last"], ["--brief-file", str(brief), "--acknowledge-upload"]
+        )
+        self.assertEqual(
+            route.call_args.args[1],
+            {
+                "reviewed_brief": {"task": "Fix parser"},
+                "context": "explicitly_authorized_upload",
+            },
+        )
+        self.assertIn("--no-daemon", executed[1])
+
+    def test_explicit_routing_settings_bypass_main_route(self):
+        cases = [
+            ["--model", "chosen"],
+            ["-pchosen"],
+            ['--config=model="chosen"'],
+            ['--config=model_reasoning_effort="high"'],
+            ['--config=plan_mode_reasoning_effort="high"'],
+            ["--config", 'model="chosen"'],
+            ["-c", 'model_reasoning_effort="high"'],
+            ["resume", "--last", "--config", 'plan_mode_reasoning_effort="high"'],
+        ]
+        for arguments in cases:
+            with self.subTest(arguments=arguments):
+                arguments = [*arguments, "Fix parser"]
+                executed, route, _ = self.launch(arguments)
+                route.assert_not_called()
+                self.assertEqual(executed[1], ["codex", "--no-daemon", *arguments])
+
+    def test_explicit_settings_ignore_prompt_text_and_option_values(self):
+        for arguments in [
+            ["--", '--config=model="literal"'],
+            ['Explain model="literal"'],
+            ['--cd=-model="directory"'],
+            ["--image=--model=filename"],
+        ]:
+            with self.subTest(arguments=arguments):
+                self.assertFalse(explicit_settings(arguments))
+
+    def test_shadow_and_fallback_remain_isolated(self):
+        for options, catalog_error, route_error in [
+            (["--mode", "shadow"], None, None),
+            ([], ClefError("catalog_unavailable"), None),
+            ([], None, ClefError("missing_credentials")),
+        ]:
+            with self.subTest(
+                options=options, catalog_error=catalog_error, route_error=route_error
+            ):
+                executed, _, _ = self.launch(
+                    ["Fix parser"], options, catalog_error, route_error
+                )
+                self.assertEqual(executed[1], ["codex", "--no-daemon", "Fix parser"])
+                self.assertEqual(executed[2]["CODEX_CLEF_ENABLED"], "1")
+
+    def test_no_daemon_option_is_not_duplicated_or_read_from_prompt(self):
+        for arguments in [["--no-daemon"], ["resume", "--last", "--no-daemon"]]:
+            with self.subTest(arguments=arguments):
+                executed, _, _ = self.launch(arguments)
+                self.assertEqual(executed[1], ["codex", *arguments])
+        executed, _, _ = self.launch(["--", "--no-daemon"], ["--mode", "shadow"])
+        self.assertEqual(executed[1], ["codex", "--no-daemon", "--", "--no-daemon"])
+
+    def test_native_noninteractive_commands_pass_through(self):
+        cases = [
+            ["exec", "Fix parser"],
+            ["e", "Fix parser"],
+            ["review", "--uncommitted"],
+            ["app-server", "--stdio"],
+            ["agents"],
+            ["completion", "bash"],
+            ["-c", "features.some_feature=true", "app-server", "daemon", "start"],
+            ["help"],
+            ["--help"],
+            ["--version"],
+            ["doctor"],
+            ["login", "status"],
+        ]
+        for arguments in cases:
+            with self.subTest(arguments=arguments):
+                executed, route, refresh = self.launch(arguments)
+                route.assert_not_called()
+                refresh.assert_not_called()
+                self.assertEqual(executed[1], ["codex", *arguments])
+                self.assertNotIn("CODEX_CLEF_ENABLED", executed[2])
+
+    def test_unknown_options_do_not_become_task_context(self):
+        for arguments in [
+            ["--prompt", "Fix parser"],
+            ["--future-option", "Fix parser"],
+        ]:
+            with self.subTest(arguments=arguments):
+                _, route, _ = self.launch(arguments)
+                route.assert_not_called()
+
+    def test_remote_connections_pass_through_without_incompatible_isolation(self):
+        for arguments in [
+            ["--remote", "ws://server:1234", "Fix parser"],
+            ["--remote=ws://server:1234", "Fix parser"],
+            ["resume", "--remote", "unix:///tmp/codex.sock", "--last"],
+            ["fork", "--remote=unix:///tmp/codex.sock", "saved-session"],
+        ]:
+            with self.subTest(arguments=arguments):
+                executed, route, refresh = self.launch(arguments)
+                route.assert_not_called()
+                refresh.assert_not_called()
+                self.assertEqual(executed[1], ["codex", *arguments])
+                self.assertNotIn("CODEX_CLEF_ENABLED", executed[2])
+
+    def test_status_reports_automatic_approval_unsupported(self):
+        with patch(
+            "clef.cli.credentials", side_effect=ClefError("missing_credentials")
+        ):
+            status = doctor(self.store, self.policy)
+        self.assertIs(status["automatic_approval_supported"], False)
+
+
+class NativeForkTests(Base):
+    def spawn(self, **fields):
+        arguments = {
+            "agent_type": "explorer",
+            "message": "Find the relevant tests",
+            "task_name": "find_tests",
+            **fields,
+        }
+        with patch.object(catalog, "cached", return_value=self.available()):
+            return self.hooks.handle(
+                self.event("PreToolUse", tool_name="spawn_agent", tool_input=arguments)
+            )
+
+    def test_native_v2_omitted_fork_turns_preserves_inherited_context(self):
+        self.assertEqual(self.spawn(), {})
+        self.assertEqual(self.client.calls, [])
+
+    def test_native_v2_all_preserves_inherited_context(self):
+        self.assertEqual(self.spawn(fork_turns="all"), {})
+        self.assertEqual(self.client.calls, [])
+
+    def test_native_v2_partial_turns_preserves_inherited_context(self):
+        self.assertEqual(self.spawn(fork_turns="2"), {})
+        self.assertEqual(self.client.calls, [])
+
+    def test_native_v2_unknown_fork_turns_abstains(self):
+        self.policy["max_delegations"] = 10
+        for value in (None, "", "0", "invalid", 2):
+            with self.subTest(value=value):
+                self.assertEqual(self.spawn(fork_turns=value), {})
+        self.assertEqual(self.client.calls, [])
+
+    def test_native_v2_none_routes_and_preserves_nonrouting_fields(self):
+        result = self.spawn(fork_turns="none")
+        updated = result["hookSpecificOutput"]["updatedInput"]
+        self.assertEqual(updated["task_name"], "find_tests")
+        self.assertEqual(updated["fork_turns"], "none")
+        self.assertEqual(updated["model"], self.available()[0]["model"])
+        self.assert_contract("pre-tool-use", result)
+
+    def test_native_v2_inlined_items_abstains(self):
+        self.assertEqual(
+            self.spawn(fork_turns="none", items=[{"type": "text", "text": "context"}]),
+            {},
+        )
+        self.assertEqual(self.client.calls, [])
+
+    def test_native_v2_explicit_settings_preserved(self):
+        for fields in ({"model": "chosen-by-user"}, {"reasoning_effort": "high"}):
+            with self.subTest(fields=fields):
+                self.assertEqual(self.spawn(fork_turns="none", **fields), {})
+        self.assertEqual(self.client.calls, [])
+
+    def test_v1_nonfork_routes(self):
+        with patch.object(catalog, "cached", return_value=self.available()):
+            result = self.hooks.handle(
+                self.event(
+                    "PreToolUse",
+                    tool_name="spawn_agent",
+                    tool_input={
+                        "agent_type": "explorer",
+                        "message": "Find the relevant tests",
+                        "fork_context": False,
+                    },
+                )
+            )
+        self.assertIn("updatedInput", result["hookSpecificOutput"])
+
+    def test_v1_fork_preserved(self):
+        result = self.hooks.handle(
+            self.event(
+                "PreToolUse",
+                tool_name="spawn_agent",
+                tool_input={"agent_type": "explorer", "fork_context": True},
+            )
+        )
+        self.assertEqual(result, {})
+        self.assertEqual(self.client.calls, [])
+
+
 class PermissionTests(Base):
+    def setUp(self):
+        self.git_path = next(
+            (Path(directory) / "git").resolve()
+            for directory in os.get_exec_path()
+            if (Path(directory) / "git").is_file()
+        )
+        self.git_env = {"PATH": os.environ.get("PATH", os.defpath)}
+        super().setUp()
+
     def test_shadow_never_approves(self):
         result = self.hooks.handle(
             self.event(
@@ -459,7 +756,7 @@ class PermissionTests(Base):
         self.assertEqual(result, {})
         self.assertFalse(self.store.records()[-1]["applied"])
 
-    def test_enforce_only_exact_eligible_command(self):
+    def test_enforce_candidate_remains_advisory_even_at_high_confidence(self):
         self.policy["approval_mode"] = "enforce"
         result = self.hooks.handle(
             self.event(
@@ -468,8 +765,9 @@ class PermissionTests(Base):
                 tool_input={"command": self.git_command()},
             )
         )
-        self.assertEqual(result["hookSpecificOutput"]["decision"]["behavior"], "allow")
-        self.assert_contract("permission-request", result)
+        self.assertEqual(result, {})
+        self.assertEqual(len(self.client.calls), 1)
+        self.assertFalse(self.store.records()[-1]["applied"])
 
     def test_dangerous_and_ambiguous_commands_stay_human(self):
         self.policy["approval_mode"] = "enforce"
@@ -555,6 +853,141 @@ class PermissionTests(Base):
             ),
             {},
         )
+
+    def test_semantic_denial_is_advisory(self):
+        self.policy["approval_mode"] = "enforce"
+        self.client.choices["approval"] = "deny"
+        result = self.hooks.handle(
+            self.event(
+                "PermissionRequest",
+                tool_name="Bash",
+                tool_input={"command": self.git_command()},
+            )
+        )
+        self.assertEqual(result, {})
+        self.assertFalse(self.store.records()[-1]["applied"])
+
+    def test_native_network_requests_do_not_infer_authorization(self):
+        self.policy["approval_mode"] = "enforce"
+        for description in ("network-access example.com:443", "Inspect local metadata"):
+            with self.subTest(description=description):
+                result = self.hooks.handle(
+                    self.event(
+                        "PermissionRequest",
+                        tool_name="Bash",
+                        tool_input={
+                            "command": self.git_command(),
+                            "description": description,
+                        },
+                    )
+                )
+                self.assertEqual(result, {})
+                self.assertFalse(self.store.records()[-1]["applied"])
+
+    def test_native_session_cwd_does_not_prove_execution_scope(self):
+        self.policy["approval_mode"] = "enforce"
+        event = self.event(
+            "PermissionRequest",
+            tool_name="Bash",
+            tool_input={"command": self.git_command()},
+        )
+        result = self.hooks.handle(event)
+        self.assertEqual(result, {})
+        state = self.client.calls[-1][0]
+        self.assertEqual(state["category"], "git_metadata_candidate")
+        self.assertEqual(state["execution_scope"], "unverified")
+        self.assertEqual(state["authorization"], "none_inferred")
+        self.assertNotIn("scope", state)
+
+    def test_git_diff_clean_filter_runs_and_request_stays_human(self):
+        self.policy["approval_mode"] = "enforce"
+        self.policy["git_binary"] = str(self.git_path)
+        repository = self.root / "filtered-repository"
+        repository.mkdir()
+        marker = self.root / "clean-filter-executed"
+        process_env = dict(os.environ, **self.git_env)
+
+        def git(*arguments):
+            return subprocess.run(
+                [str(self.git_path), *arguments],
+                cwd=repository,
+                env=process_env,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+
+        git("init", "--quiet")
+        git("config", "filter.review.clean", f"touch {marker}; cat")
+        (repository / ".gitattributes").write_text("tracked.txt filter=review\n")
+        tracked = repository / "tracked.txt"
+        tracked.write_text("before\n")
+        git("add", ".gitattributes", "tracked.txt")
+        self.assertTrue(marker.exists())
+        marker.unlink()
+        tracked.write_text("after\n")
+        arguments = [
+            "--no-pager",
+            "--no-optional-locks",
+            "-c",
+            "core.fsmonitor=false",
+            "-c",
+            "core.untrackedCache=false",
+            "diff",
+            "--no-ext-diff",
+            "--no-textconv",
+            "--stat",
+        ]
+        git(*arguments)
+        self.assertTrue(marker.exists(), "Git diff executes configured clean filters")
+        result = self.hooks.handle(
+            self.event(
+                "PermissionRequest",
+                cwd=str(repository),
+                tool_name="Bash",
+                tool_input={"command": " ".join([str(self.git_path), *arguments])},
+            )
+        )
+        self.assertEqual(result, {})
+        state = self.client.calls[-1][0]
+        self.assertIn("clean filters", state["execution_caveat"])
+        self.assertFalse(self.store.records()[-1]["applied"])
+
+    def test_malformed_native_inputs_abstain(self):
+        self.policy["approval_mode"] = "enforce"
+        for fields in (
+            {"tool_input": None},
+            {"tool_input": {"command": None}},
+            {"tool_input": {"command": self.git_command()}, "cwd": None},
+            {"tool_input": {"command": self.git_command()}, "cwd": 42},
+            {
+                "tool_input": {"command": self.git_command()},
+                "permission_mode": "unknown",
+            },
+        ):
+            with self.subTest(fields=fields):
+                self.assertEqual(
+                    self.hooks.handle(
+                        self.event("PermissionRequest", tool_name="Bash", **fields)
+                    ),
+                    {},
+                )
+        self.assertEqual(self.client.calls, [])
+
+    def test_explicit_denial_shadow_does_not_apply(self):
+        self.policy.update(
+            approval_mode="shadow", denied_commands=["explicitly-forbidden"]
+        )
+        result = self.hooks.handle(
+            self.event(
+                "PermissionRequest",
+                tool_name="Bash",
+                tool_input={"command": "explicitly-forbidden"},
+            )
+        )
+        self.assertEqual(result, {})
+        self.assertEqual(self.client.calls, [])
+        self.assertFalse(self.store.records()[-1]["applied"])
 
 
 class StateTests(Base):

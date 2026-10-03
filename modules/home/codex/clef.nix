@@ -54,7 +54,7 @@ in {
     approvalMode = lib.mkOption {
       type = lib.types.enum ["shadow" "enforce"];
       default = "shadow";
-      description = "Record approval recommendations only, or enforce the narrow installed allow/deny policy after evaluation.";
+      description = "Record advisory permission triage, or additionally enforce explicit installed denials. Native requests are never automatically approved.";
     };
     completionMode = lib.mkOption {
       type = lib.types.enum ["advisory" "enforce"];
@@ -64,7 +64,7 @@ in {
     trustedRoots = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = ["/home/stefan/system-manifest"];
-      description = "Local repository roots eligible for the exact pre-authorized metadata-command grammar.";
+      description = "Session roots eligible for advisory Git-command triage. These roots do not establish the execution directory or authorize approvals.";
     };
   };
   config = {
