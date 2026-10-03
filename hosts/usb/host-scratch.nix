@@ -400,16 +400,23 @@
     }
 
     list_mount_tree() {
-      target="$1"
-      if ! "$FINDMNT" -Rrn --target "$target" -o TARGET 2>/dev/null; then
-        if is_mounted "$target"; then
-          printf '%s\n' "$target"
-        fi
-      fi
+      local target="$1" mount_table encoded_target mounted_target
+      # --target selects the containing filesystem after a mount is gone.
+      mount_table="$("$FINDMNT" -rn -o TARGET 2>/dev/null)" || return 1
+      while IFS= read -r encoded_target; do
+        [ -n "$encoded_target" ] || continue
+        # Raw findmnt output escapes whitespace and backslashes as hex bytes.
+        printf -v mounted_target '%b' "$encoded_target"
+        case "$mounted_target" in
+          "$target"|"$target"/*)
+            printf '%s\n' "$encoded_target"
+            ;;
+        esac
+      done <<< "$mount_table"
     }
 
     unmount_one() {
-      target="$1"
+      local target="$1"
       if ! is_mounted "$target"; then
         return 0
       fi
@@ -430,14 +437,19 @@
     }
 
     unmount_tree() {
-      target="$1"
-      mounts="$(list_mount_tree "$target" | "$SORT" -r)"
+      local target="$1" mounts encoded_target mounted_target
+      if ! mounts="$(list_mount_tree "$target")"; then
+        cleanup_status=failed
+        log "warning: failed to inspect mounts below $target"
+        return 0
+      fi
       [ -n "$mounts" ] || return 0
-
-      for mounted_target in $mounts; do
-        [ -n "$mounted_target" ] || continue
+      mounts="$(printf '%s\n' "$mounts" | "$SORT" -r)"
+      while IFS= read -r encoded_target; do
+        [ -n "$encoded_target" ] || continue
+        printf -v mounted_target '%b' "$encoded_target"
         unmount_one "$mounted_target" || true
-      done
+      done <<< "$mounts"
     }
 
     mode_indicates_host_scratch() {

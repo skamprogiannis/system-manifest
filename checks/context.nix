@@ -174,6 +174,7 @@
     "${./usb-update-progress.sh}"
     "${./usb-update-unit.sh}"
     "${./usb-update-integration.sh}"
+    "${./usb-host-scratch-shutdown.sh}"
     "${usbCheckHome}/bin/usb-host-scratch"
     "${usbCheckHome}/bin/steam-host-scratch"
     "${usbSteamHostScratchPrepareScript}"

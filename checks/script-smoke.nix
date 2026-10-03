@@ -765,9 +765,9 @@ in {
         "-rn -M")
           ${pkgs.gnugrep}/bin/grep -Fxq "$3" "$mounted_file"
           ;;
-        "-Rrn --target")
-          target="$3"
-          ${pkgs.gawk}/bin/awk -v target="$target" '$0 == target || index($0, target "/") == 1 { print }' "$mounted_file"
+        "-rn -o")
+          [ "$3" = TARGET ]
+          cat "$mounted_file"
           ;;
         *)
           echo "unexpected findmnt args: $*" >&2
@@ -871,6 +871,8 @@ in {
         exit 1
       fi
       assert_file_contains "$host_scratch_cleanup_test/root/home/stefan/.local/state/system-manifest/host-scratch-last-cleanup" "result=success" "Expected late cleanup to persist its result for the next boot."
+
+      ${pkgs.bash}/bin/bash ${./usb-host-scratch-shutdown.sh} "$usb_host_scratch_shutdown_cleanup"
 
       run_expect 1 update-usb-removed-mode "$desktop_home/bin/update-usb" --mode nope
       assert_log_contains "Error: unknown option '--mode'."
