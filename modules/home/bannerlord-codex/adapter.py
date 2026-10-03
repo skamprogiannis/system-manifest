@@ -171,6 +171,8 @@ class Engine:
             try:
                 row["generated"] = True
                 result = self.generator(messages, model=self.model, timeout=remaining)
+                if result.get("diagnostic") is not None:
+                    row["generation_diagnostic"] = result["diagnostic"]
                 result["response"] = sanitize_dialogue_output(result["response"])
                 if require_json:
                     try:

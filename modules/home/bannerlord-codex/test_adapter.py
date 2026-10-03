@@ -331,6 +331,23 @@ class RunnerIsolation(unittest.TestCase):
             self.assertEqual(caught.exception.kind, "timeout")
             self.assertLess(time.monotonic() - start, 4)
 
+    def test_deadline_kills_descendant_retaining_stdout_after_cli_exit(self):
+        with tempfile.TemporaryDirectory() as directory:
+            child_file = Path(directory) / "child.pid"
+            code = "import os,signal,time\nchild=os.fork()\n"
+            code += "if child == 0:\n signal.signal(signal.SIGTERM, signal.SIG_IGN)\n os.close(2)\n time.sleep(30)\n os._exit(0)\n"
+            code += "open(" + repr(str(child_file)) + ", 'w').write(str(child))\nprint('{\"type\":\"turn.started\"}', flush=True)\n"
+            executable = self.fake_cli(directory, code)
+            started = time.monotonic()
+            with self.assertRaises(codex_runner.GenerationError) as caught:
+                codex_runner.generate([{"role": "user", "content": "x"}], timeout=1.0, executable=executable)
+            self.assertEqual(caught.exception.kind, "timeout")
+            self.assertLess(time.monotonic() - started, 5.0)
+            child_pid = int(child_file.read_text())
+            status = Path("/proc") / str(child_pid) / "stat"
+            # A killed orphan may briefly remain a zombie until init reaps it.
+            self.assertTrue(not status.exists() or status.read_text().split()[2] == "Z")
+
     def test_timeout_preserves_only_progress_metadata_not_private_output(self):
         events = [
             {"type": "thread.started", "thread_id": "PRIVATE-THREAD"},
@@ -375,6 +392,136 @@ class RunnerIsolation(unittest.TestCase):
             self.assertTrue(row["failure_diagnostic"]["turn_started"])
             self.assertEqual(row["failure_diagnostic"]["event_counts"]["turn.completed"], 1)
             self.assertNotIn("PRIVATE", metrics.read_text())
+
+    def replay(self, events, *, exit_code=0, stderr=""):
+        with tempfile.TemporaryDirectory() as directory:
+            code = "import sys\n" + "\n".join("print(" + repr(json.dumps(e)) + ", flush=True)" for e in events)
+            code += "\nprint(" + repr(stderr) + ", file=sys.stderr)\nsys.exit(" + str(exit_code) + ")\n"
+            executable = self.fake_cli(directory, code)
+            return codex_runner.generate([{"role": "user", "content": "PRIVATE-PROMPT"}], executable=executable)
+
+    def successful_turn(self):
+        return [
+            {"type": "item.completed", "item": {"type": "agent_message", "text": '{"response":"PRIVATE-REPLY"}'}},
+            {"type": "turn.completed", "usage": {"input_tokens": 10, "output_tokens": 3}},
+        ]
+
+    def test_transient_stream_error_followed_by_valid_completion_is_recovered(self):
+        # Codex exec 0.160 flattens app-server ErrorNotification and omits
+        # willRetry; the completed turn and successful exit establish recovery.
+        events = [{"type": "turn.started"},
+                  {"type": "error", "message": "Reconnecting... 1/5 (PRIVATE stream disconnected before completion)"}]
+        result = self.replay(events + self.successful_turn())
+        self.assertEqual(result["response"], "PRIVATE-REPLY")
+        diagnostic = result["diagnostic"]
+        self.assertTrue(diagnostic["retry_observed"])
+        self.assertTrue(diagnostic["recovered_error"])
+        self.assertTrue(diagnostic["turn_completed"])
+        self.assertEqual(diagnostic["error_categories"], {"transport": 1})
+        self.assertIn("auth_seconds", diagnostic["timings"])
+        self.assertIn("generation_seconds", diagnostic["timings"])
+        self.assertIn("completion_seconds", diagnostic["timings"])
+        self.assertNotIn("PRIVATE", json.dumps(diagnostic))
+
+    def test_terminal_failure_is_rejected_even_if_a_final_reply_was_emitted(self):
+        events = [{"type": "turn.started"}, *self.successful_turn()[:1],
+                  {"type": "error", "message": "PRIVATE stream disconnected before completion"},
+                  {"type": "turn.failed", "error": {"message": "PRIVATE stream disconnected before completion"}}]
+        with self.assertRaises(codex_runner.GenerationError) as caught:
+            self.replay(events)
+        self.assertEqual(caught.exception.kind, "transport")
+        self.assertTrue(caught.exception.diagnostic["turn_failed"])
+        self.assertFalse(caught.exception.diagnostic["turn_completed"])
+        self.assertFalse(caught.exception.diagnostic["recovered_error"])
+        self.assertNotIn("PRIVATE", json.dumps(caught.exception.diagnostic))
+        self.assertNotIn("PRIVATE", str(caught.exception))
+
+    def test_nonzero_exit_rejects_completed_turn_and_classifies_only_errors(self):
+        # A reply mentioning quota must not be misclassified as a quota error.
+        events = [{"type": "turn.started"},
+                  {"type": "item.completed", "item": {"type": "agent_message", "text": '{"response":"PRIVATE quota of barley"}'}},
+                  {"type": "turn.completed", "usage": {}}]
+        with self.assertRaises(codex_runner.GenerationError) as caught:
+            self.replay(events, exit_code=1, stderr="PRIVATE unexpected HTTP status 503 Service Unavailable")
+        self.assertEqual(caught.exception.kind, "upstream")
+        self.assertTrue(caught.exception.diagnostic["turn_completed"])
+        self.assertEqual(caught.exception.diagnostic["exit_code"], 1)
+        self.assertNotIn("PRIVATE", json.dumps(caught.exception.diagnostic))
+        self.assertFalse(hasattr(caught.exception, "stderr"))
+        self.assertFalse(hasattr(caught.exception, "events"))
+
+    def test_error_after_completion_and_conflicting_turn_status_fail_closed(self):
+        for event in ({"type": "error", "message": "PRIVATE stream disconnected"},
+                      {"type": "turn.failed", "error": {"message": "PRIVATE unexpected failure"}}):
+            with self.subTest(event=event), self.assertRaises(codex_runner.GenerationError):
+                self.replay([{"type": "turn.started"}, *self.successful_turn(), event])
+
+    def test_non_object_and_malformed_events_have_private_protocol_diagnostics(self):
+        for event in ([], None, {"type": "item.completed", "item": []},
+                      {"type": "item.completed", "item": {"type": []}}):
+            with self.subTest(event=event), self.assertRaises(codex_runner.GenerationError) as caught:
+                self.replay([event])
+            self.assertEqual(caught.exception.kind, "protocol")
+            self.assertNotIn("PRIVATE", json.dumps(caught.exception.diagnostic))
+
+    def test_success_and_failure_metrics_keep_phase_diagnostics_only(self):
+        for fails in (False, True):
+            with self.subTest(fails=fails), tempfile.TemporaryDirectory() as directory:
+                events = [{"type": "turn.started"},
+                          {"type": "error", "message": "Reconnecting... 1/5 (PRIVATE stream disconnected)"}]
+                if fails:
+                    events.append({"type": "turn.failed", "error": {"message": "PRIVATE usage limit reached"}})
+                else:
+                    events.extend(self.successful_turn())
+                executable = self.fake_cli(directory, "\n".join("print(" + repr(json.dumps(e)) + ")" for e in events))
+                metrics = Path(directory) / "metrics.jsonl"
+                engine = adapter.Engine(metrics=metrics, generator=lambda messages, **kw: codex_runner.generate(messages, executable=executable, **kw))
+                if fails:
+                    with self.assertRaises(adapter.RequestError) as caught:
+                        engine.run([{"role": "user", "content": "PRIVATE-PROMPT"}])
+                    self.assertEqual(caught.exception.status, 429)
+                else:
+                    engine.run([{"role": "user", "content": "PRIVATE-PROMPT"}])
+                row = json.loads(metrics.read_text())
+                diagnostic = row["failure_diagnostic" if fails else "generation_diagnostic"]
+                self.assertTrue(diagnostic["retry_observed"])
+                self.assertEqual(diagnostic["turn_completed"], not fails)
+                self.assertNotIn("PRIVATE", metrics.read_text())
+
+    def test_completion_timing_separates_cli_shutdown_from_generation(self):
+        events = [{"type": "turn.started"}, *self.successful_turn()]
+        code = "import time\n" + "\n".join("print(" + repr(json.dumps(e)) + ", flush=True)" for e in events)
+        code += "\ntime.sleep(0.15)\n"
+        with tempfile.TemporaryDirectory() as directory:
+            executable = self.fake_cli(directory, code)
+            result = codex_runner.generate([{"role": "user", "content": "x"}], executable=executable)
+        timings = result["diagnostic"]["timings"]
+        self.assertGreaterEqual(timings["completion_seconds"], 0.12)
+        self.assertAlmostEqual(sum(timings.values()), result["seconds"], delta=0.003)
+
+    def test_retry_notice_without_a_completed_turn_never_delivers_a_reply(self):
+        with self.assertRaises(codex_runner.GenerationError) as caught:
+            self.replay([{"type": "turn.started"}, {"type": "error", "message": "Reconnecting... 1/5"}])
+        self.assertEqual(caught.exception.kind, "protocol")
+        self.assertTrue(caught.exception.diagnostic["retry_observed"])
+        self.assertFalse(caught.exception.diagnostic["recovered_error"])
+
+    def test_usage_and_event_names_in_operational_metadata_are_bounded(self):
+        events = [{"type": "PRIVATE-UNKNOWN-EVENT", "private": "PRIVATE"}, *self.successful_turn()]
+        events[-1]["usage"] = {"input_tokens": 9, "output_tokens": True, "PRIVATE": "PRIVATE"}
+        result = self.replay(events)
+        self.assertEqual(result["usage"], {"input_tokens": 9})
+        self.assertIn("other", result["event_types"])
+        self.assertNotIn("PRIVATE", json.dumps({key: value for key, value in result.items() if key != "response"}))
+
+    def test_invalid_utf8_is_private_protocol_failure(self):
+        with tempfile.TemporaryDirectory() as directory:
+            executable = self.fake_cli(directory, "import os\nos.write(1, " + repr(b"PRIVATE-INVALID-UTF8: \xff") + ")\n")
+            with self.assertRaises(codex_runner.GenerationError) as caught:
+                codex_runner.generate([{"role": "user", "content": "x"}], executable=executable)
+        self.assertEqual(caught.exception.kind, "protocol")
+        self.assertNotIn("PRIVATE", json.dumps(caught.exception.diagnostic))
+        self.assertNotIn("PRIVATE", str(caught.exception))
 
     def test_saved_api_key_login_is_rejected_without_inference(self):
         with tempfile.TemporaryDirectory() as directory:
