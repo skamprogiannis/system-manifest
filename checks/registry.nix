@@ -8,6 +8,7 @@
   support = [
     "usb-initrd-ordering"
     "usb-steam"
+    "usb-update-integration"
     "hyprland-keybinds"
     "desktop-glass"
     "spotify-runtime"

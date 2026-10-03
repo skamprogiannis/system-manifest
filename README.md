@@ -128,21 +128,23 @@ For later shared-contract refactors, treat `nix flake check` plus `nixos-rebuild
 sudo update-usb /path/to/system-manifest/main
 ```
 
-`update-usb` uses prebuild mode by default, which builds locally and syncs the final squashfs image to the USB. It owns an ephemeral mount tree under `/run/update-usb`, serializes writers with a lock, and recovers stale mounts and desktop staging on the next invocation. Always pass the worktree path that contains `flake.nix`, not the repo container root. The default output shows concise percent progress; add `-v` or `--verbose` when you want full `nix build`, `nixos-install`, `mksquashfs`, and cleanup detail.
+`update-usb` builds the desired system in the host Nix store, then prepares an independent USB store on the desktop SSD. The previous USB squashfs stays compressed and read-only; a private OverlayFS directory holds added packages and deletions. Host store files are never hard-linked into staging. The final USB image remains one complete squashfs with the current and previous generations.
 
-The USB installer workflow is packaged from `modules/home/scripts/usb/`: Nix owns constants and host exposure, while the extracted `update-usb` shell fragments own runtime behavior.
-
-Use `--in-place` when local disk space is tight:
+Staging defaults to `/var/tmp/update-usb-stage`. To use another Linux drive with OverlayFS support:
 
 ```bash
-sudo update-usb --in-place /path/to/system-manifest/<worktree>
+sudo update-usb --stage-dir /mnt/ssd/update-usb-stage /path/to/system-manifest/main
 ```
 
-Use `--force` to rewrite the USB even when the existing squashfs already contains the desired system.
+The staging directory must be empty or marked as owned by this updater. `--in-place` instead expands and stages on the USB, saving host space at the cost of slower USB I/O. `--force` rewrites an otherwise current installation. Always pass a worktree containing `flake.nix`, not the repository container.
 
-The script handles preflight checks, cleanup on terminal closure or cancellation, first-boot Home Manager activation, revision verification, and one-generation rollback retention. Before installing a new system it validates the target-root profile symlinks against the existing squashfs without dereferencing the host store, carries that store forward, installs the new generation, then prunes the mounted target store to the newest two generations and garbage-collects anything older. GRUB is limited to those two generations, so the boot menu keeps the current build plus one rollback build. The completed `nix-store.squashfs` is persistent boot data: updates write and verify a `.tmp` candidate before atomically replacing it, while interruption cleanup removes only the candidate and host-side staging. The USB root therefore needs enough temporary free space for both the completed image and its replacement candidate. After booting the USB, confirm the running image with `nixos-version --json` and `readlink -f /run/current-system`.
+Output identifies the active phase, shows copied bytes and transfer rate, and gives elapsed-time heartbeats while flushing or verifying. Add `-v` for full command output. The latest ten JSON reports in `/var/log/update-usb/` record timings, image sizes, available USB space, and tool versions.
 
-`update-usb` and `nix flake check` prove the image builds correctly, but USB-only runtime issues still require a real boot on target hardware to verify rendering, cursor, DMS, and similar session behavior.
+Installation uses private Nix metadata and defers activation and bootloader changes. The updater verifies both retained package closures, copies and checksums the complete replacement image, then publishes the image, Nix metadata, and boot configuration in that order. The USB needs temporary space for the previous image, replacement image, and pending metadata. A persistent transaction record lets the next invocation resume interrupted publication before checking whether an update is needed. Cancellation removes disposable staging but preserves a prepared transaction and completed boot data.
+
+A lock serializes updates, and the updater recovers its own mounts under `/run/update-usb`. Image replacement and metadata exchange are atomic individually; publication across the USB root and EFI partition is not one atomic operation. Keep the USB connected until cleanup completes. These changes reduce staging space and improve recovery and diagnosis; they do not guarantee faster physical USB writes.
+
+The workflow lives in `modules/home/scripts/usb/`. The `usb-update-integration` check uses small real Nix stores and EFI boots to exercise staging, garbage collection, interrupted publication, and rollback. Validation still requires a real update and boot on target hardware before claiming USB runtime behavior is working. After boot, inspect `nixos-version --json` and `readlink -f /run/current-system`.
 
 ### USB RAM Store Mode
 

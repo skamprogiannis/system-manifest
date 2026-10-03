@@ -10,6 +10,9 @@
     cp ${./update-usb/metadata.sh} "$out/metadata.sh"
     cp ${./update-usb/phases.sh} "$out/phases.sh"
     cp ${./update-usb/squashfs.sh} "$out/squashfs.sh"
+    cp ${./update-usb/staging.sh} "$out/staging.sh"
+    cp ${./update-usb/transaction.sh} "$out/transaction.sh"
+    cp ${./update-usb/telemetry.sh} "$out/telemetry.sh"
   '';
 in
   pkgs.writeShellScriptBin "update-usb" ''
@@ -20,6 +23,7 @@ in
     export USB_BOOT_DEV=${usb.bootByLabel}
     export PREFERRED_USB_MAPPER_NAME=${usb.mapperName}
     export UPDATE_USB_JQ=${pkgs.jq}/bin/jq
+    export UPDATE_USB_REVISION=${updateUsbLib}
 
     exec ${pkgs.bash}/bin/bash ${updateUsbLib}/main.sh "$@"
   ''

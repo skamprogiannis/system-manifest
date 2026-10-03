@@ -53,6 +53,7 @@ version_json_field() {
   local value=""
   local jq_bin="${UPDATE_USB_JQ:-jq}"
 
+  # shellcheck disable=SC2016
   if ! value=$("$jq_bin" -r --arg key "$key" '.[$key] // empty' 2>/dev/null); then
     echo "Warning: failed to parse nixos-version JSON for key '$key'" >&2
     return 1
@@ -65,7 +66,7 @@ capture_target_system_metadata() {
   local version_json=""
   local version_error_log=""
 
-  TARGET_SYSTEM_TOPLEVEL="$(readlink -f "$MOUNT_POINT/nix/var/nix/profiles/system" 2>/dev/null || true)"
+  TARGET_SYSTEM_TOPLEVEL="$(profile_store_target "$MOUNT_POINT/nix/var/nix/profiles/system" 2>/dev/null || true)"
   TARGET_INIT_RELATIVE=""
   if [ -n "$TARGET_SYSTEM_TOPLEVEL" ]; then
     TARGET_INIT_RELATIVE="${TARGET_SYSTEM_TOPLEVEL#/nix/store/}/init"
@@ -95,6 +96,11 @@ verify_installed_revision() {
   if [ -z "$TARGET_SYSTEM_TOPLEVEL" ]; then
     echo "Error: could not resolve the installed USB system path."
     exit 1
+  fi
+
+  if [ "$TARGET_SYSTEM_TOPLEVEL" != "$DESIRED_SYSTEM_TOPLEVEL" ]; then
+    echo "Error: installed USB system path differs from the requested system." >&2
+    return 1
   fi
 
   if [ -z "$TARGET_CONFIG_REVISION" ]; then

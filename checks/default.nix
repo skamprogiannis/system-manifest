@@ -12,6 +12,7 @@
     ./hosts.nix
     ./usb-initrd-ordering.nix
     ./usb-steam.nix
+    ./usb-update.nix
     ./hyprland-keybinds.nix
     ./desktop-glass.nix
     ./spotify-runtime.nix

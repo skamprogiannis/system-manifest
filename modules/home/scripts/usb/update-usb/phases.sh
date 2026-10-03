@@ -11,349 +11,177 @@ verbose_log() {
   fi
 }
 
+# Compatibility for callers that formerly supplied estimated overall percentages.
 progress_set() {
-  local percent="$1"
   shift
-  local message="$*"
-  local line="[$percent%] $message"
-
-  if [ "$percent" -lt "${PROGRESS_PERCENT:-0}" ]; then
-    percent="$PROGRESS_PERCENT"
-    line="[$percent%] $message"
-  elif [ "$percent" -gt 100 ]; then
-    percent=100
-    line="[$percent%] $message"
-  fi
-
+  local line="=== USB Update: $* ==="
   if [ "${LAST_PROGRESS_LINE:-}" != "$line" ]; then
     printf '%s\n' "$line"
     LAST_PROGRESS_LINE="$line"
   fi
-  PROGRESS_PERCENT="$percent"
 }
 
-extract_latest_percent() {
-  local log_file="$1"
-
-  if [ ! -s "$log_file" ]; then
-    return 1
-  fi
-
-  tr '\r' '\n' <"$log_file" \
-    | sed -n 's/.*[^0-9]\([0-9][0-9]*\)%.*/\1/p' \
-    | tail -n1
-}
-
-map_percent_range() {
-  local percent="$1"
-  local start="$2"
-  local end="$3"
-
-  if [ "$percent" -lt 0 ]; then
-    percent=0
-  elif [ "$percent" -gt 100 ]; then
-    percent=100
-  fi
-
-  printf '%s\n' $((start + (percent * (end - start) / 100)))
-}
-
-estimated_progress_percent() {
-  local elapsed_seconds="$1"
-  local estimate_seconds="$2"
-  local start="$3"
-  local end="$4"
-
-  if [ "$estimate_seconds" -le 0 ] || [ "$elapsed_seconds" -le 0 ]; then
-    printf '%s\n' "$start"
-    return
-  fi
-
-  if [ "$elapsed_seconds" -gt "$estimate_seconds" ]; then
-    elapsed_seconds="$estimate_seconds"
-  fi
-
-  printf '%s\n' $((start + (elapsed_seconds * (end - start) / estimate_seconds)))
-}
-
-adaptive_progress_end() {
-  local current_percent="$1"
-  local phase_seconds="$2"
-  local remaining_seconds="$3"
-  local available_percent end_percent
-
-  if [ "$remaining_seconds" -le 0 ] || [ "$phase_seconds" -le 0 ]; then
-    printf '%s\n' "$current_percent"
-    return
-  fi
-
-  available_percent=$((100 - current_percent))
-  end_percent=$((current_percent + (available_percent * phase_seconds / remaining_seconds)))
-
-  if [ "$end_percent" -ge 100 ]; then
-    end_percent=99
-  elif [ "$end_percent" -le "$current_percent" ] && [ "$current_percent" -lt 99 ]; then
-    end_percent=$((current_percent + 1))
-  fi
-
-  printf '%s\n' "$end_percent"
-}
-
-progress_plan_init() {
-  local estimate_seconds
-
-  PROGRESS_PLAN_REMAINING_SECONDS=0
-  for estimate_seconds in "$@"; do
-    PROGRESS_PLAN_REMAINING_SECONDS=$((PROGRESS_PLAN_REMAINING_SECONDS + estimate_seconds))
-  done
-}
-
+progress_plan_init() { :; }
 progress_plan_begin() {
-  local estimate_seconds="$1"
+  PHASE_PROGRESS_START=0
+  PHASE_PROGRESS_END=0
+  PHASE_PROGRESS_ESTIMATE=0
+}
+progress_plan_end() { :; }
 
-  PHASE_PROGRESS_START="${PROGRESS_PERCENT:-0}"
-  PHASE_PROGRESS_END="$(adaptive_progress_end "$PHASE_PROGRESS_START" "$estimate_seconds" "$PROGRESS_PLAN_REMAINING_SECONDS")"
-  PHASE_PROGRESS_ESTIMATE="$estimate_seconds"
+format_duration() {
+  local seconds="$1"
+  if [ "$seconds" -ge 3600 ]; then
+    printf '%sh %sm %ss' "$((seconds / 3600))" "$(((seconds % 3600) / 60))" "$((seconds % 60))"
+  elif [ "$seconds" -ge 60 ]; then
+    printf '%sm %ss' "$((seconds / 60))" "$((seconds % 60))"
+  else
+    printf '%ss' "$seconds"
+  fi
 }
 
-progress_plan_end() {
-  local elapsed_seconds completed_percent
+command_progress() {
+  local description="$1" started_ms="$2" elapsed
+  elapsed=$(( ($(date +%s%3N) - started_ms) / 1000 ))
+  printf '  %s — elapsed %s\n' "$description" "$(format_duration "$elapsed")"
+}
 
-  elapsed_seconds=$(( $(date +%s) - PHASE_STARTED_AT ))
-  completed_percent="$(estimated_progress_percent "$elapsed_seconds" "$PHASE_PROGRESS_ESTIMATE" "$PHASE_PROGRESS_START" "$PHASE_PROGRESS_END")"
-  progress_set "$completed_percent" "$PHASE_LABEL"
-  PROGRESS_PLAN_REMAINING_SECONDS=$((PROGRESS_PLAN_REMAINING_SECONDS - PHASE_PROGRESS_ESTIMATE))
+copy_progress() {
+  local description="$1" started_ms="$2" copied_bytes elapsed_ms percent rate
+  copied_bytes="$(stat -c '%s' "$PROGRESS_COPY_TARGET" 2>/dev/null || printf '0')"
+  elapsed_ms=$(( $(date +%s%3N) - started_ms ))
+  [ "$elapsed_ms" -gt 0 ] || elapsed_ms=1
+  [ "$copied_bytes" -le "$PROGRESS_COPY_BYTES" ] || copied_bytes="$PROGRESS_COPY_BYTES"
+  percent=100
+  if [ "$PROGRESS_COPY_BYTES" -gt 0 ]; then
+    percent=$((copied_bytes * 100 / PROGRESS_COPY_BYTES))
+  fi
+  rate=$((copied_bytes * 1000 / elapsed_ms))
+  printf '  %s — %s%%, %s/%s bytes, %s B/s average, elapsed %s\n' \
+    "$description" "$percent" "$copied_bytes" "$PROGRESS_COPY_BYTES" "$rate" "$(format_duration "$((elapsed_ms / 1000))")"
+}
+
+stop_active_command() {
+  local pid="${ACTIVE_CHILD_PID:-}" timer="${ACTIVE_PROGRESS_TIMER_PID:-}" attempt
+  if [ -n "$timer" ]; then
+    kill "$timer" 2>/dev/null || true
+    wait "$timer" 2>/dev/null || true
+  fi
+  ACTIVE_PROGRESS_TIMER_PID=""
+  if [ -n "$pid" ]; then
+    # The worker owns a separate process group, including function subprocesses.
+    kill -TERM -- "-$pid" 2>/dev/null || true
+    for attempt in {1..50}; do
+      if ! kill -0 -- "-$pid" 2>/dev/null; then break; fi
+      sleep 0.1
+    done
+    kill -KILL -- "-$pid" 2>/dev/null || true
+    wait "$pid" 2>/dev/null || true
+  fi
+  ACTIVE_CHILD_PID=""
+}
+
+run_with_progress() {
+  local description="$1"
+  shift
+  local log_file pid timer status=0 started_ms completed_pid monitor_was_set=0
+  local callback="${PROGRESS_CALLBACK:-command_progress}"
+  local poll_seconds="${PROGRESS_POLL_SECONDS:-10}"
+
+  log_file="$(mktemp "${UPDATE_USB_TMP_DIR:-${TMPDIR:-/tmp}}/update-usb-progress.XXXXXX")" || return
+  started_ms="$(date +%s%3N)"
+  "$callback" "$description" "$started_ms"
+  case "$-" in *m*) monitor_was_set=1 ;; esac
+  # Job control gives shell functions their own process group without exporting state.
+  set -m
+  if is_verbose; then
+    "$@" &
+  else
+    "$@" >"$log_file" 2>&1 &
+  fi
+  pid="$!"
+  ACTIVE_CHILD_PID="$pid"
+  if [ "$monitor_was_set" -eq 0 ]; then set +m; fi
+
+  while kill -0 "$pid" 2>/dev/null; do
+    sleep "$poll_seconds" &
+    timer="$!"
+    ACTIVE_PROGRESS_TIMER_PID="$timer"
+    completed_pid=""
+    # wait -n can miss an already-finished job. Explicit wait below owns its status.
+    wait -n -p completed_pid "$pid" "$timer" 2>/dev/null || true
+    if [ "${completed_pid:-}" = "$pid" ] || ! kill -0 "$pid" 2>/dev/null; then
+      kill "$timer" 2>/dev/null || true
+      wait "$timer" 2>/dev/null || true
+      ACTIVE_PROGRESS_TIMER_PID=""
+      break
+    fi
+    wait "$timer" 2>/dev/null || true
+    ACTIVE_PROGRESS_TIMER_PID=""
+    "$callback" "$description" "$started_ms"
+  done
+
+  # Even a command that finished before the first poll must have its status read.
+  wait "$pid" || status=$?
+  ACTIVE_CHILD_PID=""
+  if [ "$status" -ne 0 ]; then
+    printf 'Error: %s failed (exit %s).\n' "$description" "$status" >&2
+    if [ -s "$log_file" ]; then cat "$log_file" >&2; fi
+  else
+    "$callback" "$description" "$started_ms"
+  fi
+  rm -f "$log_file"
+  return "$status"
 }
 
 run_logged() {
-  local description="$1"
-  shift
-
-  if is_verbose; then
-    "$@"
-    return
-  fi
-
-  local output="" status=0
-  if output="$("$@" 2>&1)"; then
-    return 0
-  else
-    status=$?
-  fi
-
-  echo "Error: $description failed." >&2
-  if [ -n "$output" ]; then
-    printf '%s\n' "$output" >&2
-  fi
-  return "$status"
+  run_with_progress "$@"
 }
 
 run_logged_progress() {
   local description="$1"
-  local start_percent="$2"
-  local end_percent="$3"
-  local estimate_seconds="$4"
   shift 4
-
-  if is_verbose; then
-    "$@"
-    return
-  fi
-
-  local log_file pid status=0 displayed_percent latest_percent mapped_percent started_at
-  local sleep_pid wait_status
-  local poll_seconds="${PROGRESS_POLL_SECONDS:-60}"
-
-  log_file="$(mktemp "${UPDATE_USB_TMP_DIR:-${TMPDIR:-/tmp}}/update-usb-progress.XXXXXX")"
-  started_at="$(date +%s)"
-  "$@" >"$log_file" 2>&1 &
-  pid="$!"
-  ACTIVE_CHILD_PID="$pid"
-
-  while kill -0 "$pid" 2>/dev/null; do
-    sleep "$poll_seconds" &
-    sleep_pid="$!"
-
-    set +e
-    wait -n "$pid" "$sleep_pid"
-    wait_status=$?
-    set -e
-
-    if ! kill -0 "$pid" 2>/dev/null; then
-      if kill -0 "$sleep_pid" 2>/dev/null; then
-        kill "$sleep_pid" 2>/dev/null || true
-        wait "$sleep_pid" 2>/dev/null || true
-      fi
-      status="$wait_status"
-      break
-    fi
-
-    wait "$sleep_pid" 2>/dev/null || true
-
-    latest_percent="$(extract_latest_percent "$log_file" || true)"
-    if [ -n "$latest_percent" ]; then
-      mapped_percent="$(map_percent_range "$latest_percent" "$start_percent" "$end_percent")"
-      if [ "$mapped_percent" -lt "$end_percent" ]; then
-        progress_set "$mapped_percent" "$description"
-      fi
-      continue
-    fi
-
-    displayed_percent="$(estimated_progress_percent "$(( $(date +%s) - started_at ))" "$estimate_seconds" "$start_percent" "$end_percent")"
-    if [ "$displayed_percent" -lt "$end_percent" ]; then
-      progress_set "$displayed_percent" "$description"
-    fi
-  done
-
-  if [ "$status" -ne 0 ]; then
-    ACTIVE_CHILD_PID=""
-    echo "Error: $description failed." >&2
-    if [ -s "$log_file" ]; then
-      cat "$log_file" >&2
-    fi
-    rm -f "$log_file"
-    return "$status"
-  fi
-
-  ACTIVE_CHILD_PID=""
-  rm -f "$log_file"
+  run_with_progress "$description" "$@"
 }
 
 copy_with_progress() {
-  local source="$1"
-  local target="$2"
-  local start_percent="$3"
-  local end_percent="$4"
-  local description="$5"
-
-  if is_verbose; then
-    cp "$source" "$target"
-    return
-  fi
-
-  local total_bytes copied_bytes raw_percent mapped_percent pid status=0
-  local sleep_pid wait_status
-  total_bytes="$(stat -c '%s' "$source")"
-  cp "$source" "$target" &
-  pid="$!"
-  ACTIVE_CHILD_PID="$pid"
-
-  while kill -0 "$pid" 2>/dev/null; do
-    sleep 1 &
-    sleep_pid="$!"
-
-    set +e
-    wait -n "$pid" "$sleep_pid"
-    wait_status=$?
-    set -e
-
-    if ! kill -0 "$pid" 2>/dev/null; then
-      if kill -0 "$sleep_pid" 2>/dev/null; then
-        kill "$sleep_pid" 2>/dev/null || true
-        wait "$sleep_pid" 2>/dev/null || true
-      fi
-      status="$wait_status"
-      break
-    fi
-
-    wait "$sleep_pid" 2>/dev/null || true
-
-    copied_bytes="$(stat -c '%s' "$target" 2>/dev/null || printf '0')"
-    if [ "$total_bytes" -gt 0 ]; then
-      raw_percent=$((copied_bytes * 100 / total_bytes))
-      mapped_percent="$(map_percent_range "$raw_percent" "$start_percent" "$end_percent")"
-      if [ "$mapped_percent" -lt "$end_percent" ]; then
-        progress_set "$mapped_percent" "$description"
-      fi
-    fi
-  done
-
-  if [ "$status" -ne 0 ]; then
-    ACTIVE_CHILD_PID=""
-    echo "Error: $description failed." >&2
-    return "$status"
-  fi
-
-  ACTIVE_CHILD_PID=""
+  local source="$1" target="$2" description="$5"
+  local PROGRESS_CALLBACK=copy_progress PROGRESS_COPY_TARGET="$target" PROGRESS_COPY_BYTES
+  PROGRESS_COPY_BYTES="$(stat -c '%s' "$source")" || return
+  run_with_progress "$description" cp -- "$source" "$target"
 }
 
 phase_begin() {
   CURRENT_PHASE="$1"
   PHASE_LABEL="$2"
   PHASE_STARTED_AT="$(date +%s)"
-  if [ -n "${3:-}" ]; then
-    progress_set "$3" "$PHASE_LABEL"
-  else
-    echo "=== USB Update: $PHASE_LABEL ==="
-  fi
+  PHASE_ACTIVE=1
+  progress_set 0 "$PHASE_LABEL"
 }
 
 phase_begin_estimated() {
-  CURRENT_PHASE="$1"
-  PHASE_LABEL="$2"
-  PHASE_STARTED_AT="$(date +%s)"
-  if [ -n "${4:-}" ]; then
-    progress_set "$4" "$PHASE_LABEL"
-  fi
-  progress_plan_begin "$3"
-  progress_set "$PHASE_PROGRESS_START" "$PHASE_LABEL"
+  phase_begin "$1" "$2"
+  progress_plan_begin
 }
 
 phase_end() {
-  local phase_ended_at phase_elapsed
-  phase_ended_at="$(date +%s)"
-  phase_elapsed=$((phase_ended_at - PHASE_STARTED_AT))
-  TIMINGS+=("$PHASE_LABEL|$phase_elapsed")
+  local elapsed=$(( $(date +%s) - PHASE_STARTED_AT ))
+  TIMINGS+=("$PHASE_LABEL|$elapsed")
+  if declare -F report_phase >/dev/null; then report_phase "$CURRENT_PHASE" "$PHASE_LABEL" "$elapsed" completed; fi
+  PHASE_ACTIVE=0
 }
 
 phase_end_estimated() {
-  progress_plan_end
   phase_end
 }
 
-format_duration() {
-  local seconds="$1"
-  local hours minutes remaining
-
-  if [ "$seconds" -lt 60 ]; then
-    printf '%ss' "$seconds"
-    return
-  fi
-
-  hours=$((seconds / 3600))
-  minutes=$(((seconds % 3600) / 60))
-  remaining=$((seconds % 60))
-
-  if [ "$hours" -gt 0 ]; then
-    if [ "$minutes" -gt 0 ] && [ "$remaining" -gt 0 ]; then
-      printf '%sh %sm %ss' "$hours" "$minutes" "$remaining"
-    elif [ "$minutes" -gt 0 ]; then
-      printf '%sh %sm' "$hours" "$minutes"
-    elif [ "$remaining" -gt 0 ]; then
-      printf '%sh %ss' "$hours" "$remaining"
-    else
-      printf '%sh' "$hours"
-    fi
-    return
-  fi
-
-  if [ "$remaining" -gt 0 ]; then
-    printf '%sm %ss' "$minutes" "$remaining"
-  else
-    printf '%sm' "$minutes"
-  fi
-}
-
 print_timing_summary() {
-  if [ "${#TIMINGS[@]}" -eq 0 ]; then
-    return
-  fi
-
-  local total=0
+  if [ "${#TIMINGS[@]}" -eq 0 ]; then return; fi
+  local total=0 timing label seconds
   echo "=== USB Update: Timing Summary ==="
   for timing in "${TIMINGS[@]}"; do
-    local label="${timing%%|*}"
-    local seconds="${timing##*|}"
+    label="${timing%%|*}"
+    seconds="${timing##*|}"
     total=$((total + seconds))
     printf '  - %s: %s\n' "$label" "$(format_duration "$seconds")"
   done

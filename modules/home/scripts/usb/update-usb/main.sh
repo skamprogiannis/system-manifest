@@ -5,304 +5,190 @@ set -euo pipefail
 : "${USB_ROOT_PART:?}"
 : "${USB_BOOT_DEV:?}"
 : "${PREFERRED_USB_MAPPER_NAME:?}"
-
-if [ -z "${USB_UPDATE_LIB_DIR:-}" ]; then
-  USB_UPDATE_LIB_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-fi
-
-# shellcheck disable=SC1090
-source "$USB_UPDATE_LIB_DIR/args.sh"
-# shellcheck disable=SC1090
-source "$USB_UPDATE_LIB_DIR/cleanup.sh"
-# shellcheck disable=SC1090
-source "$USB_UPDATE_LIB_DIR/metadata.sh"
-# shellcheck disable=SC1090
-source "$USB_UPDATE_LIB_DIR/phases.sh"
-# shellcheck disable=SC1090
-source "$USB_UPDATE_LIB_DIR/squashfs.sh"
+USB_UPDATE_LIB_DIR="${USB_UPDATE_LIB_DIR:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)}"
+for fragment in args phases telemetry cleanup metadata squashfs staging transaction; do
+  # shellcheck disable=SC1090
+  source "$USB_UPDATE_LIB_DIR/$fragment.sh"
+done
 
 SCRIPT_NAME="$(basename "$0")"
 USB_MAPPER_NAME="$PREFERRED_USB_MAPPER_NAME"
 USB_ROOT_DEV="/dev/mapper/$USB_MAPPER_NAME"
-RUNTIME_DIR="/run/update-usb"
+RUNTIME_DIR=/run/update-usb
 MOUNT_POINT="$RUNTIME_DIR/root"
-STAGE_DIR="/var/tmp/update-usb-stage"
-DEFAULT_MODE="prebuild"
+STAGE_DIR=/var/tmp/update-usb-stage
+STAGE_DIR_EXPLICIT=0
+DEFAULT_MODE=prebuild
 MODE="$DEFAULT_MODE"
 FLAKE_DIR="$PWD"
-NIX_SHELL_PACKAGES=(squashfsTools cryptsetup util-linux coreutils findutils gnused)
-REQUIRED_TOOLS=(nix nixos-install nixos-enter cryptsetup mount umount findmnt find rm du cut sort nproc mountpoint sed mktemp cp mv date chroot lsblk sleep sync stat cat tr tail flock mkdir chmod rmdir)
+NIX_SHELL_PACKAGES=(squashfsTools cryptsetup util-linux coreutils findutils gnused gawk jq)
+REQUIRED_TOOLS=(nix nix-env nix-store nixos-install nixos-enter cryptsetup mount umount findmnt find rm du cut sort nproc mountpoint sed mktemp cp mv date chroot lsblk sleep sync stat cat tr tail flock mkdir chmod rmdir df realpath xargs sha256sum awk unshare env)
+UPDATE_USB_JQ="${UPDATE_USB_JQ:-jq}"
 FORCE_UPDATE=0
 VERBOSE=0
 CLOSE_MAPPER_ON_CLEANUP=0
-MOUNTED_ROOT=0
-MOUNTED_BOOT=0
-MOUNTED_STAGE_STORE=0
 WORKSPACE_PREPARED=0
+STAGE_PREPARED=0
 PRESERVE_PREVIOUS_GENERATION=0
+PREVIOUS_SYSTEM_TOPLEVEL=""
 ACTIVE_CHILD_PID=""
 CANCELED=0
-CURRENT_PHASE="startup"
-STAGE_STORE=""
-LOCAL_SQUASHFS=""
-CANDIDATE_SQUASHFS=""
-FINAL_SQUASHFS=""
-EXPECTED_CONFIG_REVISION=""
-DESIRED_SYSTEM_TOPLEVEL=""
-DESIRED_INIT_RELATIVE=""
+CURRENT_PHASE=startup
 TARGET_CONFIG_REVISION=""
 TARGET_NIXOS_VERSION=""
 TARGET_SYSTEM_TOPLEVEL=""
 TARGET_INIT_RELATIVE=""
-PHASE_LABEL=""
-PHASE_STARTED_AT=0
 TIMINGS=()
-LAST_PROGRESS_LINE=""
 ORIGINAL_ARGS=("$@")
 
 parse_args "$@"
+if [ "$MODE" = in-place ] && [ "$STAGE_DIR_EXPLICIT" -eq 1 ]; then
+  echo 'Error: --stage-dir selects host staging and cannot be combined with --in-place.' >&2
+  exit 1
+fi
 
 if ! command -v mksquashfs >/dev/null 2>&1 || ! command -v unsquashfs >/dev/null 2>&1; then
-  if [ "${USB_UPDATE_IN_NIX_SHELL:-0}" != "1" ] && command -v nix-shell >/dev/null 2>&1; then
-    REEXEC_ARGS=""
-    for arg in "${ORIGINAL_ARGS[@]}"; do
-      REEXEC_ARGS+=" $(printf '%q' "$arg")"
-    done
-    echo "Entering nix-shell for required USB update tools..."
-    exec nix-shell -p "${NIX_SHELL_PACKAGES[@]}" --run "USB_UPDATE_IN_NIX_SHELL=1 bash \"$0\"${REEXEC_ARGS}"
+  if [ "${USB_UPDATE_IN_NIX_SHELL:-0}" != 1 ] && command -v nix-shell >/dev/null 2>&1; then
+    printf -v REEXEC_COMMAND '%q ' bash "$0" "${ORIGINAL_ARGS[@]}"
+    exec nix-shell -p "${NIX_SHELL_PACKAGES[@]}" --run "USB_UPDATE_IN_NIX_SHELL=1 $REEXEC_COMMAND"
   fi
-  echo "Error: required squashfs tools are missing and nix-shell is unavailable."
-  echo "Run manually:"
-  echo "  sudo nix-shell -p ${NIX_SHELL_PACKAGES[*]} --run '$SCRIPT_NAME /path/to/system-manifest/main'"
+  echo "Error: squashfs tools are missing; run inside nix-shell -p ${NIX_SHELL_PACKAGES[*]}." >&2
   exit 1
 fi
-
 if [ "$EUID" -ne 0 ]; then
-  echo "Error: please run with sudo."
-  echo "Example: sudo update-usb /path/to/system-manifest/main"
+  echo 'Error: please run with sudo.' >&2
   exit 1
 fi
-
-for tool in nix "${REQUIRED_TOOLS[@]}"; do
+for tool in "${REQUIRED_TOOLS[@]}" "$UPDATE_USB_JQ"; do
   if ! command -v "$tool" >/dev/null 2>&1; then
-    echo "Error: required tool '$tool' is not available in PATH."
+    echo "Error: required tool '$tool' is not available." >&2
     exit 1
   fi
 done
 
-if ! initialize_update_runtime; then
-  exit 1
-fi
-trap cleanup EXIT
+initialize_update_runtime
+trap 'cleanup "$?"' EXIT
 trap 'cancel_update HUP' HUP
 trap 'cancel_update INT' INT
 trap 'cancel_update TERM' TERM
-
-if [ ! -d "$FLAKE_DIR" ] || [ ! -f "$FLAKE_DIR/flake.nix" ]; then
-  echo "Error: flake directory '$FLAKE_DIR' is invalid (missing flake.nix)."
-  echo "Pass a worktree path containing flake.nix, for example /path/to/system-manifest/main."
+if [ ! -f "$FLAKE_DIR/flake.nix" ]; then
+  echo "Error: pass a worktree containing flake.nix: $FLAKE_DIR" >&2
   exit 1
 fi
-
+FLAKE_DIR="$(realpath "$FLAKE_DIR")"
 EXPECTED_CONFIG_REVISION="$(read_expected_config_revision || true)"
-if ! capture_desired_system_metadata; then
-  echo "Error: refusing to update USB before touching it because the desired USB system path could not be evaluated." >&2
-  exit 1
-fi
+capture_desired_system_metadata
 echo "Source flake: $FLAKE_DIR"
-if [ -n "$EXPECTED_CONFIG_REVISION" ]; then
-  echo "Desired revision: $EXPECTED_CONFIG_REVISION"
-else
-  echo "Warning: could not resolve desired USB revision from $FLAKE_DIR"
-fi
-if [ -n "$DESIRED_SYSTEM_TOPLEVEL" ]; then
-  verbose_log "Desired system: $DESIRED_SYSTEM_TOPLEVEL"
-fi
-
-if [ ! -e "$USB_ROOT_PART" ]; then
-  echo "Error: USB root partition not found at $USB_ROOT_PART"
-  echo "Run sudo setup-persistent-usb /dev/sdX first, then retry."
+echo "Desired revision: ${EXPECTED_CONFIG_REVISION:-unknown}"
+if [ ! -e "$USB_ROOT_PART" ] || [ ! -e "$USB_BOOT_DEV" ]; then
+  echo 'Error: labeled USB root and boot partitions are required.' >&2
   exit 1
 fi
-
-if [ ! -e "$USB_BOOT_DEV" ]; then
-  echo "Error: USB boot partition not found at $USB_BOOT_DEV"
-  echo "Run sudo setup-persistent-usb /dev/sdX first, then retry."
+ROOT_DISK="$(lsblk -ndo PKNAME "$(readlink -f "$USB_ROOT_PART")")"
+BOOT_DISK="$(lsblk -ndo PKNAME "$(readlink -f "$USB_BOOT_DEV")")"
+if [ -z "$ROOT_DISK" ] || [ "$ROOT_DISK" != "$BOOT_DISK" ]; then
+  echo 'Error: USB root and boot labels must identify partitions on the same disk.' >&2
   exit 1
 fi
+prepare_update_workspace
 
-if ! prepare_update_workspace; then
-  exit 1
-fi
-
-phase_begin "opening-luks" "Opening LUKS" 0
+phase_begin opening-luks 'Opening USB encryption mapping'
 refresh_usb_mapper
-if [ -e "$USB_ROOT_DEV" ]; then
-  EXISTING_USB_MOUNTS="$(findmnt -rn -S "$USB_ROOT_DEV" -o TARGET 2>/dev/null || true)"
-  if [ -n "$EXISTING_USB_MOUNTS" ]; then
-    echo "Error: USB root mapper is already mounted outside update-usb:" >&2
-    printf '%s\n' "$EXISTING_USB_MOUNTS" >&2
-    exit 1
-  fi
+if [ -e "$USB_ROOT_DEV" ] && findmnt -rn -S "$USB_ROOT_DEV" >/dev/null; then
+  echo 'Error: USB root is already mounted outside this updater.' >&2
+  exit 1
 fi
 if [ ! -e "$USB_ROOT_DEV" ]; then
   cryptsetup open "$USB_ROOT_PART" "$PREFERRED_USB_MAPPER_NAME"
   refresh_usb_mapper
 fi
 CLOSE_MAPPER_ON_CLEANUP=1
-phase_end
-
-phase_begin "mounting" "Mounting" 2
-umount "$MOUNT_POINT/boot" 2>/dev/null || true
-umount "$MOUNT_POINT" 2>/dev/null || true
-
 mount "$USB_ROOT_DEV" "$MOUNT_POINT"
-MOUNTED_ROOT=1
-remove_obsolete_usb_mountpoint
 mkdir -p "$MOUNT_POINT/boot"
 mount "$USB_BOOT_DEV" "$MOUNT_POINT/boot"
-MOUNTED_BOOT=1
 phase_end
+start_update_report /var/log/update-usb "$FLAKE_DIR" "$MOUNT_POINT"
 
-phase_begin "checking-existing-squashfs" "Checking existing USB squashfs" 3
+# Recovery precedes no-op detection: an image alone is not a completed update.
+resume_usb_transaction
+remove_pending_squashfs
 if ! skip_if_existing_squashfs_is_current; then
-  phase_end
-  CURRENT_PHASE="done"
-  print_timing_summary
+  CURRENT_PHASE='done'
   exit 0
 fi
-phase_end
-
-phase_begin "preparing-generation-state" "Preparing rollback generation" 4
+report_image previous "$MOUNT_POINT/nix-store.squashfs"
 prepare_generation_state
-if [ "$MODE" = "in-place" ]; then
-  find "$MOUNT_POINT/nix/store" -mindepth 1 -maxdepth 1 -exec rm -rf {} + 2>/dev/null || true
-  hydrate_store_from_existing_squashfs "$MOUNT_POINT/nix/store"
-else
-  verbose_log "Prebuild mode: preserving target Nix database and profile generations for rollback."
+
+phase_begin building-system 'Building desired USB system in the host store'
+# The output link pins the desired closure until installation and cleanup finish.
+run_with_progress 'Building USB system' nix build --out-link "$RUNTIME_DIR/built-system" "$FLAKE_DIR#nixosConfigurations.usb.config.system.build.toplevel"
+if [ "$(readlink "$RUNTIME_DIR/built-system")" != "$DESIRED_SYSTEM_TOPLEVEL" ]; then
+  echo 'Error: the flake changed between evaluation and build; rerun the update.' >&2
+  exit 1
 fi
 phase_end
 
-if [ "$MODE" = "prebuild" ]; then
-  phase_begin "preparing-prebuild-stage" "Preparing local prebuild stage" 5
-  STAGE_STORE="$STAGE_DIR/store"
-  mkdir -p "$STAGE_STORE"
-  hydrate_store_from_existing_squashfs "$STAGE_STORE"
-  mkdir -p "$MOUNT_POINT/nix/store"
-  mount --bind "$STAGE_STORE" "$MOUNT_POINT/nix/store"
-  MOUNTED_STAGE_STORE=1
-  phase_end
+phase_begin preparing-stage 'Preparing private store and Nix metadata'
+if [ "$MODE" = in-place ]; then
+  STAGE_DIR="$MOUNT_POINT/.update-usb-stage"
 fi
+prepare_stage_directory
+printf '%s\n' "$STAGE_DIR" > "$RUNTIME_DIR/stage-path"
+prepare_target_stage
+check_staging_capacity
+phase_end
 
-if [ "$MODE" = "prebuild" ]; then
-  progress_plan_init 1080 120 10 5 10 120 360 660 10 5
-else
-  progress_plan_init 1080 120 10 5 10 120 1800 10 600
-fi
-
-phase_begin_estimated "building-usb-system" "Building USB system" 1080 6
-run_logged_progress "Building USB system" "$PHASE_PROGRESS_START" "$PHASE_PROGRESS_END" "$PHASE_PROGRESS_ESTIMATE" nix build --no-link "$FLAKE_DIR#nixosConfigurations.usb.config.system.build.toplevel"
-phase_end_estimated
-
-phase_begin_estimated "installing-nixos" "Installing NixOS" 120
-run_logged_progress "Installing NixOS" "$PHASE_PROGRESS_START" "$PHASE_PROGRESS_END" "$PHASE_PROGRESS_ESTIMATE" nixos-install --system "$DESIRED_SYSTEM_TOPLEVEL" --root "$MOUNT_POINT" --no-root-passwd
-phase_end_estimated
-
-phase_begin_estimated "verifying-installed-revision" "Verifying installed revision" 10
+phase_begin installing-system 'Installing into private staging'
+NIX_CONFIG="${NIX_CONFIG:-}"$'\nauto-optimise-store = false' \
+  run_with_progress 'Installing NixOS into staging' nixos-install \
+    --system "$DESIRED_SYSTEM_TOPLEVEL" --root "$MOUNT_POINT" \
+    --no-root-passwd --no-channel-copy --no-bootloader
 verify_installed_revision
-phase_end_estimated
+if ! chroot "$MOUNT_POINT" "$TARGET_SYSTEM_TOPLEVEL/sw/bin/test" -f \
+  "$TARGET_SYSTEM_TOPLEVEL/etc/systemd/system/home-manager-stefan.service"; then
+  echo 'Warning: the new system does not provide the expected Home Manager service.' >&2
+fi
+run_with_progress 'Keeping current and rollback generations' prune_usb_system_generations
+phase_end
 
-phase_begin_estimated "verifying-home-manager" "Verifying Home Manager" 5
-HM_SERVICE="$MOUNT_POINT/etc/systemd/system/home-manager-stefan.service"
-if [ -f "$HM_SERVICE" ]; then
-  verbose_log "Home Manager service found. It will activate on first boot."
+phase_begin building-squashfs 'Building replacement squashfs'
+LOCAL_SQUASHFS="$STAGE_DIR/nix-store.squashfs"
+# Nix opens even read-only stores by ensuring .links exists; retain the empty
+# directory while omitting the optimiser's hard-link pool.
+run_with_progress 'Building replacement squashfs' mksquashfs "$STAGE_STORE" "$LOCAL_SQUASHFS" \
+  -noappend -comp zstd -Xcompression-level 3 -b 1048576 -processors "$(nproc)" -wildcards -e '.links/*'
+report_image built "$LOCAL_SQUASHFS"
+phase_end
+
+phase_begin verifying-closures 'Verifying packages in the completed image'
+run_with_progress 'Verifying current and rollback package contents' verify_image_closures "$LOCAL_SQUASHFS"
+# shellcheck disable=SC2016
+run_with_progress 'Hashing completed image' bash -c 'sha256sum -- "$1" > "$2"' _ "$LOCAL_SQUASHFS" "$UPDATE_USB_TMP_DIR/image.sha256"
+IMAGE_SHA256="$(cut -d ' ' -f1 "$UPDATE_USB_TMP_DIR/image.sha256")"
+detach_target_stage
+phase_end
+
+phase_begin copying-image 'Copying replacement image to USB'
+CANDIDATE_SQUASHFS="$MOUNT_POINT/nix-store.squashfs.tmp"
+METADATA_BYTES="$(du -s -B1 "$STAGE_STATE" | cut -f1)"
+if [ "$MODE" = prebuild ]; then
+  require_free_space "$MOUNT_POINT" "$(( $(stat -c %s "$LOCAL_SQUASHFS") + METADATA_BYTES + 16777216 ))" 'replacement image and Nix metadata'
+  copy_with_progress "$LOCAL_SQUASHFS" "$CANDIDATE_SQUASHFS" 0 100 'Copying replacement image to USB'
 else
-  echo "Warning: Home Manager service not found at $HM_SERVICE"
-  echo "First boot may not have the full user environment."
+  require_free_space "$MOUNT_POINT" "$((METADATA_BYTES + 16777216))" 'replacement Nix metadata'
+  mv -T "$LOCAL_SQUASHFS" "$CANDIDATE_SQUASHFS"
 fi
-phase_end_estimated
+report_image candidate "$CANDIDATE_SQUASHFS"
+phase_end
 
-phase_begin_estimated "preparing-home-manager-state" "Preparing Home Manager state" 10
-# Home Manager's first-boot activation writes GC roots and per-user profiles
-# under ~/.local/state. Seed the directories in the target root now so the
-# activation service can succeed on a fresh USB image.
-chroot "$MOUNT_POINT" /nix/var/nix/profiles/system/sw/bin/install -d -m 0755 -o stefan -g users \
-  /home/stefan/.local/state/home-manager \
-  /home/stefan/.local/state/home-manager/gcroots \
-  /home/stefan/.local/state/nix \
-  /home/stefan/.local/state/nix/profiles
-phase_end_estimated
-
-phase_begin_estimated "pruning-system-generations" "Keeping current and rollback generations" 120
-prune_usb_system_generations
-phase_end_estimated
-
-if [ "$MODE" = "prebuild" ]; then
-  phase_begin_estimated "building-squashfs" "Building squashfs locally (desktop SSD)" 360
-  LOCAL_SQUASHFS="$STAGE_DIR/nix-store.squashfs"
-  rm -f "$LOCAL_SQUASHFS"
-  run_logged_progress "Building squashfs" "$PHASE_PROGRESS_START" "$PHASE_PROGRESS_END" "$PHASE_PROGRESS_ESTIMATE" mksquashfs "$STAGE_STORE" "$LOCAL_SQUASHFS" \
-    -comp zstd \
-    -Xcompression-level 3 \
-    -b 1048576 \
-    -processors "$(nproc)"
-  SQFS_SIZE="$(du -sh "$LOCAL_SQUASHFS" | cut -f1)"
-  echo "Local squashfs image: $SQFS_SIZE"
-  phase_end_estimated
-
-  phase_begin_estimated "syncing-squashfs" "Syncing squashfs to USB" 660
-  umount "$MOUNT_POINT/nix/store"
-  MOUNTED_STAGE_STORE=0
-  CANDIDATE_SQUASHFS="$MOUNT_POINT/nix-store.squashfs.tmp"
-  rm -f "$CANDIDATE_SQUASHFS"
-  echo "Copying $SQFS_SIZE squashfs image to USB; this can take several minutes."
-  copy_with_progress "$LOCAL_SQUASHFS" "$MOUNT_POINT/nix-store.squashfs.tmp" "$PHASE_PROGRESS_START" "$PHASE_PROGRESS_END" "Syncing squashfs to USB"
-  phase_end_estimated
-else
-  phase_begin_estimated "building-squashfs" "Building squashfs in-place on USB (slow path)" 1800
-  CANDIDATE_SQUASHFS="$MOUNT_POINT/nix-store.squashfs.tmp"
-  rm -f "$CANDIDATE_SQUASHFS"
-  run_logged_progress "Building squashfs" "$PHASE_PROGRESS_START" "$PHASE_PROGRESS_END" "$PHASE_PROGRESS_ESTIMATE" mksquashfs "$MOUNT_POINT/nix/store" "$CANDIDATE_SQUASHFS" \
-    -comp zstd \
-    -Xcompression-level 3 \
-    -b 1048576 \
-    -processors "$(nproc)"
-  phase_end_estimated
-fi
-
-phase_begin_estimated "verifying-squashfs" "Verifying and publishing USB squashfs" 10
-publish_squashfs "$CANDIDATE_SQUASHFS"
-FINAL_SQUASHFS="$MOUNT_POINT/nix-store.squashfs"
-SQFS_SIZE="$(du -sh "$FINAL_SQUASHFS" | cut -f1)"
-echo "USB squashfs image: $SQFS_SIZE"
-phase_end_estimated
-
-if [ "$MODE" = "prebuild" ]; then
-  phase_begin_estimated "cleaning-ext4-store" "Cleaning ext4 store" 5
-else
-  phase_begin_estimated "cleaning-ext4-store" "Cleaning ext4 store" 600
-fi
-if [ "$MODE" = "in-place" ]; then
-  find "$MOUNT_POINT/nix/store" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
-else
-  verbose_log "Prebuild mode: leaving ext4 /nix/store untouched."
-fi
-# Preserve the target Nix DB. The booted squashfs store still needs valid DB
-# registration so Home Manager can realize its generation and add GC roots.
-phase_end_estimated
-
-CURRENT_PHASE="done"
-progress_set 100 "Done"
-echo "Mode: $MODE"
-if [ -n "$EXPECTED_CONFIG_REVISION" ]; then
-  echo "Desired revision: $EXPECTED_CONFIG_REVISION"
-fi
-if [ -n "$TARGET_CONFIG_REVISION" ]; then
-  echo "Written revision: $TARGET_CONFIG_REVISION"
-fi
-if [ -n "$TARGET_SYSTEM_TOPLEVEL" ]; then
-  verbose_log "Written system: $TARGET_SYSTEM_TOPLEVEL"
-fi
-print_timing_summary
-echo "Boot flow: LUKS unlock -> squashfs overlay on /nix/store -> fast reads"
-echo "After boot, verify with: nixos-version --json && readlink -f /run/current-system"
+phase_begin flushing-image 'Flushing copied image writes to USB'
+run_with_progress 'Flushing copied image writes to USB' sync -f "$CANDIDATE_SQUASHFS"
+phase_end
+phase_begin preparing-publication 'Preparing pending USB metadata'
+run_with_progress 'Preparing pending USB metadata' prepare_usb_transaction "$CANDIDATE_SQUASHFS" "$STAGE_STATE"
+phase_end
+resume_usb_transaction
+report_image published "$MOUNT_POINT/nix-store.squashfs"
+CURRENT_PHASE='done'
+echo "Published system: $TARGET_SYSTEM_TOPLEVEL"
+# The EXIT handler flushes cleanup and reports completion only after unmounting.
