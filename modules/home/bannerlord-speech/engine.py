@@ -1,5 +1,7 @@
 """Native bounded audio processes. No recording occurs during initialization."""
+import argparse
 import base64
+import gc
 import io
 import json
 import os
@@ -50,7 +52,12 @@ def render_speech_parts(pipeline, text, voice, speed, cancelled):
 
 
 class NativeEngine:
-    def __init__(self, runtime_dir):
+    def __init__(self, runtime_dir, device=None):
+        self.requested_device = device or os.environ.get('BANNERLORD_SPEECH_DEVICE', 'auto')
+        if self.requested_device not in ('auto', 'cpu', 'cuda'):
+            raise ValueError('Unsupported speech device')
+        self.device = 'pending'
+        self.device_fallback = None
         self.runtime_dir = Path(runtime_dir)
         self.record_process = None
         self.record_dir = None
@@ -123,7 +130,7 @@ class NativeEngine:
             recording.cleanup()
 
     def warmup(self):
-        # Load model/frontend only: no microphone, utterance or playback.
+        # Prepare both frontends and discard warm audio; no recording or playback.
         response = self._worker_request({'operation': 'prepare'})
         if response.get('ready') is not True:
             raise RuntimeError('Speech preparation failed')
@@ -153,7 +160,9 @@ class NativeEngine:
             if cancel_event is not None and cancel_event.is_set():
                 raise SpeechCancelled()
             if self.worker is None or self.worker.poll() is not None:
-                self.worker = subprocess.Popen([sys.executable, __file__, '--tts-worker'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=sys.stderr, text=True, bufsize=1)
+                self.device = 'pending'
+                self.device_fallback = None
+                self.worker = subprocess.Popen([sys.executable, __file__, '--device', self.requested_device, '--tts-worker'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=sys.stderr, text=True, bufsize=1)
             try:
                 self.worker.stdin.write(json.dumps(request) + '\n')
                 self.worker.stdin.flush()
@@ -171,6 +180,9 @@ class NativeEngine:
                             raise TimeoutError('Synthesis exceeded deadline')
                     line = self.worker.stdout.readline()
                 response = json.loads(line)
+                if response.get('device') in ('cpu', 'cuda'):
+                    self.device = response['device']
+                    self.device_fallback = response.get('device_fallback')
                 if response.get('cancelled') is True:
                     raise SpeechCancelled()
                 if 'error' in response:
@@ -182,21 +194,57 @@ class NativeEngine:
                 self.worker.kill()
                 self.worker.wait()
                 self.worker = None
+                self.device = 'pending'
+                self.device_fallback = None
                 raise
         finally:
             self.worker_lock.release()
 
 
-def pipeline_for_voice(voice, pipelines, model, factory):
+def pipeline_for_voice(voice, pipelines, model, factory, device='cpu'):
     language = voice[:1]
     if language not in ('a', 'b'):
         raise ValueError('Unsupported English voice')
     if language not in pipelines:
-        pipelines[language] = factory(lang_code=language, model=model, device='cpu', repo_id='hexgrad/Kokoro-82M')
+        pipelines[language] = factory(lang_code=language, model=model, device=device, repo_id='hexgrad/Kokoro-82M')
     return pipelines[language]
 
 
-def tts_worker():
+def prepare_speech(torch, model_factory, pipeline_factory, requested_device, voices):
+    if requested_device not in ('auto', 'cpu', 'cuda'):
+        raise ValueError('Unsupported speech device')
+
+    def initialize(device):
+        model = model_factory().eval().to(device)
+        pipelines = {}
+        # Exercise each phonemizer and actual model kernels before advertising ready.
+        with torch.inference_mode():
+            for voice in ('af_heart', 'bm_george'):
+                pipeline = pipeline_for_voice(voice, pipelines, model, pipeline_factory, device)
+                chunks = render_speech_parts(pipeline, 'Welcome, traveller.', str(voices / (voice + '.pt')), 1.0, lambda: False)
+                if not chunks:
+                    raise RuntimeError('Speech warmup produced no audio')
+        return model, pipelines, device
+
+    fallback = None
+    if requested_device != 'cpu':
+        try:
+            if torch.cuda.is_available():
+                return (*initialize('cuda'), None)
+            fallback = 'cuda_unavailable'
+        except Exception:
+            fallback = 'cuda_initialization_failed'
+        if fallback == 'cuda_initialization_failed':
+            # Release a partially initialized model before rebuilding the CPU worker.
+            gc.collect()
+            try:
+                torch.cuda.empty_cache()
+            except Exception:
+                pass
+    return (*initialize('cpu'), fallback)
+
+
+def tts_worker(requested_device='auto'):
     # Restrict numerical libraries before importing Torch.
     os.environ['OMP_NUM_THREADS'] = '2'
     os.environ['MKL_NUM_THREADS'] = '2'
@@ -208,17 +256,15 @@ def tts_worker():
     from kokoro import KModel, KPipeline
     torch.set_num_threads(2)
     torch.set_num_interop_threads(1)
-    model = KModel(repo_id='hexgrad/Kokoro-82M', config=os.environ['KOKORO_CONFIG'], model=os.environ['KOKORO_MODEL']).eval().to('cpu')
-    pipelines = {}
-    pipeline_for_voice('bm_george', pipelines, model, KPipeline)
+    model, pipelines, device, fallback = prepare_speech(torch, lambda: KModel(repo_id='hexgrad/Kokoro-82M', config=os.environ['KOKORO_CONFIG'], model=os.environ['KOKORO_MODEL']), KPipeline, requested_device, Path(os.environ['KOKORO_VOICES']))
     for line in sys.stdin:
         try:
             request = json.loads(line)
             if request.get('operation') == 'prepare':
-                protocol.write(json.dumps({'ready': True}) + '\n')
+                protocol.write(json.dumps({'ready': True, 'device': device, 'device_fallback': fallback}) + '\n')
                 protocol.flush()
                 continue
-            pipeline = pipeline_for_voice(request['voice'], pipelines, model, KPipeline)
+            pipeline = pipeline_for_voice(request['voice'], pipelines, model, KPipeline, device)
             voice = Path(os.environ['KOKORO_VOICES']) / (request['voice'] + '.pt')
             cancel_path = Path(request['cancel_path']) if request.get('cancel_path') else None
             chunks = render_speech_parts(pipeline, request['text'], str(voice), request['speed'], lambda: cancel_path is not None and cancel_path.exists())
@@ -239,9 +285,14 @@ def tts_worker():
             response = {'cancelled': True}
         except Exception as error:
             response = {'error': type(error).__name__}
+        response.update({'device': device, 'device_fallback': fallback})
         protocol.write(json.dumps(response) + '\n')
         protocol.flush()
 
 
-if __name__ == '__main__' and sys.argv[1:] == ['--tts-worker']:
-    tts_worker()
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--tts-worker', action='store_true', required=True)
+    parser.add_argument('--device', choices=('auto', 'cpu', 'cuda'), default=os.environ.get('BANNERLORD_SPEECH_DEVICE', 'auto'))
+    args = parser.parse_args()
+    tts_worker(args.device)

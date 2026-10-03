@@ -1,5 +1,6 @@
 import http.client
 import io
+import os
 import wave
 from unittest.mock import patch
 import json
@@ -134,6 +135,17 @@ class SpeechInterfaceTests(unittest.TestCase):
         self.assertEqual(self.request('POST', '/v1/dictation/stop', {})[0], 200)
         self.assertEqual(self.request('POST', '/v1/speech', {'text': 'Welcome.'})[0], 200)
 
+    def test_health_reports_selected_device_and_bounded_fallback(self):
+        self.engine.requested_device = 'auto'
+        self.engine.device = 'cpu'
+        self.engine.device_fallback = 'cuda_initialization_failed'
+        status, data = self.request('GET', '/health')
+        self.assertEqual(status, 200)
+        health = json.loads(data)
+        self.assertEqual(health['speech_device'], 'cpu')
+        self.assertEqual(health['speech_device_requested'], 'auto')
+        self.assertEqual(health['speech_device_fallback'], 'cuda_initialization_failed')
+
     def test_invalid_speech_is_not_generated(self):
         for payload in ({'text': ''}, {'text': 'x' * 4001}, {'text': 'Hello', 'speed': float('nan')}):
             self.assertEqual(self.request('POST', '/v1/speech', payload)[0], 400)
@@ -224,7 +236,14 @@ class SpeechCacheAndCancellationTests(unittest.TestCase):
 
     def test_cache_is_bounded_and_corruption_regenerates(self):
         self.stop_server(); self.start_server(limit=130)
-        self.speak('First.'); self.speak('Second.'); self.speak('First.'); self.speak('Third.')
+        self.speak('First.'); self.speak('Second.')
+        # Make access ordering independent of filesystem timestamp resolution.
+        for file in self.cache_dir.glob('*.wav'):
+            os.utime(file, ns=(1_000_000_000, 1_000_000_000))
+        self.speak('First.')
+        first_key = self.server.cache.key('First.', 'bm_lewis', 1.0, 'wav')
+        self.assertGreater((self.cache_dir / (first_key + '.wav')).stat().st_mtime_ns, 1_000_000_000)
+        self.speak('Third.')
         files = list(self.cache_dir.glob('*.wav'))
         self.assertLessEqual(sum(p.stat().st_size for p in files), 130)
         self.assertEqual(self.speak('Second.')[2]['X-Speech-Cache'], 'miss')

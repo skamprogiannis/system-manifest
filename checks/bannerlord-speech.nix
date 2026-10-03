@@ -1,6 +1,16 @@
 {ctx}: let
   inherit (ctx) pkgs self;
-  runtime = pkgs.callPackage ../modules/home/bannerlord-speech/package.nix {};
+  # This check alone permits the licences carried by the scoped CUDA wheel.
+  speechPkgs = import pkgs.path {
+    inherit (pkgs.stdenv.hostPlatform) system;
+    # Exercise the desktop closure with its existing GPU architecture target.
+    config.cudaCapabilities = self.nixosConfigurations.desktop.pkgs.config.cudaCapabilities;
+    config.allowUnfreePredicate = package:
+      pkgs.lib.all
+      (license: (license.free or false) || builtins.elem license.shortName ["unfreeRedistributable" "issl" "CUDA EULA" "cuDNN EULA" "cuSPARSELt EULA"])
+      (pkgs.lib.toList package.meta.license);
+  };
+  runtime = speechPkgs.callPackage ../modules/home/bannerlord-speech/package.nix {};
   dictationRuntime = pkgs.callPackage ../modules/home/bannerlord-speech/package.nix {dictationOnly = true;};
   enabled = self.nixosConfigurations.desktop.config.home-manager.users.stefan.system_manifest.bannerlord.enable;
   service =
@@ -24,9 +34,12 @@ in {
       python3 -m unittest discover -s tests -v
       python3 - ${serviceJson} ${environmentJson} ${dictationEnvironmentJson} ${runtime} ${dictationRuntime} <<'PY'
       import json
+      import importlib.metadata as metadata
       from pathlib import Path
       import sys
       import torch
+      import pkg_resources
+      from packaging.requirements import Requirement
       from misaki import en, espeak
 
       unit = json.loads(Path(sys.argv[1]).read_text())
@@ -48,7 +61,14 @@ in {
       assert "WHISPER_MODEL" in dictation_environment
       assert not any(key.startswith("KOKORO_") for key in dictation_environment)
       assert "TRANSFORMERS_OFFLINE" not in dictation_environment
-      assert torch.version.cuda is None, "speech Python closure must use CPU Torch"
+      assert environment["BANNERLORD_SPEECH_DEVICE"] == "auto"
+      assert "CUDA_VISIBLE_DEVICES" not in environment
+      assert dictation_environment["CUDA_VISIBLE_DEVICES"] == ""
+      assert torch.version.cuda == "13.0", "speech Python must use the pinned CUDA Torch binary"
+      setuptools_version = metadata.version("setuptools")
+      for requirement in map(Requirement, metadata.requires("torch") or []):
+          if requirement.name == "setuptools":
+              assert requirement.specifier.contains(setuptools_version), "Torch setuptools requirement must hold in the final environment"
       for key in ("WHISPER_BIN", "WHISPER_MODEL", "KOKORO_MODEL", "KOKORO_CONFIG", "KOKORO_VOICES", "PW_RECORD_BIN"):
           assert Path(environment[key]).exists(), key
       voices = sorted(p.stem for p in Path(environment["KOKORO_VOICES"]).glob("*.pt"))
@@ -60,7 +80,7 @@ in {
       assert not (dictation_runtime / "share/bannerlord-speech").exists()
       g2p = en.G2P(trf=False, british=True, fallback=espeak.EspeakFallback(british=True), unk="")
       assert g2p("What service would earn your trust?")[0]
-      print("Speech service, CPU closure and offline English front-end checks passed; no recording or model generation.")
+      print("Speech service, scoped CUDA closure and offline English front-end checks passed; no recording or model generation.")
       PY
       touch "$out"
     '';

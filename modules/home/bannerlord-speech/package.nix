@@ -4,16 +4,37 @@
   callPackage,
   makeWrapper,
   python313,
+  cudaPackages_13_0,
   whisper-cpp,
   pipewire,
   systemd,
   dictationOnly ? false,
 }: let
   models = callPackage ./models.nix {};
+  # CUDA is confined to this Python package set; desktop dictation stays CPU-only.
+  speechPython = python313.override {
+    packageOverrides = final: prev: {
+      cuda-bindings = prev.cuda-bindings.override {cudaPackages = cudaPackages_13_0;};
+      torch-bin = prev.torch-bin.override {
+        cudaPackages = cudaPackages_13_0;
+        cuda-bindings = final.cuda-bindings;
+        # Torch requires setuptools <82; pkg_resources remains in this pinned variant.
+        setuptools = prev.setuptools_80;
+      };
+      # These English frontend dependencies also propagate setuptools at runtime.
+      spacy = prev.spacy.override {setuptools = prev.setuptools_80;};
+      langcodes = prev.langcodes.override {setuptools = prev.setuptools_80;};
+      torch = final.torch-bin;
+      torchvision = prev.torchvision-bin.override {
+        cudaPackages = cudaPackages_13_0;
+        torch-bin = final.torch-bin;
+      };
+    };
+  };
   python =
     if dictationOnly
     then python313
-    else python313.withPackages (ps: [ps.kokoro ps.soundfile ps.spacy-models.en_core_web_sm]);
+    else speechPython.withPackages (ps: [ps.kokoro ps.soundfile ps.spacy-models.en_core_web_sm]);
   whisper = whisper-cpp.override {
     cudaSupport = false;
     rocmSupport = false;
@@ -27,11 +48,12 @@
       OMP_NUM_THREADS = "2";
       OPENBLAS_NUM_THREADS = "2";
       MKL_NUM_THREADS = "2";
-      CUDA_VISIBLE_DEVICES = "";
       PYTHONDONTWRITEBYTECODE = "1";
       PYTHONUNBUFFERED = "1";
     }
+    // lib.optionalAttrs dictationOnly {CUDA_VISIBLE_DEVICES = "";}
     // lib.optionalAttrs (!dictationOnly) {
+      BANNERLORD_SPEECH_DEVICE = "auto";
       KOKORO_MODEL = toString models.kokoro;
       KOKORO_CONFIG = toString models.config;
       KOKORO_VOICES = toString models.voices;
@@ -40,11 +62,20 @@
       TRANSFORMERS_OFFLINE = "1";
       TOKENIZERS_PARALLELISM = "false";
     };
-  wrapperArguments = lib.concatStringsSep " " (lib.mapAttrsToList (name: value: "--set ${name} ${lib.escapeShellArg value}") engineEnvironment);
+  wrapperArguments = lib.concatStringsSep " " (lib.mapAttrsToList (name: value: "${
+      if name == "BANNERLORD_SPEECH_DEVICE"
+      then "--set-default"
+      else "--set"
+    } ${name} ${lib.escapeShellArg value}")
+    engineEnvironment);
 in
-  runCommand (if dictationOnly then "desktop-dictation-runtime-0.1" else "bannerlord-speech-runtime-0.1") {
+  runCommand (
+    if dictationOnly
+    then "desktop-dictation-runtime-0.1"
+    else "bannerlord-speech-runtime-0.1"
+  ) {
     nativeBuildInputs = [python makeWrapper];
-    passthru = {inherit python whisper models engineEnvironment;};
+    passthru = {inherit python whisper models engineEnvironment speechPython;};
   } ''
     mkdir -p "$out/lib" "$out/bin"
     cp ${./service.py} "$out/lib/service.py"

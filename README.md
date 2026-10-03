@@ -12,6 +12,7 @@ Managed via **Nix Flakes** and **Home Manager**.
 - **Laptop: Dual-Boot Hyprland** — Laptop host keeps the full desktop muscle-memory workflow with portable display detection, encrypted-root install labels, Caps-to-Escape, Greek/US layouts, Zellij, Neovim, Codex, and browser setup.
 - **Gaming Tools:** Steam and GameMode are available in the normal desktop, with Gamescope installed for opt-in per-game scaling, frame limiting, and compatibility workarounds.
 - **Desktop local dictation:** Hold `Super+T` to record English speech and release to copy its local Whisper transcription to the clipboard. Notes uses `Super+N`; alerts use `Super+A`. The desktop-only service runs on demand and removes its transient recording state when it stops.
+- **Bannerlord dialogue and voices:** On-demand Codex dialogue with private failure diagnostics and local Kokoro NPC speech. Speech prepares both English frontends, supports CUDA with CPU fallback, and preserves the offline voice cast; game launchers own service startup and shutdown.
 - **Media & Productivity:**
   - **Spotify GUI:** The current Nixpkgs Spotify client is styled with Spicetify and the Hazy translucent theme.
   - **Transmission:** Local BitTorrent daemon with a browser-app Web UI and a keyboard-friendly `torrent` helper.

@@ -19,29 +19,34 @@ Kokoro supplies fourteen English voices: the original eight British voices plus
 American Fenrir, Michael, Onyx, Puck, Heart and Bella. The game companion owns
 character casting and explicit voice overrides.
 Explicit cast overrides take priority; the voice prefix selects the matching
-English phonemizer, with both phonemizers sharing one CPU model. Existing Player2
+English phonemizer, with both phonemizers sharing one resident model. Existing Player2
 voice assignments and AI memories are unchanged. Synthesis is deferred so text
 does not wait for audio. The game companion owns NPC playback and cancels it when
 the player advances or closes a conversation. Ambient NPC conversations and
 image generation are separate systems. Late speech is discarded after conversation closure.
 
-Both engines run on CPU with two inference threads, one inference job at a time,
-and service memory thresholds of 2 GiB/3 GiB. Starting the on-demand service now
-prepares the model and British frontend in a background worker before dialogue;
-it does not record, generate an utterance, play audio, or hold the dictation job
-lock. Health reports `speech_status` as preparing, ready or failed. A failed
-preparation keeps dictation available and synthesis can retry. Preparation and
-any overlapping first synthesis share a 45-second deadline per request.
+Dictation stays on CPU with two inference threads. NPC synthesis uses a scoped
+CUDA Torch binary while leaving the rest of the system's Python packages unchanged.
+`bannerlord-speech-service --device auto|cuda|cpu` selects the synthesis device;
+`BANNERLORD_SPEECH_DEVICE` supplies the default (normally `auto`). Automatic mode
+uses CUDA when available. CUDA availability, model transfer, frontend preparation
+or warm inference failure falls back to a fresh CPU model. Explicit `cuda` also
+falls back on initialization failure so dialogue remains usable; `cpu` never
+initializes CUDA. Runtime synthesis errors retain the existing text fallback.
+The fourteen pinned voice embeddings, model weights, speaking rates and audio gain
+are unchanged. A resident worker still executes one inference job at a time, with
+host memory thresholds of 2 GiB/3 GiB; those thresholds do not bound GPU memory.
 
-The first in-game reply exposed 25.9 seconds of synthesis including lazy model
-loading. A 120-character CPU fixture measured 14.7 seconds cold versus 5.6 seconds
-warm. With background preparation, health was available in 0.2 seconds, model
-preparation finished in 7.0 seconds, and the first requested reply took 5.4 seconds.
-The complete fourteen-voice fixture peaked at 1.69 GiB with no cgroup memory
-pressure or swapping. Preparing earlier removes model-loading from normal first
-dialogue; speech
-still needs inference time, and game/other workloads can make it slower. The
-American frontend loads only on its first use, reusing the loaded weights.
+Starting the on-demand service prepares both American and British frontends in a
+background worker and discards a small synthesized phrase for each before reporting
+ready. It does not record or play audio, and does not hold the dictation job lock.
+Health reports `speech_status` as preparing, ready or failed, plus `speech_device`,
+`speech_device_requested` and `speech_device_fallback`. Fallback reasons are bounded
+to `cuda_unavailable` or `cuda_initialization_failed`; raw device errors are not
+reported. Failed preparation keeps dictation available and synthesis can retry.
+Preparation and any overlapping first synthesis share a 45-second deadline per
+request. Host GPU access and gameplay impact require measurement outside build
+checks; device selection and fallback are covered with mocked runtime tests.
 
 The user has confirmed English dictation, NPC audio, loading the existing
 campaign and creating a new save were usable; continued gameplay and voice
@@ -63,8 +68,8 @@ does not record the microphone or play sound during unattended testing.
 optional `format` (`wav` by default, or `ogg`). OGG responses use Vorbis directly
 in the existing native encoder, avoiding a Windows WAV-to-OGG conversion.
 Responses use `audio/wav` or `audio/ogg` and an `X-Speech-Cache: hit|miss` header.
-The game can request an initial phrase of roughly 25–96 characters, then phrases
-up to 120 characters, and begin playback while later phrases are prepared.
+The game can request an initial phrase of roughly 40–90 characters, then longer
+phrases, and begin playback while later phrases are prepared.
 The worker also splits long legacy requests into parts of at most 120 characters.
 
 The private cache lives at `~/.local/state/bannerlord-speech/audio-cache`, bounded

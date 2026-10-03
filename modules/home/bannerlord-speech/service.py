@@ -160,7 +160,7 @@ class SpeechServer(ThreadingHTTPServer):
         except Exception as error:
             self.warmup_status = 'failed'
             print(json.dumps({'operation': 'prepare', 'error_type': type(error).__name__}), flush=True)
-        print(json.dumps({'operation': 'prepare', 'status': self.warmup_status, 'seconds': round(time.monotonic()-started, 3)}), flush=True)
+        print(json.dumps({'operation': 'prepare', 'status': self.warmup_status, 'device': getattr(self.engine, 'device', 'pending'), 'device_fallback': getattr(self.engine, 'device_fallback', None), 'seconds': round(time.monotonic()-started, 3)}), flush=True)
 
 
 VOICES = tuple('af_heart af_bella am_fenrir am_michael am_onyx am_puck bf_alice bf_emma bf_isabella bf_lily bm_daniel bm_fable bm_george bm_lewis'.split())
@@ -301,7 +301,7 @@ class SpeechHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path == '/health':
-            return self.reply(200, {'service': 'bannerlord-speech', 'version': 1, 'recording': self.server.recording, 'speech_status': self.server.warmup_status, 'audio_formats': ['wav', 'ogg'], 'speech_cancel_supported': True, 'cache_enabled': self.server.cache is not None})
+            return self.reply(200, {'service': 'bannerlord-speech', 'version': 1, 'recording': self.server.recording, 'speech_status': self.server.warmup_status, 'speech_device': getattr(self.server.engine, 'device', 'pending'), 'speech_device_requested': getattr(self.server.engine, 'requested_device', 'auto'), 'speech_device_fallback': getattr(self.server.engine, 'device_fallback', None), 'audio_formats': ['wav', 'ogg'], 'speech_cancel_supported': True, 'cache_enabled': self.server.cache is not None})
         if self.path == '/v1/voices':
             return self.reply(200, {'voices': [{'id': name, 'gender': 'female' if name[1] == 'f' else 'male', 'language': 'en-US' if name.startswith('a') else 'en-GB'} for name in VOICES]})
         return self.reply(404, {'error': 'Unknown operation'})
@@ -313,12 +313,13 @@ def main():
     parser.add_argument('--runtime-dir', type=Path, required=True)
     parser.add_argument('--cache-dir', type=Path)
     parser.add_argument('--dictation-only', action='store_true')
+    parser.add_argument('--device', choices=('auto', 'cpu', 'cuda'), default=os.environ.get('BANNERLORD_SPEECH_DEVICE', 'auto'))
     args = parser.parse_args()
     os.umask(0o077)
     args.runtime_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
     from engine import NativeEngine
     token = secrets.token_hex(32)
-    engine = NativeEngine(args.runtime_dir)
+    engine = NativeEngine(args.runtime_dir, device=args.device)
     server = SpeechServer(('127.0.0.1', args.port), engine, args.runtime_dir, token, cache_dir=args.cache_dir)
     (args.runtime_dir / 'token').write_text(token)
     if not args.dictation_only:
