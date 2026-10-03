@@ -1408,9 +1408,9 @@ in {
         "Expected Codex config to include the Linear MCP server."
 
       assert_log_contains_file \
-        'model = "gpt-6-sol"' \
+        'model = "gpt-6.1-sol"' \
         "$codex_seed_path" \
-        "Expected Codex config to use the GPT-6 Sol model."
+        "Expected Codex config to use the GPT-6.1 Sol model."
 
       if ${pkgs.gnugrep}/bin/grep -Fq 'model = "gpt-5.6"' "$codex_seed_path"; then
         echo "Codex config must not use the unsupported bare GPT-5.6 model alias." >&2

@@ -1,6 +1,8 @@
 name = "security-reviewer"
 description = "OWASP-focused security analysis with severity ratings for auth, API, input handling, and sensitive-data code."
 
+sandbox_mode = "read-only"
+
 developer_instructions = '''
 # Security Reviewer
 

@@ -614,23 +614,6 @@
         "type": "github"
       }
     },
-    "jev-mcp": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1789816964,
-        "narHash": "sha256-MfWaz8ZT23f3HgkgBOtC0kwB0xyUSg/V7q1Nc/34GA0=",
-        "owner": "burnigtm",
-        "repo": "jev-mcp",
-        "rev": "4f4ae11a5e1e9a502cdc432550d878f728851820",
-        "type": "github"
-      },
-      "original": {
-        "owner": "burnigtm",
-        "repo": "jev-mcp",
-        "rev": "4f4ae11a5e1e9a502cdc432550d878f728851820",
-        "type": "github"
-      }
-    },
     "mattpocock-skills": {
       "flake": false,
       "locked": {
@@ -779,7 +762,6 @@
         "home-manager": "home-manager_2",
         "hyprland": "hyprland",
         "impeccable": "impeccable",
-        "jev-mcp": "jev-mcp",
         "mattpocock-skills": "mattpocock-skills",
         "neovim-nixpkgs": "neovim-nixpkgs",
         "nixpkgs": "nixpkgs_2",
@@ -789,7 +771,6 @@
         "skwd-wall": "skwd-wall",
         "spicetify-nix": "spicetify-nix",
         "trailofbits-skills": "trailofbits-skills",
-        "typesafe-skills": "typesafe-skills",
         "visual-explainer": "visual-explainer"
       }
     },
@@ -911,23 +892,6 @@
       "original": {
         "owner": "trailofbits",
         "repo": "skills",
-        "type": "github"
-      }
-    },
-    "typesafe-skills": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1789191725,
-        "narHash": "sha256-Lh2Y90TFv+njKqo/g5WXEHw0Rk1jQSH5POqKtrvy5kM=",
-        "owner": "typesafe-ai",
-        "repo": "skills",
-        "rev": "65a39f393687675ce170e6094757de20370365b9",
-        "type": "github"
-      },
-      "original": {
-        "owner": "typesafe-ai",
-        "repo": "skills",
-        "rev": "65a39f393687675ce170e6094757de20370365b9",
         "type": "github"
       }
     },

@@ -5,18 +5,17 @@
     "caveman"
     "caveman-commit"
     "caveman-review"
+    "clef-decisions"
     "code-review"
     "codebase-design"
     "diagnose"
     "domain-modeling"
     "grilling"
     "impeccable"
-    "jev-mcp"
     "prototype"
     "static-analysis"
     "tdd"
     "technical-debt"
-    "typesafe-ai"
     "visual-explainer"
   ];
   expectedSkillsJson = builtins.toFile "expected-codex-skills.json" (builtins.toJSON expectedSkills);
@@ -89,10 +88,6 @@ in {
               raise SystemExit(f"Codex-incompatible Skill tool instruction in {skill_file}")
           if name == "code-review" and "/setup-matt-pocock-skills" in text:
               raise SystemExit(f"Obsolete setup workflow in {skill_file}")
-          if name == "jev-mcp":
-              policy_file = skill_dir / "agents/openai.yaml"
-              if not policy_file.is_file() or "allow_implicit_invocation: false" not in policy_file.read_text(encoding="utf-8"):
-                  raise SystemExit("jev-mcp must remain explicit-only")
       PY
 
       test -x "$skills_root/impeccable/scripts/impeccable"
@@ -103,36 +98,6 @@ in {
       pinchtab_seed="$(sed -n 's|^[[:space:]]*cp \(/nix/store/[^ ]*pinchtab-config.json\) .*|\1|p' ${desktopPinchtabConfigActivationFile})"
       test -n "$pinchtab_seed"
       PINCHTAB_CONFIG="$pinchtab_seed" "${desktopCheckHome}/bin/pinchtab" config validate
-
-      mock_doctor="$TMPDIR/jev-mock-doctor.json"
-      HOME="$TMPDIR/home" JEV_MCP_MOCK=1 "${desktopCheckHome}/bin/jev-mcp" doctor --json >"$mock_doctor"
-      python3 - "$mock_doctor" <<'PY'
-      import json
-      import sys
-
-      report = json.load(open(sys.argv[1], encoding="utf-8"))
-      if not report.get("ready") or report.get("model") != "jev-1.13" or not report.get("mock"):
-          raise SystemExit(f"Jev mock doctor failed: {report}")
-      PY
-
-      if HOME="$TMPDIR/no-key-home" "${desktopCheckHome}/bin/jev-mcp" doctor --json >"$TMPDIR/jev-no-key.json" 2>/dev/null; then
-        echo "Jev doctor unexpectedly accepted a missing API key." >&2
-        exit 1
-      fi
-      grep -q 'CONFIG_ERROR' "$TMPDIR/jev-no-key.json"
-
-      XDG_STATE_HOME="$TMPDIR/state" "${desktopCheckHome}/bin/jev-shadow-route" \
-        --task-kind research --proposed-tier reasoning --effort high \
-        --probability 0.82 --latency-ms 180 --usage-tokens 120
-      python3 - "$TMPDIR/state/codex-jev/shadow.jsonl" <<'PY'
-      import json
-      import sys
-
-      entry = json.loads(open(sys.argv[1], encoding="utf-8").readline())
-      allowed = {"timestamp", "task_kind", "proposed_tier", "effort", "probability", "latency_ms", "usage_tokens", "estimated_cost_usd"}
-      if not set(entry).issubset(allowed) or "task_kind" not in entry:
-          raise SystemExit(f"Unsafe Jev shadow log entry: {entry}")
-      PY
 
       touch "$out"
     '';

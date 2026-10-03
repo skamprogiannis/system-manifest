@@ -22,7 +22,7 @@ Managed via **Nix Flakes** and **Home Manager**.
   - **Brave + Vimium C:** Declarative browser setup with preseeded extension settings and portable keymaps.
 - **Vesktop:** Discord client with declarative Translucence theming and QuickCSS customization.
 - **Dev Ready:** Pre-configured environment for Node.js, Python, Go, Playwright, and Neovim (via nixvim), plus Clang build essentials. Neovim is also registered as the default text editor via an `nvim-text` desktop entry. Its LSP hover uses [md-render.nvim](https://github.com/delphinus/md-render.nvim) for compact Markdown and navigable links.
-- **AI Integrated:** Built-in configuration for **Codex CLI** with per-repo `AGENTS.md` instructions, global defaults in `~/.codex/AGENTS.md`, custom agents in `~/.codex/agents`, Linear/Context7/Etsy/OpenAI Docs MCP servers, and curated skills for visualization, browser automation, security analysis, frontend work, review, diagnosis, TDD, design, prototyping, and concise response modes. The opt-in Jev MCP pilot adds typed advisory decisions, review, screening, verification, and metadata-only shadow model-routing recommendations; it never switches models automatically.
+- **AI Integrated:** Built-in configuration for **Codex CLI** with per-repo `AGENTS.md` instructions, global defaults in `~/.codex/AGENTS.md`, custom agents in `~/.codex/agents`, Linear/Context7/Etsy/OpenAI Docs MCP servers, and curated skills for visualization, browser automation, security analysis, frontend work, review, diagnosis, TDD, design, prototyping, and concise response modes. Opt-in direct Cloudflare Clef integration adds dynamic model/effort selection, bounded native hooks, conservative approval triage, and metadata-only evaluation logs.
   Linear MCP auth is local per machine; after first enabling a host, run `codex mcp login linear` once if Codex reports that Linear is not logged in. Context7 uses a local API key from `~/.config/context7/api-key` when present.
 - **Modular Architecture:** Configuration split across `hosts/` (system-level) and `modules/home/` (user-level) for maintainability.
 - **Voiden:** Declarative AppImage wrapper for the Voiden offline-first API client.
@@ -49,8 +49,6 @@ Packages tracked independently of nixpkgs for tighter version control:
 | `mattpocock-skills` | `github:mattpocock/skills` | Engineering skills used here for diagnosis, grilling, domain and module design, review, TDD, and prototyping |
 | `trailofbits-skills` | `github:trailofbits/skills` | Security and analysis skill marketplace used here as the upstream source for the compact `static-analysis` skill |
 | `pinchtab-src` | `github:pinchtab/pinchtab` | Release-matched PinchTab skill and safety references for browser automation |
-| `typesafe-skills` | `github:typesafe-ai/skills` | Official TypeSafe System One and Jev application-design skill |
-| `jev-mcp` | `github:burnigtm/jev-mcp` | Local stdio MCP adapter for explicit TypeSafe Jev pilot calls |
 | `dms` | `github:AvengeMedia/DankMaterialShell` | Fast-moving shell UI |
 
 ## Workflow & UI
@@ -66,7 +64,7 @@ Packages tracked independently of nixpkgs for tighter version control:
 - **DMS Shell:** Core shell layout, widget placement, and launcher behavior are managed declaratively in Nix.
 - **Screenshots:** Region/window/full keybinds use `dms screenshot` to save under `~/pictures/screenshots` and copy the image to the clipboard. `screenshot-path-copy` copies the file path instead (useful for sharing with AI agents).
 - **Screen Recording:** GPU Screen Recorder's GTK UI handles capture setup, backed by GPU Screen Recorder. `gsr-record stop` is kept as an emergency stop helper for finalizing active clips under `~/videos/screencasts`.
-- **Codex CLI:** Codex is integrated into the Neovim + terminal workflow with repository-specific instructions, `/goal` enabled, explicit declarative skill enablement, Linear/Context7/Etsy/OpenAI Docs/Jev MCP servers, custom reviewer agents, BEL-based terminal urgency, and a dedicated Zellij tab. Codex and the optional Bannerlord adapter share one version pin; upgrade checks cover daemon startup and adapter preflight. Jev uses `TYPESAFE_API_KEY` or `~/.config/typesafe/api-key` locally; credentials and raw prompts are never declared in Nix or written to its shadow-routing log.
+- **Codex CLI:** Codex is integrated into the Neovim + terminal workflow with repository-specific instructions, `/goal` enabled, declarative skills, Linear/Context7/Etsy/OpenAI Docs MCP servers, custom agents, BEL-based terminal urgency, and a dedicated Zellij tab. Codex and the optional Bannerlord adapter share one version pin; upgrade checks cover daemon startup and adapter preflight. `codex-auto` enables direct Clef decision support without changing ordinary `codex` sessions; scoped runtime credentials remain outside Nix and repositories.
 - **Browser Automation:** PinchTab is installed declaratively so the browser-automation skill has the CLI it documents.
 - **Static Analysis:** CodeQL, Semgrep, and SARIF tooling are installed declaratively to back the compact `static-analysis` skill.
 - **DNS:** Quad9 (`9.9.9.9`) for privacy-focused DNS resolution.
@@ -82,6 +80,8 @@ Packages tracked independently of nixpkgs for tighter version control:
 | `gsr-record` | Emergency stop helper for active GPU Screen Recorder captures; `stop` finalizes recordings and clears stale runtime state |
 | `torrent` | Manages the local Transmission daemon with readable `gui`, `list`, `add`, `start`, `stop`, `remove`, and guarded `delete --yes` commands |
 | `transmission-port-sync` | Syncs Transmission's configured peer port (for example after a VPN-forwarded port change) |
+| `codex-auto` | Opt-in Clef launch-time model and effort routing with native decision-support hooks |
+| `codex-clef` | Status, model catalog, metadata outcomes, and explicit typed/image evaluation |
 | `codex-state-sync` | Safely merges active Codex sessions between desktop and USB (`to-usb` / `from-usb`) while leaving machine-local state alone |
 | `nixos-usb-host-scratch-status` | Shows encrypted host-scratch mounts plus the last checkpoint/shutdown sync result |
 | `specify` | Spec Kit CLI wrapper — scaffolds spec-driven development for new projects |
@@ -89,6 +89,30 @@ Packages tracked independently of nixpkgs for tighter version control:
 | `steam-host-scratch` | Reports host-auto Steam paths and checkpoints account/config/userdata state |
 | `usb-host-scratch` | Opens the temporary repositories path, checkpoints persistent app state, or shows host-scratch status |
 | `update-usb` | Updates the USB image using prebuild mode by default, with `--in-place` as a lower-disk-space fallback |
+
+## Clef-assisted Codex
+
+`codex-auto -- "task"` opts into direct Cloudflare Clef support. Clef selects a
+model **and** reasoning effort from the authenticated Codex model catalog; explicit
+model/profile/effort overrides win. Initial routing sets both ordinary and planning
+effort, while subsequent main-thread TUI messages retain Codex's own settings.
+Native hooks can independently route named subagents, recommend skills and checks,
+flag repeated failure signals, and suggest one bounded completion review.
+
+Plain `codex` remains available without active Clef hooks. Approval recommendations
+start in **shadow mode**, and completion suggestions are advisory. Unknown,
+sensitive, privileged or destructive requests remain with the user. Required tests
+and independent code review are not replaced by model confidence.
+
+Install a scoped Workers AI token locally, review the hooks through Codex's `/hooks`,
+and use `codex-clef status` to check credentials, model-catalog state and log paths.
+Automatic decisions upload only coarse task metadata. Raw task briefs, source,
+verification evidence and screenshots require explicit upload consent.
+
+Setup, command examples, privacy boundaries, evaluation and rollback are documented
+in [the Clef module guide](modules/home/codex/CLEF.md). Runtime logs are not committed
+or deleted during migration; the retired Jev pilot's absence of logs does not imply
+that a routing evaluation has taken place.
 
 ## Usage
 

@@ -69,6 +69,21 @@ def migrate_memory_feature(config):
         features.setdefault("memories", features.pop("memory_tool"))
 
 
+
+def migrate_retired_jev(config):
+    # Unmanaged MCPs and unrelated skills are intentionally preserved.
+    servers = config.get("mcp_servers")
+    if isinstance(servers, dict):
+        servers.pop("jev", None)
+    skills = config.get("skills")
+    if isinstance(skills, dict) and isinstance(skills.get("config"), list):
+        retired = {"jev-mcp", "typesafe-ai"}
+        skills["config"] = [entry for entry in skills["config"] if not (
+            isinstance(entry, dict) and isinstance(entry.get("path"), str)
+            and Path(entry["path"]).name in retired
+        )]
+
+
 def main():
     if len(sys.argv) != 3:
         print("usage: merge-config.py SEED_CONFIG TARGET_CONFIG", file=sys.stderr)
@@ -84,6 +99,7 @@ def main():
     if isinstance(merged.get("features"), dict):
         merged["features"].pop("experimental_use_rmcp_client", None)
     migrate_memory_feature(merged)
+    migrate_retired_jev(merged)
     atomic_write(config_path, tomli_w.dumps(merged))
     return 0
 

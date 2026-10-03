@@ -10,7 +10,7 @@
     version = codexVersion;
     src = pkgs.fetchurl {
       url = "https://github.com/openai/codex/releases/download/rust-v${codexVersion}/codex-package-x86_64-unknown-linux-musl.tar.gz";
-      hash = "sha256-ni0ppxO5RHiyQN7C8Q4RMkzQX6123EPnxjm9+KEzems=";
+      hash = "sha256-T8xHq1f1L/dTY5Uah2EUbNEMgoi9hv7UVIfbsgSha3E=";
     };
     dontUnpack = true;
     installPhase = ''
@@ -66,16 +66,6 @@
     inherit source;
     force = true;
   };
-  explicitSkill = skillName: source:
-    pkgs.runCommand "codex-explicit-skill-${skillName}" {} ''
-      cp -r ${source} "$out"
-      chmod -R u+w "$out"
-      mkdir -p "$out/agents"
-      cat > "$out/agents/openai.yaml" <<'EOF'
-      policy:
-        allow_implicit_invocation: false
-      EOF
-    '';
   sanitizeSkill = skillName: description: source:
     pkgs.runCommand "codex-skill-${skillName}" {} ''
             cp -r ${source} "$out"
@@ -177,48 +167,6 @@
       platforms = ["x86_64-linux"];
     };
   };
-  jevMcpPackage = pkgs.buildNpmPackage {
-    pname = "jev-mcp";
-    version = "0.1.0";
-    src = inputs.jev-mcp;
-    npmDepsHash = "sha256-jOeluW+VO2AFtbqLBW8NJIWfGDSv3ozFSzMaPsTqnHA=";
-    npmBuildScript = "build";
-    doCheck = true;
-    checkPhase = ''
-      runHook preCheck
-      writable_npm_cache="$TMPDIR/jev-mcp-npm-cache"
-      cp -a "$npm_config_cache" "$writable_npm_cache"
-      chmod -R u+w "$writable_npm_cache"
-      export npm_config_cache="$writable_npm_cache"
-      npm test
-      npm run typecheck
-      npm run test:package
-      runHook postCheck
-    '';
-  };
-  jevMcp = pkgs.writeShellScriptBin "jev-mcp" ''
-    api_key="''${TYPESAFE_API_KEY:-}"
-    if [ -z "$api_key" ] && [ -r "$HOME/.config/typesafe/api-key" ]; then
-      api_key="$(${pkgs.coreutils}/bin/head -n 1 "$HOME/.config/typesafe/api-key")"
-    fi
-
-    if [ -n "$api_key" ]; then
-      export TYPESAFE_API_KEY="$api_key"
-    fi
-    export JEV_MCP_MODEL="jev-1.13"
-    exec ${jevMcpPackage}/bin/jev-mcp "$@"
-  '';
-  jevShadowRoute = pkgs.writeShellScriptBin "jev-shadow-route" ''
-    exec ${pkgs.python3}/bin/python3 ${./jev-shadow-route.py} "$@"
-  '';
-  jevMcpSkill = pkgs.runCommand "codex-jev-mcp-skill" {} ''
-    cp -r ${inputs.jev-mcp}/skills/jev-mcp "$out"
-    chmod -R u+w "$out"
-    mkdir -p "$out/references"
-    cp ${inputs.jev-mcp}/docs/tools.md "$out/references/tools.md"
-    substituteInPlace "$out/SKILL.md" --replace-fail "../../docs/tools.md" "references/tools.md"
-    cat ${./jev-shadow-routing.md} >> "$out/SKILL.md"
-  '';
   pinchtabConfigSeed = pkgs.writeText "pinchtab-config.json" (builtins.toJSON {
     configVersion = "0.8.0";
     server = {
@@ -360,6 +308,7 @@
         cp -r "$workdir"/. "$out/"
   '';
   declarativeSkills = [
+    (mkSkill "clef-decisions" ./skills/clef-decisions "Use direct Clef typed decisions for explicit reviews, verification, ranking, and screenshot classification; inspect routing diagnostics.")
     (mkSkill "visual-explainer" visualExplainerSkill "Generate visual diagrams and HTML explainers for architecture, plans, diffs, and complex tables.")
     (mkSkill "technical-debt" ./skills/technical-debt "Audit code health, quantify technical debt, and produce focused refactoring roadmaps.")
     (mkSkill "browser-automation" "${inputs.pinchtab-src}/plugins/grok/skills/pinchtab" "Control Chrome with PinchTab for web UI testing, scraping, form filling, and browser workflows.")
@@ -375,8 +324,6 @@
     (mkSkill "code-review" "${inputs.mattpocock-skills}/skills/engineering/code-review" "Review changes against repository standards and the originating specification.")
     (mkSkill "tdd" "${inputs.mattpocock-skills}/skills/engineering/tdd" "Use red-green-refactor test-driven development for features and bug fixes.")
     (mkSkill "prototype" "${inputs.mattpocock-skills}/skills/engineering/prototype" "Build a throwaway prototype to validate data, state, or UI design choices.")
-    (mkSkill "typesafe-ai" "${inputs.typesafe-skills}/skills/typesafe-ai" "Design AI features with TypeSafe System One models, including typed Jev judgments and calibrated decisions.")
-    (mkSkill "jev-mcp" (explicitSkill "jev-mcp" jevMcpSkill) "Use the local Jev MCP pilot for explicit typed decision, review, verification, screening, ranking, and shadow-routing tasks.")
   ];
   skillDependencies = {
     tdd = ["code-review"];
@@ -412,10 +359,11 @@
     exec ${pkgs.nodejs}/bin/npx -y @upstash/context7-mcp
   '';
   codexConfigText = ''
-    model = "gpt-6-sol"
+    model = "gpt-6.1-sol"
     model_reasoning_effort = "medium"
     plan_mode_reasoning_effort = "xhigh"
     approval_policy = "on-request"
+    approvals_reviewer = "user"
     sandbox_mode = "workspace-write"
     cli_auth_credentials_store = "file"
     suppress_unstable_features_warning = true
@@ -430,6 +378,7 @@
     trust_level = "trusted"
 
     [features]
+    hooks = true
     goals = true
     multi_agent = true
     plugins = true
@@ -439,9 +388,6 @@
 
     [mcp_servers.context7]
     command = "${context7Mcp}/bin/context7-mcp"
-
-    [mcp_servers.jev]
-    command = "${jevMcp}/bin/jev-mcp"
 
     [mcp_servers.etsy]
     url = "https://mcp.api.etsycloud.com/mcp"
@@ -463,6 +409,8 @@
     '';
   };
 in {
+  imports = [./clef.nix];
+
   _module.args = {
     codexCliPackage = codexCli;
     pinchtabConfigSeed = pinchtabConfigSeed;
@@ -471,8 +419,6 @@ in {
   home.packages = [
     pkgs.bubblewrap
     codexCli
-    jevMcp
-    jevShadowRoute
     pkgs.codeql
     pinchtab
     pkgs.python3Packages."sarif-tools"
@@ -503,6 +449,10 @@ in {
       ".codex/AGENTS.md".text = builtins.readFile ./instructions.md;
       ".codex/diagrams/.keep".text = "";
 
+      ".codex/agents/explorer.toml".text = builtins.readFile ./agents/explorer.toml;
+      ".codex/agents/researcher.toml".text = builtins.readFile ./agents/researcher.toml;
+      ".codex/agents/worker.toml".text = builtins.readFile ./agents/worker.toml;
+      ".codex/agents/architect.toml".text = builtins.readFile ./agents/architect.toml;
       ".codex/agents/plan-reviewer.toml".text = builtins.readFile ./agents/plan-reviewer.toml;
       ".codex/agents/security-reviewer.toml".text = builtins.readFile ./agents/security-reviewer.toml;
     };

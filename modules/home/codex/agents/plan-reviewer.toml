@@ -1,6 +1,8 @@
 name = "plan-reviewer"
 description = "Structured four-section implementation-plan review across architecture, code quality, tests, and performance."
 
+sandbox_mode = "read-only"
+
 developer_instructions = '''
 # Plan Reviewer
 

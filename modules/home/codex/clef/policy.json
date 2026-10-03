@@ -1,0 +1,38 @@
+{
+  "version": "1",
+  "codex_version": "0.160.0",
+  "provider_model": "clef",
+  "timeout_seconds": 3,
+  "max_text_bytes": 24000,
+  "max_session_calls": 40,
+  "max_daily_calls": 500,
+  "catalog_ttl_seconds": 3600,
+  "route_probability": 0.70,
+  "route_margin": 0.10,
+  "approval_mode": "shadow",
+  "approval_probability": 0.99,
+  "approval_margin": 0.98,
+  "completion_mode": "advisory",
+  "completion_probability": 0.90,
+  "max_stop_continuations": 1,
+  "max_delegations": 4,
+  "trusted_roots": ["/home/stefan/system-manifest"],
+  "git_binary": "@git@",
+  "denied_commands": [],
+  "models": {
+    "gpt-6.1-sol": "Preferred general implementation model; broad repository edits and ordinary full-stack development. Starter preference, not a measured benchmark.",
+    "gpt-6-luna": "Prefer for narrow read-only exploration or bounded documentation lookup with sufficient context. Escalate ambiguous, consequential work.",
+    "gpt-6-astra": "Prefer for consequential architecture, difficult diagnosis, and substantial independent review, when that added analysis is justified."
+  },
+  "skills": {
+    "diagnose": "Reproduce, minimize, gather evidence, and diagnose a failure.",
+    "code-review": "Review implementation against requirements and repository standards.",
+    "codebase-design": "Architecture, interfaces, and module boundaries.",
+    "tdd": "Test-first implementation of a feature or bug fix.",
+    "impeccable": "Frontend interface design and visual polish.",
+    "static-analysis": "Scanner-backed security analysis.",
+    "technical-debt": "Focused audit of duplication, complexity and maintainability.",
+    "browser-automation": "Explicit browser testing and UI verification.",
+    "none": "No additional skill is needed."
+  }
+}

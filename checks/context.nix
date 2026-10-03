@@ -36,11 +36,6 @@
       (builtins.attrNames desktopHomeFiles))
   );
   desktopPinchtabConfigActivationFile = pkgs.writeText "desktop-pinchtab-config-activation" self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.activation.ensurePinchTabConfig.data;
-  desktopJevMcpWrapper = builtins.head (
-    builtins.filter
-    (package: (package.name or "") == "jev-mcp")
-    self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.packages
-  );
   desktopActivation = self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.activationPackage;
   desktopBannerlordEnabled = self.nixosConfigurations.desktop.config.home-manager.users.stefan.system_manifest.bannerlord.enable;
   desktopSkwdWalldService = self.nixosConfigurations.desktop.config.systemd.user.services.skwd-walld;
@@ -151,39 +146,39 @@
       "${desktopCheckHome}/bin/bannerlord-speech-service"
     ]
     ++ [
-    "${desktopCheckHome}/bin/codex-state-sync"
-    "${desktopCheckHome}/bin/gsr-record"
-    "${desktopCheckHome}/bin/hypr-quit-active"
-    "${desktopCheckHome}/bin/screenshot-path-copy"
-    "${desktopCheckHome}/bin/spotify_player"
-    "${desktopCheckHome}/bin/torrent"
-    "${desktopCheckHome}/bin/transmission-port-sync"
-    "${desktopCheckHome}/bin/update-usb"
-    "${desktopCheckHome}/bin/zellij-sessionizer"
-    "${desktopZellijLegacyArgsScrubActivationFile}"
-    "${desktopZellijPostCommandDiscoveryHook}"
-    "${updateUsbSourceDir}/args.sh"
-    "${updateUsbSourceDir}/cleanup.sh"
-    "${updateUsbSourceDir}/main.sh"
-    "${updateUsbSourceDir}/metadata.sh"
-    "${updateUsbSourceDir}/phases.sh"
-    "${updateUsbSourceDir}/squashfs.sh"
-    "${updateUsbSourceDir}/staging.sh"
-    "${updateUsbSourceDir}/telemetry.sh"
-    "${updateUsbSourceDir}/transaction.sh"
-    "${./usb-update-progress.sh}"
-    "${./usb-update-unit.sh}"
-    "${./usb-update-integration.sh}"
-    "${./usb-host-scratch-shutdown.sh}"
-    "${usbCheckHome}/bin/usb-host-scratch"
-    "${usbCheckHome}/bin/steam-host-scratch"
-    "${usbSteamHostScratchPrepareScript}"
-    "${usbCheckHome}/bin/nixos-usb-store-status"
-    "${usbHostScratchStartScript}"
-    "${usbHostScratchStopScript}"
-    "${usbHostScratchSyncScript}"
-    "${usbHostScratchShutdownCleanupScript}"
-    "${usbCheckHome}/bin/spotify_player"
-    "${usbCheckHome}/bin/setup-persistent-usb"
-  ];
+      "${desktopCheckHome}/bin/codex-state-sync"
+      "${desktopCheckHome}/bin/gsr-record"
+      "${desktopCheckHome}/bin/hypr-quit-active"
+      "${desktopCheckHome}/bin/screenshot-path-copy"
+      "${desktopCheckHome}/bin/spotify_player"
+      "${desktopCheckHome}/bin/torrent"
+      "${desktopCheckHome}/bin/transmission-port-sync"
+      "${desktopCheckHome}/bin/update-usb"
+      "${desktopCheckHome}/bin/zellij-sessionizer"
+      "${desktopZellijLegacyArgsScrubActivationFile}"
+      "${desktopZellijPostCommandDiscoveryHook}"
+      "${updateUsbSourceDir}/args.sh"
+      "${updateUsbSourceDir}/cleanup.sh"
+      "${updateUsbSourceDir}/main.sh"
+      "${updateUsbSourceDir}/metadata.sh"
+      "${updateUsbSourceDir}/phases.sh"
+      "${updateUsbSourceDir}/squashfs.sh"
+      "${updateUsbSourceDir}/staging.sh"
+      "${updateUsbSourceDir}/telemetry.sh"
+      "${updateUsbSourceDir}/transaction.sh"
+      "${./usb-update-progress.sh}"
+      "${./usb-update-unit.sh}"
+      "${./usb-update-integration.sh}"
+      "${./usb-host-scratch-shutdown.sh}"
+      "${usbCheckHome}/bin/usb-host-scratch"
+      "${usbCheckHome}/bin/steam-host-scratch"
+      "${usbSteamHostScratchPrepareScript}"
+      "${usbCheckHome}/bin/nixos-usb-store-status"
+      "${usbHostScratchStartScript}"
+      "${usbHostScratchStopScript}"
+      "${usbHostScratchSyncScript}"
+      "${usbHostScratchShutdownCleanupScript}"
+      "${usbCheckHome}/bin/spotify_player"
+      "${usbCheckHome}/bin/setup-persistent-usb"
+    ];
 }
