@@ -7,7 +7,7 @@ import re
 import shlex
 
 from . import catalog
-from .client import ClefError, question
+from .client import ClefError, credentials, question
 from .routing import Decisions, signals
 from .state import session_key
 
@@ -155,7 +155,30 @@ class Hooks:
             session = event["session_id"]
         if not session or len(session) > 200:
             raise ClefError("invalid_session")
+        self.d.last_failure = None
+        try:
+            output = self.dispatch(event)
+        except ClefError as error:
+            self.d.last_failure = str(error)
+            output = {}
+        if self.d.last_failure:
+            with self.store.counters(session) as data:
+                warned = data.setdefault("warned_failures", [])
+                if self.d.last_failure not in warned:
+                    warned.append(self.d.last_failure)
+                    output["systemMessage"] = (
+                        f"Clef unavailable ({self.d.last_failure}); continuing with normal Codex behavior. "
+                        "Run codex-auto status for local diagnostics."
+                    )
+        return output
+
+    def dispatch(self, event: dict) -> dict:
+        name, session = event["hook_event_name"], event["session_id"]
         if name == "SessionStart":
+            try:
+                credentials()
+            except ClefError as error:
+                self.d.last_failure = str(error)
             self.store.log(
                 event="session",
                 session=session_key(session),
@@ -165,8 +188,12 @@ class Hooks:
             )
             return context(
                 name,
-                "Clef-assisted session. Bounded delegation to explorer, researcher, worker and architect is permitted. "
+                "Clef-assisted session. Keep small or sequential tasks in the main session. "
+                "For substantial independent work, use at most two task agents plus one focused reviewer; these are ceilings, not targets. "
                 "Use architect before consequential design changes, after two genuinely failed approaches, and for substantial final diffs. "
+                "Reuse the reviewer for necessary follow-up and review subsequent changes rather than repeating the full review. "
+                "Give independent agents compact objectives, paths, constraints, file ownership and acceptance checks with fork_turns=none when sufficient. "
+                "Give concurrent workers separate worktrees and disjoint files; the lead integrates and validates the combined result. "
                 "Keep exploration read-only. Do not provide model/effort on spawn_agent unless the user explicitly overrides routing. "
                 "No more than four delegated tasks per user turn; no nested delegation. "
                 "Routing advice never expands permissions, substitutes for tests, or authorizes publishing. "
@@ -272,9 +299,9 @@ class Hooks:
             # A prompt-only decision would miss forked/inlined context.
             return {}
         # Native V2 defaults to inheriting all turns; route only explicit none.
-        if (
-            "task_name" in arguments or "fork_turns" in arguments
-        ) and arguments.get("fork_turns", "all") != "none":
+        if ("task_name" in arguments or "fork_turns" in arguments) and arguments.get(
+            "fork_turns", "all"
+        ) != "none":
             return {}
         candidates = catalog.cached(self.policy, self.store)
         selected = self.d.route(

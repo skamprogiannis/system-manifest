@@ -77,8 +77,7 @@ Hyprland and its portal use Nixpkgs packages. Treesitter uses the editor Nixpkgs
 | `gsr-record` | Emergency stop helper for active GPU Screen Recorder captures; `stop` finalizes recordings and clears stale runtime state |
 | `torrent` | Manages the local Transmission daemon with readable `gui`, `list`, `add`, `start`, `stop`, `remove`, and guarded `delete --yes` commands |
 | `transmission-port-sync` | Syncs Transmission's configured peer port (for example after a VPN-forwarded port change) |
-| `codex-auto` | Opt-in Clef launch-time model and effort routing with native decision-support hooks |
-| `codex-clef` | Status, model catalog, metadata outcomes, and explicit typed/image evaluation |
+| `codex-auto` | Assisted Codex launch, local health/usage with `status`, and advanced `clef` operations |
 | `codex-state-sync` | Safely merges active Codex sessions between desktop and USB (`to-usb` / `from-usb`) while leaving machine-local state alone |
 | `nixos-usb-host-scratch-status` | Shows encrypted host-scratch mounts plus the last checkpoint/shutdown sync result |
 | `specify` | Spec Kit CLI wrapper — scaffolds spec-driven development for new projects |
@@ -106,7 +105,7 @@ requests remain with the user. Required tests and independent code review are no
 replaced by model confidence.
 
 Install a scoped Workers AI token locally, review the hooks through Codex's `/hooks`,
-and use `codex-clef status` to check credentials, model-catalog state and log paths.
+and use `codex-auto status` to check credentials, model-catalog state and log paths.
 Automatic decisions upload only coarse task metadata. Raw task briefs, source,
 verification evidence and screenshots require explicit upload consent.
 

@@ -68,10 +68,13 @@ Always check the local repository for `AGENTS.md` first. Local repository instru
 
 ## Clef-Assisted Sessions
 
-- Opt in with `codex-auto -- "task"`. `codex-auto --mode shadow -- "task"` records model/effort advice without changing those settings. Inspect status and log paths with `codex-clef status`.
+- Opt in with `codex-auto -- "task"`. `codex-auto --mode shadow -- "task"` records model/effort advice without changing those settings. Inspect status and log paths with `codex-auto status`.
 - Within these sessions, bounded delegation is permitted. Use `architect` before consequential architecture changes, after two genuinely failed approaches, and for a substantial final diff. Supply failed hypotheses and actual evidence; two trivial command errors are not two failed approaches.
 - `plan-reviewer` stays interactive for user-led discussion. `architect` returns findings without repeatedly asking the user questions. Never review a trivial change merely to satisfy a ritual.
-- Delegate at most four tasks per user turn; do not delegate from subagents. Use the named roles, give each a bounded question/change, and keep read-only work in read-only agents.
+- Keep small or sequential tasks in the main session. For substantial independent work, use at most two task agents plus one focused reviewer per user turn; these are ceilings, not targets. The existing four-spawn guard remains a fallback. Do not delegate from subagents.
+- Give independent agents compact objectives, relevant paths, constraints, file ownership and acceptance checks. Prefer `fork_turns = "none"` when that brief is sufficient; inherit conversation only when the assignment depends on it. The router already abstains for inherited context.
+- Give concurrent implementation workers separate worktrees and disjoint files. The lead integrates their changes and validates the combined result. Use named roles and keep exploration read-only.
+- Choose architect or security-reviewer according to the changed interfaces and risks. Review failure paths and actual test evidence. Reuse the reviewer for necessary follow-up, focusing on subsequent changes instead of repeating the full review. Preserve the required architect checkpoints.
 - Do not pin model or `reasoning_effort` on `spawn_agent` unless the user explicitly chooses them. Clef's native hook can select a supported pair; explicit settings and forked/inlined context are left untouched.
 - Bare startup/resume preserves configured or saved model and effort. Main-thread routing requires a task prompt or approved brief and happens at launch, not invisibly on every later TUI message. Do not claim instructions changed a model setting. The launcher sets both normal and planning effort when it applies a decision.
 - Keep required tests and independent reviews. Completion suggestions are not correctness proofs. Codex 0.160.0 Bash hook output does not include an exit status, so text-based failure signals are advisory and cannot establish that tests passed.

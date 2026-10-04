@@ -2,6 +2,7 @@
 
 from concurrent.futures import ThreadPoolExecutor
 import copy
+from datetime import datetime, timezone, timedelta
 import importlib.util
 import io
 import json
@@ -37,6 +38,7 @@ from clef.cli import (
     image_payload,
     launch_arguments,
     parser,
+    parse_arguments,
     run,
 )
 from clef.hooks import Hooks, approval_class, tool_outcome
@@ -301,7 +303,9 @@ class RoutingTests(Base):
         ):
             with self.assertRaises(SystemExit):
                 run(args)
-            self.assertEqual(execute.call_args.args[1], ["codex", "--no-daemon", "task"])
+            self.assertEqual(
+                execute.call_args.args[1], ["codex", "--no-daemon", "task"]
+            )
 
     def test_unnamed_role_not_silently_treated_as_worker(self):
         result = self.hooks.handle(
@@ -655,6 +659,145 @@ class LauncherTests(Base):
         self.assertIs(status["automatic_approval_supported"], False)
 
 
+class PublicCommandTests(Base):
+    def arguments(self, *arguments):
+        return parse_arguments(
+            [
+                "auto",
+                "--policy",
+                str(SOURCE / "clef/policy.json"),
+                "--codex",
+                "codex",
+                "--",
+                *arguments,
+            ]
+        )
+
+    def test_status_is_offline_and_has_explicit_json_output(self):
+        for flags in ((), ("--json",)):
+            args = self.arguments("status", *flags)
+            self.assertEqual(args.command, "status")
+            self.assertEqual(args.json, bool(flags))
+            with (
+                patch("clef.cli.catalog.refresh") as refresh,
+                patch("clef.client.Client.evaluate") as evaluate,
+            ):
+                result = run(args)
+            refresh.assert_not_called()
+            evaluate.assert_not_called()
+            self.assertEqual(result["usage_today"]["successful_calls"], 0)
+            self.assertFalse(self.store.root.exists())
+
+    def test_reserved_words_can_be_literal_prompts(self):
+        for word in ("status", "clef"):
+            args = self.arguments("--", word)
+            self.assertEqual(args.command, "launch")
+            self.assertEqual(args.arguments, ["--", word])
+        self.assertEqual(
+            self.arguments("resume", "--last").arguments, ["resume", "--last"]
+        )
+        self.assertEqual(self.arguments().command, "launch")
+
+    def test_leading_native_options_require_delimiter(self):
+        args = self.arguments("--", "--model", "chosen-by-user", "task")
+        self.assertEqual(args.arguments, ["--", "--model", "chosen-by-user", "task"])
+        with self.assertRaises(SystemExit):
+            self.arguments("--model", "chosen-by-user", "task")
+
+    def test_advanced_commands_keep_upload_consent_and_internal_hooks_private(self):
+        self.assertEqual(self.arguments("clef", "catalog").command, "catalog")
+        for command in ("hook", "launch"):
+            with self.assertRaises(SystemExit):
+                self.arguments("clef", command)
+        with self.assertRaises(SystemExit):
+            self.arguments(
+                "clef", "evaluate", "--contract", "review", "--input", "evidence.json"
+            )
+
+    def test_daily_usage_counts_evaluations_once_and_excludes_previous_day(self):
+        self.store.log(
+            event="route",
+            status="evaluated",
+            decision_id="a" * 32,
+            input_tokens=537,
+            output_tokens=0,
+        )
+        self.store.log(
+            event="route", status="selected", decision_id="a" * 32, applied=True
+        )
+        self.store.log(
+            event="workflow", status="fallback", fallback_reason="transport_error"
+        )
+        rows = self.store.records()
+        rows.append(
+            {
+                "event": "workflow",
+                "status": "evaluated",
+                "decision_id": "b" * 32,
+                "input_tokens": 999,
+                "output_tokens": 0,
+                "timestamp": (
+                    datetime.now(timezone.utc) - timedelta(days=1)
+                ).isoformat(),
+            }
+        )
+        with patch.object(self.store, "records", return_value=rows):
+            result = doctor(self.store, self.policy)
+        self.assertEqual(result["usage_today"]["successful_calls"], 1)
+        self.assertEqual(result["usage_today"]["failed_attempts"], 1)
+        self.assertEqual(result["usage_today"]["input_tokens"], 537)
+        self.assertEqual(result["latest_failure"]["reason"], "transport_error")
+        self.assertEqual(result["latest_success"], rows[0]["timestamp"])
+
+
+class FailureWarningTests(Base):
+    def test_provider_failure_warns_once_per_category_per_session(self):
+        event = self.event("UserPromptSubmit", prompt="Fix the parser")
+        with patch.object(self.client, "evaluate", side_effect=ClefError("http_429")):
+            first = self.hooks.handle(event)
+            second = self.hooks.handle(dict(event, turn_id="turn-2"))
+        self.assertIn("http_429", first["systemMessage"])
+        self.assertNotIn("systemMessage", second)
+        self.assert_contract("user-prompt-submit", first)
+        with patch.object(
+            self.client, "evaluate", side_effect=ClefError("transport_error")
+        ):
+            third = self.hooks.handle(event)
+        self.assertIn("transport_error", third["systemMessage"])
+
+    def test_startup_checks_credentials_without_inference(self):
+        with patch(
+            "clef.hooks.credentials", side_effect=ClefError("invalid_credentials")
+        ):
+            result = self.hooks.handle(self.event("SessionStart"))
+        self.assertIn("invalid_credentials", result["systemMessage"])
+        self.assertEqual(self.client.calls, [])
+        self.assert_contract("session-start", result)
+
+    def test_success_and_routing_abstention_remain_quiet(self):
+        with patch("clef.hooks.credentials", return_value=("a" * 32, "b" * 40)):
+            result = self.hooks.handle(self.event("SessionStart"))
+        self.assertNotIn("systemMessage", result)
+        result = self.hooks.handle(
+            self.event("UserPromptSubmit", prompt="Explain code")
+        )
+        self.assertNotIn("systemMessage", result)
+        with patch("clef.hooks.catalog.cached", return_value=self.available()):
+            self.client.choices = {"route": "keep"}
+            result = self.hooks.handle(
+                self.event(
+                    "PreToolUse",
+                    tool_name="spawn_agent",
+                    tool_input={
+                        "agent_type": "worker",
+                        "task_name": "small_task",
+                        "fork_turns": "none",
+                    },
+                )
+            )
+        self.assertNotIn("systemMessage", result)
+
+
 class NativeForkTests(Base):
     def spawn(self, tool_name="spawn_agent", **fields):
         arguments = {
@@ -851,16 +994,16 @@ class PermissionTests(Base):
     def test_network_error_does_not_auto_approve(self):
         self.policy["approval_mode"] = "enforce"
         self.client.evaluate = lambda *_: (_ for _ in ()).throw(ClefError("http_401"))
-        self.assertEqual(
-            self.hooks.handle(
-                self.event(
-                    "PermissionRequest",
-                    tool_name="Bash",
-                    tool_input={"command": self.git_command()},
-                )
-            ),
-            {},
+        result = self.hooks.handle(
+            self.event(
+                "PermissionRequest",
+                tool_name="Bash",
+                tool_input={"command": self.git_command()},
+            )
         )
+        self.assertEqual(set(result), {"systemMessage"})
+        self.assertIn("http_401", result["systemMessage"])
+        self.assert_contract("permission-request", result)
 
     def test_semantic_denial_is_advisory(self):
         self.policy["approval_mode"] = "enforce"
@@ -1222,6 +1365,32 @@ class MigrationTests(Base):
         self.assertEqual(
             result["hooks"]["Stop"][0]["hooks"],
             [{"type": "command", "command": "user-hook"}],
+        )
+
+    def test_private_hook_replaces_legacy_hook_and_is_removed_when_disabled(self):
+        root = "/nix/store/" + "a" * 32 + "-codex-clef/"
+        old, new = root + "bin/codex-clef hook", root + "libexec/codex-auto-hook"
+        seed = {"hooks": {"Stop": [{"hooks": [{"type": "command", "command": new}]}]}}
+        current = {
+            "hooks": {
+                "Stop": [
+                    {
+                        "hooks": [
+                            {"type": "command", "command": old},
+                            {"type": "command", "command": "user-hook"},
+                        ]
+                    }
+                ]
+            }
+        }
+        merged = hook_merge.merge(seed, current)
+        commands = [h["command"] for g in merged["hooks"]["Stop"] for h in g["hooks"]]
+        self.assertEqual(commands, ["user-hook", new])
+        self.assertEqual(hook_merge.merge(seed, merged), merged)
+        disabled = hook_merge.merge({"hooks": {}}, merged)
+        self.assertEqual(
+            [h["command"] for g in disabled["hooks"]["Stop"] for h in g["hooks"]],
+            ["user-hook"],
         )
 
     def test_invalid_hook_configuration_not_overwritten(self):

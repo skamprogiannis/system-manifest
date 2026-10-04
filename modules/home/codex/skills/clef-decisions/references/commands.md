@@ -3,18 +3,18 @@
 Inspect local configuration without an inference request:
 
 ```bash
-codex-clef status
-codex-clef catalog
+codex-auto status
+codex-auto clef catalog
 ```
 
 After the user authorizes uploading the selected, locally reviewed JSON evidence:
 
 ```bash
-codex-clef evaluate --contract review --input /tmp/review.json --acknowledge-upload
-codex-clef evaluate --contract verify --input /tmp/evidence.json --acknowledge-upload
-codex-clef evaluate --contract screen --input /tmp/content.json --acknowledge-upload
-codex-clef evaluate --contract escalation --input /tmp/attempts.json --acknowledge-upload
-codex-clef evaluate --contract rank --input /tmp/candidates.json --acknowledge-upload
+codex-auto clef evaluate --contract review --input /tmp/review.json --acknowledge-upload
+codex-auto clef evaluate --contract verify --input /tmp/evidence.json --acknowledge-upload
+codex-auto clef evaluate --contract screen --input /tmp/content.json --acknowledge-upload
+codex-auto clef evaluate --contract escalation --input /tmp/attempts.json --acknowledge-upload
+codex-auto clef evaluate --contract rank --input /tmp/candidates.json --acknowledge-upload
 ```
 
 Rank input is an object with a `goal` and a `candidates` array of 2 to 32 strings
@@ -25,7 +25,7 @@ Text payloads are capped at 24,000 UTF-8 bytes, including the question contract.
 After explicit permission to upload the selected image:
 
 ```bash
-codex-clef vision --image /tmp/screen.png --acknowledge-upload
+codex-auto clef vision --image /tmp/screen.png --acknowledge-upload
 ```
 
 This sends re-encoded pixels without original metadata. Visible personal data can
@@ -35,7 +35,7 @@ screenshot capture. The result is loading, login, error, success, or unknown.
 A routing record can receive reviewed outcome metadata, without a prompt:
 
 ```bash
-codex-clef outcome --decision-id ID_FROM_LOG --test-outcome passed --human-agreement agree
+codex-auto clef outcome --decision-id ID_FROM_LOG --test-outcome passed --human-agreement agree
 ```
 
 Use `failed`, `not_run` or `unknown` instead of claiming an unrun test passed. Add

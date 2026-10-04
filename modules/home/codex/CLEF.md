@@ -40,8 +40,8 @@ Cloudflare administration permissions just for inference.
 
 ```bash
 codex --version
-codex-clef status
-codex-clef catalog
+codex-auto status
+codex-auto clef catalog
 codex-auto --mode shadow -- "Trace the wallpaper-to-greeter configuration"
 ```
 
@@ -52,6 +52,20 @@ login. It does not request model inference. Missing login or catalog support
 causes conservative routing fallback. Read and trust the managed commands through
 Codex's `/hooks` interface before relying on hooks. The module does not forge hook
 trust or bypass approval settings.
+
+`codex-auto` is the public command for launch and diagnostics. `codex-auto status`
+shows readable health and today's recorded calls and tokens; add `--json` for
+scripts. Its routing mode describes the current environment separately from the
+launch default and permission policy. The last successful evaluation is historical
+evidence, not a fresh verification of the current key. These local records do not
+measure account-wide quota; failed requests can have unrecorded provider usage.
+Use `codex-auto clef --help` for advanced operations. The private hook executable
+is outside PATH. `codex-auto -- status` and `codex-auto -- clef` escape reserved
+words when they are literal task prompts.
+
+Assisted sessions display a native warning once per failure category per session.
+Normal success and routing abstention stay quiet. Diagnostics and startup
+credential validation make no inference requests.
 
 Use `codex-auto -- "task"` to apply valid model/effort choices. Assisted local
 interactive launches use native `--no-daemon` execution so hook activation belongs
@@ -106,6 +120,14 @@ replace, Codex's sandbox and the user's review. The main agent is instructed to
 consult architect for consequential plans, two genuinely failed approaches, or a
 substantial final diff. Advice is not a scheduler that forces a review every turn.
 
+Ordinary workflow instructions use a tighter ceiling of two independent task
+agents plus one focused reviewer for substantial work. Small or sequential work
+stays in the main session. Compact briefs prefer `fork_turns = "none"` when
+sufficient; concurrent workers own separate worktrees and disjoint files. The
+lead integrates and validates the result. Required architect checkpoints remain,
+with the reviewer reused for necessary follow-up and review of subsequent changes.
+These limits reduce overhead but do not guarantee a Codex allowance percentage.
+
 Automatic routing sends only locally derived booleans and size buckets. It does
 not send raw prompts, task text, code, command output, paths or transcripts. This
 privacy tradeoff can cause conservative abstention. For a richer decision, the
@@ -140,7 +162,7 @@ fixed categories and the fact that execution context is unverified go to Clef.
 
 `approvalMode = "enforce"` enforces only exact commands in the immutable installed
 `denied_commands` list; it never applies classifier allow or deny suggestions.
-The default list is empty. `codex-clef status` reports
+The default list is empty. `codex-auto status` reports
 `automatic_approval_supported: false`. There is no automatic promotion from
 shadow examples, probability thresholds or confidence. Agent tasks must not
 modify the installed policy or expand permissions.
@@ -171,7 +193,7 @@ Injection screening remains advice, not a security boundary.
 ## Logs and evaluation
 
 ```bash
-codex-clef status
+codex-auto status
 log="${XDG_STATE_HOME:-$HOME/.local/state}/codex-clef/decisions.jsonl"
 test ! -f "$log" || tail -n 10 "$log"
 ```
@@ -191,7 +213,7 @@ Records are private JSONL and appends/counters are locked across processes. The
 10 MiB log cap causes safe fallback rather than silently deleting evidence.
 
 ```bash
-codex-clef outcome --decision-id DECISION_ID --test-outcome passed --human-agreement agree
+codex-auto clef outcome --decision-id DECISION_ID --test-outcome passed --human-agreement agree
 ```
 
 Other labels are failed/not_run/unknown and disagree/unknown. Optional escalated

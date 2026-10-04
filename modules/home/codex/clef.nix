@@ -18,20 +18,20 @@
   policyFile = pkgs.writeText "codex-clef-policy.json" (builtins.toJSON policy);
   python = pkgs.python3.withPackages (ps: [ps.pillow]);
   package = pkgs.runCommand "codex-clef" {nativeBuildInputs = [pkgs.makeWrapper];} ''
-    mkdir -p "$out/lib/codex-clef" "$out/bin"
+    mkdir -p "$out/lib/codex-clef" "$out/libexec" "$out/bin"
     cp -r ${./clef} "$out/lib/codex-clef/clef"
     cp ${./clef-entry.py} "$out/lib/codex-clef/entry.py"
-    makeWrapper ${python}/bin/python3 "$out/bin/codex-clef" \
-      --add-flags "-I $out/lib/codex-clef/entry.py --policy ${policyFile} --codex ${codexCliPackage}/bin/codex"
+    makeWrapper ${python}/bin/python3 "$out/libexec/codex-auto-hook" \
+      --add-flags "-I $out/lib/codex-clef/entry.py --policy ${policyFile} --codex ${codexCliPackage}/bin/codex hook"
     makeWrapper ${python}/bin/python3 "$out/bin/codex-auto" \
-      --add-flags "-I $out/lib/codex-clef/entry.py --policy ${policyFile} --codex ${codexCliPackage}/bin/codex launch"
+      --add-flags "-I $out/lib/codex-clef/entry.py auto --policy ${policyFile} --codex ${codexCliPackage}/bin/codex --"
   '';
   handler = matcher: {
     inherit matcher;
     hooks = [
       {
         type = "command";
-        command = "${package}/bin/codex-clef hook";
+        command = "${package}/libexec/codex-auto-hook";
         timeout = 8;
         statusMessage = "Clef decision support";
       }

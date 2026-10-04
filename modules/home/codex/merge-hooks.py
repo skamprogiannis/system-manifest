@@ -8,7 +8,9 @@ import sys
 import tempfile
 import os
 
-OWN_COMMAND = re.compile(r"^/nix/store/[a-z0-9]{32}-codex-clef/bin/codex-clef hook$")
+OWN_COMMAND = re.compile(
+    r"^/nix/store/[a-z0-9]{32}-codex-clef/(?:bin/codex-clef hook|libexec/codex-auto-hook)$"
+)
 
 
 def merge(seed, current):

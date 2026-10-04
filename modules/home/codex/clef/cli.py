@@ -4,6 +4,7 @@ import argparse
 import base64
 from collections import Counter
 from dataclasses import dataclass
+from datetime import datetime, timezone
 import io
 import json
 import os
@@ -262,9 +263,20 @@ def doctor(store: Store, policy: dict) -> dict:
     except ClefError as error:
         catalog_status = str(error)
     records = store.records()
+    day = datetime.now(timezone.utc).date().isoformat()
+    evaluations = {
+        row["decision_id"]: row for row in records if row.get("status") == "evaluated"
+    }
+    successes = sorted(evaluations.values(), key=lambda row: row["timestamp"])
+    failures = [row for row in records if row.get("status") == "fallback"]
+    today = [row for row in successes if row["timestamp"].startswith(day + "T")]
     return {
         "credentials": credential_status,
         "catalog": catalog_status,
+        "default_routing_mode": "apply",
+        "routing_mode": os.environ.get("CODEX_CLEF_ROUTING_MODE", "apply")
+        if os.environ.get("CODEX_CLEF_ENABLED") == "1"
+        else "not_in_assisted_session",
         "approval_mode": policy["approval_mode"],
         "automatic_approval_supported": False,
         "completion_mode": policy["completion_mode"],
@@ -279,12 +291,51 @@ def doctor(store: Store, policy: dict) -> dict:
                 if row.get("status") == "fallback"
             )
         ),
+        "usage_today": {
+            "day_utc": day,
+            "successful_calls": len(today),
+            "failed_attempts": sum(
+                row["timestamp"].startswith(day + "T") for row in failures
+            ),
+            "input_tokens": sum(row.get("input_tokens", 0) for row in today),
+            "output_tokens": sum(row.get("output_tokens", 0) for row in today),
+        },
+        "latest_success": successes[-1]["timestamp"] if successes else None,
+        "latest_failure": {
+            "timestamp": failures[-1]["timestamp"],
+            "reason": failures[-1].get("fallback_reason"),
+        }
+        if failures
+        else None,
         "legacy_jev_log": str(store.root.parent / "codex-jev/shadow.jsonl"),
         "legacy_jev_log_exists": (
             store.root.parent / "codex-jev/shadow.jsonl"
         ).is_file(),
-        "note": "No live requests were made. Review and trust the installed hooks through /hooks in Codex.",
+        "note": "This status check made no live requests. Usage reflects local integration records, not account-wide quota. Failed requests may have unrecorded provider usage. Review hooks through /hooks in Codex.",
     }
+
+
+def format_status(status: dict) -> str:
+    usage = status["usage_today"]
+    failure = status["latest_failure"]
+    return "\n".join(
+        [
+            "Codex Auto — Clef support",
+            f"Credentials: {status['credentials']}",
+            f"Model catalog: {status['catalog']}",
+            f"Routing: {status['routing_mode']} (launch default: {status['default_routing_mode']})",
+            f"Permission policy: {status['approval_mode']}; automatic approval unsupported",
+            f"Completion advice: {status['completion_mode']}",
+            f"Today ({usage['day_utc']} UTC): {usage['successful_calls']} successful calls, {usage['failed_attempts']} failed attempts",
+            f"Recorded tokens: {usage['input_tokens']} input, {usage['output_tokens']} output",
+            f"Last successful evaluation: {status['latest_success'] or 'none recorded'}",
+            f"Latest recorded failure: {failure['reason']} at {failure['timestamp']}"
+            if failure
+            else "Latest recorded failure: none",
+            f"Log: {status['log']}",
+            status["note"],
+        ]
+    )
 
 
 def image_payload(path: Path) -> list[dict]:
@@ -320,30 +371,32 @@ def positive(value: str) -> int:
     return parsed
 
 
-def parser() -> argparse.ArgumentParser:
+def parser(*, advanced=False) -> argparse.ArgumentParser:
     root = argparse.ArgumentParser(
-        description="Direct Cloudflare Clef support for Codex."
+        prog="codex-auto clef" if advanced else "codex-auto backend",
+        description="Direct Cloudflare Clef support for Codex.",
     )
-    root.add_argument("--policy", type=Path, required=True)
-    root.add_argument("--codex", default="codex")
+    root.add_argument("--policy", type=Path, required=True, help=argparse.SUPPRESS)
+    root.add_argument("--codex", default="codex", help=argparse.SUPPRESS)
     commands = root.add_subparsers(dest="command", required=True)
-    commands.add_parser("status", aliases=["doctor"])
+    if not advanced:
+        status = commands.add_parser("status", aliases=["doctor"])
+        status.add_argument("--json", action="store_true")
     commands.add_parser(
         "catalog", help="Refresh models through Codex's native app-server."
     )
-    commands.add_parser("hook", help="Read one native hook event from stdin.")
-    launch = commands.add_parser(
-        "launch",
-        help="Opt-in launch; subsequent main-thread turns keep Codex's settings.",
-    )
-    launch.add_argument(
-        "--brief-file",
-        type=Path,
-        help="Reviewed JSON task brief for Cloudflare; requires upload consent.",
-    )
-    launch.add_argument("--acknowledge-upload", action="store_true")
-    launch.add_argument("--mode", choices=("apply", "shadow"), default="apply")
-    launch.add_argument("arguments", nargs=argparse.REMAINDER)
+    if not advanced:
+        commands.add_parser("hook", help="Read one native hook event from stdin.")
+        launch = commands.add_parser("launch", help="Opt-in assisted Codex launch.")
+        launch.prog = "codex-auto"
+        launch.add_argument(
+            "--brief-file",
+            type=Path,
+            help="Reviewed JSON task brief for Cloudflare; requires upload consent.",
+        )
+        launch.add_argument("--acknowledge-upload", action="store_true")
+        launch.add_argument("--mode", choices=("apply", "shadow"), default="apply")
+        launch.add_argument("arguments", nargs=argparse.REMAINDER)
     evaluate = commands.add_parser(
         "evaluate", help="Explicit typed evaluation of user-approved content."
     )
@@ -372,6 +425,35 @@ def parser() -> argparse.ArgumentParser:
     outcome.add_argument("--escalated", action="store_true")
     outcome.add_argument("--duration-ms", type=positive)
     return root
+
+
+def parse_arguments(arguments: list[str]):
+    # The packaged frontend separates its fixed backend options from user arguments.
+    if arguments[:1] != ["auto"]:
+        return parser().parse_args(arguments)
+    boundary = arguments.index("--")
+    internal, public = arguments[1:boundary], arguments[boundary + 1 :]
+    if public[:1] in (["--help"], ["-h"]):
+        print(
+            "usage: codex-auto [--mode {apply,shadow}] [--brief-file PATH --acknowledge-upload] [-- CODEX_OPTIONS] [TASK_OR_SUBCOMMAND]\n"
+            "       codex-auto status [--json]\n"
+            "       codex-auto clef {catalog,evaluate,vision,outcome} ...\n\n"
+            "Launch assisted Codex, inspect local health and usage, or run explicit Clef operations.\n"
+            "Bare launch and resume preserve model settings. Use -- before leading native options or reserved status/clef task prompts.\n"
+            "Use codex --help for native Codex options, and codex-auto clef --help for evaluations."
+        )
+        raise SystemExit(0)
+    if public[:1] == ["status"]:
+        args = parser().parse_args([*internal, *public])
+        args.human_output = not args.json
+        return args
+    if public[:1] == ["clef"]:
+        advanced = parser(advanced=True)
+        if len(public) == 1:
+            advanced.print_help()
+            raise SystemExit(0)
+        return advanced.parse_args([*internal, *public[1:]])
+    return parser().parse_args([*internal, "launch", *public])
 
 
 def run(args) -> object:
@@ -456,6 +538,11 @@ def run(args) -> object:
                 f"Clef selected {selected['model']} / {selected['effort']} ({args.mode}); decision {selected['decision_id']}",
                 file=sys.stderr,
             )
+        elif decisions.last_failure:
+            print(
+                f"Clef: {decisions.last_failure}; retaining the normal Codex configuration.",
+                file=sys.stderr,
+            )
         env = dict(
             os.environ, CODEX_CLEF_ENABLED="1", CODEX_CLEF_ROUTING_MODE=args.mode
         )
@@ -533,7 +620,7 @@ def run(args) -> object:
 
 
 def main() -> int:
-    args = parser().parse_args()
+    args = parse_arguments(sys.argv[1:])
 
     def deadline(*_):
         raise ClefError("deadline_exceeded")
@@ -545,7 +632,11 @@ def main() -> int:
         signal.alarm(6)
     try:
         result = run(args)
-        print(json.dumps(result, allow_nan=False))
+        print(
+            format_status(result)
+            if getattr(args, "human_output", False)
+            else json.dumps(result, allow_nan=False)
+        )
         return 0
     except (ClefError, OSError, ValueError, TypeError, KeyError) as error:
         code = str(error) if isinstance(error, ClefError) else "invalid_input_or_state"

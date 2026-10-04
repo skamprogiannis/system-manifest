@@ -52,10 +52,12 @@ class Decisions:
     def __init__(self, policy: dict, store: Store, client=None):
         self.policy, self.store = policy, store
         self.client = client or Client(policy)
+        self.last_failure = None
 
     def ask(
         self, purpose: str, session: str, state: dict, questions: dict, images=None
     ):
+        self.last_failure = None
         common = dict(
             event=purpose,
             session=session_key(session),
@@ -67,6 +69,7 @@ class Decisions:
                 raise ClefError("budget_exhausted")
             result = self.client.evaluate(state, questions, images)
         except ClefError as error:
+            self.last_failure = str(error)
             self.store.log(
                 **common, status="fallback", fallback_reason=str(error), applied=False
             )

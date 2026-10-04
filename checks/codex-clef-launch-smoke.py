@@ -31,6 +31,30 @@ def main():
             env[key] = str(path)
         env["TERM"] = "xterm-256color"
 
+        for arguments in (
+            ["--help"],
+            ["status"],
+            ["status", "--json"],
+            ["clef", "--help"],
+        ):
+            result = subprocess.run(
+                [assisted, *arguments],
+                env=env,
+                cwd=root,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            assert result.returncode == 0, result.stderr
+            assert "entry.py" not in result.stdout, (
+                "frontend exposes internal entrypoint"
+            )
+            if arguments == ["status", "--json"]:
+                assert json.loads(result.stdout)["usage_today"]["successful_calls"] == 0
+        assert not (root / "state/codex-clef").exists(), (
+            "diagnostics created decision state"
+        )
+
         def daemon(command):
             socket = root / "codex/app-server-control/app-server-control.sock"
             if command == "version" and not socket.exists():

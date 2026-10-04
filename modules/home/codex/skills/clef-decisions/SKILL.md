@@ -5,8 +5,9 @@ description: Run explicit typed Cloudflare Clef decisions for review triage, evi
 
 # Clef decisions
 
-Use the installed `codex-clef` executable directly. No MCP server is required.
-First run `codex-clef status`. A configured key is not proof of working credentials;
+Use the installed `codex-auto` executable directly. No MCP server is required.
+For health or usage questions, run `codex-auto status --json` and summarize the local records. This check uploads nothing and needs no upload consent.
+First run `codex-auto status`. A configured key is not proof of working credentials;
 status never makes a paid request. Read [the command guide](references/commands.md).
 
 The user must explicitly authorize sending the particular content to Cloudflare.

@@ -39,7 +39,8 @@ in {
     assert not re.search(matcher, "collaborationsend_message")
     PY
     python3 ${./codex-clef-test.py} ${../modules/home/codex} ${./fixtures/codex-0.160.0}
-    ${clef}/bin/codex-clef status > "$TMPDIR/status.json"
+    test ! -e ${clef}/bin/codex-clef
+    ${clef}/bin/codex-auto status --json > "$TMPDIR/status.json"
     python3 - "$TMPDIR/status.json" <<'PY'
     import json, sys
     status = json.load(open(sys.argv[1]))
