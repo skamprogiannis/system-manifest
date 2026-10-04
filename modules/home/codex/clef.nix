@@ -41,7 +41,7 @@
     hooks = {
       SessionStart = [(handler "startup|resume|clear|compact")];
       UserPromptSubmit = [(handler "*")];
-      PreToolUse = [(handler "^(spawn_agent|Agent)$")];
+      PreToolUse = [(handler "^(spawn_agent|Agent|collaborationspawn_agent)$")];
       PermissionRequest = [(handler "*")];
       PostToolUse = [(handler "*")];
       Stop = [(handler "*")];

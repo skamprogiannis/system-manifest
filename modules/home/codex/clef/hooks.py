@@ -174,7 +174,11 @@ class Hooks:
             )
         if name == "UserPromptSubmit":
             return self.workflow(event)
-        if name == "PreToolUse" and event.get("tool_name") in ("spawn_agent", "Agent"):
+        if name == "PreToolUse" and event.get("tool_name") in (
+            "spawn_agent",
+            "Agent",
+            "collaborationspawn_agent",
+        ):
             return self.spawn(event)
         if name == "PermissionRequest":
             return self.permission(event)

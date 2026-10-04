@@ -656,7 +656,7 @@ class LauncherTests(Base):
 
 
 class NativeForkTests(Base):
-    def spawn(self, **fields):
+    def spawn(self, tool_name="spawn_agent", **fields):
         arguments = {
             "agent_type": "explorer",
             "message": "Find the relevant tests",
@@ -665,7 +665,7 @@ class NativeForkTests(Base):
         }
         with patch.object(catalog, "cached", return_value=self.available()):
             return self.hooks.handle(
-                self.event("PreToolUse", tool_name="spawn_agent", tool_input=arguments)
+                self.event("PreToolUse", tool_name=tool_name, tool_input=arguments)
             )
 
     def test_native_v2_omitted_fork_turns_preserves_inherited_context(self):
@@ -693,6 +693,14 @@ class NativeForkTests(Base):
         self.assertEqual(updated["task_name"], "find_tests")
         self.assertEqual(updated["fork_turns"], "none")
         self.assertEqual(updated["model"], self.available()[0]["model"])
+        self.assert_contract("pre-tool-use", result)
+
+    def test_native_v2_namespaced_hook_routes_compact_briefs(self):
+        result = self.spawn(tool_name="collaborationspawn_agent", fork_turns="none")
+        updated = result["hookSpecificOutput"]["updatedInput"]
+        self.assertEqual(updated["fork_turns"], "none")
+        self.assertEqual(updated["task_name"], "find_tests")
+        self.assertEqual(len(self.client.calls), 1)
         self.assert_contract("pre-tool-use", result)
 
     def test_native_v2_inlined_items_abstains(self):

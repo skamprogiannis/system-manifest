@@ -22,8 +22,9 @@ in {
     printf 'unmanaged role\n' > "$HOME/.codex/agents/custom.keep"
     ${ctx.self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.activation.ensureCodexAgents.data}
     test "$(cat "$HOME/.codex/agents/custom.keep")" = "unmanaged role"
+    ${ctx.self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.activation.ensureCodexClefHooks.data}
     python3 - <<'PY'
-    import os, pathlib, tomllib
+    import json, os, pathlib, re, tomllib
     paths = list((pathlib.Path.home() / ".codex/agents").glob("*.toml"))
     assert len(paths) == 6
     for path in paths:
@@ -31,6 +32,11 @@ in {
         with os.fdopen(fd) as handle:
             role = tomllib.loads(handle.read())
         assert role["name"] == path.stem
+    hooks = json.loads((pathlib.Path.home() / ".codex/hooks.json").read_text())
+    matcher = hooks["hooks"]["PreToolUse"][0]["matcher"]
+    for tool in ("spawn_agent", "Agent", "collaborationspawn_agent"):
+        assert re.search(matcher, tool), tool
+    assert not re.search(matcher, "collaborationsend_message")
     PY
     python3 ${./codex-clef-test.py} ${../modules/home/codex} ${./fixtures/codex-0.160.0}
     ${clef}/bin/codex-clef status > "$TMPDIR/status.json"
