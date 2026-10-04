@@ -94,6 +94,11 @@ researcher, worker, architect, plan-reviewer and security-reviewer. All except
 worker are read-only, and none pins model/effort. The existing plan reviewer
 remains interactive; architect supplies a bounded noninteractive critique.
 
+Home Manager installs managed role definitions as private regular files during
+activation: native spawning refuses final-component symlinks even though role
+discovery can list them. This prevents the misleading “agent type is currently
+not available” error caused by declarative symlinks.
+
 Clef-assisted sessions permit at most four native spawns per user
 turn and reject nested spawns observed by their hooks. Unknown/custom tool paths
 are not a universal enforcement boundary; these hooks complement, rather than

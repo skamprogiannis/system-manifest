@@ -460,13 +460,6 @@ in {
     // {
       ".codex/AGENTS.md".text = builtins.readFile ./instructions.md;
       ".codex/diagrams/.keep".text = "";
-
-      ".codex/agents/explorer.toml".text = builtins.readFile ./agents/explorer.toml;
-      ".codex/agents/researcher.toml".text = builtins.readFile ./agents/researcher.toml;
-      ".codex/agents/worker.toml".text = builtins.readFile ./agents/worker.toml;
-      ".codex/agents/architect.toml".text = builtins.readFile ./agents/architect.toml;
-      ".codex/agents/plan-reviewer.toml".text = builtins.readFile ./agents/plan-reviewer.toml;
-      ".codex/agents/security-reviewer.toml".text = builtins.readFile ./agents/security-reviewer.toml;
     };
 
   home.activation.ensureWritableCodexDirectory = lib.hm.dag.entryBefore ["checkLinkTargets"] ''
@@ -485,6 +478,15 @@ in {
   home.activation.ensureWritableCodexConfig = lib.hm.dag.entryAfter ["linkGeneration"] ''
     run mkdir -p "$HOME/.codex"
     run ${codexConfigMerger}/bin/merge-codex-config ${codexConfigSeed} "$HOME/.codex/config.toml"
+  '';
+
+  # Native role loading refuses final-component symlinks, including Home Manager links.
+  home.activation.ensureCodexAgents = lib.hm.dag.entryAfter ["linkGeneration"] ''
+    run ${pkgs.coreutils}/bin/install -d -m 700 "$HOME/.codex/agents"
+    ${lib.concatMapStringsSep "\n" (name: ''
+      run ${pkgs.coreutils}/bin/install -m 600 ${pkgs.writeText "codex-${name}.toml" (builtins.readFile (./agents + "/${name}.toml"))} "$HOME/.codex/agents/.${name}.toml.new"
+      run ${pkgs.coreutils}/bin/mv -f "$HOME/.codex/agents/.${name}.toml.new" "$HOME/.codex/agents/${name}.toml"
+    '') ["architect" "explorer" "plan-reviewer" "researcher" "security-reviewer" "worker"]}
   '';
 
   home.activation.ensurePinchTabConfig = lib.hm.dag.entryAfter ["linkGeneration"] ''
