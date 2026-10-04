@@ -89,8 +89,18 @@ in {
       assert_file_contains ${desktopMimeDefaultApplicationsFile} '"x-scheme-handler/magnet":["torrent-add.desktop"]'
       assert_file_contains ${desktopMimeDefaultApplicationsFile} '"application/x-bittorrent":["torrent-add.desktop"]'
       test -x ${desktopGreeterPackage}/bin/dms-greeter
-      assert_file_not_contains ${desktopDmsPackage}/share/quickshell/dms/Modals/DankLauncherV2/DankLauncherV2ModalStandalone.qml 'sourceRect.antialiasing'
-      assert_file_not_contains ${desktopDmsPackage}/share/quickshell/dms/Modals/DankLauncherV2/DankLauncherV2ModalStandalone.qml 'sourceRect.smooth'
+      assert_file_not_contains ${desktopDmsPackage}/share/quickshell/dms/Modals/DankLauncherV2/DankLauncherV2ModalHost.qml 'sourceRect.antialiasing'
+      assert_file_not_contains ${desktopDmsPackage}/share/quickshell/dms/Modals/DankLauncherV2/DankLauncherV2ModalHost.qml 'sourceRect.smooth'
+      assert_file_contains ${desktopDmsPackage}/share/quickshell/dms/Modules/DankBar/Widgets/Clock.qml 'showSeconds: root.widgetData?.showSeconds !== undefined ? root.widgetData.showSeconds : SettingsData.showSeconds'
+      assert_file_contains ${desktopDmsPackage}/share/quickshell/dms/Widgets/ClockContent.qml 'SettingsData.getEffectiveTimeFormat(root.showSeconds)'
+      assert_file_contains ${desktopDmsPackage}/share/quickshell/dms/Widgets/ClockContent.qml 'precision: root.showSeconds ? SystemClock.Seconds : SystemClock.Minutes'
+      assert_file_contains ${desktopDmsPackage}/share/quickshell/dms/Modals/NotificationModal.qml 'NotificationService.clearHistory();'
+      assert_file_contains ${usbDmsPackage}/share/quickshell/dms/Modules/DankBar/BarSurface.qml 'Shape.SoftwareRenderer : Shape.CurveRenderer'
+      assert_file_contains ${usbDmsPackage}/share/quickshell/dms/DankCommon/Widgets/CachingImage.qml 'if (!root._cacheTarget || Quickshell.env("QT_QUICK_BACKEND") === "software")'
+      assert_file_contains ${usbDmsPackage}/share/quickshell/dms/Modules/Settings/WallpaperColorsTab.qml 'Quickshell.execDetached(["skwd-wall-v2"]);'
+      assert_file_not_contains ${usbDmsPackage}/share/quickshell/dms/Modules/Settings/WallpaperColorsTab.qml 'SessionData.setMaterialWallpaper'
+      assert_file_not_contains ${usbDmsPackage}/share/quickshell/dms/Modules/Settings/WallpaperColorsTab.qml 'SessionData.setWallpaper('
+      assert_file_not_contains ${usbDmsPackage}/share/quickshell/dms/Modules/Settings/WallpaperColorsTab.qml 'SessionData.setMonitorWallpaper('
       # Guard the packaged wake listener; real input/session-lock behavior
       # still requires a monitor-off-then-lock trial on hardware.
       lock_wake_monitor="$TMPDIR/lock-wake-monitor.qml"

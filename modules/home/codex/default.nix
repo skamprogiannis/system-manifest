@@ -422,7 +422,7 @@ in {
     pkgs.codeql
     pinchtab
     pkgs.python3Packages."sarif-tools"
-    pkgs.semgrep
+    (import ./semgrep.nix {inherit pkgs;})
   ];
 
   home.sessionVariables = {

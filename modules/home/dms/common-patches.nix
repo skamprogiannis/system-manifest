@@ -1,22 +1,4 @@
 {}: let
-  overviewCard = ''
-    root / "Modules/DankDash/Overview/Card.qml": [
-        (
-            "color: Theme.nestedSurface",
-            "color: Theme.withAlpha(Theme.nestedSurface, Math.max(0.0, Theme.popupTransparency - 0.22))",
-        ),
-    ],
-  '';
-
-  calendarOverviewCard = ''
-    root / "Modules/DankDash/Overview/CalendarOverviewCard.qml": [
-        (
-            "color: Theme.nestedSurface",
-            "color: Theme.withAlpha(Theme.nestedSurface, Math.max(0.0, Theme.popupTransparency - 0.22))",
-        ),
-    ],
-  '';
-
   appSearchService = ''
     root / "Services/AppSearchService.qml": [
         (
@@ -26,28 +8,6 @@
         (
             '                comment: "DMS",\n                action: "ipc:color-picker",',
             '                comment: "Sample colors from anywhere on screen",\n                action: "ipc:color-picker",',
-        ),
-    ],
-  '';
-
-  launcherSourceClassifier = ''
-    root / "Modals/DankLauncherV2/ControllerUtils.js": [
-        (
-            '    if (exec.indexOf("/nix/store/") !== -1\n        || exec.indexOf("/run/current-system/sw/") !== -1\n        || exec.indexOf("/etc/profiles/per-user/") !== -1)\n        return "nix";\n\n    return "system";',
-            '    if (exec.indexOf("steam://rungameid/") !== -1)\n        return "system";\n\n    if (exec.indexOf("/nix/store/") !== -1\n        || exec.indexOf("/run/current-system/sw/") !== -1\n        || exec.indexOf("/etc/profiles/per-user/") !== -1)\n        return "nix";\n\n    if (cmd0.length > 0 && cmd0.indexOf("/") === -1)\n        return "nix";\n\n    return "system";',
-        ),
-    ],
-  '';
-
-  lockedIdleWake = ''
-    root / "Services/IdleService.qml": [
-        (
-            '    // Wakes monitors powered off by the "power off monitors on lock" path.',
-            '    // Locking rearms the normal idle listeners and can lose their wake transition.\n    // Keep seat-level wake active for every locked monitor-off path, including idle.',
-        ),
-        (
-            '        enabled: root.enabled && root.isShellLocked && root.monitorsOff && (SettingsData.lockScreenPowerOffMonitorsOnLock || root.lockPowerOffRequested)',
-            '        enabled: root.enabled && root.isShellLocked && root.monitorsOff',
         ),
     ],
   '';
@@ -65,35 +25,6 @@
     ],
   '';
 
-  clockWidget = ''
-    root / "Modules/DankBar/Widgets/Clock.qml": [
-        (
-            "            readonly property bool compact: widgetData?.clockCompactMode !== undefined ? widgetData.clockCompactMode : SettingsData.clockCompactMode\n",
-            "            readonly property bool compact: widgetData?.clockCompactMode !== undefined ? widgetData.clockCompactMode : SettingsData.clockCompactMode\n            readonly property bool showSeconds: widgetData?.showSeconds !== undefined ? widgetData.showSeconds : SettingsData.showSeconds\n",
-        ),
-        (
-            "                    visible: SettingsData.showSeconds\n",
-            "                    visible: showSeconds\n",
-        ),
-        (
-            "                        visible: SettingsData.showSeconds\n",
-            "                        visible: showSeconds\n",
-        ),
-        (
-            "                        visible: SettingsData.showSeconds\n",
-            "                        visible: showSeconds\n",
-        ),
-        (
-            "                        visible: SettingsData.showSeconds\n",
-            "                        visible: showSeconds\n",
-        ),
-        (
-            "                precision: SettingsData.showSeconds ? SystemClock.Seconds : SystemClock.Minutes\n",
-            "                precision: showSeconds ? SystemClock.Seconds : SystemClock.Minutes\n",
-        ),
-    ],
-  '';
-
   notificationModal = ''
     root / "Modals/NotificationModal.qml": [
         (
@@ -101,65 +32,6 @@
             '        function clearAll(): string {\n            notificationModal.clearAll();\n            return "NOTIFICATION_MODAL_CLEAR_ALL_SUCCESS";\n        }\n\n        function clearHistory(): string {\n            NotificationService.clearHistory();\n            return "NOTIFICATION_MODAL_CLEAR_HISTORY_SUCCESS";\n        }',
         ),
     ],
-  '';
-
-  dankPopoutBase = ''
-    (
-        "targetColor: Theme.withAlpha(Theme.surfaceContainer, Theme.popupTransparency)",
-        'targetColor: Theme.withAlpha(Theme.surfaceContainer, root.layerNamespace === "dms:dash" ? Math.max(0.0, Theme.popupTransparency - 0.12) : Theme.popupTransparency)',
-    ),
-  '';
-
-  popoutBorderFallback = ''
-    (
-        "                border.width: BlurService.borderWidth",
-        "                border.width: BlurService.enabled ? BlurService.borderWidth : 1",
-    ),
-  '';
-
-  modalStandaloneBorderFallback = ''
-    (
-                        "                        border.color: BlurService.borderColor",
-                        "                        border.color: BlurService.enabled ? BlurService.borderColor : Theme.outlineMedium",
-    ),
-    (
-                        "                        border.width: BlurService.borderWidth",
-                        "                        border.width: BlurService.enabled ? BlurService.borderWidth : 1",
-    ),
-  '';
-
-  modalConnectedBorderFallback = ''
-    (
-        '                        border.color: (root.connectedSurfaceOverride || root.frameOwnsConnectedChrome) ? Theme.withAlpha(BlurService.borderColor, 0) : BlurService.borderColor',
-        '                        border.color: (root.connectedSurfaceOverride || root.frameOwnsConnectedChrome) ? Theme.withAlpha(BlurService.borderColor, 0) : (BlurService.enabled ? BlurService.borderColor : Theme.outlineMedium)',
-    ),
-    (
-        '                        border.width: (root.connectedSurfaceOverride || root.frameOwnsConnectedChrome) ? 0 : BlurService.borderWidth',
-        '                        border.width: (root.connectedSurfaceOverride || root.frameOwnsConnectedChrome) ? 0 : (BlurService.enabled ? BlurService.borderWidth : 1)',
-    ),
-  '';
-
-  launcherBorderFallback = ''
-    (
-        "                borderColor: root.borderColor",
-        "                borderColor: BlurService.enabled ? BlurService.borderColor : root.borderColor",
-    ),
-    (
-        "                borderWidth: root.borderWidth",
-        "                borderWidth: BlurService.enabled ? BlurService.borderWidth : root.borderWidth",
-    ),
-    (
-        "                border.color: BlurService.borderColor",
-        "                border.color: BlurService.enabled ? BlurService.borderColor : root.borderColor",
-    ),
-    (
-        "                border.width: BlurService.borderWidth",
-        "                border.width: BlurService.enabled ? BlurService.borderWidth : root.borderWidth",
-    ),
-    (
-        "                color: \"transparent\"\n                border.color:",
-        "                color: \"transparent\"\n                antialiasing: true\n                border.color:",
-    ),
   '';
 
   notificationPopupBorderFallback = ''
@@ -190,133 +62,89 @@
         ),
     ],
   '';
-in {
-  # Keep only behavior that upstream DMS does not expose declaratively.
-  defaultReplacementsPython = ''
-    root / "Widgets/DankPopoutStandalone.qml": [
-      ${dankPopoutBase}
-      ${popoutBorderFallback}
+
+  # DMS unified its standalone and connected hosts; preserve local glass on both.
+  # CalendarOverviewCard inherits Card, and upstream now includes locked idle wake.
+  common = ''
+    root / "Modules/DankDash/Overview/Card.qml": [
+        ("    restRadius: DashMetrics.cardRadius", "    restRadius: DashMetrics.cardRadius\n    color: Theme.withAlpha(surfaceColor, Math.max(0.0, Theme.popupTransparency - 0.22))"),
     ],
-    root / "Modals/Common/DankModalStandalone.qml": [
-      ${modalStandaloneBorderFallback}
+    root / "Modals/DankLauncherV2/ControllerUtils.js": [
+        ("    if (exec.indexOf(\"/nix/store/\") !== -1 || exec.indexOf(\"/run/current-system/sw/\") !== -1 || exec.indexOf(\"/etc/profiles/per-user/\") !== -1)\n        return \"nix\";\n\n    return \"system\";", "    if (exec.indexOf(\"steam://rungameid/\") !== -1)\n        return \"system\";\n\n    if (exec.indexOf(\"/nix/store/\") !== -1 || exec.indexOf(\"/run/current-system/sw/\") !== -1 || exec.indexOf(\"/etc/profiles/per-user/\") !== -1)\n        return \"nix\";\n\n    if (cmd0.length > 0 && cmd0.indexOf(\"/\") === -1)\n        return \"nix\";\n\n    return \"system\";"),
     ],
-    root / "Modals/Common/DankModalConnected.qml": [
-      ${modalConnectedBorderFallback}
+    root / "Widgets/DankPopoutHost.qml": [
+        ("    property string layerNamespace: popoutHandle.layerNamespace", "    property string layerNamespace: popoutHandle.layerNamespace\n    readonly property color localReadableSurface: root.layerNamespace === \"dms:dash\" ? Theme.withAlpha(Theme.hostSurface, Math.max(0.0, Theme.popupTransparency - 0.12)) : Theme.readableSurface"),
+        ("readonly property color surfaceColor: root.usesConnectedSurfaceChrome ? Theme.connectedSurfaceColor : Theme.readableSurface", "readonly property color surfaceColor: root.usesConnectedSurfaceChrome ? Theme.connectedSurfaceColor : root.localReadableSurface"),
+        ("readonly property color surfaceBorderColor: root.usesConnectedSurfaceChrome ? Theme.withAlpha(BlurService.borderColor, 0) : BlurService.borderColor", "readonly property color surfaceBorderColor: root.usesConnectedSurfaceChrome ? Theme.withAlpha(BlurService.borderColor, 0) : (BlurService.enabled ? BlurService.borderColor : Theme.outlineMedium)"),
+        ("readonly property real surfaceBorderWidth: root.usesConnectedSurfaceChrome ? 0 : BlurService.borderWidth", "readonly property real surfaceBorderWidth: root.usesConnectedSurfaceChrome ? 0 : (BlurService.enabled ? BlurService.borderWidth : 1)"),
+        ("surfaceColor: Theme.readableSurface", "surfaceColor: root.localReadableSurface"),
+        ("targetColor: root._fluidMotionActive ? Theme.readableSurface : \"transparent\"", "targetColor: root._fluidMotionActive ? root.localReadableSurface : \"transparent\""),
+        ("color: Theme.readableSurface", "color: root.localReadableSurface"),
+        ("border.color: BlurService.borderColor", "border.color: BlurService.enabled ? BlurService.borderColor : Theme.outlineMedium"),
+        ("border.width: BlurService.borderWidth", "border.width: BlurService.enabled ? BlurService.borderWidth : 1"),
     ],
-    root / "Modals/DankLauncherV2/DankLauncherV2ModalStandalone.qml": [
-      ${launcherBorderFallback}
+    root / "Modals/Common/DankModalHost.qml": [
+        ("border.color: root.frameOwnsConnectedChrome ? Theme.withAlpha(BlurService.borderColor, 0) : BlurService.borderColor", "border.color: root.frameOwnsConnectedChrome ? Theme.withAlpha(BlurService.borderColor, 0) : (BlurService.enabled ? BlurService.borderColor : Theme.outlineMedium)"),
+        ("border.width: root.frameOwnsConnectedChrome ? 0 : BlurService.borderWidth", "border.width: root.frameOwnsConnectedChrome ? 0 : (BlurService.enabled ? BlurService.borderWidth : 1)"),
     ],
+    root / "Modals/DankLauncherV2/DankLauncherV2ModalHost.qml": [
+        ("                    borderColor: root.borderColor", "                    borderColor: BlurService.enabled ? BlurService.borderColor : root.borderColor"),
+        ("                    borderWidth: root.borderWidth", "                    borderWidth: BlurService.enabled ? BlurService.borderWidth : root.borderWidth"),
+        ("                    border.color: BlurService.borderColor", "                    border.color: BlurService.enabled ? BlurService.borderColor : root.borderColor"),
+        ("                    border.width: BlurService.borderWidth", "                    border.width: BlurService.enabled ? BlurService.borderWidth : root.borderWidth"),
+        ("                    color: \"transparent\"\n                    border.color:", "                    color: \"transparent\"\n                    antialiasing: true\n                    border.color:"),
+    ],
+    ${appSearchService}
+    ${wallpaperCyclingExternalSet}
+    ${niriScreenshotDirectory}
     root / "Modules/Notifications/Popup/NotificationPopup.qml": [
       ${notificationPopupBorderFallback}
     ],
-    ${overviewCard}
-    ${calendarOverviewCard}
-    ${appSearchService}
-    ${launcherSourceClassifier}
-    ${lockedIdleWake}
+  '';
+in {
+  defaultReplacementsPython = ''
+    ${common}
     ${commonLists}
-    ${clockWidget}
-    ${wallpaperCyclingExternalSet}
-    ${niriScreenshotDirectory}
-    # Expose a clearHistory IPC command so keybinds can wipe the History tab.
-    # The built-in clearAll IPC only calls clearAllNotifications(); this adds
-    # a sibling function that delegates to NotificationService.clearHistory().
     ${notificationModal}
+    root / "Modules/DankBar/Widgets/Clock.qml": [
+        ("                    id: clock", "                    id: clock\n                    showSeconds: root.widgetData?.showSeconds !== undefined ? root.widgetData.showSeconds : SettingsData.showSeconds"),
+    ],
+    root / "Widgets/ClockContent.qml": [
+        ("    property bool vertical: false", "    property bool vertical: false\n    property bool showSeconds: SettingsData.showSeconds"),
+        ("SettingsData.getEffectiveTimeFormat()", "SettingsData.getEffectiveTimeFormat(root.showSeconds)"),
+        ("if (SettingsData.showSeconds)", "if (root.showSeconds)"),
+        ("precision: SettingsData.showSeconds ?", "precision: root.showSeconds ?"),
+    ],
+    root / "Common/SettingsData.qml": [
+        ("    function getEffectiveTimeFormat() {", "    function getEffectiveTimeFormat(seconds = showSeconds) {"),
+        ("return showSeconds ? \"hh:mm:ss\"", "return seconds ? \"hh:mm:ss\""),
+        ("return showSeconds ? \"hh:mm:ss AP\"", "return seconds ? \"hh:mm:ss AP\""),
+        ("return showSeconds ? \"h:mm:ss AP\"", "return seconds ? \"h:mm:ss AP\""),
+    ],
   '';
 
-  # USB-specific patches support the software-rendered portable session.
+  # Portable software rendering cannot capture GPU-backed cache thumbnails.
   usbReplacementsPython = ''
-    root / "Widgets/DankPopoutStandalone.qml": [
-      ${dankPopoutBase}
-      ${popoutBorderFallback}
-    ],
-    root / "Modals/Common/DankModalStandalone.qml": [
-      ${modalStandaloneBorderFallback}
-    ],
-    root / "Modals/Common/DankModalConnected.qml": [
-      ${modalConnectedBorderFallback}
-    ],
-    root / "Modals/DankLauncherV2/DankLauncherV2ModalStandalone.qml": [
-      ${launcherBorderFallback}
-    ],
-    root / "Modules/Notifications/Popup/NotificationPopup.qml": [
-      ${notificationPopupBorderFallback}
-    ],
-    ${overviewCard}
-    ${calendarOverviewCard}
-    ${appSearchService}
-    ${launcherSourceClassifier}
-    ${wallpaperCyclingExternalSet}
-    ${niriScreenshotDirectory}
+    ${common}
     root / "DankCommon/Widgets/CachingImage.qml": [
-        (
-            "import QtQuick\nimport qs.DankCommon.Common",
-            "import QtQuick\nimport Quickshell\nimport qs.DankCommon.Common",
-        ),
-        (
-            "                if (root._fromCache || root.isRemoteUrl || !root.cachePath)",
-            '                if (root._fromCache || root.isRemoteUrl || !root.cachePath || Quickshell.env("QT_QUICK_BACKEND") === "software")',
-        ),
-        (
-            "        // Cache-first; a miss errors and falls back to encodedImagePath\n        _fromCache = true;\n        staticImg.source = `''${Paths.stringify(Paths.imagecache)}/''${hash}@''${maxCacheSize}x''${maxCacheSize}.png`;",
-            "        if (Quickshell.env(\"QT_QUICK_BACKEND\") === \"software\") {\n            _fromCache = false;\n            staticImg.source = encoded;\n            return;\n        }\n        // Cache-first; a miss errors and falls back to encodedImagePath\n        _fromCache = true;\n        staticImg.source = `''${Paths.stringify(Paths.imagecache)}/''${hash}@''${maxCacheSize}x''${maxCacheSize}.png`;",
-        ),
+        ("import QtQuick\n", "import QtQuick\nimport Quickshell\n"),
+        ("                if (!root._cacheTarget)", "                if (!root._cacheTarget || Quickshell.env(\"QT_QUICK_BACKEND\") === \"software\")"),
+        ("        _cacheTarget = `''${Paths.stringify(Paths.imagecache)}/''${hash}@''${maxCacheSize}x''${maxCacheSize}.png`;", "        if (Quickshell.env(\"QT_QUICK_BACKEND\") === \"software\") {\n            staticImg.sourceSize = Qt.size(maxCacheSize, maxCacheSize);\n            staticImg.source = encoded;\n            return;\n        }\n        _cacheTarget = `''${Paths.stringify(Paths.imagecache)}/''${hash}@''${maxCacheSize}x''${maxCacheSize}.png`;"),
     ],
-    root / "Modules/Settings/WallpaperTab.qml": [
-        (
-            "    Component.onCompleted: {",
-            """    function launchSkwdWall() {
-        Quickshell.execDetached(["skwd-wall-v2"]);
-    }
-
-    Component.onCompleted: {""",
-        ),
-        (
-            "        mainWallpaperBrowserLoader.active = true;",
-            "        launchSkwdWall();\n        return;",
-        ),
-        (
-            "        lightWallpaperBrowserLoader.active = true;",
-            "        launchSkwdWall();\n        return;",
-        ),
-        (
-            "        darkWallpaperBrowserLoader.active = true;",
-            "        launchSkwdWall();\n        return;",
-        ),
-        (
-            "                                                    SessionData.setMonitorWallpaper(selectedMonitorName, selectedColor);",
-            "                                                    root.launchSkwdWall();\n                                                    return;",
-        ),
-        (
-            "                                                    SessionData.setWallpaperColor(selectedColor);",
-            "                                                    root.launchSkwdWall();\n                                                    return;",
-        ),
-        (
-            "                                                SessionData.setMonitorWallpaper(selectedMonitorName, \"\");",
-            "                                                root.launchSkwdWall();\n                                                return;",
-        ),
-        (
-            "                                                SessionData.clearWallpaper();",
-            "                                                root.launchSkwdWall();\n                                                return;",
-        ),
+    root / "Modules/DankBar/BarSurface.qml": [
+        ("import QtQuick.Shapes", "import QtQuick.Shapes\nimport Quickshell"),
+        ("preferredRendererType: Shape.CurveRenderer", "preferredRendererType: Quickshell.env(\"QT_QUICK_BACKEND\") === \"software\" ? Shape.SoftwareRenderer : Shape.CurveRenderer"),
     ],
-    root / "Modules/DankBar/BarCanvas.qml": [
-        (
-            "import QtQuick.Shapes",
-            "import QtQuick.Shapes\nimport Quickshell",
-        ),
-        (
-            "    property real wing: gothEnabled ? barWindow._wingR : 0",
-            '    property real wing: gothEnabled ? barWindow._wingR : 0\n    readonly property int shapeRendererType: Quickshell.env("QT_QUICK_BACKEND") === "software" ? Shape.SoftwareRenderer : Shape.CurveRenderer',
-        ),
-        (
-            "            preferredRendererType: Shape.CurveRenderer",
-            "            preferredRendererType: root.shapeRendererType",
-        ),
-        (
-            "            preferredRendererType: Shape.CurveRenderer",
-            "            preferredRendererType: root.shapeRendererType",
-        ),
+    root / "Modules/Settings/WallpaperColorsTab.qml": [
+        ("    function openBrowser() {\n        wallpaperBrowserLoader.active = true;\n        if (wallpaperBrowserLoader.item)\n            wallpaperBrowserLoader.item.open();\n    }", "    function openBrowser() {\n        Quickshell.execDetached([\"skwd-wall-v2\"]);\n    }"),
+        ("    function applyWallpaper(path) {\n        if (perMonitor) {\n            SessionData.setMonitorWallpaper(selectedScreen, path);\n            SessionData.setMonitorCyclingFolderPath(selectedScreen, \"\");\n            return;\n        }\n        SessionData.setWallpaper(path);\n        SessionData.wallpaperCyclingFolderPath = \"\";\n        SessionData.saveSettings();\n    }", "    function applyWallpaper(path) {\n        Quickshell.execDetached([\"skwd-wall-v2\"]);\n    }"),
+        ("    function pickColor() {\n        const picker = PopoutService.colorPickerModal;\n        if (!picker)\n            return;\n        picker.selectedColor = currentWallpaper.startsWith(\"#\") ? currentWallpaper : Theme.primary;\n        picker.pickerTitle = I18n.tr(\"Choose Wallpaper Color\", \"wallpaper color picker title\");\n        picker.onColorSelectedCallback = function (color) {\n            root.applyWallpaper(color.toString());\n        };\n        picker.show();\n    }", "    function pickColor() {\n        Quickshell.execDetached([\"skwd-wall-v2\"]);\n    }"),
+        ("    function clearWallpaper() {\n        SessionData.setMaterialWallpaper(materialTarget, materialEntry);\n    }", "    function clearWallpaper() {\n        Quickshell.execDetached([\"skwd-wall-v2\"]);\n    }"),
+        ("    function selectSeed(seed) {\n        if (!SessionData.setMaterialWallpaperSeed(materialTarget, seed))\n            return;\n        SettingsData.setMatugenSeedColor(\"\");\n    }", "    function selectSeed(seed) {\n        Quickshell.execDetached([\"skwd-wall-v2\"]);\n    }"),
+        ("    function pickSeed() {\n        const picker = PopoutService.colorPickerModal;\n        if (!picker)\n            return;\n        picker.selectedColor = materialEntry.seed;\n        picker.pickerTitle = I18n.tr(\"Seed color\");\n        picker.onColorSelectedCallback = function (color) {\n            root.selectSeed(Theme.withAlpha(color, 1).toString());\n        };\n        picker.show();\n    }", "    function pickSeed() {\n        Quickshell.execDetached([\"skwd-wall-v2\"]);\n    }"),
+        ("onResetRequested: SessionData.setMaterialWallpaperPreset(root.materialTarget, Art.defaultPreset)", "onResetRequested: root.clearWallpaper()"),
+        ("onSelected: preset => SessionData.setMaterialWallpaperPreset(root.materialTarget, preset)", "onSelected: preset => root.clearWallpaper()"),
+        ("onClicked: SessionData.setMonitorWallpaper(root.selectedScreen, \"\")", "onClicked: root.clearWallpaper()"),
     ],
   '';
 }

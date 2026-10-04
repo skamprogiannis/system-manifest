@@ -60,7 +60,7 @@
     fd
     ffmpegthumbnailer
     file
-    gcr
+    gcr_3
     glow
     gnumake
     go

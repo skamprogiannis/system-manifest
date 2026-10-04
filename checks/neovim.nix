@@ -140,6 +140,7 @@ in {
     LUA
 
     cp ${./neovim-hover.lua} check-hover.lua
+    cp ${./neovim-treesitter.lua} check-treesitter.lua
 
     cat > check-web-tooling.lua <<'LUA'
     local function fail(message)
@@ -420,6 +421,10 @@ in {
     ${pkgs.coreutils}/bin/timeout 20s \
       ${desktopHome}/bin/nvim --headless -n -i NONE -u ${desktopNeovimInitFile} \
       +"lua dofile('$PWD/check-go-format.lua')"
+
+    ${pkgs.coreutils}/bin/timeout 20s \
+      ${desktopHome}/bin/nvim --headless -n -i NONE -u ${desktopNeovimInitFile} \
+      +"lua local ok, err = pcall(dofile, '$PWD/check-treesitter.lua'); if not ok then vim.api.nvim_err_writeln(err); vim.cmd('cquit'); end"
 
     touch "$out"
   '';

@@ -30,19 +30,17 @@ Managed via **Nix Flakes** and **Home Manager**.
 
 ## Flake Inputs
 
-Packages tracked independently of nixpkgs for tighter version control:
+Hyprland and its portal use Nixpkgs packages. Treesitter uses the editor Nixpkgs package and its matching grammars. These inputs remain independently tracked for configuration modules, upstream features, or release-matched resources:
 
 | Input | Source | Why |
 |-------|--------|-----|
 | `catppuccin` | `github:catppuccin/nix` | Shared static Mocha palette for supported Home Manager applications |
-| `hyprland` | `github:hyprwm/Hyprland` | nixpkgs lags behind Hyprland releases; tracked directly for current compositor blur, rules, and Lua-config behavior |
-| `ghostty` | `github:ghostty-org/ghostty` | Stays on latest release; uses `ghostty.cachix.org` for fast installs |
+| `ghostty` | `github:ghostty-org/ghostty` | Tracks upstream development for terminal features; keeps its own Nixpkgs revision for `ghostty.cachix.org` cache compatibility |
 | `home-manager` | `github:nix-community/home-manager` | Tracks nixpkgs-unstable |
 | `neovim-nixpkgs` | `github:nixos/nixpkgs/nixos-unstable` | Editor and plugin packages can be refreshed independently of desktop packages |
 | `nixvim` | `github:nix-community/nixvim` | Full Neovim config in Nix |
 | `spicetify-nix` | `github:Gerg-L/spicetify-nix` | Declarative Spicetify wrapper for the themed Spotify GUI |
 | `skwd-wall` | `github:liixini/skwd-wall/nix` | skwd-wall v2 wallpaper selector/engine, daemon, and semantic model suite |
-| `pearpass-app-desktop` | `github:tetherto/pearpass-app-desktop` | PearPass AppImage source for NixOS wrapper |
 | `visual-explainer` | `github:nicobailon/visual-explainer` | HTML visualization generator for architecture diagrams and code explanations |
 | `impeccable` | `github:pbakaus/impeccable` | Frontend design skill bundle for typography, color, layout, and motion |
 | `caveman` | `github:JuliusBrussee/caveman` | Skill suite for concise low-token responses plus terse commit/review helpers |

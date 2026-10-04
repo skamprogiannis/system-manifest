@@ -2,7 +2,7 @@
   description = "Stefan's NixOS";
 
   inputs = {
-    # We use unstable to get the latest Hyprland and Ghostty
+    # Track current desktop packages, including Hyprland and its portal.
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
 
     home-manager = {
@@ -31,11 +31,6 @@
     skwd-wall = {
       url = "github:liixini/skwd-wall/nix";
       inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    pearpass-app-desktop = {
-      url = "github:tetherto/pearpass-app-desktop";
-      flake = false;
     };
 
     visual-explainer = {
@@ -75,11 +70,6 @@
 
     dank-greeter = {
       url = "github:AvengeMedia/dank-greeter";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    hyprland = {
-      url = "github:hyprwm/Hyprland";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 

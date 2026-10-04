@@ -2,11 +2,10 @@
   config,
   pkgs,
   lib,
-  inputs,
   ...
 }: let
   glass = import ./glass.nix;
-  hyprland-pkg = inputs.hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
+  hyprland-pkg = pkgs.hyprland;
   hyprlandLuaPkg = let
     joined = pkgs.symlinkJoin {
       name = "${hyprland-pkg.name}-lua-config";
