@@ -1,0 +1,26 @@
+--- a/proton/vpn/app/gtk/widgets/main/tray_icon.py
++++ b/proton/vpn/app/gtk/widgets/main/tray_icon.py
+@@ -82,6 +82,7 @@
+     ID = "Id"
+     TITLE = "Title"
+     ICON_NAME = "IconName"
++    ICON_PIXMAP = "IconPixmap"
+     MENU = "Menu"
+     ITEM_IS_MENU = "ItemIsMenu"
+     ICON_ACCESSIBLE_DESCRIPTION = "IconAccessibleDesc"
+@@ -285,6 +286,7 @@
+             StatusNotifierItemProperty.ID.value: dbus.String(self.tray.app_id),
+             StatusNotifierItemProperty.TITLE.value: dbus.String(self.tray.title),
+             StatusNotifierItemProperty.ICON_NAME.value: dbus.String(self.tray.icon_name),
++            StatusNotifierItemProperty.ICON_PIXMAP.value: dbus.Array([], signature="(iiay)"),
+             StatusNotifierItemProperty.MENU.value: dbus.ObjectPath(DBUSMENU_PATH),
+             StatusNotifierItemProperty.ITEM_IS_MENU.value: dbus.Boolean(True),
+             StatusNotifierItemProperty.ICON_ACCESSIBLE_DESCRIPTION.value: dbus.String(
+@@ -312,6 +314,7 @@
+             StatusNotifierItemProperty.ID.value: dbus.String(self.tray.app_id),
+             StatusNotifierItemProperty.TITLE.value: dbus.String(self.tray.title),
+             StatusNotifierItemProperty.ICON_NAME.value: dbus.String(self.tray.icon_name),
++            StatusNotifierItemProperty.ICON_PIXMAP.value: dbus.Array([], signature="(iiay)"),
+             StatusNotifierItemProperty.MENU.value: dbus.ObjectPath(DBUSMENU_PATH),
+             StatusNotifierItemProperty.ITEM_IS_MENU.value: dbus.Boolean(True),
+             StatusNotifierItemProperty.ICON_ACCESSIBLE_DESCRIPTION.value: dbus.String(

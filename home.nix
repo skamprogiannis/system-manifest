@@ -43,7 +43,7 @@
     mpv
     pkgs.mailspring
     obsidian
-    proton-vpn
+    (pkgs.callPackage ./modules/home/proton-vpn/package.nix {})
     vesktop
 
     # CLI / Tools
