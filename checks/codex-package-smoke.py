@@ -2,10 +2,40 @@
 
 import json
 import os
+import signal
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import time
+
+
+def wait_for_managed_processes_to_exit(root):
+    # The PID backend leaves its separate update loop running after daemon stop.
+    # Stop only fixture-owned updaters before removing their copied package.
+    deadline = time.monotonic() + 10
+    while True:
+        running = []
+        for process in Path("/proc").iterdir():
+            if not process.name.isdigit():
+                continue
+            try:
+                executable = Path(os.readlink(process / "exe"))
+            except (FileNotFoundError, PermissionError, ProcessLookupError):
+                continue
+            if executable.is_relative_to(root):
+                running.append(process.name)
+                try:
+                    arguments = (process / "cmdline").read_bytes().split(b"\0")
+                    if arguments[1:5] == [b"app-server", b"daemon", b"pid-update-loop", b""]:
+                        os.kill(int(process.name), signal.SIGTERM)
+                except (FileNotFoundError, ProcessLookupError):
+                    continue
+        if not running:
+            return
+        if time.monotonic() >= deadline:
+            raise AssertionError(f"Fixture daemon processes did not exit after stop: {running}")
+        time.sleep(0.05)
 
 
 def main():
@@ -74,11 +104,13 @@ def main():
         except BaseException:
             try:
                 run("app-server", "daemon", "stop")
+                wait_for_managed_processes_to_exit(root)
             except Exception as cleanup_error:
                 print(f"Daemon cleanup also failed: {cleanup_error}", file=sys.stderr)
             raise
         else:
             run("app-server", "daemon", "stop")
+            wait_for_managed_processes_to_exit(root)
 
 
 if __name__ == "__main__":
