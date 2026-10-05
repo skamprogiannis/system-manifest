@@ -23,7 +23,6 @@
     ./modules/home/firefox.nix
     ./modules/home/theme.nix
     ./modules/home/obsidian.nix
-    ./modules/home/spotify.nix
     ./modules/home/spicetify.nix
     ./modules/home/zellij.nix
     ./modules/home/scripts

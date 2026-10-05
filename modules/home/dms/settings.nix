@@ -310,11 +310,6 @@ in {
         replacement = "steam_icon_$1";
         type = "regex";
       }
-      {
-        pattern = "spotify_player";
-        replacement = "spotify";
-        type = "exact";
-      }
     ];
 
     # --- CURSOR ---

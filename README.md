@@ -14,7 +14,6 @@ Managed via **Nix Flakes** and **Home Manager**.
 - **Desktop local dictation:** Hold `Super+T` to record English speech and release to copy its local Whisper transcription to the clipboard. Notes uses `Super+N`; alerts use `Super+A`. The desktop-only service runs on demand and removes its transient recording state when it stops.
 - **Media & Productivity:**
   - **Spotify GUI:** The current Nixpkgs Spotify client is styled with Spicetify and the Hazy translucent theme.
-  - **Spotify Player:** Terminal-based Spotify client (`spotify_player`) with streaming support. The wrapper authenticates interactively before bootstrapping the background daemon so the login callback port is not stolen by a headless service on fresh setups, it does one safe re-auth pass when Spotify later rejects a cached refresh token, and it can read a personal Spotify app client ID from `~/.config/spotify-player/client_id` so Web API auth does not depend on a shared client ID when Spotify rate-limits it.
   - **Transmission:** Local BitTorrent daemon with a browser-app Web UI and a keyboard-friendly `torrent` helper.
   - **Mailspring:** Email client; credentials stored via GNOME Keyring (runs standalone, no GNOME shell required).
   - **Obsidian:** Note-taking application with Home Manager plugin management.

@@ -6,6 +6,7 @@
     desktopSpicedSpotify
     desktopSpotifyDirectlyInstalled
     desktopSpotifyPackage
+    spotifyPlayerRemoved
     pkgs
     ;
 in {
@@ -18,6 +19,12 @@ in {
       ];
     } ''
       set -euo pipefail
+
+      if [ ${builtins.toJSON spotifyPlayerRemoved} != true ]; then
+        echo "spotify_player and its service/auth migration must be removed from every host." >&2
+        exit 1
+      fi
+      test ! -e ${desktopHome}/bin/spotify_player
 
       if [ "${desktopSpotifyPackage}" != "${desktopNixpkgsSpotify}" ]; then
         echo "Spotify must use the complete current Nixpkgs package." >&2

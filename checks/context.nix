@@ -50,6 +50,12 @@
   desktopSpotifyPackage = self.nixosConfigurations.desktop.config.home-manager.users.stefan.programs.spicetify.spotifyPackage;
   desktopSpicedSpotify = self.nixosConfigurations.desktop.config.home-manager.users.stefan.programs.spicetify.spicedSpotify;
   desktopSpotifyDirectlyInstalled = builtins.elem desktopSpicedSpotify self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.packages;
+  spotifyPlayerRemoved = builtins.all (host: let
+    home = self.nixosConfigurations.${host}.config.home-manager.users.stefan;
+  in
+    !home.programs.spotify-player.enable
+    && !(home.systemd.user.services ? spotify-player)
+    && !(home.home.activation ? spotifyUsbAuthMigration)) ["desktop" "usb" "laptop"];
   desktopTmpfilesRulesFile = pkgs.writeText "desktop-tmpfiles-rules" (builtins.concatStringsSep "\n" self.nixosConfigurations.desktop.config.systemd.tmpfiles.rules);
   desktopZellijDevLayoutFile = pkgs.writeText "desktop-zellij-dev-layout" self.nixosConfigurations.desktop.config.home-manager.users.stefan.xdg.configFile."zellij/layouts/dev.kdl".text;
   desktopZellijLegacyArgsScrubActivationFile = pkgs.writeText "desktop-zellij-legacy-args-scrub-activation" self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.activation.scrubLegacyZellijContext7Args.data;
@@ -150,7 +156,6 @@
       "${desktopCheckHome}/bin/gsr-record"
       "${desktopCheckHome}/bin/hypr-quit-active"
       "${desktopCheckHome}/bin/screenshot-path-copy"
-      "${desktopCheckHome}/bin/spotify_player"
       "${desktopCheckHome}/bin/torrent"
       "${desktopCheckHome}/bin/transmission-port-sync"
       "${desktopCheckHome}/bin/update-usb"
@@ -178,7 +183,6 @@
       "${usbHostScratchStopScript}"
       "${usbHostScratchSyncScript}"
       "${usbHostScratchShutdownCleanupScript}"
-      "${usbCheckHome}/bin/spotify_player"
       "${usbCheckHome}/bin/setup-persistent-usb"
     ];
 }

@@ -1627,71 +1627,8 @@ in {
       assert data["model"] == "gpt-5.6-terra"
       PY
 
-      if ${pkgs.gnugrep}/bin/grep -Fq "get key devices" "$desktop_home/bin/spotify_player"; then
-        echo "spotify_player wrapper must not probe 'get key devices' because it can relaunch OAuth." >&2
-        ${pkgs.gnused}/bin/sed -n '1,220p' "$desktop_home/bin/spotify_player" >&2
-        exit 1
-      fi
-
-      if ! ${pkgs.gnugrep}/bin/grep -Fq "cached Spotify login expired; re-authenticating..." "$desktop_home/bin/spotify_player"; then
-        echo "Expected spotify_player wrapper to recover stale cached Spotify logins." >&2
-        ${pkgs.gnused}/bin/sed -n '1,220p' "$desktop_home/bin/spotify_player" >&2
-        exit 1
-      fi
-
-      if ! ${pkgs.gnugrep}/bin/grep -Fq "Spotify Web API is rate-limited for the shared client ID" "$desktop_home/bin/spotify_player"; then
-        echo "Expected spotify_player wrapper to surface shared-client rate limiting guidance." >&2
-        ${pkgs.gnused}/bin/sed -n '1,260p' "$desktop_home/bin/spotify_player" >&2
-        exit 1
-      fi
-
-      if ! ${pkgs.gnugrep}/bin/grep -Fq "Spotify client ID changed; clearing cached auth before re-authenticating" "$desktop_home/bin/spotify_player"; then
-        echo "Expected spotify_player wrapper to clear cached auth when the configured client ID changes." >&2
-        ${pkgs.gnused}/bin/sed -n '1,260p' "$desktop_home/bin/spotify_player" >&2
-        exit 1
-      fi
-
-      if ! ${pkgs.gnugrep}/bin/grep -Fq "service_has_failed()" "$desktop_home/bin/spotify_player"; then
-        echo "Expected spotify_player wrapper to detect failed daemon starts safely." >&2
-        ${pkgs.gnused}/bin/sed -n '1,220p' "$desktop_home/bin/spotify_player" >&2
-        exit 1
-      fi
-
-      if ! ${pkgs.gnugrep}/bin/grep -Fq "daemon_port=\"8082\"" "$desktop_home/bin/spotify_player"; then
-        echo "Expected spotify_player wrapper to wait on the daemon-specific socket port." >&2
-        ${pkgs.gnused}/bin/sed -n '1,220p' "$desktop_home/bin/spotify_player" >&2
-        exit 1
-      fi
-
-      if ! ${pkgs.gnugrep}/bin/grep -Fq 'exec "$real_player" -c "$daemon_config_dir" "$@"' "$desktop_home/bin/spotify_player"; then
-        echo "Expected spotify_player daemon-backed subcommands to use the daemon config." >&2
-        ${pkgs.gnused}/bin/sed -n '1,240p' "$desktop_home/bin/spotify_player" >&2
-        exit 1
-      fi
-
-      if ! ${pkgs.gnugrep}/bin/grep -Fq "spotify-player-tui.lock" "$desktop_home/bin/spotify_player"; then
-        echo "Expected spotify_player wrapper to prevent duplicate TUI instances." >&2
-        ${pkgs.gnused}/bin/sed -n '1,260p' "$desktop_home/bin/spotify_player" >&2
-        exit 1
-      fi
-
-      if ! ${pkgs.gnugrep}/bin/grep -Fq "app_refresh_duration_in_ms = 32" ${../modules/home/spotify.nix}; then
-        echo "Expected spotify module to keep fast periodic app refresh polling." >&2
-        ${pkgs.gnused}/bin/sed -n '100,170p' ${../modules/home/spotify.nix} >&2
-        exit 1
-      fi
-
-      if ! ${pkgs.gnugrep}/bin/grep -Fq "client_id_command = { command =" ${../modules/home/spotify.nix}; then
-        echo "Expected spotify module to resolve the client ID via a command." >&2
-        ${pkgs.gnused}/bin/sed -n '100,170p' ${../modules/home/spotify.nix} >&2
-        exit 1
-      fi
-
-      if ! ${pkgs.gnugrep}/bin/grep -Fq "spotify-player auth OAuth block not found" ${../modules/home/spotify.nix}; then
-        echo "Expected spotify module to patch the upstream auth flow to honor the configured client ID." >&2
-        ${pkgs.gnused}/bin/sed -n '1,140p' ${../modules/home/spotify.nix} >&2
-        exit 1
-      fi
+      test ! -e "$desktop_home/bin/spotify_player"
+      test ! -e "$usb_home/bin/spotify_player"
 
       touch "$out"
     '';
