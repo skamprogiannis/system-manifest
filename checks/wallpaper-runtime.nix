@@ -44,6 +44,9 @@ in {
         exit 1
       fi
 
+      export SKWD_V2_CONFIG_SOURCE=${../modules/home/wallpaper/configure-v2.py}
+      python3 ${./skwd-v2-config-test.py}
+
       export WALLPAPER_SYNC_SOURCE=${../modules/home/wallpaper/wallpaper-sync.py}
       python3 ${./wallpaper-sync-test.py}
       export WALLPAPER_GREETER_SYNC_SOURCE=${../modules/system/wallpaper-greeter-sync.py}

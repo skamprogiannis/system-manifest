@@ -78,8 +78,8 @@
   programs.gpu-screen-recorder.enable = true;
   services.skwd-deck = {
     enable = true;
-    # The daemon invokes Matugen plus shell/setsid for integration reload hooks.
-    extraPackages = [pkgs.bash pkgs.matugen pkgs.util-linux];
+    # The daemon invokes Matugen, SteamCMD, and shell/setsid integration hooks.
+    extraPackages = [pkgs.bash pkgs.matugen pkgs.steamcmd pkgs.util-linux];
   };
 
   # Allow the user to rebuild the system without a password
