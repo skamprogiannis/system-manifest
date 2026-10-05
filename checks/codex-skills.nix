@@ -92,6 +92,10 @@ in {
 
       test -x "$skills_root/impeccable/scripts/impeccable"
       test -f "$skills_root/impeccable/reference/generate.md"
+      test -x "$skills_root/impeccable/scripts/bin/linux-x64/impeccable"
+      impeccable_version="$(tr -d '[:space:]' < "$skills_root/impeccable/scripts/VERSION")"
+      # Probe mode refuses runtime downloads and skips user cache/PATH fallbacks.
+      test "$(IMPECCABLE_LAUNCHER_PROBE=1 "$skills_root/impeccable/scripts/impeccable" engine-probe)" = "impeccable-engine $impeccable_version"
       test -f "$skills_root/browser-automation/references/safety.md"
       test -f "$skills_root/browser-automation/agents/openai.yaml"
 

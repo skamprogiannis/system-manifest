@@ -42,7 +42,7 @@ Hyprland and its portal use Nixpkgs packages. Treesitter uses the editor Nixpkgs
 | `spicetify-nix` | `github:Gerg-L/spicetify-nix` | Declarative Spicetify wrapper for the themed Spotify GUI |
 | `skwd-wall` | `github:liixini/skwd-wall/nix` | skwd-wall v2 wallpaper selector/engine, daemon, and semantic model suite |
 | `visual-explainer` | `github:nicobailon/visual-explainer` | HTML visualization generator for architecture diagrams and code explanations |
-| `impeccable` | `github:pbakaus/impeccable` | Frontend design skill bundle for typography, color, layout, and motion |
+| `impeccable` | `github:pbakaus/impeccable` | Frontend design skill bundle with its matching engine packaged for offline typography, color, layout, and motion tools |
 | `caveman` | `github:JuliusBrussee/caveman` | Skill suite for concise low-token responses plus terse commit/review helpers |
 | `mattpocock-skills` | `github:mattpocock/skills` | Engineering skills used here for diagnosis, grilling, domain and module design, review, TDD, and prototyping |
 | `trailofbits-skills` | `github:trailofbits/skills` | Security and analysis skill marketplace used here as the upstream source for the compact `static-analysis` skill |

@@ -307,13 +307,25 @@
         mkdir -p "$out"
         cp -r "$workdir"/. "$out/"
   '';
+  impeccableSource = "${inputs.impeccable}/.agents/skills/impeccable";
+  impeccableEngineVersion = lib.strings.trim (builtins.readFile "${impeccableSource}/scripts/VERSION");
+  impeccableEngine = pkgs.fetchurl {
+    url = "https://github.com/pbakaus/impeccable/releases/download/engine-v${impeccableEngineVersion}/impeccable-linux-x64";
+    hash = "sha256-AiFgfh9TWvk36iZ8NHsfkCM7hdwlY8vS7u/fQuDlxZQ=";
+  };
+  impeccableSkill = pkgs.runCommand "impeccable-skill-with-engine-${impeccableEngineVersion}" {} ''
+    cp -r ${impeccableSource} "$out"
+    chmod -R u+w "$out"
+    install -Dm755 ${impeccableEngine} "$out/scripts/bin/linux-x64/impeccable"
+    test "$(IMPECCABLE_LAUNCHER_PROBE=1 "$out/scripts/impeccable" engine-probe)" = "impeccable-engine ${impeccableEngineVersion}"
+  '';
   declarativeSkills = [
     (mkSkill "clef-decisions" ./skills/clef-decisions "Use direct Clef typed decisions for explicit reviews, verification, ranking, and screenshot classification; inspect routing diagnostics.")
     (mkSkill "visual-explainer" visualExplainerSkill "Generate visual diagrams and HTML explainers for architecture, plans, diffs, and complex tables.")
     (mkSkill "technical-debt" ./skills/technical-debt "Audit code health, quantify technical debt, and produce focused refactoring roadmaps.")
     (mkSkill "browser-automation" "${inputs.pinchtab-src}/plugins/grok/skills/pinchtab" "Control Chrome with PinchTab for web UI testing, scraping, form filling, and browser workflows.")
     (mkSkill "static-analysis" staticAnalysisSkill "Run scanner-backed security analysis with CodeQL, Semgrep, and SARIF interpretation.")
-    (mkSkill "impeccable" "${inputs.impeccable}/.agents/skills/impeccable" "Design, audit, and polish frontend interfaces, layouts, typography, motion, and UX details.")
+    (mkSkill "impeccable" impeccableSkill "Design, audit, and polish frontend interfaces, layouts, typography, motion, and UX details.")
     (mkSkill "caveman" "${inputs.caveman}/skills/caveman" "Use terse caveman-mode responses with technical accuracy and minimal filler.")
     (mkSkill "caveman-commit" "${inputs.caveman}/skills/caveman-commit" "Generate terse Conventional Commit messages in caveman style.")
     (mkSkill "caveman-review" "${inputs.caveman}/skills/caveman-review" "Produce compact code review findings in caveman style.")
