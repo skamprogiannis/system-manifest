@@ -81,7 +81,7 @@ in {
       assert_file_contains ${desktopDmsSettingsFile} '"floatingWindowSyncGlobal":false'
       assert_file_contains ${desktopDmsSettingsFile} '"floatingWindowTransparency":0.55'
       assert_file_contains ${desktopDmsSettingsFile} '"floatingWindowForegroundLayers":true'
-      assert_file_contains ${desktopDmsSettingsFile} '"floatingWindowForegroundTransparency":0.63'
+      assert_file_contains ${desktopDmsSettingsFile} '"floatingWindowForegroundTransparency":0.4'
       assert_file_contains ${desktopDmsSettingsFile} '"notepadTransparencyOverride":0.6'
       assert_file_contains ${desktopDmsSettingsFile} '"systemMonitorTransparency":0.6'
       assert_file_contains ${desktopDmsSettingsFile} '"transparency":0.35'

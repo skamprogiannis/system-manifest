@@ -43,7 +43,7 @@
     barWidgetTransparency = 0.55;
     popupTransparency = 0.55;
     floatingWindowTransparency = 0.55;
-    floatingWindowForegroundTransparency = 0.63;
+    floatingWindowForegroundTransparency = 0.40;
     notepadTransparency = 0.60;
     systemMonitorTransparency = 0.60;
     layerIgnoreAlpha = 0.2;
