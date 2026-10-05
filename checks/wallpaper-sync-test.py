@@ -24,6 +24,7 @@ class WallpaperSyncTests(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
         self.paths = sync.Paths(self.root, self.root/'state', self.root/'cache', self.root/'config', self.root/'run')
+        self.write(self.paths.config/'skwd-wall-v2/config.json', {'paths': {'wallpaper': str(self.root), 'videoWallpaper': str(self.root)}})
         self.image = self.root/'80s Room.png'
         self.image.write_bytes(b'fixture image')
         self.last = {'type': 'static', 'path': str(self.image), 'thumb': str(self.image), 'we_id': ''}
@@ -166,6 +167,121 @@ class WallpaperSyncTests(unittest.TestCase):
         self.rpc_unavailable = False
         self.bridge.reconcile()
         self.assertTrue(self.bridge.status()['session_matches'])
+
+    def test_nested_library_key_with_generated_thumbnail_matches_exact_source(self):
+        self.write(self.paths.config/'skwd-wall-v2/config.json', {'paths': {'wallpaper': '~/wallpapers'}})
+        self.image = self.root/'wallpapers/paintings/same-name.png'
+        self.image.parent.mkdir(parents=True)
+        self.image.write_bytes(b'nested fixture')
+        thumbnail = self.root/'cache/skwd-wall-v2/thumbs/paintings--same-name.webp'
+        thumbnail.parent.mkdir(parents=True)
+        thumbnail.write_bytes(b'thumbnail')
+        self.last.update(path=str(self.image), thumb=str(self.image))
+        self.theme.update(key='static:paintings/same-name.png', source=str(thumbnail), thumb=str(thumbnail))
+        self.write(self.paths.last, self.last)
+        self.write(self.paths.outputs, {'DP-1': self.last, 'DP-2': self.last})
+        self.bridge.reconcile()
+        metadata = sync.read_json(self.paths.current/'metadata.json')
+        self.assertEqual(metadata['source'], str(self.image))
+        self.assertEqual(metadata['identity']['key'], 'static:paintings/same-name.png')
+        previous = self.paths.current.resolve()
+        for key in ('static:other/same-name.png', 'static:same-name.png'):
+            with self.subTest(key=key):
+                self.theme['key'] = key
+                with self.assertRaises(sync.SyncError):
+                    self.bridge.reconcile()
+                self.assertEqual(self.paths.current.resolve(), previous)
+
+    def test_same_basename_in_another_folder_rejects_stale_theme(self):
+        self.bridge.reconcile()
+        previous = self.paths.current.resolve()
+        self.image = self.root/'other/80s Room.png'
+        self.image.parent.mkdir()
+        self.image.write_bytes(b'different image')
+        self.last.update(path=str(self.image), thumb=str(self.image))
+        self.write(self.paths.last, self.last)
+        self.write(self.paths.outputs, {'DP-1': self.last})
+        with self.assertRaises(sync.SyncError):
+            self.bridge.reconcile()
+        self.assertEqual(self.paths.current.resolve(), previous)
+
+    def test_unset_video_root_uses_configured_wallpaper_root(self):
+        self.write(self.paths.config/'skwd-wall-v2/config.json', {'paths': {'wallpaper': str(self.root)}})
+        video = self.root/'clips/animated.webm'
+        video.parent.mkdir()
+        video.write_bytes(b'video')
+        self.last.update(type='video', path=str(video))
+        self.theme['key'] = 'video:clips/animated.webm'
+        self.write(self.paths.last, self.last)
+        self.write(self.paths.outputs, {'DP-1': self.last})
+        self.bridge.reconcile()
+        self.assertEqual(sync.read_json(self.paths.current/'metadata.json')['key'], 'video:clips/animated.webm')
+        self.write(self.paths.config/'skwd-wall-v2/config.json', {'paths': {'wallpaper': str(self.root), 'videoWallpaper': ''}})
+        self.assertEqual(self.bridge.library_roots()['videoWallpaper'], self.root)
+
+    def test_missing_wallpaper_root_follows_localized_pictures_and_existing_legacy_folder(self):
+        self.write(self.paths.config/'skwd-wall-v2/config.json', {'paths': {}})
+        user_dirs = self.paths.config/'user-dirs.dirs'
+        user_dirs.write_text('XDG_PICTURES_DIR="$HOME/Εικόνες"\n')
+        localized = self.root/'Εικόνες/Wallpapers'
+        self.assertEqual(self.bridge.library_roots()['wallpaper'], localized)
+        self.assertEqual(self.bridge.library_roots()['videoWallpaper'], localized)
+        user_dirs.write_text('XDG_PICTURES_DIR="' + str(self.root/'pictures') + '"\n')
+        self.assertEqual(self.bridge.library_roots()['wallpaper'], self.root/'pictures/Wallpapers')
+        legacy = self.root/'Pictures/Wallpapers'
+        legacy.mkdir(parents=True)
+        self.assertEqual(self.bridge.library_roots()['wallpaper'], legacy)
+        legacy.rmdir()
+        user_dirs.unlink()
+        self.assertEqual(self.bridge.library_roots()['wallpaper'], legacy)
+
+    def test_user_dirs_are_literal_and_malformed_config_keeps_previous_snapshot(self):
+        marker = self.root/'shell-command-executed'
+        self.write(self.paths.config/'skwd-wall-v2/config.json', {})
+        user_dirs = self.paths.config/'user-dirs.dirs'
+        user_dirs.write_text('XDG_PICTURES_DIR="$HOME/$(touch ' + str(marker) + ')"\n')
+        self.bridge.library_roots()
+        self.assertFalse(marker.exists())
+        user_dirs.write_text('XDG_PICTURES_DIR="unclosed\n')
+        self.assertEqual(self.bridge.library_roots()['wallpaper'], self.root/'Pictures/Wallpapers')
+        self.write(self.paths.config/'skwd-wall-v2/config.json', {'paths': {'wallpaper': str(self.root)}})
+        self.bridge.reconcile()
+        previous = self.paths.current.resolve()
+        for root in (['malformed'], False, 'relative/root'):
+            with self.subTest(root=root):
+                self.write(self.paths.config/'skwd-wall-v2/config.json', {'paths': {'wallpaper': root}})
+                with self.assertRaises(sync.SyncError):
+                    self.bridge.reconcile()
+                self.assertEqual(self.paths.current.resolve(), previous)
+
+    def test_workshop_video_empty_we_id_matches_item_directory_and_rejects_sibling(self):
+        workshop = self.root/'SteamLibrary/steamapps/workshop/content/431960'
+        video = workshop/'1797921288/HKwallpaper.mp4'
+        video.parent.mkdir(parents=True)
+        video.write_bytes(b'video')
+        thumbnail = self.root/'cache/skwd-wall-v2/we-thumbs/1797921288.webp'
+        thumbnail.parent.mkdir(parents=True)
+        thumbnail.write_bytes(b'Workshop still')
+        self.write(self.paths.config/'skwd-wall-v2/config.json', {'paths': {'wallpaper': str(self.root), 'steamWorkshop': str(workshop)}})
+        self.last.update(type='video', path=str(video), thumb=str(thumbnail), we_id='')
+        self.theme.update(key='we:1797921288', source=str(thumbnail), thumb=str(thumbnail))
+        self.write(self.paths.last, self.last)
+        self.write(self.paths.outputs, {'DP-1': self.last})
+        self.bridge.reconcile()
+        metadata = sync.read_json(self.paths.current/'metadata.json')
+        self.assertEqual(metadata['identity']['key'], 'we:1797921288')
+        self.assertEqual(metadata['source'], str(thumbnail))
+        previous = self.paths.current.resolve()
+        sibling = workshop/'999999999/HKwallpaper.mp4'
+        sibling.parent.mkdir()
+        sibling.write_bytes(b'different video')
+        # Even a shared/stale cached thumbnail cannot make another item's key valid.
+        self.last['path'] = str(sibling)
+        self.write(self.paths.last, self.last)
+        self.write(self.paths.outputs, {'DP-1': self.last})
+        with self.assertRaises(sync.SyncError):
+            self.bridge.reconcile()
+        self.assertEqual(self.paths.current.resolve(), previous)
 
     def test_animated_wallpaper_uses_still_and_immutable_greeter_path(self):
         video = self.root/'animated.webm'

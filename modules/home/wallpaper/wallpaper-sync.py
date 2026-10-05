@@ -47,6 +47,7 @@ class Paths:
         cache = Path(cache or os.environ.get('XDG_CACHE_HOME', home/'.cache'))
         config = Path(config or os.environ.get('XDG_CONFIG_HOME', home/'.config'))
         runtime = Path(runtime or os.environ.get('XDG_RUNTIME_DIR', f'/run/user/{os.getuid()}'))
+        self.home = home
         self.root = state/'wallpaper-sync'
         self.current = self.root/'current'
         self.pending = self.root/'status.json'
@@ -126,12 +127,27 @@ def material_colors(theme, light):
                        for mode in ('dark', 'light')}}
 
 
-def applied_identity(last):
+def applied_identity(last, roots):
     kind = last.get('type')
     path = last.get('path', '')
     if kind not in ('static', 'video', 'we'):
         raise SyncError(f'Unsupported applied wallpaper type: {kind}')
-    key = f"we:{last.get('we_id', '')}" if kind == 'we' else f'{kind}:{Path(path).name}'
+    key = f"we:{last.get('we_id', '')}" if kind == 'we' else None
+    if kind != 'we' and path:
+        source = Path(path).resolve()
+        if kind == 'video' and roots.get('steamWorkshop'):
+            try:
+                relative = source.relative_to(roots['steamWorkshop'])
+                if len(relative.parts) >= 2 and relative.parts[0].isdecimal():
+                    key = f'we:{relative.parts[0]}'
+            except ValueError:
+                pass
+        if key is None:
+            try:
+                relative = source.relative_to(roots['wallpaper' if kind == 'static' else 'videoWallpaper'])
+                key = f'{kind}:{relative.as_posix()}'
+            except ValueError:
+                pass
     return {'type': kind, 'path': path, 'we_id': last.get('we_id', ''), 'key': key}
 
 
@@ -174,16 +190,64 @@ class Bridge:
         except (OSError, ValueError, SyncError, subprocess.TimeoutExpired):
             return False
 
+    def default_wallpaper_root(self):
+        # Match skwd-config beta.24: an existing historical folder wins over
+        # the localized XDG picture directory. user-dirs.dirs is data, not shell.
+        previous = self.paths.home/'Pictures/Wallpapers'
+        if previous.is_dir():
+            return previous
+        try:
+            lines = (self.paths.config/'user-dirs.dirs').read_text().splitlines()
+        except (OSError, UnicodeError):
+            return previous
+        for line in lines:
+            match = re.fullmatch(r'\s*XDG_PICTURES_DIR\s*=\s*"((?:[^"\\]|\\.)*)"\s*(?:#.*)?', line)
+            if not match:
+                continue
+            value = re.sub(r'\\(["\\])', r'\1', match[1])
+            if value == '$HOME' or value.startswith('$HOME/'):
+                pictures = self.paths.home/value[6:] if value != '$HOME' else self.paths.home
+            else:
+                pictures = Path(value)
+            if pictures.is_absolute():
+                return pictures/'Wallpapers'
+        return previous
+
+    def library_roots(self):
+        configured = read_json(self.paths.config/'skwd-wall-v2/config.json', {}).get('paths', {})
+        if not isinstance(configured, dict):
+            raise SyncError('Wallpaper library paths are malformed')
+        roots = {}
+        for name in ('wallpaper', 'videoWallpaper', 'steamWorkshop'):
+            value = configured.get(name)
+            if value is None or value == '':
+                if name == 'wallpaper':
+                    roots[name] = self.default_wallpaper_root().resolve()
+                elif name == 'videoWallpaper':
+                    roots[name] = roots['wallpaper']
+                continue
+            if not isinstance(value, str):
+                raise SyncError('Wallpaper library path is malformed')
+            if value == '~' or value.startswith('~/'):
+                value = self.paths.home/value[2:] if value != '~' else self.paths.home
+            root = Path(value)
+            if not root.is_absolute():
+                raise SyncError('Wallpaper library path must be absolute')
+            roots[name] = root.resolve()
+        return roots
+
     def applied(self):
         last = read_json(self.paths.last)
-        identity = applied_identity(last)
+        roots = self.library_roots()
+        identity = applied_identity(last, roots)
         theme = self.rpc('theme.current')
-        # Matugen may be reading a generated thumbnail, not the source image.
-        candidates = {identity['key'], identity['path'], last.get('thumb')}
+        # Matugen may read a generated thumbnail; its key must still identify
+        # the exact library entry, including folders or the Workshop item ID.
+        candidates = {value for value in (identity['key'], identity['path']) if value}
         if theme.get('key') not in candidates:
             raise SyncError('Waiting for the latest applied wallpaper theme')
         outputs = read_json(self.paths.outputs)
-        if not any(applied_identity(value) == identity for value in outputs.values() if isinstance(value, dict)):
+        if not any(applied_identity(value, roots) == identity for value in outputs.values() if isinstance(value, dict)):
             raise SyncError('Applied wallpaper is not active on any output')
         material_colors(theme, False)
         return last, identity, theme
