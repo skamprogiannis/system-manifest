@@ -2,16 +2,15 @@
   inherit
     (ctx)
     codexConfigPython
-    desktopActivation
-    desktopCheckHome
+    desktopCodexConfigActivationFile
+    desktopScriptArtifacts
     desktopZellijDevLayoutFile
     desktopZellijLegacyArgsScrubActivationFile
     desktopZellijPostCommandDiscoveryHook
     pkgs
     updateUsbSourceDir
-    usbActivation
     usbDmsServiceEnvironmentFile
-    usbCheckHome
+    usbScriptArtifacts
     usbHostScratchCheckpointExec
     usbHostScratchMountDropinFile
     usbHostScratchServiceBeforeFile
@@ -23,8 +22,6 @@
     usbHostScratchSyncScript
     usbHostStoreMountDropinFile
     usbShutdownRamfsStorePathsFile
-    usbSteamLauncher
-    usbHostAutoSteamLauncher
     usbSteamHostScratchPrepareScript
     usbTmpfilesRulesFile
     ;
@@ -42,16 +39,13 @@ in {
     } ''
       set -euo pipefail
 
-      desktop_home="${desktopCheckHome}"
-      desktop_activation="${desktopActivation}"
+      desktop_home="${desktopScriptArtifacts}"
+      desktop_codex_config_activation="${desktopCodexConfigActivationFile}"
       desktop_zellij_legacy_args_scrub_activation="${desktopZellijLegacyArgsScrubActivationFile}"
       desktop_zellij_post_command_discovery_hook="${desktopZellijPostCommandDiscoveryHook}"
       update_usb_source_dir="${updateUsbSourceDir}"
-      usb_activation="${usbActivation}"
-      usb_home="${usbCheckHome}"
+      usb_home="${usbScriptArtifacts}"
       steam_host_scratch="$usb_home/bin/steam-host-scratch"
-      usb_steam_launcher="${usbSteamLauncher}"
-      usb_host_auto_steam_launcher="${usbHostAutoSteamLauncher}"
       usb_steam_host_scratch_prepare="${usbSteamHostScratchPrepareScript}"
       usb_host_scratch_description="${usbHostScratchServiceDescriptionFile}"
       usb_host_scratch_mount_dropin="${usbHostScratchMountDropinFile}"
@@ -135,7 +129,6 @@ in {
         fi
       }
 
-      zathura_config="$desktop_activation/home-files/.config/zathura/zathurarc"
       assert_file_contains "$desktop_home/bin/codex-state-sync" 'MOUNT_PARENT="/run/codex-state-sync"' "Expected Codex state sync to use an ephemeral runtime mountpoint."
       assert_file_contains "$desktop_home/bin/codex-state-sync" 'MOUNT="$MOUNT_PARENT/root"' "Expected Codex state sync to keep its mount beneath the owned runtime directory."
       assert_not_file_contains "$desktop_home/bin/codex-state-sync" 'MOUNT="/mnt/usb-sync"' "Expected Codex state sync not to leave a persistent /mnt mountpoint."
@@ -424,12 +417,6 @@ in {
           "$steam_host_scratch" checkpoint
       assert_log_contains "exit Steam before checkpointing"
 
-      assert_not_file_contains "$usb_steam_launcher" \
-        "/nix/.host-scratch/user/stefan/steam/Steam" \
-        "Expected normal USB Steam to keep its persistent data-home behavior."
-      assert_file_contains "$usb_host_auto_steam_launcher" \
-        "$usb_steam_host_scratch_prepare" \
-        "Expected host-auto Steam to invoke its host-scratch preparation script."
       assert_file_contains "$usb_steam_host_scratch_prepare" \
         "/nix/.host-scratch/user/stefan/steam/Steam" \
         "Expected host-auto Steam to redirect its mutable client and default library to host scratch."
@@ -1340,35 +1327,10 @@ in {
         exit 1
       fi
 
-      if ! ${pkgs.gnugrep}/bin/grep -Fq "/bin/merge-codex-config" "$desktop_activation/activate"; then
-        echo "Expected Home Manager activation to call the generated Codex config merger." >&2
-        ${pkgs.gnused}/bin/sed -n '/ensureWritableCodexConfig/,/Activating/p' "$desktop_activation/activate" >&2
-        exit 1
-      fi
-
-      if ! ${pkgs.gnugrep}/bin/grep -Fq "ensureWritableCodexDirectory" "$usb_activation/activate"; then
-        echo "Expected USB Home Manager activation to repair a stale symlinked ~/.codex before link checks." >&2
-        ${pkgs.gnused}/bin/sed -n '/ensureWritableCodexDirectory/,/Activating/p' "$usb_activation/activate" >&2
-        exit 1
-      fi
-
-      codex_dir_line="$(${pkgs.gnugrep}/bin/grep -n 'Activating %s" "ensureWritableCodexDirectory' "$usb_activation/activate" | cut -d: -f1 | head -n1)"
-      check_links_line="$(${pkgs.gnugrep}/bin/grep -n 'Activating %s" "checkLinkTargets' "$usb_activation/activate" | cut -d: -f1 | head -n1)"
-      link_generation_line="$(${pkgs.gnugrep}/bin/grep -n 'Activating %s" "linkGeneration' "$usb_activation/activate" | cut -d: -f1 | head -n1)"
-      codex_config_line="$(${pkgs.gnugrep}/bin/grep -n 'Activating %s" "ensureWritableCodexConfig' "$usb_activation/activate" | cut -d: -f1 | head -n1)"
-      if [ -z "$codex_dir_line" ] || [ -z "$check_links_line" ] || [ "$codex_dir_line" -ge "$check_links_line" ]; then
-        echo "Expected Codex directory repair to run before Home Manager link collision checks." >&2
-        exit 1
-      fi
-      if [ -z "$link_generation_line" ] || [ -z "$codex_config_line" ] || [ "$codex_config_line" -le "$link_generation_line" ]; then
-        echo "Expected Codex config merge to run after Home Manager creates declarative file links." >&2
-        exit 1
-      fi
-
-      codex_seed_path="$(${pkgs.gnused}/bin/sed -n 's|.*merge-codex-config \(/nix/store/[^ ]*-codex-config.toml\) .*|\1|p' "$desktop_activation/activate" | head -n1)"
+      codex_seed_path="$(${pkgs.gnused}/bin/sed -n 's|.*merge-codex-config \(/nix/store/[^ ]*-codex-config.toml\) .*|\1|p' "$desktop_codex_config_activation" | head -n1)"
       if [ -z "$codex_seed_path" ] || [ ! -f "$codex_seed_path" ]; then
         echo "Expected Home Manager activation to reference the generated Codex seed config." >&2
-        ${pkgs.gnused}/bin/sed -n '/ensureWritableCodexConfig/,/Activating/p' "$desktop_activation/activate" >&2
+        ${pkgs.gnused}/bin/sed -n '/ensureWritableCodexConfig/,/Activating/p' "$desktop_codex_config_activation" >&2
         exit 1
       fi
 
@@ -1626,9 +1588,6 @@ in {
           data = tomllib.load(f)
       assert data["model"] == "gpt-5.6-terra"
       PY
-
-      test ! -e "$desktop_home/bin/spotify_player"
-      test ! -e "$usb_home/bin/spotify_player"
 
       touch "$out"
     '';

@@ -1,8 +1,7 @@
 {ctx}: let
   inherit (ctx) pkgs;
-  packages = ctx.self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.packages;
-  codex = builtins.head (builtins.filter (p: pkgs.lib.getName p == "codex-cli-wrapped") packages);
-  clef = builtins.head (builtins.filter (p: pkgs.lib.getName p == "codex-clef") packages);
+  codex = ctx.homePackage "desktop" "codex-cli-wrapped";
+  clef = ctx.homePackage "desktop" "codex-clef";
   version = pkgs.lib.removeSuffix "\n" (builtins.readFile ../modules/home/codex/version.txt);
   python = pkgs.python3.withPackages (ps: [ps.jsonschema ps.pillow ps.tomli-w]);
 in {

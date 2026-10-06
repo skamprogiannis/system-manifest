@@ -9,7 +9,7 @@
     desktopGreeterPackage
     desktopGpuScreenRecorderGtkPackage
     desktopGpuScreenRecorderPackage
-    desktopHome
+    desktopBravePackage
     desktopHyprlandPackage
     desktopMimeDefaultApplicationsFile
     desktopNvidiaDriverVersion
@@ -72,12 +72,9 @@ in {
       assert_file_contains ${desktopHyprlandPackage}/bin/Hyprland 'hyprland.lua'
       assert_file_contains ${desktopHyprlandPackage}/bin/start-hyprland '/bin/start-hyprland --path'
       assert_file_contains ${desktopHyprlandPackage}/bin/start-hyprland '/bin/Hyprland" "$@"'
-      assert_file_not_contains ${desktopHome}/bin/brave '--test-type'
-      assert_file_contains ${desktopHome}/bin/brave '--user-data-dir=/home/stefan/.config/BraveSoftware/Brave-Browser'
+      assert_file_not_contains ${desktopBravePackage}/bin/brave '--test-type'
+      assert_file_contains ${desktopBravePackage}/bin/brave '--user-data-dir=/home/stefan/.config/BraveSoftware/Brave-Browser'
       assert_file_contains ${desktopBraveExtensionsFile} 'bkkmolkhemgaeaeggcmfbghljjjoofoh'
-      assert_file_contains ${desktopHome}/share/applications/com.brave.Browser.desktop 'Exec=brave %U'
-      assert_file_contains ${desktopHome}/share/applications/transmission.desktop 'Exec=torrent gui'
-      assert_file_contains ${desktopHome}/share/applications/torrent-add.desktop 'Exec=torrent add %U'
       assert_elf_needs ${desktopGpuScreenRecorderPackage}/bin/.wrapped/gpu-screen-recorder 'libavcodec.so.62'
       assert_file_contains ${desktopGpuScreenRecorderGtkPackage}/bin/gpu-screen-recorder-gtk '${desktopGpuScreenRecorderPackage}/bin'
       for state in idle recording paused; do

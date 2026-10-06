@@ -12,6 +12,7 @@
   };
   runtime = speechPkgs.callPackage ../modules/home/bannerlord-speech/package.nix {};
   dictationRuntime = pkgs.callPackage ../modules/home/bannerlord-speech/package.nix {dictationOnly = true;};
+  unitTests = (import ./bannerlord-speech-unit.nix {inherit ctx;}).bannerlord-speech-unit;
   enabled = self.nixosConfigurations.desktop.config.home-manager.users.stefan.system_manifest.bannerlord.enable;
   service =
     if enabled
@@ -28,10 +29,7 @@ in {
       export PYTHONPATH=${runtime}/lib
       export PYTHONDONTWRITEBYTECODE=1 HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1
       export OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2
-      mkdir tests
-      cp ${../modules/home/bannerlord-speech/test_service.py} tests/test_service.py
-      cp ${../modules/home/bannerlord-speech/test_engine.py} tests/test_engine.py
-      python3 -m unittest discover -s tests -v
+      test -e ${unitTests}
       python3 - ${serviceJson} ${environmentJson} ${dictationEnvironmentJson} ${runtime} ${dictationRuntime} <<'PY'
       import json
       import importlib.metadata as metadata

@@ -39,15 +39,4 @@ jobs:
           gc-max-store-size-linux: 5G
 
       - name: Build full desktop
-        run: |
-          for attempt in 1 2 3; do
-            if nix build --print-build-logs .#nixosConfigurations.desktop.config.system.build.toplevel; then
-              exit 0
-            fi
-
-            if [ "$attempt" -eq 3 ]; then
-              exit 1
-            fi
-
-            sleep "$((attempt * 30))"
-          done
+        run: nix build --print-build-logs .#nixosConfigurations.desktop.config.system.build.toplevel
