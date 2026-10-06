@@ -1,10 +1,10 @@
 {
-  "version": "2",
+  "version": "3",
   "codex_version": "0.160.0",
   "provider_model": "clef",
   "timeout_seconds": 3,
   "max_text_bytes": 24000,
-  "max_session_calls": 40,
+  "max_session_calls": null,
   "max_daily_calls": 500,
   "catalog_ttl_seconds": 3600,
   "route_probability": 0.70,

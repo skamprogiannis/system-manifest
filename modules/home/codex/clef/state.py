@@ -147,7 +147,8 @@ class Store:
                 return False
             with self.counters(session) as data:
                 calls = data.get("calls", 0)
-                if calls >= policy["max_session_calls"]:
+                limit = policy["max_session_calls"]
+                if limit is not None and calls >= limit:
                     return False
                 data["calls"] = calls + 1
                 daily.update(day=day, calls=count + 1)

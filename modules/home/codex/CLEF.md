@@ -61,11 +61,12 @@ launch default and permission policy. The last successful evaluation is historic
 evidence, not a fresh verification of the current key. These local records do not
 measure account-wide quota; failed requests can have unrecorded provider usage.
 Fallback counts include skipped calls as well as failed attempts. The displayed
-call limits come from the installed local policy, not Cloudflare: currently 40
-calls per Codex session/thread across resumes and later days, and 500 calls across
-sessions per UTC day, resetting at 00:00 UTC. Reaching either local limit skips
-Clef before contacting Cloudflare; Codex continues normally. Historical
-`budget_exhausted` records do not identify which of these limits was reached.
+call limits come from the installed local policy, not Cloudflare. There is no
+per-session cap (`max_session_calls: null`), so resumed threads can continue using
+Clef. The shared limit remains 500 calls per UTC day, resetting at 00:00 UTC.
+Reaching it skips Clef before contacting Cloudflare; Codex continues normally.
+Historical `budget_exhausted` records can include the former per-session cap and
+do not identify which limit was reached.
 Use `codex-auto clef --help` for advanced operations. The private hook executable
 is outside PATH. `codex-auto -- status` and `codex-auto -- clef` escape reserved
 words when they are literal task prompts.

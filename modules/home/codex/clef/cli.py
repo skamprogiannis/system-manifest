@@ -329,7 +329,7 @@ _STATUS_LABELS = {
     "missing_catalog": "no usable cached model catalog; run codex-auto clef catalog (no inference)",
     "stale_catalog": "cached model catalog is out of date; run codex-auto clef catalog (no inference)",
     "not_in_assisted_session": "current command is outside an assisted session",
-    "budget_exhausted": "local session or daily call limit reached before contacting Cloudflare; Clef call skipped; Codex continues normally",
+    "budget_exhausted": "local call limit reached before contacting Cloudflare; Clef call skipped; Codex continues normally",
 }
 
 
@@ -341,6 +341,11 @@ def format_status(status: dict) -> str:
     usage = status["usage_today"]
     failure = status["latest_failure"]
     limits = status["local_limits"]
+    session_limit = (
+        "  No per-session call cap; the daily limit applies"
+        if limits["max_session_calls"] is None
+        else f"  {limits['max_session_calls']} calls per Codex session/thread, shared across resumes and later days"
+    )
     routing_labels = {
         "apply": "apply valid model/effort choices",
         "shadow": "advice only; keep current model/effort",
@@ -360,7 +365,7 @@ def format_status(status: dict) -> str:
             f"Permission policy: {status['approval_mode']}; automatic approval unsupported",
             f"Completion advice: {status['completion_mode']}",
             "Local call limits (configured policy; not Cloudflare quota):",
-            f"  {limits['max_session_calls']} calls per Codex session/thread, shared across resumes and later days",
+            session_limit,
             f"  {limits['max_daily_calls']} calls across sessions per UTC day, resets at 00:00 UTC",
             f"Today ({usage['day_utc']} UTC): {usage['successful_calls']} successful calls, {usage['failed_attempts']} fallbacks (skipped or failed)",
             f"Recorded tokens: {usage['input_tokens']} input, {usage['output_tokens']} output",

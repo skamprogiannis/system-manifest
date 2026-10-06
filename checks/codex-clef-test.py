@@ -688,6 +688,8 @@ class PublicCommandTests(Base):
             evaluate.assert_not_called()
             self.assertEqual(result["usage_today"]["successful_calls"], 0)
             self.assertIn("codex-auto clef catalog", format_status(result))
+            self.assertIsNone(result["local_limits"]["max_session_calls"])
+            self.assertIn("No per-session call cap", format_status(result))
             self.assertFalse(self.store.root.exists())
 
     def test_status_uses_loaded_limits_and_explains_offline_fallbacks_without_writes(self):
@@ -751,7 +753,7 @@ class PublicCommandTests(Base):
             "7 calls per Codex session/thread",
             "19 calls across sessions per UTC day",
             "resumes and later days",
-            "local session or daily call limit reached before contacting Cloudflare",
+            "local call limit reached before contacting Cloudflare",
             "Codex continues normally",
             "1 fallbacks (skipped or failed)",
         ):
@@ -1258,6 +1260,25 @@ class StateTests(Base):
         self.assertFalse(self.store.reserve("a", self.policy))
         self.assertTrue(self.store.reserve("b", self.policy))
         self.assertFalse(self.store.reserve("c", self.policy))
+
+    def test_unlimited_resumed_session_keeps_shared_daily_guard_and_utc_reset(self):
+        self.policy.update(max_session_calls=None, max_daily_calls=2)
+        now = datetime.now(timezone.utc)
+        with self.store.counters("resumed") as data:
+            data["calls"] = 40
+        with self.store.counters("daily-budget") as daily:
+            daily.update(day=(now - timedelta(days=1)).date().isoformat(), calls=2)
+        with patch("clef.state.datetime") as clock:
+            clock.now.return_value = now
+            self.assertTrue(self.store.reserve("resumed", self.policy))
+            self.assertTrue(self.store.reserve("other", self.policy))
+            self.assertFalse(self.store.reserve("resumed", self.policy))
+            with self.store.counters("resumed") as data:
+                self.assertEqual(data["calls"], 41)
+            clock.now.return_value = now + timedelta(days=1)
+            self.assertTrue(self.store.reserve("resumed", self.policy))
+        with self.store.counters("resumed") as data:
+            self.assertEqual(data["calls"], 42)
 
     def test_legacy_log_preserved(self):
         legacy = self.store.root.parent / "codex-jev/shadow.jsonl"
