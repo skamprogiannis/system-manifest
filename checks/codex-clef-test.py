@@ -35,6 +35,7 @@ from clef.client import (
 from clef.cli import (
     doctor,
     explicit_settings,
+    format_status,
     image_payload,
     launch_arguments,
     parser,
@@ -686,7 +687,76 @@ class PublicCommandTests(Base):
             refresh.assert_not_called()
             evaluate.assert_not_called()
             self.assertEqual(result["usage_today"]["successful_calls"], 0)
+            self.assertIn("codex-auto clef catalog", format_status(result))
             self.assertFalse(self.store.root.exists())
+
+    def test_status_uses_loaded_limits_and_explains_offline_fallbacks_without_writes(self):
+        installed_policy = dict(self.policy, max_session_calls=7, max_daily_calls=19)
+        policy_path = self.root / "installed-policy.json"
+        policy_path.write_text(json.dumps(installed_policy))
+        self.store.reserve("saved-thread", installed_policy)
+        self.store.log(
+            event="workflow", status="fallback", fallback_reason="budget_exhausted"
+        )
+        cached = self.store.root / "catalog.json"
+        cached.write_text(json.dumps({"time": 0}))
+        cached.chmod(0o600)
+        before = {
+            p: (p.read_bytes(), p.stat().st_mtime_ns)
+            for p in self.store.root.rglob("*")
+            if p.is_file()
+        }
+        args = self.arguments("status")
+        args.policy = policy_path
+        with (
+            patch.dict(
+                os.environ,
+                {
+                    "CLOUDFLARE_ACCOUNT_ID": "a" * 32,
+                    "CLOUDFLARE_API_TOKEN": "b" * 40,
+                },
+            ),
+            patch("clef.cli.catalog.refresh") as refresh,
+            patch("clef.client.Client.evaluate") as evaluate,
+            patch.object(Store, "reserve") as reserve,
+            patch.object(Store, "log") as log,
+        ):
+            result = run(args)
+            readable = format_status(result)
+        for operation in (refresh, evaluate, reserve, log):
+            operation.assert_not_called()
+        self.assertEqual(
+            before,
+            {
+                p: (p.read_bytes(), p.stat().st_mtime_ns)
+                for p in self.store.root.rglob("*")
+                if p.is_file()
+            },
+        )
+        self.assertEqual(
+            result["local_limits"],
+            {"max_session_calls": 7, "max_daily_calls": 19},
+        )
+        self.assertEqual(result["credentials"], "configured_not_live_verified")
+        self.assertEqual(result["catalog"], "stale_catalog")
+        self.assertEqual(result["routing_mode"], "not_in_assisted_session")
+        self.assertEqual(result["latest_failure"]["reason"], "budget_exhausted")
+        self.assertEqual(result["usage_today"]["failed_attempts"], 1)
+        for description in (
+            "local format checks passed",
+            "Cloudflare authentication was not tested",
+            "codex-auto clef catalog",
+            "current command is outside an assisted session",
+            "Assisted launch default: apply",
+            "7 calls per Codex session/thread",
+            "19 calls across sessions per UTC day",
+            "resumes and later days",
+            "local session or daily call limit reached before contacting Cloudflare",
+            "Codex continues normally",
+            "1 fallbacks (skipped or failed)",
+        ):
+            self.assertIn(description, readable)
+        self.assertNotIn("failed attempts", readable)
 
     def test_reserved_words_can_be_literal_prompts(self):
         for word in ("status", "clef"):

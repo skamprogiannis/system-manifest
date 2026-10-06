@@ -280,6 +280,10 @@ def doctor(store: Store, policy: dict) -> dict:
         "approval_mode": policy["approval_mode"],
         "automatic_approval_supported": False,
         "completion_mode": policy["completion_mode"],
+        "local_limits": {
+            "max_session_calls": policy["max_session_calls"],
+            "max_daily_calls": policy["max_daily_calls"],
+        },
         "state_directory": str(store.root),
         "log": str(store.root / "decisions.jsonl"),
         "log_status": "recorded" if records else "no_decisions_recorded",
@@ -315,23 +319,55 @@ def doctor(store: Store, policy: dict) -> dict:
     }
 
 
+_STATUS_LABELS = {
+    "configured_not_live_verified": "configured; local format checks passed; Cloudflare authentication was not tested",
+    "missing_credentials": "credentials are not configured locally",
+    "invalid_credentials": "local credential file is unreadable or has invalid TOML",
+    "invalid_account_id": "local account ID has an invalid format",
+    "invalid_api_token": "local API token has an invalid format",
+    "invalid_config_home": "local configuration directory must be an absolute path",
+    "missing_catalog": "no usable cached model catalog; run codex-auto clef catalog (no inference)",
+    "stale_catalog": "cached model catalog is out of date; run codex-auto clef catalog (no inference)",
+    "not_in_assisted_session": "current command is outside an assisted session",
+    "budget_exhausted": "local session or daily call limit reached before contacting Cloudflare; Clef call skipped; Codex continues normally",
+}
+
+
+def status_label(value: str) -> str:
+    return _STATUS_LABELS.get(value, str(value).replace("_", " "))
+
+
 def format_status(status: dict) -> str:
     usage = status["usage_today"]
     failure = status["latest_failure"]
+    limits = status["local_limits"]
+    routing_labels = {
+        "apply": "apply valid model/effort choices",
+        "shadow": "advice only; keep current model/effort",
+    }
+    routing = routing_labels.get(status["routing_mode"], status_label(status["routing_mode"]))
+    launch_default = routing_labels.get(
+        status["default_routing_mode"], status_label(status["default_routing_mode"])
+    )
+    catalog_label = re.sub(r"^(\d+)_pairs$", r"\1 supported model/effort pairs", status["catalog"])
     return "\n".join(
         [
             "Codex Auto — Clef support",
-            f"Credentials: {status['credentials']}",
-            f"Model catalog: {status['catalog']}",
-            f"Routing: {status['routing_mode']} (launch default: {status['default_routing_mode']})",
+            f"Credentials: {status_label(status['credentials'])}",
+            f"Model catalog: {status_label(catalog_label)}",
+            f"Routing: {routing}",
+            f"Assisted launch default: {launch_default}",
             f"Permission policy: {status['approval_mode']}; automatic approval unsupported",
             f"Completion advice: {status['completion_mode']}",
-            f"Today ({usage['day_utc']} UTC): {usage['successful_calls']} successful calls, {usage['failed_attempts']} failed attempts",
+            "Local call limits (configured policy; not Cloudflare quota):",
+            f"  {limits['max_session_calls']} calls per Codex session/thread, shared across resumes and later days",
+            f"  {limits['max_daily_calls']} calls across sessions per UTC day, resets at 00:00 UTC",
+            f"Today ({usage['day_utc']} UTC): {usage['successful_calls']} successful calls, {usage['failed_attempts']} fallbacks (skipped or failed)",
             f"Recorded tokens: {usage['input_tokens']} input, {usage['output_tokens']} output",
             f"Last successful evaluation: {status['latest_success'] or 'none recorded'}",
-            f"Latest recorded failure: {failure['reason']} at {failure['timestamp']}"
+            f"Latest recorded fallback ({failure['timestamp']}): {status_label(failure['reason'])}"
             if failure
-            else "Latest recorded failure: none",
+            else "Latest recorded fallback: none",
             f"Log: {status['log']}",
             status["note"],
         ]

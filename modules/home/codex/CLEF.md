@@ -45,13 +45,14 @@ codex-auto clef catalog
 codex-auto --mode shadow -- "Trace the wallpaper-to-greeter configuration"
 ```
 
-`status` is offline. It reports configured-but-not-live-verified credentials,
-catalog state, mode, log paths and recorded events. `catalog` obtains the model
-picker through an isolated Codex app-server process using the existing Codex
-login. It does not request model inference. Missing login or catalog support
-causes conservative routing fallback. Read and trust the managed commands through
-Codex's `/hooks` interface before relying on hooks. The module does not forge hook
-trust or bypass approval settings.
+`status` is offline. Configured credentials have passed local format checks;
+Cloudflare authentication is not tested. It reports catalog state, mode, log paths
+and recorded events. For a stale or missing catalog, run `codex-auto clef catalog`.
+`catalog` obtains the model picker through an isolated Codex app-server process
+using the existing Codex login. It does not request model inference. Missing login
+or catalog support causes conservative routing fallback. Read and trust the managed
+commands through Codex's `/hooks` interface before relying on hooks. The module does
+not forge hook trust or bypass approval settings.
 
 `codex-auto` is the public command for launch and diagnostics. `codex-auto status`
 shows readable health and today's recorded calls and tokens; add `--json` for
@@ -59,6 +60,12 @@ scripts. Its routing mode describes the current environment separately from the
 launch default and permission policy. The last successful evaluation is historical
 evidence, not a fresh verification of the current key. These local records do not
 measure account-wide quota; failed requests can have unrecorded provider usage.
+Fallback counts include skipped calls as well as failed attempts. The displayed
+call limits come from the installed local policy, not Cloudflare: currently 40
+calls per Codex session/thread across resumes and later days, and 500 calls across
+sessions per UTC day, resetting at 00:00 UTC. Reaching either local limit skips
+Clef before contacting Cloudflare; Codex continues normally. Historical
+`budget_exhausted` records do not identify which of these limits was reached.
 Use `codex-auto clef --help` for advanced operations. The private hook executable
 is outside PATH. `codex-auto -- status` and `codex-auto -- clef` escape reserved
 words when they are literal task prompts.
