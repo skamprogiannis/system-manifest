@@ -107,7 +107,7 @@ fixture_tests() {
   TARGET_INIT_RELATIVE="${FIXTURE_NEW#/nix/store/}/init"
   TARGET_CONFIG_REVISION=fixture-new
   DESIRED_SYSTEM_TOPLEVEL="$FIXTURE_NEW"
-  closure_bytes=$(nix path-info --json --recursive "$FIXTURE_NEW" | jq '[.[].narSize] | add')
+  closure_bytes=$(nix path-info --json --json-format 1 --recursive "$FIXTURE_NEW" "$FIXTURE_OLD" "$FIXTURE_OLDEST" | jq '[.[].narSize] | add')
   expected_capacity=$((closure_bytes * 3 / 5 + 1073741824))
   capacity_output=$(check_staging_capacity)
   [[ "$capacity_output" == *"Estimated additional staging requirement: $expected_capacity bytes."* ]] || fail "Capacity estimate treats present packages as missing"

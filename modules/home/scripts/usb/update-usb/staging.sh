@@ -110,17 +110,65 @@ prepare_target_stage() {
 }
 
 check_staging_capacity() {
-  local closure="$RUNTIME_DIR/tmp/desired-closure.json" missing=0 bytes path estimated_image total
-  nix path-info --json --recursive "$DESIRED_SYSTEM_TOPLEVEL" > "$closure" || return 1
+  local closure="$RUNTIME_DIR/tmp/desired-closure.json"
+  local rollback_closure="$RUNTIME_DIR/tmp/rollback-closure.json"
+  local closure_paths="$RUNTIME_DIR/tmp/desired-closure.tsv"
+  local missing=0 bytes path estimated_image total required profile generation
+  local headroom=1073741824
+  local rollback_roots=()
+  local closure_filter='
+    if type == "object" and length > 0 and
+      all(to_entries[]; (.key | startswith("/nix/store/")) and
+        (.value.narSize | type == "number" and . >= 0 and floor == .))
+    then to_entries[] | [.key, .value.narSize] | @tsv
+    else error("invalid path-info closure") end'
+
+  nix path-info --json --json-format 1 --recursive "$DESIRED_SYSTEM_TOPLEVEL" > "$closure" || return 1
+  "$UPDATE_USB_JQ" -r "$closure_filter" "$closure" > "$closure_paths" || return 1
+  "$UPDATE_USB_JQ" -e --arg root "$DESIRED_SYSTEM_TOPLEVEL" 'has($root)' "$closure" >/dev/null || return 1
   while IFS=$'\t' read -r path bytes; do
     if [ ! -e "$STAGE_STORE/${path#/nix/store/}" ] && [ ! -L "$STAGE_STORE/${path#/nix/store/}" ]; then
       missing=$((missing + bytes))
     fi
-  done < <("$UPDATE_USB_JQ" -r 'to_entries[] | [.key, .value.narSize] | @tsv' "$closure")
-  total="$("$UPDATE_USB_JQ" '[.[].narSize] | add // 0' "$closure")" || return 1
-  # Compression is not knowable in advance. Reserve an estimate, then check
-  # the actual finished image before touching published USB artifacts.
-  estimated_image=$((total * 3 / 5 + missing * 3 / 5 + 1073741824))
-  echo "Estimated additional staging requirement: $((missing + estimated_image)) bytes."
-  require_free_space "$STAGE_DIR" "$((missing + estimated_image))" 'new packages and replacement image (estimate)'
+  done < "$closure_paths"
+
+  printf '{}\n' > "$rollback_closure" || return 1
+  if [ "${PRESERVE_PREVIOUS_GENERATION:-0}" -eq 1 ]; then
+    [ -n "$PREVIOUS_SYSTEM_TOPLEVEL" ] || return 1
+    rollback_roots+=("$PREVIOUS_SYSTEM_TOPLEVEL")
+    # Manual rollback and forced reinstalls can retain profiles other than
+    # the active generation. Conservatively include every existing root.
+    for profile in "$MOUNT_POINT"/nix/var/nix/profiles/system-*-link; do
+      [ -L "$profile" ] || continue
+      generation="$(profile_store_target "$profile")" || return 1
+      rollback_roots+=("$generation")
+    done
+    # The host may no longer have a rollback path; its metadata lives in the
+    # private target database, already bound to the staging state directory.
+    nix --extra-experimental-features read-only-local-store path-info \
+      --store "local?root=$MOUNT_POINT&read-only=true" --json --json-format 1 \
+      --recursive "${rollback_roots[@]}" > "$rollback_closure" || return 1
+    "$UPDATE_USB_JQ" -r "$closure_filter" "$rollback_closure" >/dev/null || return 1
+    for generation in "${rollback_roots[@]}"; do
+      "$UPDATE_USB_JQ" -e --arg root "$generation" 'has($root)' "$rollback_closure" >/dev/null || return 1
+    done
+  fi
+  total="$("$UPDATE_USB_JQ" -s 'add | [.[].narSize] | add // 0' "$closure" "$rollback_closure")" || return 1
+  # Desired totals already include new packages. Count shared paths once in
+  # the replacement image, and reserve writable space only for missing paths.
+  # Compression remains an estimate; publication checks the finished image.
+  estimated_image=$((total * 3 / 5))
+  required=$((missing + estimated_image + headroom))
+  echo "Missing packages to stage: $missing bytes."
+  echo "Estimated replacement image: $estimated_image bytes."
+  echo "Staging headroom: $headroom bytes."
+  echo "Estimated additional staging requirement: $required bytes."
+  if ! require_free_space "$STAGE_DIR" "$required" 'new packages and replacement image (estimate)'; then
+    if [ "${MODE:-prebuild}" = in-place ]; then
+      echo 'Rerun without --in-place and use --stage-dir PATH on a filesystem with sufficient free space.' >&2
+    else
+      echo 'Use --stage-dir PATH to select another staging filesystem with sufficient free space.' >&2
+    fi
+    return 1
+  fi
 }

@@ -155,6 +155,8 @@ sudo update-usb /path/to/system-manifest/main
 
 `update-usb` builds the desired system in the host Nix store, then prepares an independent USB store on the desktop SSD. The previous USB squashfs stays compressed and read-only; a private OverlayFS directory holds added packages and deletions. Host store files are never hard-linked into staging. The final USB image remains one complete squashfs with the current and previous generations.
 
+The space check reports missing packages, the estimated replacement image, and safety headroom. Retained generation closures are included so rollback data stays accounted for.
+
 Staging defaults to `/var/tmp/update-usb-stage`. To use another Linux drive with OverlayFS support:
 
 ```bash

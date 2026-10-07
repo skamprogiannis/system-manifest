@@ -75,6 +75,149 @@ if require_free_space "$STAGE_DIR" 999999999999999999 test; then
   exit 1
 fi
 
+# Capacity checks must count desired and retained rollback packages once, using
+# the target database for rollback metadata that may be absent from the host.
+(
+  STAGE_DIR="$test_root/capacity-stage"
+  STAGE_STORE="$STAGE_DIR/store"
+  RUNTIME_DIR="$test_root/capacity-runtime"
+  MOUNT_POINT="$test_root/capacity-target"
+  DESIRED_SYSTEM_TOPLEVEL=/nix/store/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-new-system
+  PREVIOUS_SYSTEM_TOPLEVEL=""
+  PRESERVE_PREVIOUS_GENERATION=0
+  shared=/nix/store/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-shared
+  rollback=/nix/store/cccccccccccccccccccccccccccccccc-rollback-system
+  query_log="$test_root/capacity-queries"
+  desired_json="$test_root/capacity-desired.json"
+  rollback_json="$test_root/capacity-rollback.json"
+  query_failure=""
+  expected_rollback_roots=()
+  mkdir -p "$RUNTIME_DIR/tmp" "$STAGE_STORE/${shared#/nix/store/}" "$MOUNT_POINT/nix/var/nix/profiles"
+  jq -n --arg shared "$shared" --arg desired "$DESIRED_SYSTEM_TOPLEVEL" \
+    '{($shared): {narSize: 6442450944}, ($desired): {narSize: 4294967296}}' > "$desired_json"
+  jq -n --arg shared "$shared" --arg rollback "$rollback" \
+    '{($shared): {narSize: 6442450944}, ($rollback): {narSize: 4294967296}}' > "$rollback_json"
+  cp "$rollback_json" "$test_root/capacity-original-rollback.json"
+
+  nix() {
+    local store="" version="" readonly=0 recursive=0 query_kind=desired
+    local roots=()
+    printf '%s\n' "$*" >> "$query_log"
+    if [ "$1" = --extra-experimental-features ]; then
+      [ "$2" = read-only-local-store ] || return 1
+      readonly=1
+      shift 2
+    fi
+    [ "$1" = path-info ] || return 1
+    shift
+    while [ "$#" -gt 0 ]; do
+      case "$1" in
+        --store) store="$2"; shift 2 ;;
+        --json-format) version="$2"; shift 2 ;;
+        --recursive) recursive=1; shift ;;
+        --json) shift ;;
+        *) roots+=("$1"); shift ;;
+      esac
+    done
+    [ "$recursive" -eq 1 ] || return 1
+    if [ -n "$version" ] && [ "$version" != 1 ]; then return 1; fi
+    if [ -n "$store" ]; then
+      [ "$store" = "local?root=$MOUNT_POINT&read-only=true" ] && [ "$readonly" -eq 1 ] || return 1
+      [ "$(printf '%s\n' "${roots[@]}" | sort -u)" = "$(printf '%s\n' "${expected_rollback_roots[@]}" | sort -u)" ] || return 1
+      query_kind=rollback
+    else
+      [ "${roots[*]}" = "$DESIRED_SYSTEM_TOPLEVEL" ] || return 1
+    fi
+    [ "$query_failure" != "$query_kind" ] || return 1
+    if [ "$query_kind" = rollback ]; then cat "$rollback_json"; else cat "$desired_json"; fi
+  }
+  fixture_available=11811160064
+  df() { printf 'Avail\n%s\n' "$fixture_available"; }
+
+  # 10 GiB desired, including 4 GiB missing: 4 GiB packages + 6 GiB image + 1 GiB reserve.
+  capacity_output=$(check_staging_capacity) || fail 'missing packages were counted twice in the image estimate'
+  [[ "$capacity_output" == *'Estimated additional staging requirement: 11811160064 bytes.'* ]] || fail 'incorrect desired-closure estimate'
+  [[ "$capacity_output" == *'Missing packages to stage: 4294967296 bytes.'* ]] || fail 'missing package size was not reported'
+  [[ "$capacity_output" == *'Estimated replacement image: 6442450944 bytes.'* ]] || fail 'image size was not reported'
+  fixture_available=11811160063
+  if capacity_output=$(check_staging_capacity 2>&1); then fail 'insufficient staging space was accepted'; fi
+  [[ "$capacity_output" == *'--stage-dir PATH'* ]] || fail 'capacity failure omitted staging-directory guidance'
+
+  # Two 10-GiB closures share 6 GiB. All desired paths are present, but the
+  # 14-GiB union still needs 9.4 GiB image/reserve space, exceeding 8 GiB free.
+  mkdir -p "$STAGE_STORE/${DESIRED_SYSTEM_TOPLEVEL#/nix/store/}" "$STAGE_STORE/${rollback#/nix/store/}"
+  PREVIOUS_SYSTEM_TOPLEVEL="$rollback"
+  PRESERVE_PREVIOUS_GENERATION=1
+  expected_rollback_roots=("$rollback")
+  ln -s "$rollback" "$MOUNT_POINT/nix/var/nix/profiles/system-1-link"
+  fixture_available=8589934592
+  if capacity_output=$(check_staging_capacity 2>&1); then fail 'rollback-only paths were omitted from the image estimate'; fi
+  [[ "$capacity_output" == *'Estimated additional staging requirement: 10093173145 bytes.'* ]] || fail 'incorrect desired/rollback union estimate'
+  [[ "$capacity_output" == *'Missing packages to stage: 0 bytes.'* ]] || fail 'present paths were charged as missing'
+  fixture_available=10093173145
+  check_staging_capacity >/dev/null || fail 'shared desired/rollback packages were counted twice'
+
+  # After a manual rollback, a newer linked generation can survive +2 even
+  # when the desired system differs from the active, older generation.
+  (
+    newer=/nix/store/dddddddddddddddddddddddddddddddd-newer-system
+    ln -s "$newer" "$MOUNT_POINT/nix/var/nix/profiles/system-2-link"
+    mkdir -p "$STAGE_STORE/${newer#/nix/store/}"
+    jq --arg newer "$newer" '. + {($newer): {narSize: 4294967296}}' "$rollback_json" > "$test_root/capacity-manual-rollback.json"
+    nix() {
+      printf '%s\n' "$*" >> "$query_log"
+      if [[ " $* " == *' --store '* ]]; then
+        if [[ " $* " == *" $newer "* ]]; then
+          cat "$test_root/capacity-manual-rollback.json"
+        else
+          # Actual path-info returns only the closures of requested roots.
+          jq --arg newer "$newer" 'del(.[$newer])' "$test_root/capacity-manual-rollback.json"
+        fi
+      else
+        cat "$desired_json"
+      fi
+    }
+    fixture_available=10093173145
+    if capacity_output=$(check_staging_capacity 2>&1); then fail 'manual rollback omitted a newer retained profile'; fi
+    [[ "$capacity_output" == *'Estimated additional staging requirement: 12670153523 bytes.'* ]] || fail 'manual rollback did not count the newer retained closure'
+    fixture_available=12670153523
+    check_staging_capacity >/dev/null || fail 'manual rollback counted shared packages twice'
+  )
+
+  # A forced rewrite of the current system can retain an older profile too.
+  PREVIOUS_SYSTEM_TOPLEVEL="$DESIRED_SYSTEM_TOPLEVEL"
+  ln -sfn "$DESIRED_SYSTEM_TOPLEVEL" "$MOUNT_POINT/nix/var/nix/profiles/system-2-link"
+  expected_rollback_roots=("$DESIRED_SYSTEM_TOPLEVEL" "$rollback")
+  jq -s 'add' "$desired_json" "$rollback_json" > "$test_root/capacity-forced.json"
+  cp "$test_root/capacity-forced.json" "$rollback_json"
+  fixture_available=8589934592
+  if check_staging_capacity > "$test_root/capacity-forced-output" 2>&1; then fail 'forced rewrite omitted the older rollback profile'; fi
+  grep -Fq 'Estimated additional staging requirement: 10093173145 bytes.' "$test_root/capacity-forced-output" || fail 'forced rewrite did not include all retained roots'
+  fixture_available=10093173145
+  check_staging_capacity >/dev/null || fail 'forced rewrite duplicated its current closure'
+
+  # Query errors and invalid metadata must fail before estimating capacity.
+  for query_failure in desired rollback; do
+    if capacity_output=$(check_staging_capacity 2>&1); then fail "failed $query_failure query was accepted"; fi
+    [[ "$capacity_output" != *'Estimated additional staging requirement:'* ]] || fail 'failed query reached capacity admission'
+  done
+  query_failure=""
+  cp "$desired_json" "$test_root/capacity-original-desired.json"
+  cp "$rollback_json" "$test_root/capacity-original-forced.json"
+  for invalid_json in "$desired_json" "$rollback_json"; do
+    printf '{broken\n' > "$invalid_json"
+    if capacity_output=$(check_staging_capacity 2>&1); then fail 'malformed closure JSON was accepted'; fi
+    [[ "$capacity_output" != *'Estimated additional staging requirement:'* ]] || fail 'invalid JSON reached capacity admission'
+    cp "$test_root/capacity-original-desired.json" "$desired_json"
+    cp "$test_root/capacity-original-forced.json" "$rollback_json"
+  done
+  jq --arg desired "$DESIRED_SYSTEM_TOPLEVEL" '.[$desired].narSize = "invalid"' "$desired_json" > "$test_root/capacity-invalid-size.json"
+  cp "$test_root/capacity-invalid-size.json" "$desired_json"
+  if capacity_output=$(check_staging_capacity 2>&1); then fail 'invalid NAR size was accepted'; fi
+  [[ "$capacity_output" != *'Estimated additional staging requirement:'* ]] || fail 'invalid NAR size reached capacity admission'
+  if grep -v -- '--json-format 1' "$query_log"; then fail 'Nix path-info JSON format was not selected explicitly'; fi
+)
+
 # A new installation must not destroy the published database during preflight.
 mkdir -p "$MOUNT_POINT/nix/var/nix/db"
 printf 'previous\n' > "$MOUNT_POINT/nix/var/nix/db/sentinel"
