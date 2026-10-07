@@ -235,9 +235,9 @@ calibration or cost savings from unlabeled routing suggestions. Compare outcomes
 with the normal baseline and use held-out reviewed tasks before expanding policy.
 There is no automatic promotion, learning or calibration from a magic sample count.
 
-Calls are capped at 40 per session/agent and 500 per UTC day; failed requests also
-consume the request budget. Text input is capped at 24,000 bytes and images at
-4 MiB/16 megapixels. Hook runtime has a six-second application deadline inside
+The installed policy caps calls at 500 per UTC day with no session/agent cap;
+failed requests also consume the request budget. Text input is capped at
+24,000 bytes and images at 4 MiB/16 megapixels. Hook runtime has a six-second application deadline inside
 Codex's eight-second hook timeout. Endpoint hostname is fixed, TLS is verified,
 redirects are rejected, and transport errors do not expose response bodies or keys.
 

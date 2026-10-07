@@ -6,7 +6,7 @@
 - **Check Configuration:** `nixos-rebuild test --flake .#desktop` (Builds and activates, but doesn't add to bootloader - good for temporary testing.)
 - **Flake Check:** `nix flake check` (This is the standard Nix flake command. In this repo it runs the host and support checks defined by the Check registry in `checks/registry.nix`.)
 - **List Generations:** `nixos-rebuild list-generations`
-- **Garbage Collect:** `nix-collect-garbage -d` (Deletes old generations)
+- **Garbage Collect:** `nix-store --gc` (Deletes unreferenced store paths while preserving retained generations. Deleting generations is a separate step.)
 
 ## Agent Tips
 
@@ -25,7 +25,6 @@
   - Remove merged worktree: `git --git-dir=/home/stefan/system-manifest/.bare worktree remove /home/stefan/system-manifest/<dir>` and then `git --git-dir=/home/stefan/system-manifest/.bare branch -d <branch>`
   - Run all editing/build/git commands from the intended worktree path.
 - **System Git:** Ensure `git` stays in `hosts/common/default.nix` under `environment.systemPackages` (required for Flakes).
-- **Git Push:** Always `git push` (or force push if history was rewritten) immediately after creating a new commit.
 - **Codex Instruction Source:** Repository-wide Codex defaults are edited in `modules/home/codex/instructions.md`, which is synced to `~/.codex/AGENTS.md` via Home Manager when you run `nixos-rebuild switch`.
 - **Codex Upgrades:** Update the shared version in `modules/home/codex/version.txt` and the release hash in `modules/home/codex/default.nix`. The Bannerlord adapter must use that same version: keep its packaged preflight expectation, tests, and README consistent on every Codex upgrade. Run the `bannerlord-codex` and `script-smoke` checks before deployment; do not leave a separate stale version pin in the adapter.
 - **Codex Package Layout:** Preserve the upstream release package, including `codex-package.json`, `bin/codex`, `bin/codex-code-mode-host`, `codex-path/rg`, and `codex-resources/bwrap`. Keep the direnv wrapper outside that package and execute its absolute `bin/codex` path. Verify actual daemon start, managed-package copy, version, and stop in isolated test state; `--version` and `exec` alone do not test interactive daemon startup.
@@ -50,11 +49,11 @@
 - **Comments**: Keep comments focused on "why" or "what" (e.g., "# Wrapper for native messaging"). Do NOT add meta-comments about your actions (e.g., "# I added this because user asked").
 - **No Commented-Out Code**: Do not leave commented-out code blocks. Use git history if you need to revert or reference old code.
 
-- **Subagent Rebuilds:** Agents are authorized to use subagents for `nixos-rebuild dry-build` validation without asking first. Use a subagent (task tool) to handle `nixos-rebuild` commands (dry-run and switch) to keep the main context clean and handle potential long output.
-- **Bug Reporting:** When a bug is reported, prioritize writing a reproduction test before attempting a fix. Use subagents to implement the fix and verify it with the passing test.
-- **Pre-Completion Dry Build:** After any config/code change and before reporting "done," run `nixos-rebuild dry-build --flake .#desktop` yourself and fix any failures before handing back to the user.
+- **Rebuild Delegation:** When delegation is explicitly authorized or the session uses `codex-auto`, a bounded subagent may handle long rebuild validation. Plain `codex` handles it in the main session unless the user asks for delegation.
+- **Bug Reporting:** Prioritize a reproduction test before attempting a fix, then verify it passes. Delegate bounded implementation or validation work only when delegation is authorized.
+- **Pre-Completion Dry Build:** After any config/code change and before reporting "done," complete `nixos-rebuild dry-build --flake .#desktop` and fix any failures. Documentation-only changes need source and link review, without a system build.
 - **CI Shape:** GitHub Actions mirrors the Check registry groups in `checks/registry.nix` with separate host and support jobs so failures stay isolated. CI serializes full Nix builds and uses configured Nix caches plus GitHub's Nix store cache to reduce upstream fetch throttling. Script-oriented support checks use filtered Home Manager bin environments so unrelated GUI fetches such as Voiden cannot block them.
-- **ShellCheck Scope:** ShellCheck currently lints the generated custom shell entrypoints from the Home Manager profiles, including host-variant wrappers where desktop and USB differ. If more shell logic moves into standalone `.sh` files later, extend linting to those sources too.
+- **ShellCheck Scope:** ShellCheck lints generated Home Manager shell entrypoints, host variants, extracted USB updater fragments, and standalone script fixtures registered in `checks/context.nix`. Register new shell sources there.
 - **Deadnix Hygiene:** Run `deadnix` after significant Nix refactors, package sweeps, or module rewiring before committing. Treat it as an occasional cleanup check, not a required gate for tiny config edits.
 - **Validation vs Deployment:** CI and `nix flake check` only validate buildability and scripted checks. Deployment is still manual: `nixos-rebuild switch --flake .#desktop` for desktop, `nixos-rebuild switch --flake .#laptop` for laptop, and `update-usb` for the USB image.
 
@@ -124,7 +123,7 @@ Linear MCP auth is local to each machine. If Codex says Linear is not logged in,
 
 - **Attribute Re-definition:** Nix doesn't allow defining the same attribute set key (like `home.file`) multiple times in the same file. You must merge them into a single block.
 
-- **USB Formatting:** When formatting raw disks or running `update-usb`, scripts often fail because NixOS root environments lack standard utilities (like `sgdisk`, `parted`, `mkfs.ext4`). **Always** run disk manipulation scripts inside a shell with the required tools: `sudo nix-shell -p gptfdisk parted cryptsetup dosfstools e2fsprogs util-linux --run '<command>'`.
+- **USB Tool Environments:** `setup-persistent-usb` and `update-usb` bootstrap their required Nix tool environments; use those commands directly. For manual disk operations, provide the required utilities, for example `sudo nix-shell -p gptfdisk parted cryptsetup dosfstools e2fsprogs util-linux --run '<command>'`.
 - **Neovim Swap Files:** If Neovim throws an `E325: ATTENTION` error or fails to open a file from `neo-tree`, it is blocked by a `.swp` file. Do not try to debug the plugin. The solution is to delete `~/.local/state/nvim/swap/*`. (Swap files are globally disabled in `opts.swapfile = false`, but old ones may linger).
 - **Zellij Stacking Action Name:** On Zellij `0.43.1`, `TogglePaneEmbedOrEject` is invalid and causes config parse failure. Use `TogglePaneEmbedOrFloating` instead.
 

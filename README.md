@@ -203,7 +203,7 @@ usb-host-scratch checkpoint --include-cache
 usb-host-scratch status
 ```
 
-Checkpoints are serialized and update phase, scope, and result diagnostics shown by `status`. The default checkpoint persists essential Codex session state and Brave profile state while excluding volatile caches and USB-local Codex authentication/configuration. Add `--include-cache` for an explicit, potentially slow full `~/.cache` copy. Docker state, everything under the host-scratch `repositories` directory, and games installed in `~/games/SteamLibrary` remain intentionally temporary. Steam Cloud is the durability path for supported game saves; commit or push repository work before powering off.
+Checkpoints are serialized and update phase, scope, and result diagnostics shown by `status`. The default checkpoint persists essential Codex session state and Brave profile state while excluding volatile caches and USB-local Codex authentication/configuration. Add `--include-cache` for an explicit, potentially slow full `~/.cache` copy. Docker state, everything under the host-scratch `repositories` directory, and games installed in `~/games/SteamLibrary` remain intentionally temporary. Steam Cloud is the durability path for supported game saves. Push repository work you want to keep, or copy the repository to persistent storage before powering off; local commits inside host scratch are temporary too.
 
 Keep the USB connected until the computer has powered off. The console message `Reached target System Power Off` can appear before final filesystem and encrypted scratch cleanup finishes. If shutdown stops there, leave the USB attached while diagnosing it.
 
