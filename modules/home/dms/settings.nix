@@ -7,6 +7,36 @@
     inherit id;
     enabled = true;
   };
+  controlCenterTile = id: col: row: w: {
+    inherit id col row w;
+    enabled = true;
+    h = 1;
+  };
+  workspaceSwitcherWidget =
+    (enabledWidget "workspaceSwitcher")
+    // {
+      showWorkspaceIndex = true;
+      showWorkspaceName = false;
+      showWorkspacePadding = false;
+      showWorkspaceApps = false;
+      workspaceFollowFocus = false;
+      showOccupiedWorkspacesOnly = true;
+      reverseScrolling = false;
+      workspaceColorMode = "default";
+      workspaceOccupiedColorMode = "none";
+      workspaceUnfocusedColorMode = "default";
+      workspaceUrgentColorMode = "default";
+      workspaceFocusedBorderEnabled = false;
+      workspaceFocusedBorderColor = "primary";
+      workspaceFocusedBorderThickness = 2;
+    };
+  launcherButtonWidget =
+    (enabledWidget "launcherButton")
+    // {
+      launcherLogoMode = "os";
+      launcherLogoColorOverride = "primary";
+      launcherLogoSizeOffset = 5;
+    };
   monitorPreference = monitor: {
     name = monitor.connector;
     model = monitor.model;
@@ -15,13 +45,14 @@
     spacing = 4;
     innerPadding = 4;
     bottomGap = 1;
+    followInterfaceStyle = false;
+    widgetFollowInterfaceStyle = false;
     transparency = glass.dms.barTransparency;
     widgetTransparency = glass.dms.barWidgetTransparency;
     squareCorners = false;
     noBackground = true;
     maximizeWidgetIcons = false;
     maximizeWidgetText = false;
-    removeWidgetPadding = false;
     widgetPadding = 12;
     gothCornersEnabled = false;
     gothCornerRadiusOverride = false;
@@ -72,7 +103,7 @@
   };
 in {
   programs.dank-material-shell.settings = {
-    configVersion = 11;
+    configVersion = 37;
     muxType = "zellij";
 
     # Keep settings declarative while removing setup prompts in DMS UI.
@@ -88,7 +119,7 @@ in {
           ];
           showOnLastDisplay = false;
           leftWidgets = [
-            "workspaceSwitcher"
+            workspaceSwitcherWidget
             compactRunningAppsWidget
             compactFocusedWindowWidget
             (enabledWidget "systemTray")
@@ -139,7 +170,7 @@ in {
           ];
           showOnLastDisplay = false;
           leftWidgets = [
-            (enabledWidget "launcherButton")
+            launcherButtonWidget
             (enabledWidget "clipboard")
             (enabledWidget "notepadButton")
             (enabledWidget "colorPicker")
@@ -158,7 +189,7 @@ in {
             }
             compactFocusedWindowWidget
             compactRunningAppsWidget
-            (enabledWidget "workspaceSwitcher")
+            workspaceSwitcherWidget
           ];
         })
       (commonBarStyle
@@ -171,8 +202,8 @@ in {
           screenPreferences = [];
           showOnLastDisplay = true;
           leftWidgets = [
-            (enabledWidget "launcherButton")
-            (enabledWidget "workspaceSwitcher")
+            launcherButtonWidget
+            workspaceSwitcherWidget
             (enabledWidget "systemTray")
             compactRunningAppsWidget
             (enabledWidget "focusedWindow")
@@ -212,11 +243,74 @@ in {
         })
     ];
 
+    # --- CONTROL CENTER ---
+    controlCenterColumns = 8;
+    controlCenterIconScale = 1.0;
+    controlCenterTileColorMode = "primary";
+    controlCenterFooterPosition = "bottom";
+    controlCenterWidgets = [
+      (controlCenterTile "user" 0 0 5)
+      ((controlCenterTile "settings" 5 0 1)
+        // {
+          small = true;
+        })
+      ((controlCenterTile "lock" 6 0 1)
+        // {
+          small = true;
+        })
+      ((controlCenterTile "power" 7 0 1)
+        // {
+          small = true;
+        })
+      (controlCenterTile "volumeSlider" 0 1 4)
+      (controlCenterTile "wifi" 4 1 4)
+      ((controlCenterTile "diskUsage" 0 2 4)
+        // {
+          instanceId = "root-filesystem";
+          mountPath = "/";
+          showMountPath = true;
+        })
+      (controlCenterTile "audioOutput" 4 2 4)
+      (controlCenterTile "audioInput" 0 3 4)
+      (controlCenterTile "battery" 4 3 4)
+      (controlCenterTile "doNotDisturb" 0 4 2)
+      (controlCenterTile "idleInhibitor" 2 4 2)
+      (controlCenterTile "darkMode" 4 4 2)
+      (controlCenterTile "nightMode" 6 4 2)
+      ((enabledWidget "runningApps")
+        // {
+          w = 4;
+          h = 1;
+          footer = true;
+        })
+      ((enabledWidget "edit")
+        // {
+          w = 1;
+          h = 1;
+          footer = true;
+          small = true;
+          footerEnd = true;
+        })
+    ];
+
     # --- DISPLAYS & WIDGET SCREENS ---
     displayNameMode = monitorIdentity.displayNameMode;
     displaySnapToEdge = true;
     displayProfileAutoSelect = false;
-    showDock = false;
+    dockConfigs = [
+      {
+        id = "dock";
+        name = "Dock";
+        enabled = false;
+        iconSize = 40;
+        spacing = 4;
+        itemSpacing = 4;
+        margin = 0;
+        followInterfaceStyle = false;
+        launcherEnabled = false;
+        launcherLogoMode = "apps";
+      }
+    ];
     screenPreferences = {
       wallpaper = [];
       notifications = [monitorIdentity.primary.dmsDisplayName];
@@ -238,6 +332,8 @@ in {
     matugenPaletteFidelity = 1;
     widgetColorMode = "colorful";
     blurEnabled = true;
+    blurBorderEnabled = true;
+    blurBorderSeeded = true;
     blurBorderColor = "primary";
     blurBorderOpacity = 0.60;
     popupTransparency = glass.dms.popupTransparency;
@@ -248,26 +344,7 @@ in {
     notepadTransparencyOverride = glass.dms.notepadTransparency;
     systemMonitorTransparency = glass.dms.systemMonitorTransparency;
 
-    # --- WORKSPACES ---
-    showWorkspaceIndex = true;
-    showWorkspaceName = false;
-    showWorkspacePadding = false;
-    showWorkspaceApps = false;
-    workspaceFollowFocus = false;
-    showOccupiedWorkspacesOnly = true;
-    reverseScrolling = false;
-    workspaceColorMode = "default";
-    workspaceOccupiedColorMode = "none";
-    workspaceUnfocusedColorMode = "default";
-    workspaceUrgentColorMode = "default";
-    workspaceFocusedBorderEnabled = false;
-    workspaceFocusedBorderColor = "primary";
-    workspaceFocusedBorderThickness = 2;
-
     # --- LAUNCHER ---
-    launcherLogoMode = "os";
-    launcherLogoColorOverride = "primary";
-    launcherLogoSizeOffset = 5;
     sortAppsAlphabetically = false;
     appLauncherGridColumns = 4;
     dankLauncherV2Size = "compact";
@@ -327,7 +404,7 @@ in {
     showSeconds = true;
     useAutoLocation = true;
     use24HourClock = true;
-    cornerRadius = 12;
+    radiusStrength = 38;
     enablePerModeWallpapers = false;
     nightModeEnabled = sessionDefaults.nightModeEnabled;
     themeModeAutoEnabled = sessionDefaults.themeModeAutoEnabled;

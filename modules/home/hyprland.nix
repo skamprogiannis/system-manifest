@@ -585,6 +585,7 @@ in {
             (execBind (modKey "SHIFT + r") "gsr-record stop")
 
             # --- DMS IPC Controls ---
+            (execBind (modKey "c") "dms ipc call control-center toggle")
             (execBind (modKey "a") "dms ipc call notifications toggle")
             (execBind (modKey "SHIFT + a") "dms ipc call notifications clearAll; dms ipc call notifications clearHistory")
             (execBind (modKey "BackSpace") "dms ipc call notifications dismissAllPopups")
