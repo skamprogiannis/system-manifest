@@ -389,6 +389,10 @@
     [projects."/home/stefan/system-manifest"]
     trust_level = "trusted"
 
+    [agents]
+    default_subagent_model = "gpt-6.1-sol"
+    default_subagent_reasoning_effort = "medium"
+
     [features]
     hooks = true
     goals = true

@@ -48,8 +48,26 @@ in {
     assert config["approvals_reviewer"] == "auto_review"
     assert config["approval_policy"] == "on-request"
     assert config["sandbox_mode"] == "workspace-write"
+    assert config["model"] == "gpt-6.1-sol"
+    assert config["model_reasoning_effort"] == "medium"
+    assert config["plan_mode_reasoning_effort"] == "xhigh"
+    assert config["agents"]["default_subagent_model"] == "gpt-6.1-sol"
+    assert config["agents"]["default_subagent_reasoning_effort"] == "medium"
+    assert "Stop" not in hooks["hooks"]
+    assert "SubagentStop" not in hooks["hooks"]
     assert "auto_review" not in config
     assert config["projects"]["/unmanaged-project"]["trust_level"] == "trusted"
+    PY
+    # Read the native resolver's values, without credentials or a model turn.
+    python3 - <<'PY'
+    import sys
+    sys.path.insert(0, "${../modules/home/codex}")
+    from clef.catalog import RPC
+    with RPC("${codex}/bin/codex") as rpc:
+        config = rpc.request("config/read", {"includeLayers": False})["config"]
+    assert config["agents"]["default_subagent_model"] == "gpt-6.1-sol", config["agents"]
+    assert config["agents"]["default_subagent_reasoning_effort"] == "medium", config["agents"]
+    assert config["plan_mode_reasoning_effort"] == "xhigh"
     PY
     python3 ${./codex-startup-test.py} ${../modules/home/codex}
     python3 ${./codex-clef-test.py} ${../modules/home/codex} ${./fixtures/codex-0.160.0}

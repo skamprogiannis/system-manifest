@@ -1,5 +1,5 @@
 {
-  "version": "4",
+  "version": "5",
   "codex_version": "0.160.0",
   "provider_model": "clef",
   "timeout_seconds": 3,
@@ -7,26 +7,32 @@
   "max_session_calls": null,
   "max_daily_calls": 500,
   "catalog_ttl_seconds": 3600,
-  "route_probability": 0.70,
-  "route_margin": 0.10,
-  "completion_mode": "advisory",
-  "completion_probability": 0.90,
-  "max_stop_continuations": 1,
+  "route_probability": 0.7,
+  "route_margin": 0.1,
   "max_delegations": 4,
   "models": {
-    "gpt-6.1-sol": "Preferred general implementation model; broad repository edits and ordinary full-stack development. Starter preference, not a measured benchmark.",
-    "gpt-6-luna": "Prefer for narrow read-only exploration or bounded documentation lookup with sufficient context. Escalate ambiguous, consequential work.",
-    "gpt-6-astra": "Prefer for consequential architecture, difficult diagnosis, and substantial independent review, when that added analysis is justified."
+    "gpt-6-luna": "Lowest-cost starting choice for narrow coding jobs and focused read-only lookup with complete context. Return to the lead after one failed repair or expanded scope; a starting policy, not a guarantee.",
+    "gpt-6.1-sol": "General implementation and ambiguous investigation at medium effort; architect, plan and security review at high effort. Prefer accepted-result cost, including repair and review. Prefer Sol for Nix activation/module wiring and Nix/store/USB contracts even when the edit is small; early matched trials exposed missed native contracts on Luna.",
+    "gpt-6-astra": "Reserve low effort initially for the hardest architecture or unresolved failures; deeper effort requires evidence that it is needed."
   },
-  "skills": {
-    "diagnose": "Reproduce, minimize, gather evidence, and diagnose a failure.",
-    "code-review": "Review implementation against requirements and repository standards.",
-    "codebase-design": "Architecture, interfaces, and module boundaries.",
-    "tdd": "Test-first implementation of a feature or bug fix.",
-    "impeccable": "Frontend interface design and visual polish.",
-    "static-analysis": "Scanner-backed security analysis.",
-    "technical-debt": "Focused audit of duplication, complexity and maintainability.",
-    "browser-automation": "Explicit browser testing and UI verification.",
-    "none": "No additional skill is needed."
-  }
+  "shadow_trial_id": "native-routing-v1",
+  "shadow_trial_samples": 20,
+  "routing_pairs": [
+    {
+      "model": "gpt-6-luna",
+      "effort": "high"
+    },
+    {
+      "model": "gpt-6.1-sol",
+      "effort": "medium"
+    },
+    {
+      "model": "gpt-6.1-sol",
+      "effort": "high"
+    },
+    {
+      "model": "gpt-6-astra",
+      "effort": "low"
+    }
+  ]
 }

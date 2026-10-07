@@ -12,7 +12,6 @@ import uuid
 
 from .client import ClefError, private_read
 
-
 EVENTS = {
     "route",
     "approval",
@@ -46,6 +45,13 @@ FIELDS = {
     "human_agreement",
     "escalated",
     "duration_ms",
+    "suggested_model",
+    "suggested_effort",
+    "native_model",
+    "native_effort",
+    "selection_source",
+    "abstention_reason",
+    "trial_id",
 }
 
 
@@ -153,6 +159,36 @@ class Store:
                 data["calls"] = calls + 1
                 daily.update(day=day, calls=count + 1)
         return True
+
+    def reserve_shadow_sample(self, policy: dict) -> bool:
+        # Trial attempts are separate from the general daily/session call budget.
+        with self.counters("shadow-trial-" + policy["shadow_trial_id"]) as data:
+            count = data.get("samples", 0)
+            if count >= policy["shadow_trial_samples"]:
+                return False
+            data["samples"] = count + 1
+        return True
+
+    def shadow_samples(self, policy: dict) -> int:
+        # Status must remain read-only, including when no state exists yet.
+        path = (
+            self.root
+            / "sessions"
+            / (session_key("shadow-trial-" + policy["shadow_trial_id"]) + ".json")
+        )
+        try:
+            data = json.loads(private_read(path, 32768))
+        except FileNotFoundError:
+            return 0
+        except ValueError:
+            raise ClefError("invalid_state") from None
+        if (
+            not isinstance(data, dict)
+            or type(data.get("samples", 0)) is not int
+            or data.get("samples", 0) < 0
+        ):
+            raise ClefError("invalid_state")
+        return data.get("samples", 0)
 
     def records(self) -> list[dict]:
         try:

@@ -21,7 +21,6 @@ from .routing import Decisions, load_policy, signals
 from .state import Store, state_root
 from .startup import launch_interactive
 
-
 CONTRACTS = {
     "review": (
         "Assess the supplied patch and its evidence. Incomplete context means unknown. This is triage, not a substitute for code review.",
@@ -271,16 +270,58 @@ def doctor(store: Store, policy: dict) -> dict:
     successes = sorted(evaluations.values(), key=lambda row: row["timestamp"])
     failures = [row for row in records if row.get("status") == "fallback"]
     today = [row for row in successes if row["timestamp"].startswith(day + "T")]
+    samples = store.shadow_samples(policy)
+    routes = {
+        row["decision_id"]: row
+        for row in records
+        if row.get("event") == "route"
+        and row.get("trial_id") == policy["shadow_trial_id"]
+        and row.get("status") in {"selected", "abstained"}
+    }
+    outcomes = {
+        row["decision_id"]: row for row in records if row.get("event") == "outcome"
+    }
+    comparison = Counter()
+    for decision_id, row in routes.items():
+        if row.get("suggested_model") is None:
+            comparison["keep"] += 1
+        elif (
+            row.get("native_model") == "unknown"
+            or row.get("native_effort") == "unknown"
+        ):
+            comparison["unknown_native_pair"] += 1
+        elif (row["suggested_model"], row["suggested_effort"]) == (
+            row["native_model"],
+            row["native_effort"],
+        ):
+            comparison["same_pair"] += 1
+        else:
+            comparison["different_pair"] += 1
+        comparison[
+            "tests_" + outcomes.get(decision_id, {}).get("test_outcome", "unknown")
+        ] += 1
     return {
+        "shadow_trial": {
+            "id": policy["shadow_trial_id"],
+            "attempts": samples,
+            "limit": policy["shadow_trial_samples"],
+            "state": (
+                "complete" if samples >= policy["shadow_trial_samples"] else "sampling"
+            ),
+            "evaluated_assignments": len(routes),
+            "comparison": dict(comparison),
+        },
         "credentials": credential_status,
         "catalog": catalog_status,
-        "default_routing_mode": "apply",
-        "routing_mode": os.environ.get("CODEX_CLEF_ROUTING_MODE", "apply")
-        if os.environ.get("CODEX_CLEF_ENABLED") == "1"
-        else "not_in_assisted_session",
+        "default_routing_mode": "shadow",
+        "routing_mode": (
+            os.environ.get("CODEX_CLEF_ROUTING_MODE", "shadow")
+            if os.environ.get("CODEX_CLEF_ENABLED") == "1"
+            else "not_in_assisted_session"
+        ),
         "approval_mode": "native",
         "automatic_approval_supported": False,
-        "completion_mode": policy["completion_mode"],
+        "completion_mode": "disabled",
         "local_limits": {
             "max_session_calls": policy["max_session_calls"],
             "max_daily_calls": policy["max_daily_calls"],
@@ -306,12 +347,14 @@ def doctor(store: Store, policy: dict) -> dict:
             "output_tokens": sum(row.get("output_tokens", 0) for row in today),
         },
         "latest_success": successes[-1]["timestamp"] if successes else None,
-        "latest_failure": {
-            "timestamp": failures[-1]["timestamp"],
-            "reason": failures[-1].get("fallback_reason"),
-        }
-        if failures
-        else None,
+        "latest_failure": (
+            {
+                "timestamp": failures[-1]["timestamp"],
+                "reason": failures[-1].get("fallback_reason"),
+            }
+            if failures
+            else None
+        ),
         "legacy_jev_log": str(store.root.parent / "codex-jev/shadow.jsonl"),
         "legacy_jev_log_exists": (
             store.root.parent / "codex-jev/shadow.jsonl"
@@ -342,6 +385,7 @@ def format_status(status: dict) -> str:
     usage = status["usage_today"]
     failure = status["latest_failure"]
     limits = status["local_limits"]
+    trial = status["shadow_trial"]
     session_limit = (
         "  No per-session call cap; the daily limit applies"
         if limits["max_session_calls"] is None
@@ -351,11 +395,15 @@ def format_status(status: dict) -> str:
         "apply": "apply valid model/effort choices",
         "shadow": "advice only; keep current model/effort",
     }
-    routing = routing_labels.get(status["routing_mode"], status_label(status["routing_mode"]))
+    routing = routing_labels.get(
+        status["routing_mode"], status_label(status["routing_mode"])
+    )
     launch_default = routing_labels.get(
         status["default_routing_mode"], status_label(status["default_routing_mode"])
     )
-    catalog_label = re.sub(r"^(\d+)_pairs$", r"\1 supported model/effort pairs", status["catalog"])
+    catalog_label = re.sub(
+        r"^(\d+)_pairs$", r"\1 supported model/effort pairs", status["catalog"]
+    )
     return "\n".join(
         [
             "Codex Auto — Clef support",
@@ -364,16 +412,21 @@ def format_status(status: dict) -> str:
             f"Routing: {routing}",
             f"Assisted launch default: {launch_default}",
             "Approvals: Codex native reviewer; Clef permission hook disabled",
-            f"Completion advice: {status['completion_mode']}",
+            "Automatic workflow, escalation and completion requests: disabled",
+            f"Shadow trial: {trial['attempts']}/{trial['limit']} eligible routing attempts; {trial['state']} (separate from call allowance)",
+            f"Shadow comparison with requested native pairs: {json.dumps(trial['comparison'], sort_keys=True)}",
+            "Advice is not an executed model change; missing outcomes remain unknown.",
             "Local call limits (configured policy; not Cloudflare quota):",
             session_limit,
             f"  {limits['max_daily_calls']} calls across sessions per UTC day, resets at 00:00 UTC",
             f"Today ({usage['day_utc']} UTC): {usage['successful_calls']} successful calls, {usage['failed_attempts']} fallbacks (skipped or failed)",
             f"Recorded tokens: {usage['input_tokens']} input, {usage['output_tokens']} output",
             f"Last successful evaluation: {status['latest_success'] or 'none recorded'}",
-            f"Latest recorded fallback ({failure['timestamp']}): {status_label(failure['reason'])}"
-            if failure
-            else "Latest recorded fallback: none",
+            (
+                f"Latest recorded fallback ({failure['timestamp']}): {status_label(failure['reason'])}"
+                if failure
+                else "Latest recorded fallback: none"
+            ),
             f"Log: {status['log']}",
             status["note"],
         ]
@@ -437,7 +490,7 @@ def parser(*, advanced=False) -> argparse.ArgumentParser:
             help="Reviewed JSON task brief for Cloudflare; requires upload consent.",
         )
         launch.add_argument("--acknowledge-upload", action="store_true")
-        launch.add_argument("--mode", choices=("apply", "shadow"), default="apply")
+        launch.add_argument("--mode", choices=("apply", "shadow"), default="shadow")
         launch.add_argument("arguments", nargs=argparse.REMAINDER)
     evaluate = commands.add_parser(
         "evaluate", help="Explicit typed evaluation of user-approved content."
@@ -480,7 +533,7 @@ def parse_arguments(arguments: list[str]):
             "usage: codex-auto [--mode {apply,shadow}] [--brief-file PATH --acknowledge-upload] [-- CODEX_OPTIONS] [TASK_OR_SUBCOMMAND]\n"
             "       codex-auto status [--json]\n"
             "       codex-auto clef {catalog,evaluate,vision,outcome} ...\n\n"
-            "Launch assisted Codex, inspect local health and usage, or run explicit Clef operations.\n"
+            "Launch native Codex with a bounded Clef shadow trial (default), inspect local usage, or run explicit evaluations.\n"
             "Bare launch and resume preserve model settings. Use -- before leading native options or reserved status/clef task prompts.\n"
             "Use codex --help for native Codex options, and codex-auto clef --help for evaluations."
         )
@@ -518,7 +571,8 @@ def run(args) -> object:
             raise ClefError("invalid_decision_id")
         if not any(
             row.get("decision_id") == args.decision_id
-            and row.get("status") == "selected"
+            and row.get("event") == "route"
+            and row.get("status") in {"selected", "abstained"}
             for row in store.records()
         ):
             raise ClefError("unknown_decision_id")
@@ -547,7 +601,11 @@ def run(args) -> object:
         try:
             # Refresh also primes the cache for later subagent routing without a startup task.
             available = catalog.refresh(args.codex, policy, store)
-            if not context.explicit and (context.prompt or args.brief_file):
+            if (
+                args.mode == "apply"
+                and not context.explicit
+                and (context.prompt or args.brief_file)
+            ):
                 state = {
                     "task_signals": signals(context.prompt or ""),
                     "context": "coarse_metadata_only",

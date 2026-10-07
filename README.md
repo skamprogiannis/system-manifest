@@ -22,7 +22,7 @@ Managed via **Nix Flakes** and **Home Manager**.
   - **Brave + Vimium C:** Declarative browser setup with preseeded extension settings and portable keymaps.
 - **Vesktop:** Discord client with declarative Translucence theming and QuickCSS customization.
 - **Dev Ready:** Pre-configured environment for Node.js, Python, Go, Playwright, and Neovim (via nixvim), plus Clang build essentials. Neovim is also registered as the default text editor via an `nvim-text` desktop entry. Its LSP hover uses [md-render.nvim](https://github.com/delphinus/md-render.nvim) for compact Markdown and navigable links.
-- **AI Integrated:** Built-in configuration for **Codex CLI** with per-repo `AGENTS.md` instructions, global defaults in `~/.codex/AGENTS.md`, custom agents in `~/.codex/agents`, Linear/Context7/Etsy/OpenAI Docs MCP servers, and curated skills for visualization, browser automation, security analysis, frontend work, review, diagnosis, TDD, design, prototyping, and concise response modes. Opt-in direct Cloudflare Clef integration adds dynamic model/effort selection, bounded native hooks and metadata-only evaluation logs. Codex uses native auto-review for approval requests.
+- **AI Integrated:** Built-in configuration for **Codex CLI** with per-repo `AGENTS.md` instructions, global defaults in `~/.codex/AGENTS.md`, custom agents in `~/.codex/agents`, Linear/Context7/Etsy/OpenAI Docs MCP servers, and curated skills for visualization, browser automation, security analysis, frontend work, review, diagnosis, TDD, design, prototyping, and concise response modes. Native agent defaults support bounded Luna workers, Sol implementation/review and selective Astra escalation. Opt-in Cloudflare Clef observes a 20-assignment shadow trial with metadata-only logs. Codex uses native auto-review for approval requests.
   Linear MCP auth is local per machine; after first enabling a host, run `codex mcp login linear` once if Codex reports that Linear is not logged in. Context7 uses a local API key from `~/.config/context7/api-key` when present.
 - **Modular Architecture:** Configuration split across `hosts/` (system-level) and `modules/home/` (user-level) for maintainability.
 - **Voiden:** Declarative AppImage wrapper for the Voiden offline-first API client.
@@ -89,15 +89,23 @@ Hyprland and its portal use Nixpkgs packages. Treesitter uses the editor Nixpkgs
 
 ## Clef-assisted Codex
 
-`codex-auto -- "task"` opts into direct Cloudflare Clef support. Clef selects a
-model **and** reasoning effort from the authenticated Codex model catalog; explicit
-model/profile/effort overrides win. Initial routing sets both ordinary and planning
-effort, while subsequent main-thread TUI messages retain Codex's own settings.
-Native hooks can independently route named subagents, recommend skills and checks,
-flag repeated failure signals, and suggest one bounded completion review.
+`codex-auto -- "task"` uses native Codex model selection and enables a limited
+Clef shadow trial. Independent bounded workers and focused lookup start on
+Luna/high; broader coding uses Sol 6.1/medium, reviews use Sol/high, and the
+hardest architecture can escalate to Astra/low. Nix activation and store/USB
+contracts start on Sol even for small edits. Main coding remains Sol/medium
+and Plan mode keeps extra-high effort. Manual choices win; custom roles stay
+unpinned so the lead can escalate.
 
-Bare startup and resume preserve their model/effort settings; main routing needs
-a task prompt or explicitly approved brief. Assisted interactive sessions run
+Clef observes up to 20 eligible agent-routing attempts, including explicit native
+pairs, then stops sampling. It compares four supported model/effort pairs plus
+keep, without changing selections. `codex-auto status` reports suggestions,
+requested native pairs and known outcomes separately from general call limits.
+Automatic workflow, completion and escalation provider requests are disabled.
+Explicit `--mode apply` retains advanced routing with confidence guards.
+
+Bare startup, resume and default shadow launches preserve native settings;
+advanced main routing needs explicit apply mode and a task prompt or approved brief. Assisted interactive sessions run
 independently of the shared daemon, so plain `codex` keeps its hooks inactive.
 After an account-routing bootstrap timeout, the launcher tries ordinary Codex
 once with Clef routing disabled, allowing the native daemon to handle startup.
@@ -107,8 +115,7 @@ unrelated failures and cancelled launches return immediately.
 Approval requests use **Codex native auto-review** within the existing sandbox
 and permission scope. Clef does not handle approvals. Native safety checks are
 free for ChatGPT sign-ins; coding, delegated work and code reviews still consume
-usage. Sensitive actions require sufficient user authorization. Completion
-suggestions remain advisory; required tests and independent code review remain
+usage. Sensitive actions require sufficient user authorization. Required tests and independent code review remain
 part of the workflow.
 
 Install a scoped Workers AI token locally, review the hooks through Codex's `/hooks`,

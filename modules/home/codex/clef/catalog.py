@@ -25,6 +25,8 @@ def pairs(models: list, policy: dict) -> list[dict]:
                 r"[a-z][a-z0-9_]{0,31}", effort
             ):
                 continue
+            if {"model": name, "effort": effort} not in policy["routing_pairs"]:
+                continue
             candidate = {
                 "model": name,
                 "effort": effort,

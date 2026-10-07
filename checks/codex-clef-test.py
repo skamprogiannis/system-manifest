@@ -90,6 +90,7 @@ class Base(unittest.TestCase):
                 "XDG_STATE_HOME": str(self.root / "state"),
                 "XDG_CONFIG_HOME": str(self.root / "config"),
                 "CODEX_HOME": str(self.root / "codex"),
+                "CODEX_CLEF_ROUTING_MODE": "apply",
             },
             clear=True,
         )
@@ -293,7 +294,9 @@ class RoutingTests(Base):
             ),
             patch("clef.cli.Store.log", side_effect=OSError("read only")),
             patch("clef.cli.os.execvpe", side_effect=SystemExit(0)) as execute,
-            patch("clef.cli.launch_interactive", side_effect=lambda *a, **kw: execute(*a)),
+            patch(
+                "clef.cli.launch_interactive", side_effect=lambda *a, **kw: execute(*a)
+            ),
         ):
             with self.assertRaises(SystemExit):
                 run(args)
@@ -310,18 +313,20 @@ class RoutingTests(Base):
         self.assertEqual(result, {})
         self.assertEqual(self.client.calls, [])
 
-    def test_effort_is_discovered_not_fixed_per_model(self):
+    def test_only_policy_pairs_supported_by_catalog_are_offered(self):
         models = [
             {
                 "model": "gpt-6.1-sol",
                 "supportedReasoningEfforts": [
                     {"reasoningEffort": "low"},
-                    {"reasoningEffort": "max"},
+                    {"reasoningEffort": "high"},
+                    {"reasoningEffort": "medium"},
                 ],
             }
         ]
         self.assertEqual(
-            [v["effort"] for v in catalog.pairs(models, self.policy)], ["low", "max"]
+            [v["effort"] for v in catalog.pairs(models, self.policy)],
+            ["high", "medium"],
         )
 
     def test_unknown_and_hidden_models_filtered(self):
@@ -452,7 +457,9 @@ class LauncherTests(Base):
     def test_interactive_main_returns_status_without_json_output(self):
         from clef import cli
 
-        args = parser().parse_args(["--policy", str(SOURCE / "clef/policy.json"), "launch"])
+        args = parser().parse_args(
+            ["--policy", str(SOURCE / "clef/policy.json"), "launch"]
+        )
         output = io.StringIO()
         with (
             patch("clef.cli.parse_arguments", return_value=args),
@@ -468,6 +475,8 @@ class LauncherTests(Base):
                 "--policy",
                 str(SOURCE / "clef/policy.json"),
                 "launch",
+                "--mode",
+                "apply",
                 *options,
                 "--",
                 *arguments,
@@ -486,7 +495,9 @@ class LauncherTests(Base):
                 side_effect=route_error,
             ) as route,
             patch("clef.cli.os.execvpe", side_effect=SystemExit(0)) as execute,
-            patch("clef.cli.launch_interactive", side_effect=lambda *a, **kw: execute(*a)),
+            patch(
+                "clef.cli.launch_interactive", side_effect=lambda *a, **kw: execute(*a)
+            ),
         ):
             with self.assertRaises(SystemExit):
                 run(args)
@@ -528,10 +539,15 @@ class LauncherTests(Base):
             ["--", "--no-daemon"],
         ):
             with self.subTest(arguments=arguments):
-                args = parser().parse_args([
-                    "--policy", str(SOURCE / "clef/policy.json"),
-                    "launch", "--", *arguments,
-                ])
+                args = parser().parse_args(
+                    [
+                        "--policy",
+                        str(SOURCE / "clef/policy.json"),
+                        "launch",
+                        "--",
+                        *arguments,
+                    ]
+                )
                 with (
                     patch("clef.cli.catalog.refresh", return_value=self.available()),
                     patch("clef.cli.Decisions.route", return_value=None),
@@ -546,7 +562,9 @@ class LauncherTests(Base):
                 self.assertEqual(ordinary_args, ["codex", *arguments])
                 self.assertEqual(ordinary_env["CODEX_CLEF_ENABLED"], "0")
                 self.assertNotIn("CODEX_CLEF_ROUTING_MODE", ordinary_env)
-                self.assertEqual(launch.call_args.args[1], ["codex", "--no-daemon", *arguments])
+                self.assertEqual(
+                    launch.call_args.args[1], ["codex", "--no-daemon", *arguments]
+                )
 
     def test_only_native_prompt_supplies_task_signals(self):
         cases = [
@@ -728,7 +746,9 @@ class PublicCommandTests(Base):
             self.assertIn("No per-session call cap", format_status(result))
             self.assertFalse(self.store.root.exists())
 
-    def test_status_uses_loaded_limits_and_explains_offline_fallbacks_without_writes(self):
+    def test_status_uses_loaded_limits_and_explains_offline_fallbacks_without_writes(
+        self,
+    ):
         installed_policy = dict(self.policy, max_session_calls=7, max_daily_calls=19)
         policy_path = self.root / "installed-policy.json"
         policy_path.write_text(json.dumps(installed_policy))
@@ -785,7 +805,7 @@ class PublicCommandTests(Base):
             "Cloudflare authentication was not tested",
             "codex-auto clef catalog",
             "current command is outside an assisted session",
-            "Assisted launch default: apply",
+            "Assisted launch default: advice only",
             "7 calls per Codex session/thread",
             "19 calls across sessions per UTC day",
             "resumes and later days",
@@ -860,18 +880,25 @@ class PublicCommandTests(Base):
 
 class FailureWarningTests(Base):
     def test_provider_failure_warns_once_per_category_per_session(self):
-        event = self.event("UserPromptSubmit", prompt="Fix the parser")
-        with patch.object(self.client, "evaluate", side_effect=ClefError("http_429")):
-            first = self.hooks.handle(event)
-            second = self.hooks.handle(dict(event, turn_id="turn-2"))
-        self.assertIn("http_429", first["systemMessage"])
-        self.assertNotIn("systemMessage", second)
-        self.assert_contract("user-prompt-submit", first)
-        with patch.object(
-            self.client, "evaluate", side_effect=ClefError("transport_error")
-        ):
-            third = self.hooks.handle(event)
-        self.assertIn("transport_error", third["systemMessage"])
+        event = self.event(
+            "PreToolUse",
+            tool_name="spawn_agent",
+            tool_input={"agent_type": "worker", "message": "Fix parser"},
+        )
+        with patch("clef.hooks.catalog.cached", return_value=self.available()):
+            with patch.object(
+                self.client, "evaluate", side_effect=ClefError("http_429")
+            ):
+                first = self.hooks.handle(event)
+                second = self.hooks.handle(dict(event, turn_id="turn-2"))
+            self.assertIn("http_429", first["systemMessage"])
+            self.assertNotIn("systemMessage", second)
+            self.assert_contract("pre-tool-use", first)
+            with patch.object(
+                self.client, "evaluate", side_effect=ClefError("transport_error")
+            ):
+                third = self.hooks.handle(event)
+            self.assertIn("transport_error", third["systemMessage"])
 
     def test_startup_checks_credentials_without_inference(self):
         with patch(
@@ -904,6 +931,141 @@ class FailureWarningTests(Base):
                 )
             )
         self.assertNotIn("systemMessage", result)
+
+
+class ShadowTrialTests(Base):
+    def spawn(self, **overrides):
+        args = dict(
+            agent_type="worker",
+            task_name="bounded",
+            fork_turns="none",
+            message="Fix SECRET /private/path",
+        )
+        args.update(overrides)
+        with (
+            patch.dict(os.environ, {"CODEX_CLEF_ROUTING_MODE": "shadow"}),
+            patch.object(catalog, "cached", return_value=self.available()),
+        ):
+            return self.hooks.handle(
+                self.event("PreToolUse", tool_name="spawn_agent", tool_input=args)
+            )
+
+    def test_explicit_native_pair_is_observed_without_rewriting(self):
+        self.client.p = 0.55
+        self.assertEqual(self.spawn(model="gpt-6-luna", reasoning_effort="high"), {})
+        self.assertEqual(len(self.client.calls), 1)
+        row = self.store.records()[-1]
+        self.assertEqual(
+            (row["native_model"], row["native_effort"]), ("gpt-6-luna", "high")
+        )
+        self.assertEqual(row["suggested_model"], "gpt-6.1-sol")
+        self.assertEqual(row["abstention_reason"], "below_probability")
+        self.assertFalse(row["applied"])
+        self.assertNotIn("SECRET", json.dumps(self.client.calls))
+        self.assertNotIn("/private/path", json.dumps(self.store.records()))
+        self.assertNotIn("native_model", self.client.calls[0][0])
+
+    def test_trial_limit_is_atomic_and_does_not_limit_explicit_calls(self):
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            counts = list(
+                executor.map(
+                    lambda _: self.store.reserve_shadow_sample(self.policy), range(32)
+                )
+            )
+        self.assertEqual(sum(counts), 20)
+        self.assertEqual(self.store.shadow_samples(self.policy), 20)
+        self.assertEqual(self.spawn(), {})
+        self.assertEqual(self.client.calls, [])
+        self.assertIsNotNone(self.d.route("explicit", {}, self.available()))
+        self.assertEqual(len(self.client.calls), 1)
+        status = doctor(self.store, self.policy)
+        self.assertEqual(status["shadow_trial"]["state"], "complete")
+        self.assertIsNone(status["local_limits"]["max_session_calls"])
+
+    def test_failures_consume_trial_attempts_but_inherited_context_does_not(self):
+        self.policy["max_delegations"] = 30
+        self.assertEqual(self.spawn(fork_turns="all"), {})
+        self.assertEqual(self.store.shadow_samples(self.policy), 0)
+        with patch.object(
+            self.client, "evaluate", side_effect=ClefError("transport_error")
+        ):
+            self.spawn()
+        self.assertEqual(self.store.shadow_samples(self.policy), 1)
+        with (
+            patch.object(catalog, "cached", side_effect=ClefError("stale_catalog")),
+            patch.dict(os.environ, {"CODEX_CLEF_ROUTING_MODE": "shadow"}),
+        ):
+            self.hooks.handle(
+                self.event(
+                    "PreToolUse",
+                    tool_name="spawn_agent",
+                    tool_input={"agent_type": "worker", "fork_turns": "none"},
+                )
+            )
+        self.assertEqual(self.store.shadow_samples(self.policy), 1)
+
+    def test_unknown_explicit_values_do_not_enter_logs(self):
+        self.spawn(model="SECRET-model", reasoning_effort="SECRET-effort")
+        row = self.store.records()[-1]
+        self.assertEqual(row["native_model"], "unknown")
+        self.assertEqual(row["native_effort"], "unknown")
+        self.assertNotIn("SECRET", json.dumps(self.store.records()))
+
+    def test_omitted_fields_are_unknown_even_with_different_native_fallback(self):
+        # The parent event model and local policy do not resolve profile/project
+        # overrides of native [agents] defaults. Never guess an omitted field.
+        for fields in ({}, {"reasoning_effort": "high"}, {"model": "gpt-6-luna"}):
+            with self.subTest(fields=fields):
+                self.spawn(**fields)
+                row = self.store.records()[-1]
+                self.assertEqual(row["native_model"], fields.get("model", "unknown"))
+                self.assertEqual(
+                    row["native_effort"], fields.get("reasoning_effort", "unknown")
+                )
+        status = doctor(self.store, self.policy)
+        self.assertEqual(
+            status["shadow_trial"]["comparison"],
+            {"unknown_native_pair": 3, "tests_unknown": 3},
+        )
+
+    def test_outcomes_can_attach_to_abstention_and_latest_update_wins(self):
+        self.client.p = 0.55
+        self.spawn(model="gpt-6-luna", reasoning_effort="high")
+        decision_id = self.store.records()[-1]["decision_id"]
+        for outcome in ("failed", "passed"):
+            args = parser(advanced=True).parse_args(
+                [
+                    "--policy",
+                    str(SOURCE / "clef/policy.json"),
+                    "outcome",
+                    "--decision-id",
+                    decision_id,
+                    "--test-outcome",
+                    outcome,
+                ]
+            )
+            run(args)
+        status = doctor(self.store, self.policy)
+        self.assertEqual(
+            status["shadow_trial"]["comparison"],
+            {"different_pair": 1, "tests_passed": 1},
+        )
+
+    def test_shadow_default_does_not_route_main_prompt(self):
+        args = parser().parse_args(
+            ["--policy", str(SOURCE / "clef/policy.json"), "launch", "--", "Fix parser"]
+        )
+        self.assertEqual(args.mode, "shadow")
+        with (
+            patch("clef.cli.catalog.refresh", return_value=self.available()),
+            patch("clef.cli.Decisions.route") as route,
+            patch("clef.cli.launch_interactive", return_value=0) as launch,
+        ):
+            run(args)
+        route.assert_not_called()
+        self.assertEqual(
+            launch.call_args.args[1], ["codex", "--no-daemon", "Fix parser"]
+        )
 
 
 class NativeForkTests(Base):
@@ -1115,39 +1277,25 @@ class LifecycleTests(Base):
         self.assertEqual(self.hooks.handle(event), {})
         self.assertNotIn("secret-in-output", json.dumps(self.client.calls))
 
-    def test_completion_advisory_is_not_approval(self):
-        with self.store.counters("test-session") as data:
-            data.update(edits=1)
-        self.client.choices = {"completion": "verify"}
-        result = self.hooks.handle(
-            self.event("Stop", last_assistant_message="Implemented")
-        )
-        self.assertIn("systemMessage", result)
-        self.assert_contract("stop", result)
-
-    def test_stop_continuation_bounded(self):
-        self.policy["completion_mode"] = "enforce"
-        self.client.choices = {"completion": "verify"}
-        with self.store.counters("test-session") as data:
-            data.update(edits=1)
-        event = self.event("Stop", last_assistant_message="Implemented")
-        result = self.hooks.handle(event)
-        self.assertEqual(result["decision"], "block")
-        self.assert_contract("stop", result)
-        self.assertEqual(self.hooks.handle(event), {})
-        self.assertEqual(self.hooks.handle(dict(event, stop_hook_active=True)), {})
-
-    def test_honest_limitation_not_blocked(self):
-        self.policy["completion_mode"] = "enforce"
-        self.client.choices = {"completion": "verify"}
-        with self.store.counters("test-session") as data:
-            data.update(edits=1)
-        result = self.hooks.handle(
-            self.event(
-                "Stop", last_assistant_message="Implemented but tests were not run"
+    def test_workflow_failures_and_stop_make_no_provider_requests(self):
+        for name in ("UserPromptSubmit", "Stop", "SubagentStop"):
+            self.assertEqual(
+                self.hooks.handle(
+                    self.event(
+                        name, prompt="Fix tests", last_assistant_message="Implemented"
+                    )
+                ),
+                {},
             )
+        failure = self.event(
+            "PostToolUse",
+            tool_name="Bash",
+            tool_response="FAIL secret",
+            tool_input={"command": "go test ./..."},
         )
-        self.assertNotIn("decision", result)
+        self.hooks.handle(failure)
+        self.hooks.handle(failure)
+        self.assertEqual(self.client.calls, [])
 
     def test_disabled_hook_inert(self):
         result = subprocess.run(
@@ -1263,8 +1411,14 @@ class MigrationTests(Base):
                 "PermissionRequest": [
                     {
                         "hooks": [
-                            {"type": "command", "command": root + "bin/codex-clef hook"},
-                            {"type": "command", "command": root + "libexec/codex-auto-hook"},
+                            {
+                                "type": "command",
+                                "command": root + "bin/codex-clef hook",
+                            },
+                            {
+                                "type": "command",
+                                "command": root + "libexec/codex-auto-hook",
+                            },
                             {"type": "command", "command": "user-permission-hook"},
                         ]
                     }
@@ -1274,7 +1428,14 @@ class MigrationTests(Base):
         seed = {
             "hooks": {
                 "Stop": [
-                    {"hooks": [{"type": "command", "command": root + "libexec/codex-auto-hook"}]}
+                    {
+                        "hooks": [
+                            {
+                                "type": "command",
+                                "command": root + "libexec/codex-auto-hook",
+                            }
+                        ]
+                    }
                 ]
             }
         }

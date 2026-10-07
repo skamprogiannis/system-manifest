@@ -10,7 +10,6 @@
     (builtins.fromJSON (builtins.readFile ./clef/policy.json))
     // {
       codex_version = lib.removeSuffix "\n" (builtins.readFile ./version.txt);
-      completion_mode = cfg.completionMode;
     };
   policyFile = pkgs.writeText "codex-clef-policy.json" (builtins.toJSON policy);
   python = pkgs.python3.withPackages (ps: [ps.pillow]);
@@ -40,18 +39,11 @@
       UserPromptSubmit = [(handler "*")];
       PreToolUse = [(handler "^(spawn_agent|Agent|collaborationspawn_agent)$")];
       PostToolUse = [(handler "*")];
-      Stop = [(handler "*")];
-      SubagentStop = [(handler "*")];
     };
   });
 in {
   options.system_manifest.codex.clef = {
     enable = lib.mkEnableOption "opt-in native Clef decision support" // {default = true;};
-    completionMode = lib.mkOption {
-      type = lib.types.enum ["advisory" "enforce"];
-      default = "advisory";
-      description = "Display completion advice, or permit at most one verification continuation per turn.";
-    };
   };
   config = {
     home.packages = lib.mkIf cfg.enable [package];

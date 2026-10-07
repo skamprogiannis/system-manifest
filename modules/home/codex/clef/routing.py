@@ -8,7 +8,6 @@ import re
 from .client import ClefError, Client, question
 from .state import Store, session_key
 
-
 SIGNALS = {
     "diagnosis": r"\b(bug|broken|fail(?:ed|ure|ing)?|crash|debug|regression|stuck)\b",
     "architecture": r"\b(architect\w*|redesign|migration|refactor|interface|boundary|boundaries)\b",
@@ -41,7 +40,14 @@ def load_policy(path: Path) -> dict:
         policy = json.loads(path.read_text())
     except (OSError, ValueError):
         raise ClefError("invalid_policy") from None
-    if policy.get("completion_mode") not in ("advisory", "enforce"):
+    if (
+        not isinstance(policy.get("shadow_trial_id"), str)
+        or not re.fullmatch(r"[a-z0-9-]{1,60}", policy["shadow_trial_id"])
+        or type(policy.get("shadow_trial_samples")) is not int
+        or not 0 <= policy["shadow_trial_samples"] <= 100
+        or not isinstance(policy.get("routing_pairs"), list)
+        or not policy["routing_pairs"]
+    ):
         raise ClefError("invalid_policy")
     return policy
 
@@ -82,7 +88,19 @@ class Decisions:
         )
         return replace(result, decision_id=decision_id)
 
-    def route(self, session: str, state: dict, candidates: list[dict], *, apply=False):
+    def route(
+        self,
+        session: str,
+        state: dict,
+        candidates: list[dict],
+        *,
+        apply=False,
+        trial=False,
+        native=None,
+    ):
+        self.last_failure = None
+        if trial and not self.store.reserve_shadow_sample(self.policy):
+            return None
         choices = {
             f"r{index}": entry["description"] for index, entry in enumerate(candidates)
         }
@@ -120,11 +138,34 @@ class Decisions:
             policy_version=self.policy["version"],
             provider=self.policy["provider_model"],
             status="selected" if selected else "abstained",
+            mode="apply" if apply else "shadow",
+            abstention_reason=(
+                "none"
+                if selected
+                else (
+                    "keep"
+                    if answer.choice == "keep"
+                    else (
+                        "below_probability"
+                        if answer.probability < self.policy["route_probability"]
+                        else "below_margin"
+                    )
+                )
+            ),
             probability=answer.probability,
             confidence=answer.confidence,
             margin=answer.margin,
             applied=bool(selected and apply),
         )
+        if trial:
+            fields["trial_id"] = self.policy["shadow_trial_id"]
+        if native:
+            fields.update(native)
+        if answer.choice != "keep":
+            suggested = candidates[int(answer.choice[1:])]
+            fields.update(
+                suggested_model=suggested["model"], suggested_effort=suggested["effort"]
+            )
         if selected:
             fields.update(
                 selected_model=selected["model"], selected_effort=selected["effort"]

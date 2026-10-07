@@ -1,16 +1,14 @@
 """Native Codex lifecycle adapters; unknown or incomplete inputs abstain."""
 
 import os
-import json
 from pathlib import Path
 import re
 import shlex
 
 from . import catalog
-from .client import ClefError, credentials, question
+from .client import ClefError, credentials
 from .routing import Decisions, signals
 from .state import session_key
-
 
 READ_ONLY_ROLES = {
     "explorer",
@@ -20,13 +18,6 @@ READ_ONLY_ROLES = {
     "plan-reviewer",
 }
 ROLES = READ_ONLY_ROLES | {"worker"}
-WORKFLOW_CHECKS = {
-    "unit": "Prioritize focused unit/integration tests around changed behavior.",
-    "config": "Prioritize configuration evaluation and targeted Nix checks, then the required desktop dry-build.",
-    "security": "Prioritize security checks and an independent review of sensitive changes.",
-    "browser": "Prioritize browser-based verification of affected UI behavior.",
-    "none": "No additional check prioritization is useful yet.",
-}
 
 
 def context(event: str, message: str) -> dict:
@@ -121,7 +112,7 @@ class Hooks:
                 event="session",
                 session=session_key(session),
                 status="started",
-                mode=os.environ.get("CODEX_CLEF_ROUTING_MODE", "apply"),
+                mode=os.environ.get("CODEX_CLEF_ROUTING_MODE", "shadow"),
                 applied=False,
             )
             return context(
@@ -132,7 +123,7 @@ class Hooks:
                 "Reuse the reviewer for necessary follow-up and review subsequent changes rather than repeating the full review. "
                 "Give independent agents compact objectives, paths, constraints, file ownership and acceptance checks with fork_turns=none when sufficient. "
                 "Give concurrent workers separate worktrees and disjoint files; the lead integrates and validates the combined result. "
-                "Keep exploration read-only. Do not provide model/effort on spawn_agent unless the user explicitly overrides routing. "
+                "Keep exploration read-only. For independent assignments choose native model and effort explicitly: Luna/high for bounded coding and focused lookup, Sol 6.1/medium for broad or ambiguous work and Nix activation/module wiring or Nix/store/USB contracts, Sol 6.1/high for architecture, plan and security review. Reserve Astra/low initially for the hardest architecture or unresolved failures. Manual choices win. Return to the lead after one failed repair or expanded scope. Clef shadow advice does not change the native pair. "
                 "No more than four delegated tasks per user turn; no nested delegation. "
                 "Routing advice never expands permissions, substitutes for tests, or authorizes publishing. "
                 "Clef receives coarse metadata by default, not prompts, source code or transcripts.",
@@ -147,8 +138,6 @@ class Hooks:
             return self.spawn(event)
         if name == "PostToolUse":
             return self.observe(event)
-        if name in ("Stop", "SubagentStop"):
-            return self.stop(event)
         return {}
 
     def workflow(self, event: dict) -> dict:
@@ -164,41 +153,10 @@ class Hooks:
                     checks_failed=0,
                     failure_signals=0,
                     edits=0,
-                    stop_count=0,
                     escalation_sent=False,
                     signals=hints,
                 )
-        result = self.d.ask(
-            "workflow",
-            session,
-            {"task_signals": hints},
-            {
-                "skill": question(
-                    "Select the most relevant installed workflow skill from coarse task signals; choose none when uncertain.",
-                    self.policy["skills"],
-                ),
-                "check": question(
-                    "Prioritize checks; this never excuses skipping required repository checks.",
-                    WORKFLOW_CHECKS,
-                ),
-            },
-        )
-        if result is None:
-            return {}
-        messages = []
-        skill = result.answers["skill"]
-        if skill.choice != "none" and skill.probability >= 0.75:
-            messages.append(f"Consider the installed {skill.choice} skill.")
-        check = result.answers["check"]
-        if check.choice != "none" and check.probability >= 0.75:
-            messages.append(WORKFLOW_CHECKS[check.choice])
-        if hints["architecture"] and (
-            hints["security"] or hints["system"] or hints["substantial"]
-        ):
-            messages.append(
-                "Obtain a bounded read-only architect consultation before implementation; preserve the interactive plan-reviewer for user-led design discussion."
-            )
-        return context("UserPromptSubmit", " ".join(messages)) if messages else {}
+        return {}
 
     def spawn(self, event: dict) -> dict:
         arguments = event.get("tool_input")
@@ -225,8 +183,9 @@ class Hooks:
                 }
         if role not in ROLES:
             return {}
-        # Explicit choices are authoritative, including a partial effort override.
-        if (
+        shadow = os.environ.get("CODEX_CLEF_ROUTING_MODE", "shadow") == "shadow"
+        # Apply mode preserves explicit choices; shadow mode only observes them.
+        if not shadow and (
             arguments.get("model") is not None
             or arguments.get("reasoning_effort") is not None
         ):
@@ -239,7 +198,36 @@ class Hooks:
             "fork_turns", "all"
         ) != "none":
             return {}
+        if (
+            shadow
+            and self.store.shadow_samples(self.policy)
+            >= self.policy["shadow_trial_samples"]
+        ):
+            return {}
         candidates = catalog.cached(self.policy, self.store)
+        # Only known enum values enter logs; arbitrary tool arguments stay local.
+        model = arguments.get("model")
+        effort = arguments.get("reasoning_effort")
+        source = (
+            "explicit"
+            if model is not None and effort is not None
+            else "fallback" if model is None and effort is None else "partial_unknown"
+        )
+        native = {
+            "native_model": (
+                model
+                if isinstance(model, str) and model in self.policy["models"]
+                else "unknown"
+            ),
+            "native_effort": (
+                effort
+                if isinstance(effort, str)
+                and effort
+                in {"none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"}
+                else "unknown"
+            ),
+            "selection_source": source,
+        }
         selected = self.d.route(
             event["session_id"],
             {
@@ -248,9 +236,11 @@ class Hooks:
                 "read_only": role in READ_ONLY_ROLES,
             },
             candidates,
-            apply=os.environ.get("CODEX_CLEF_ROUTING_MODE") != "shadow",
+            apply=not shadow,
+            trial=shadow,
+            native=native,
         )
-        if not selected or os.environ.get("CODEX_CLEF_ROUTING_MODE") == "shadow":
+        if not selected or shadow:
             return {}
         updated = dict(arguments)
         updated.update(model=selected["model"], reasoning_effort=selected["effort"])
@@ -296,117 +286,10 @@ class Hooks:
             ) >= 2 and not data.get("escalation_sent")
             if trigger:
                 data["escalation_sent"] = True
-            state = {
-                key: data.get(key, 0)
-                for key in (
-                    "failed_commands",
-                    "failure_signals",
-                    "checks_passed",
-                    "checks_failed",
-                    "edits",
-                )
-            }
         if not trigger:
             return {}
-        result = self.d.ask(
-            "escalation",
-            session,
-            state,
-            {
-                "next": question(
-                    "Select a useful next step after repeated command failures. Failure signals from output text are not verified exit statuses or necessarily distinct failed hypotheses.",
-                    {
-                        "context": "Inspect the error and gather missing evidence before retrying.",
-                        "architect": "Consult the read-only architect with failed hypotheses and relevant evidence.",
-                        "continue": "Continue the current approach, but change the failing step.",
-                    },
-                )
-            },
-        )
-        if result is None:
-            return context(
-                "PostToolUse",
-                "Repeated failure signals observed; confirm the actual failures. Gather evidence before repeating the same approach.",
-            )
-        messages = {
-            "context": "Gather missing evidence and inspect the failure before retrying.",
-            "architect": "Consider a bounded architect consultation; provide the actual failed hypotheses and evidence, not just a failure count.",
-            "continue": "Change the failing step rather than blindly rerunning it.",
-        }
-        return context("PostToolUse", messages[result.answers["next"].choice])
-
-    def stop(self, event: dict) -> dict:
-        session = event["session_id"]
-        if event.get("stop_hook_active"):
-            return {}
-        with self.store.counters(session) as data:
-            state = {
-                key: data.get(key, 0)
-                for key in ("edits", "checks_passed", "checks_failed")
-            }
-            state["task_signals"] = data.get("signals", {})
-            if (
-                not state["edits"]
-                or data.get("stop_count", 0) >= self.policy["max_stop_continuations"]
-            ):
-                return {}
-            data["stop_count"] = data.get("stop_count", 0) + 1
-        # The last message stays local. This is a narrow evidence signal, not a code review.
-        message = event.get("last_assistant_message") or ""
-        state["claims_completion"] = bool(
-            re.search(r"\b(done|complete|fixed|passed|implemented)\b", message, re.I)
-        )
-        state["discloses_limitation"] = bool(
-            re.search(
-                r"\b(unverified|blocked|unable|not run|could not|failed)\b",
-                message,
-                re.I,
-            )
-        )
-        result = self.d.ask(
-            "completion",
-            session,
-            state,
-            {
-                "completion": question(
-                    "Does the available metadata justify an additional verification pass? Passing commands do not prove correctness, "
-                    "and absence of a recorded test is not proof that no tests ran. Do not overrule an honest limitation report.",
-                    {
-                        "finish": "No additional pass is justified from this evidence.",
-                        "verify": "Request one focused verification or disclosure pass.",
-                        "review": "Suggest an independent read-only review of a substantial change.",
-                    },
-                )
-            },
-        )
-        if result is None:
-            return {}
-        answer = result.answers["completion"]
-        if (
-            answer.choice == "finish"
-            or answer.probability < self.policy["completion_probability"]
-        ):
-            return {}
-        message = (
-            "Verify the affected behavior or explicitly disclose what remains unverified; do not claim unrun checks passed."
-            if answer.choice == "verify"
-            else "Consider a bounded read-only architect review of the diff and test evidence; do not repeat an already completed review."
-        )
-        enforce = (
-            self.policy["completion_mode"] == "enforce"
-            and not state["discloses_limitation"]
-        )
-        self.store.log(
-            event="completion",
-            session=session_key(session),
-            status="decision",
-            decision_id=result.decision_id,
-            decision=answer.choice,
-            probability=answer.probability,
-            applied=enforce,
-        )
-        return (
-            {"decision": "block", "reason": message}
-            if enforce
-            else {"systemMessage": "Clef advisory: " + message}
+        return context(
+            "PostToolUse",
+            "Repeated failure signals observed; confirm the actual failures. Gather evidence before repeating the same approach. "
+            "After two genuinely failed approaches, consult the architect with hypotheses and evidence.",
         )
