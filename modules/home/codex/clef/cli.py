@@ -19,6 +19,7 @@ from .client import ClefError, credentials, question
 from .hooks import Hooks
 from .routing import Decisions, load_policy, signals
 from .state import Store, state_root
+from .startup import launch_interactive
 
 
 CONTRACTS = {
@@ -590,7 +591,7 @@ def run(args) -> object:
         # Hooks obtain their scoped token from the runtime file, not a shell-visible key.
         env.pop("CLOUDFLARE_API_TOKEN", None)
         env.pop("CLOUDFLARE_ACCOUNT_ID", None)
-        os.execvpe(
+        return launch_interactive(
             args.codex,
             [
                 args.codex,
@@ -673,6 +674,8 @@ def main() -> int:
         signal.alarm(6)
     try:
         result = run(args)
+        if args.command == "launch" and isinstance(result, int):
+            return result
         print(
             format_status(result)
             if getattr(args, "human_output", False)

@@ -99,6 +99,8 @@ flag repeated failure signals, and suggest one bounded completion review.
 Bare startup and resume preserve their model/effort settings; main routing needs
 a task prompt or explicitly approved brief. Assisted interactive sessions run
 independently of the shared daemon, so plain `codex` keeps its hooks inactive.
+The launcher retries transient account-routing bootstrap timeouts at most twice,
+before a session starts.
 Approval recommendations start in **shadow mode** and never automatically approve
 native requests; optional enforcement applies only explicit installed denials.
 Completion suggestions are advisory. Unknown, sensitive, privileged or destructive

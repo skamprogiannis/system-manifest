@@ -78,6 +78,11 @@ credential validation make no inference requests.
 Use `codex-auto -- "task"` to apply valid model/effort choices. Assisted local
 interactive launches use native `--no-daemon` execution so hook activation belongs
 to that invocation. Plain `codex` keeps hooks inert, regardless of launch order.
+
+The launcher retries the pinned CLI's exact fatal account-routing bootstrap timeout
+at most twice. Each attempt retains the same arguments, environment, hooks, and
+terminal input/output. Other failures and interrupted launches return immediately;
+active sessions and model turns are never restarted.
 `--mode shadow` leaves main/subagent model settings untouched while recording
 recommendations; approval behavior is independently controlled
 by the installed Nix policy, not the launch-mode flag.

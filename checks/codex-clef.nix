@@ -38,6 +38,7 @@ in {
         assert re.search(matcher, tool), tool
     assert not re.search(matcher, "collaborationsend_message")
     PY
+    python3 ${./codex-startup-test.py} ${../modules/home/codex}
     python3 ${./codex-clef-test.py} ${../modules/home/codex} ${./fixtures/codex-0.160.0}
     test ! -e ${clef}/bin/codex-clef
     ${clef}/bin/codex-auto status --json > "$TMPDIR/status.json"

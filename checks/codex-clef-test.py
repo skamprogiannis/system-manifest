@@ -301,6 +301,7 @@ class RoutingTests(Base):
             ),
             patch("clef.cli.Store.log", side_effect=OSError("read only")),
             patch("clef.cli.os.execvpe", side_effect=SystemExit(0)) as execute,
+            patch("clef.cli.launch_interactive", side_effect=lambda *a: execute(*a)),
         ):
             with self.assertRaises(SystemExit):
                 run(args)
@@ -456,6 +457,19 @@ class RoutingTests(Base):
 
 
 class LauncherTests(Base):
+    def test_interactive_main_returns_status_without_json_output(self):
+        from clef import cli
+
+        args = parser().parse_args(["--policy", str(SOURCE / "clef/policy.json"), "launch"])
+        output = io.StringIO()
+        with (
+            patch("clef.cli.parse_arguments", return_value=args),
+            patch("clef.cli.run", return_value=143),
+            patch("clef.cli.sys.stdout", output),
+        ):
+            self.assertEqual(cli.main(), 143)
+        self.assertEqual(output.getvalue(), "")
+
     def launch(self, arguments, options=(), catalog_error=None, route_error=None):
         args = parser().parse_args(
             [
@@ -480,6 +494,7 @@ class LauncherTests(Base):
                 side_effect=route_error,
             ) as route,
             patch("clef.cli.os.execvpe", side_effect=SystemExit(0)) as execute,
+            patch("clef.cli.launch_interactive", side_effect=lambda *a: execute(*a)),
         ):
             with self.assertRaises(SystemExit):
                 run(args)

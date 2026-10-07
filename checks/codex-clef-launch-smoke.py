@@ -78,12 +78,19 @@ def main():
             try:
                 deadline = time.monotonic() + 25
                 while time.monotonic() < deadline and process.poll() is None:
+                    # Assisted launch supervises its native child for early bootstrap recovery.
+                    candidates = [str(process.pid)]
                     try:
-                        arguments = Path(f"/proc/{process.pid}/cmdline").read_bytes().split(b"\0")
+                        candidates += Path(f"/proc/{process.pid}/task/{process.pid}/children").read_text().split()
                     except FileNotFoundError:
                         break
-                    if arguments and Path(os.fsdecode(arguments[0])).name == "codex":
-                        native_arguments = arguments
+                    for pid in candidates:
+                        try:
+                            arguments = Path(f"/proc/{pid}/cmdline").read_bytes().split(b"\0")
+                        except FileNotFoundError:
+                            continue
+                        if arguments and Path(os.fsdecode(arguments[0])).name == "codex" and b"--no-daemon" in arguments:
+                            native_arguments = arguments
                     if select.select([master], [], [], 0.1)[0]:
                         try:
                             output.extend(os.read(master, 65536))
