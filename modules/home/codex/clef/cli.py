@@ -278,7 +278,7 @@ def doctor(store: Store, policy: dict) -> dict:
         "routing_mode": os.environ.get("CODEX_CLEF_ROUTING_MODE", "apply")
         if os.environ.get("CODEX_CLEF_ENABLED") == "1"
         else "not_in_assisted_session",
-        "approval_mode": policy["approval_mode"],
+        "approval_mode": "native",
         "automatic_approval_supported": False,
         "completion_mode": policy["completion_mode"],
         "local_limits": {
@@ -363,7 +363,7 @@ def format_status(status: dict) -> str:
             f"Model catalog: {status_label(catalog_label)}",
             f"Routing: {routing}",
             f"Assisted launch default: {launch_default}",
-            f"Permission policy: {status['approval_mode']}; automatic approval unsupported",
+            "Approvals: Codex native reviewer; Clef permission hook disabled",
             f"Completion advice: {status['completion_mode']}",
             "Local call limits (configured policy; not Cloudflare quota):",
             session_limit,

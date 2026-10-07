@@ -57,7 +57,7 @@ not forge hook trust or bypass approval settings.
 `codex-auto` is the public command for launch and diagnostics. `codex-auto status`
 shows readable health and today's recorded calls and tokens; add `--json` for
 scripts. Its routing mode describes the current environment separately from the
-launch default and permission policy. The last successful evaluation is historical
+launch default and approval ownership. The last successful evaluation is historical
 evidence, not a fresh verification of the current key. These local records do not
 measure account-wide quota; failed requests can have unrecorded provider usage.
 Fallback counts include skipped calls as well as failed attempts. The displayed
@@ -84,8 +84,7 @@ at most twice. Each attempt retains the same arguments, environment, hooks, and
 terminal input/output. Other failures and interrupted launches return immediately;
 active sessions and model turns are never restarted.
 `--mode shadow` leaves main/subagent model settings untouched while recording
-recommendations; approval behavior is independently controlled
-by the installed Nix policy, not the launch-mode flag.
+recommendations. Native approval review is independent of Clef launch mode.
 
 ## Routing and roles
 
@@ -153,32 +152,26 @@ codex-auto --brief-file /tmp/reviewed-task.json --acknowledge-upload -- "task"
 The provided brief goes to Cloudflare. Passing this flag is not authorization to
 upload other content. Required tests and protected actions remain unchanged.
 
-## Native approval policy
+## Native approval review
 
-Default `approvalMode = "shadow"` records recommendations and never approves or
-denies for the user. The normal fallback remains `on-request` with reviewer `user`.
-Malformed input, missing context/credentials, timeouts, quota exhaustion and
-unrecognized actions abstain. This does not invoke Sol or Astra merely to call
-Clef. Nor does it replace Codex's built-in auto-review model through a config alias.
+Codex uses `approval_policy = "on-request"`, `approvals_reviewer = "auto_review"`
+and `sandbox_mode = "workspace-write"`. Its built-in reviewer handles eligible
+requests within the existing sandbox and permission scope. This configuration
+keeps the built-in reviewer policy; it does not install a custom approval policy.
+Sensitive actions still require sufficient user authorization. Agent tasks must
+not replace the reviewer policy or expand permissions.
 
-The native 0.160.0 permission contract does not expose a trustworthy execution
-directory and complete requested permissions. Its `cwd` can be the session
-directory even when a command uses another `workdir`, and a network grant can
-carry the same Bash command as a shell escalation. Command descriptions do not
-establish authorization. Therefore ordinary native requests always remain with
-the normal user approval flow, regardless of the classifier's confidence.
+[OpenAI's plan guidance](https://help.openai.com/en/articles/11369540-using-codex-with-your-chatgpt-plan)
+states that auto-review safety checks are free when signed in with a ChatGPT
+account. Ordinary coding, delegated work and code reviews still consume usage.
 
-A narrow pinned-Git grammar is retained only for advisory triage under configured
-session roots. Even `git diff --no-ext-diff --no-textconv` can execute configured
-clean filters, so this grammar does not certify a metadata-only operation. Only
-fixed categories and the fact that execution context is unverified go to Clef.
-
-`approvalMode = "enforce"` enforces only exact commands in the immutable installed
-`denied_commands` list; it never applies classifier allow or deny suggestions.
-The default list is empty. `codex-auto status` reports
-`automatic_approval_supported: false`. There is no automatic promotion from
-shadow examples, probability thresholds or confidence. Agent tasks must not
-modify the installed policy or expand permissions.
+Clef has no permission hook or approval classifier. Activation removes its old
+`PermissionRequest` handlers while preserving user handlers and historical logs.
+`codex-auto status` reports native ownership, without checking a running session's
+reviewer. For JSON consumers, `approval_mode` is `native`; the retained
+`automatic_approval_supported: false` field describes Clef's own capability.
+Native auto-review follows Codex configuration independently of assisted launch.
+Restart existing Codex sessions to load the changed default.
 
 ## Workflow and completion support
 

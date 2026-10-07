@@ -22,6 +22,12 @@ in {
     printf 'unmanaged role\n' > "$HOME/.codex/agents/custom.keep"
     ${ctx.self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.activation.ensureCodexAgents.data}
     test "$(cat "$HOME/.codex/agents/custom.keep")" = "unmanaged role"
+    cat > "$HOME/.codex/config.toml" <<'TOML'
+    approvals_reviewer = "user"
+    [projects."/unmanaged-project"]
+    trust_level = "trusted"
+    TOML
+    ${ctx.self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.activation.ensureWritableCodexConfig.data}
     ${ctx.self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.activation.ensureCodexClefHooks.data}
     python3 - <<'PY'
     import json, os, pathlib, re, tomllib
@@ -37,6 +43,13 @@ in {
     for tool in ("spawn_agent", "Agent", "collaborationspawn_agent"):
         assert re.search(matcher, tool), tool
     assert not re.search(matcher, "collaborationsend_message")
+    assert "PermissionRequest" not in hooks["hooks"]
+    config = tomllib.loads((pathlib.Path.home() / ".codex/config.toml").read_text())
+    assert config["approvals_reviewer"] == "auto_review"
+    assert config["approval_policy"] == "on-request"
+    assert config["sandbox_mode"] == "workspace-write"
+    assert "auto_review" not in config
+    assert config["projects"]["/unmanaged-project"]["trust_level"] == "trusted"
     PY
     python3 ${./codex-startup-test.py} ${../modules/home/codex}
     python3 ${./codex-clef-test.py} ${../modules/home/codex} ${./fixtures/codex-0.160.0}
@@ -46,7 +59,8 @@ in {
     import json, sys
     status = json.load(open(sys.argv[1]))
     assert status["log_status"] == "no_decisions_recorded", status
-    assert status["approval_mode"] == "shadow", status
+    assert status["approval_mode"] == "native", status
+    assert status["automatic_approval_supported"] is False, status
     PY
     # Match the real installed package, not only a mocked protocol transport.
     python3 ${./codex-package-smoke.py} ${codex}/bin/codex ${version}

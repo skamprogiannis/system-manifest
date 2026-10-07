@@ -41,9 +41,7 @@ def load_policy(path: Path) -> dict:
         policy = json.loads(path.read_text())
     except (OSError, ValueError):
         raise ClefError("invalid_policy") from None
-    if policy.get("approval_mode") not in ("shadow", "enforce") or policy.get(
-        "completion_mode"
-    ) not in ("advisory", "enforce"):
+    if policy.get("completion_mode") not in ("advisory", "enforce"):
         raise ClefError("invalid_policy")
     return policy
 

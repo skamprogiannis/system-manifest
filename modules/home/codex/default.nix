@@ -375,7 +375,7 @@
     model_reasoning_effort = "medium"
     plan_mode_reasoning_effort = "xhigh"
     approval_policy = "on-request"
-    approvals_reviewer = "user"
+    approvals_reviewer = "auto_review"
     sandbox_mode = "workspace-write"
     cli_auth_credentials_store = "file"
     suppress_unstable_features_warning = true

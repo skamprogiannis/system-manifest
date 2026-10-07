@@ -40,68 +40,6 @@ def command_input(event: dict) -> str:
     return value.get("command", "") if isinstance(value, dict) else ""
 
 
-def approval_class(event: dict, policy: dict) -> tuple[str, dict]:
-    """Classify exact denials or candidates for advisory permission triage.
-
-    Native PermissionRequest supplies the session cwd, not the command workdir or
-    full permission request. Matching command syntax cannot establish authorization.
-    """
-    command = command_input(event)
-    if command in policy["denied_commands"]:
-        return "deny", {}
-    value = event.get("tool_input")
-    if (
-        event.get("tool_name") != "Bash"
-        or not isinstance(value, dict)
-        or not isinstance(command, str)
-    ):
-        return "human", {}
-    if set(value) - {"command", "description"}:
-        return "human", {}
-    if event.get("permission_mode") not in ("default", "acceptEdits", "plan"):
-        return "human", {}
-    try:
-        cwd = Path(event["cwd"]).resolve(strict=True)
-        roots = [Path(root).resolve(strict=True) for root in policy["trusted_roots"]]
-    except (OSError, KeyError, TypeError, ValueError):
-        return "human", {}
-    if not any(cwd == root or cwd.is_relative_to(root) for root in roots):
-        return "human", {}
-    # No shell expansion, pipelines, substitutions, redirects, assignments, or paths.
-    if re.search(r"[\n\r;&|<>`$\\*?\[\]{}()~]", command):
-        return "human", {}
-    try:
-        argv = shlex.split(command)
-    except ValueError:
-        return "human", {}
-    prefix = [
-        policy["git_binary"],
-        "--no-pager",
-        "--no-optional-locks",
-        "-c",
-        "core.fsmonitor=false",
-        "-c",
-        "core.untrackedCache=false",
-    ]
-    permitted = [
-        prefix + ["status", "--short", "--untracked-files=no"],
-        prefix + ["diff", "--no-ext-diff", "--no-textconv", "--stat"],
-        prefix + ["diff", "--no-ext-diff", "--no-textconv", "--check"],
-    ]
-    if argv not in permitted or not Path(policy["git_binary"]).is_absolute():
-        return "human", {}
-    # These flags still permit configured Git clean filters to execute. Neither
-    # the matching grammar nor the session cwd proves command execution scope.
-    return "candidate", {
-        "category": "git_metadata_candidate",
-        "operation": argv[7],
-        "flags": argv[8:],
-        "execution_scope": "unverified",
-        "authorization": "none_inferred",
-        "execution_caveat": "Git may execute configured clean filters, even with --no-ext-diff and --no-textconv.",
-    }
-
-
 def tool_outcome(event: dict) -> tuple[bool | None, bool]:
     """Read explicit exit status, not words such as 'success' in tool output."""
     response = event.get("tool_response")
@@ -183,7 +121,7 @@ class Hooks:
                 event="session",
                 session=session_key(session),
                 status="started",
-                mode=self.policy["approval_mode"],
+                mode=os.environ.get("CODEX_CLEF_ROUTING_MODE", "apply"),
                 applied=False,
             )
             return context(
@@ -207,8 +145,6 @@ class Hooks:
             "collaborationspawn_agent",
         ):
             return self.spawn(event)
-        if name == "PermissionRequest":
-            return self.permission(event)
         if name == "PostToolUse":
             return self.observe(event)
         if name in ("Stop", "SubagentStop"):
@@ -325,61 +261,6 @@ class Hooks:
                 "updatedInput": updated,
             }
         }
-
-    def permission(self, event: dict) -> dict:
-        category, state = approval_class(event, self.policy)
-        mode = self.policy["approval_mode"]
-        if category != "candidate":
-            self.store.log(
-                event="approval",
-                session=session_key(event["session_id"]),
-                mode=mode,
-                status=category,
-                applied=category == "deny" and mode == "enforce",
-            )
-            if category == "deny" and mode == "enforce":
-                return {
-                    "hookSpecificOutput": {
-                        "hookEventName": "PermissionRequest",
-                        "decision": {
-                            "behavior": "deny",
-                            "message": "Denied by the installed explicit policy.",
-                        },
-                    }
-                }
-            return {}
-        result = self.d.ask(
-            "approval",
-            event["session_id"],
-            state,
-            {
-                "approval": question(
-                    "Provide advisory triage only. The native hook omits the actual execution workdir and full permission request. "
-                    "Command syntax and descriptions are not authorization, and Git may execute configured clean filters. "
-                    "A person must decide every ordinary request; abstain when details are insufficient.",
-                    {
-                        "allow": "The candidate command shape looks expected; execution scope and permission remain unverified.",
-                        "deny": "The candidate presents a concern for a person to review; do not deny automatically.",
-                        "human": "Insufficient information or ambiguity; a person must review.",
-                    },
-                )
-            },
-        )
-        if result is None:
-            return {}
-        answer = result.answers["approval"]
-        self.store.log(
-            event="approval",
-            session=session_key(event["session_id"]),
-            mode=mode,
-            status="decision",
-            decision_id=result.decision_id,
-            decision=answer.choice,
-            probability=answer.probability,
-            confidence=answer.confidence,
-            applied=False,
-        )
-        return {}
 
     def observe(self, event: dict) -> dict:
         session = event["session_id"]

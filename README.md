@@ -22,7 +22,7 @@ Managed via **Nix Flakes** and **Home Manager**.
   - **Brave + Vimium C:** Declarative browser setup with preseeded extension settings and portable keymaps.
 - **Vesktop:** Discord client with declarative Translucence theming and QuickCSS customization.
 - **Dev Ready:** Pre-configured environment for Node.js, Python, Go, Playwright, and Neovim (via nixvim), plus Clang build essentials. Neovim is also registered as the default text editor via an `nvim-text` desktop entry. Its LSP hover uses [md-render.nvim](https://github.com/delphinus/md-render.nvim) for compact Markdown and navigable links.
-- **AI Integrated:** Built-in configuration for **Codex CLI** with per-repo `AGENTS.md` instructions, global defaults in `~/.codex/AGENTS.md`, custom agents in `~/.codex/agents`, Linear/Context7/Etsy/OpenAI Docs MCP servers, and curated skills for visualization, browser automation, security analysis, frontend work, review, diagnosis, TDD, design, prototyping, and concise response modes. Opt-in direct Cloudflare Clef integration adds dynamic model/effort selection, bounded native hooks, conservative approval triage, and metadata-only evaluation logs.
+- **AI Integrated:** Built-in configuration for **Codex CLI** with per-repo `AGENTS.md` instructions, global defaults in `~/.codex/AGENTS.md`, custom agents in `~/.codex/agents`, Linear/Context7/Etsy/OpenAI Docs MCP servers, and curated skills for visualization, browser automation, security analysis, frontend work, review, diagnosis, TDD, design, prototyping, and concise response modes. Opt-in direct Cloudflare Clef integration adds dynamic model/effort selection, bounded native hooks and metadata-only evaluation logs. Codex uses native auto-review for approval requests.
   Linear MCP auth is local per machine; after first enabling a host, run `codex mcp login linear` once if Codex reports that Linear is not logged in. Context7 uses a local API key from `~/.config/context7/api-key` when present.
 - **Modular Architecture:** Configuration split across `hosts/` (system-level) and `modules/home/` (user-level) for maintainability.
 - **Voiden:** Declarative AppImage wrapper for the Voiden offline-first API client.
@@ -101,11 +101,12 @@ a task prompt or explicitly approved brief. Assisted interactive sessions run
 independently of the shared daemon, so plain `codex` keeps its hooks inactive.
 The launcher retries transient account-routing bootstrap timeouts at most twice,
 before a session starts.
-Approval recommendations start in **shadow mode** and never automatically approve
-native requests; optional enforcement applies only explicit installed denials.
-Completion suggestions are advisory. Unknown, sensitive, privileged or destructive
-requests remain with the user. Required tests and independent code review are not
-replaced by model confidence.
+Approval requests use **Codex native auto-review** within the existing sandbox
+and permission scope. Clef does not handle approvals. Native safety checks are
+free for ChatGPT sign-ins; coding, delegated work and code reviews still consume
+usage. Sensitive actions require sufficient user authorization. Completion
+suggestions remain advisory; required tests and independent code review remain
+part of the workflow.
 
 Install a scoped Workers AI token locally, review the hooks through Codex's `/hooks`,
 and use `codex-auto status` to check credentials, model-catalog state and log paths.

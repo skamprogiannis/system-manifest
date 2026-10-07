@@ -1,5 +1,5 @@
 {
-  "version": "3",
+  "version": "4",
   "codex_version": "0.160.0",
   "provider_model": "clef",
   "timeout_seconds": 3,
@@ -9,14 +9,10 @@
   "catalog_ttl_seconds": 3600,
   "route_probability": 0.70,
   "route_margin": 0.10,
-  "approval_mode": "shadow",
   "completion_mode": "advisory",
   "completion_probability": 0.90,
   "max_stop_continuations": 1,
   "max_delegations": 4,
-  "trusted_roots": ["/home/stefan/system-manifest"],
-  "git_binary": "@git@",
-  "denied_commands": [],
   "models": {
     "gpt-6.1-sol": "Preferred general implementation model; broad repository edits and ordinary full-stack development. Starter preference, not a measured benchmark.",
     "gpt-6-luna": "Prefer for narrow read-only exploration or bounded documentation lookup with sufficient context. Escalate ambiguous, consequential work.",
