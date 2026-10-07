@@ -79,10 +79,16 @@ Use `codex-auto -- "task"` to apply valid model/effort choices. Assisted local
 interactive launches use native `--no-daemon` execution so hook activation belongs
 to that invocation. Plain `codex` keeps hooks inert, regardless of launch order.
 
-The launcher retries the pinned CLI's exact fatal account-routing bootstrap timeout
-at most twice. Each attempt retains the same arguments, environment, hooks, and
-terminal input/output. Other failures and interrupted launches return immediately;
-active sessions and model turns are never restarted.
+After the pinned CLI's exact fatal account-routing bootstrap timeout, the launcher
+tries ordinary Codex once, clearing its Clef opt-in and retaining native arguments
+and terminal input/output. The fallback notice identifies this session as ordinary
+Codex; Clef routing hooks are unavailable, while native approval review and sandbox
+settings remain in effect. Existing daemon hook state must be verified as inactive
+before reuse. An enabled or unreadable daemon skips fallback and keeps at most two
+assisted retries. An explicit `--no-daemon` also keeps those retries. Other failures
+and interrupted launches return immediately; active sessions and model turns are
+never restarted. This recovers through the native startup path; it does not fix
+the upstream routing timeout or guarantee that the network request will succeed.
 `--mode shadow` leaves main/subagent model settings untouched while recording
 recommendations. Native approval review is independent of Clef launch mode.
 

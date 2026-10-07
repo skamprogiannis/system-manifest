@@ -21,14 +21,14 @@ TIMEOUT = "Error: account/read failed during TUI bootstrap: account/read failed:
 
 
 class StartupTests(unittest.TestCase):
-    def exercise(self, mode, error=TIMEOUT, interrupt=None):
+    def exercise(self, mode, error=TIMEOUT, interrupt=None, fallback=False, unsafe_daemon=False):
         with tempfile.TemporaryDirectory(prefix="codex-startup-test-") as directory:
             root = Path(directory)
             fake = root / "native.py"
             fake.write_text("""import json, os, pathlib, signal, sys, time
 root=pathlib.Path(os.environ['FIXTURE_ROOT']); count=root/'count'
 n=int(count.read_text())+1 if count.exists() else 1; count.write_text(str(n))
-(root/'observed.json').write_text(json.dumps({'args':sys.argv[1:],'enabled':os.environ['CODEX_CLEF_ENABLED'],'stdin_tty':sys.stdin.isatty(),'stdout_tty':sys.stdout.isatty()}))
+(root/'observed.json').write_text(json.dumps({'args':sys.argv[1:],'enabled':os.environ['CODEX_CLEF_ENABLED'],'routing_mode':os.environ.get('CODEX_CLEF_ROUTING_MODE'),'stdin_tty':sys.stdin.isatty(),'stdout_tty':sys.stdout.isatty()}))
 mode=os.environ['FIXTURE_MODE']
 if mode=='interrupt':
  (root/'ready').touch(); time.sleep(20)
@@ -37,7 +37,7 @@ if mode=='descendant':
  if pid==0:
   time.sleep(1); os._exit(0)
  sys.exit(0)
-if mode=='retry' and n<3 or mode=='exhaust':
+if mode=='retry' and n<3 or mode=='exhaust' or mode=='fallback' and '--no-daemon' in sys.argv:
  print(os.environ['FIXTURE_ERROR'],file=sys.stderr);sys.exit(1)
 if mode=='other':
  print(os.environ['FIXTURE_ERROR'],file=sys.stderr);sys.exit(1)
@@ -46,7 +46,15 @@ print('KEY:'+sys.stdin.readline().strip(),flush=True)
 """)
             runner = root / "runner.py"
             runner.write_text(
-                'import os,sys\nsys.path.insert(0,sys.argv[1])\nfrom clef.startup import launch_interactive\nraise SystemExit(launch_interactive(sys.executable,[sys.executable,sys.argv[2],"--no-daemon","task"],dict(os.environ),backoff=0))\n'
+                'import os,sys\nsys.path.insert(0,sys.argv[1])\nfrom clef.startup import launch_interactive\n'
+                'if os.environ["FIXTURE_UNSAFE_DAEMON"]=="1":\n'
+                ' from clef import startup;startup._ordinary_daemon_safe=lambda _:False\n'
+                'fallback=None\n'
+                'if os.environ["FIXTURE_FALLBACK"]=="1":\n'
+                ' env=dict(os.environ,CODEX_CLEF_ENABLED="0");env.pop("CODEX_CLEF_ROUTING_MODE",None)\n'
+                ' fallback=([sys.executable,sys.argv[2],"task"],env)\n'
+                'options={"fallback":fallback} if fallback is not None else {}\n'
+                'raise SystemExit(launch_interactive(sys.executable,[sys.executable,sys.argv[2],"--no-daemon","task"],dict(os.environ),backoff=0,**options))\n'
             )
             env = dict(
                 os.environ,
@@ -54,6 +62,10 @@ print('KEY:'+sys.stdin.readline().strip(),flush=True)
                 FIXTURE_MODE=mode,
                 FIXTURE_ERROR=error,
                 CODEX_CLEF_ENABLED="1",
+                CODEX_CLEF_ROUTING_MODE="shadow",
+                CODEX_HOME=str(root / "codex"),
+                FIXTURE_FALLBACK=str(int(fallback)),
+                FIXTURE_UNSAFE_DAEMON=str(int(unsafe_daemon)),
             )
             master, slave = pty.openpty()
             proc = subprocess.Popen(
@@ -153,6 +165,44 @@ print('KEY:'+sys.stdin.readline().strip(),flush=True)
         self.assertEqual((status, count), (0, 1))
         self.assertLess(elapsed, 0.8)
 
+    def test_exact_timeout_uses_ordinary_path_once_without_assisted_environment(self):
+        status, count, output, observed, _ = self.exercise("fallback", fallback=True)
+        self.assertEqual((status, count), (0, 2))
+        self.assertEqual(observed["args"], ["task"])
+        self.assertEqual(observed["enabled"], "0")
+        self.assertIsNone(observed["routing_mode"])
+        self.assertTrue(observed["stdin_tty"])
+        self.assertTrue(observed["stdout_tty"])
+        self.assertIn("KEY:hello", output)
+        self.assertIn("ordinary Codex", output)
+        self.assertNotIn("retrying startup", output)
+
+    def test_ordinary_path_failure_is_final(self):
+        status, count, _, _, _ = self.exercise("exhaust", fallback=True)
+        self.assertEqual((status, count), (1, 2))
+
+    def test_unverified_daemon_keeps_assisted_retries(self):
+        status, count, output, observed, _ = self.exercise(
+            "fallback", fallback=True, unsafe_daemon=True
+        )
+        self.assertEqual((status, count), (1, 3))
+        self.assertEqual(observed["args"], ["--no-daemon", "task"])
+        self.assertEqual(observed["enabled"], "1")
+        self.assertEqual(output.count("fallback skipped"), 1)
+        self.assertNotIn("trying ordinary Codex", output)
+
+    def test_other_errors_success_and_cancellation_do_not_use_ordinary_path(self):
+        for mode, error, sig, expected in (
+            ("other", "Error: permission denied", None, 1),
+            ("success", TIMEOUT, None, 0),
+            ("interrupt", TIMEOUT, signal.SIGTERM, 143),
+        ):
+            with self.subTest(mode=mode):
+                status, count, output, observed, _ = self.exercise(mode, error, sig, True)
+                self.assertEqual((status, count), (expected, 1))
+                self.assertEqual(observed["enabled"], "1")
+                self.assertNotIn("ordinary Codex", output)
+
 
 class StartupFailureTests(unittest.TestCase):
     def setUp(self):
@@ -162,6 +212,10 @@ class StartupFailureTests(unittest.TestCase):
         self.startup = startup
         self.spawn = subprocess.Popen
         self.children = []
+
+    def test_daemon_metadata_access_failure_is_closed(self):
+        with patch.object(self.startup.Path, "stat", side_effect=PermissionError):
+            self.assertFalse(self.startup._ordinary_daemon_safe({"CODEX_CLEF_ENABLED":"0"}))
 
     def tearDown(self):
         for child in self.children:

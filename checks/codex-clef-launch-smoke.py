@@ -14,6 +14,8 @@ import time
 
 def main():
     codex, assisted = sys.argv[1:]
+    sys.path.insert(0, str(Path(assisted).resolve().parent.parent / "lib/codex-clef"))
+    from clef.startup import _ordinary_daemon_safe
     with tempfile.TemporaryDirectory(prefix="clf-", dir="/tmp") as temporary:
         root = Path(temporary)
         env = {
@@ -55,12 +57,12 @@ def main():
             "diagnostics created decision state"
         )
 
-        def daemon(command):
+        def daemon(command, daemon_env=None):
             socket = root / "codex/app-server-control/app-server-control.sock"
             if command == "version" and not socket.exists():
                 return {"status": "not_running"}
             result = subprocess.run(
-                [codex, "app-server", "daemon", command], env=env, cwd=root,
+                [codex, "app-server", "daemon", command], env=daemon_env or env, cwd=root,
                 capture_output=True, text=True, timeout=15,
             )
             assert result.returncode == 0, result.stderr
@@ -118,9 +120,14 @@ def main():
                 assert daemon("version")["status"] != "running", "assisted launch started shared daemon"
             # A plain daemon started first must not absorb assisted invocations.
             daemon("start")
+            assert _ordinary_daemon_safe(env), "ordinary daemon falsely rejected"
             for mode in ("shadow", "apply"):
                 launch(mode)
                 assert daemon("version")["status"] == "running"
+            daemon("stop")
+            # A daemon started with Clef must never be used as an ordinary fallback.
+            daemon("start", dict(env, CODEX_CLEF_ENABLED="1", CODEX_CLEF_ROUTING_MODE="shadow"))
+            assert not _ordinary_daemon_safe(env), "Clef-enabled daemon accepted for ordinary fallback"
             print("Installed assisted launcher isolated in both modes and startup orders")
         finally:
             daemon("stop")

@@ -99,8 +99,11 @@ flag repeated failure signals, and suggest one bounded completion review.
 Bare startup and resume preserve their model/effort settings; main routing needs
 a task prompt or explicitly approved brief. Assisted interactive sessions run
 independently of the shared daemon, so plain `codex` keeps its hooks inactive.
-The launcher retries transient account-routing bootstrap timeouts at most twice,
-before a session starts.
+After an account-routing bootstrap timeout, the launcher tries ordinary Codex
+once with Clef routing disabled, allowing the native daemon to handle startup.
+An explicit `--no-daemon` keeps assisted startup with at most two retries instead.
+Fallback is skipped if an existing daemon has Clef enabled or cannot be verified;
+unrelated failures and cancelled launches return immediately.
 Approval requests use **Codex native auto-review** within the existing sandbox
 and permission scope. Clef does not handle approvals. Native safety checks are
 free for ChatGPT sign-ins; coding, delegated work and code reviews still consume

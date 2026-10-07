@@ -293,7 +293,7 @@ class RoutingTests(Base):
             ),
             patch("clef.cli.Store.log", side_effect=OSError("read only")),
             patch("clef.cli.os.execvpe", side_effect=SystemExit(0)) as execute,
-            patch("clef.cli.launch_interactive", side_effect=lambda *a: execute(*a)),
+            patch("clef.cli.launch_interactive", side_effect=lambda *a, **kw: execute(*a)),
         ):
             with self.assertRaises(SystemExit):
                 run(args)
@@ -486,7 +486,7 @@ class LauncherTests(Base):
                 side_effect=route_error,
             ) as route,
             patch("clef.cli.os.execvpe", side_effect=SystemExit(0)) as execute,
-            patch("clef.cli.launch_interactive", side_effect=lambda *a: execute(*a)),
+            patch("clef.cli.launch_interactive", side_effect=lambda *a, **kw: execute(*a)),
         ):
             with self.assertRaises(SystemExit):
                 run(args)
@@ -519,6 +519,34 @@ class LauncherTests(Base):
                 route.assert_not_called()
                 self.assertEqual(executed[1], ["codex", "--no-daemon", *arguments])
                 self.assertEqual(executed[2]["CODEX_CLEF_ENABLED"], "1")
+
+    def test_ordinary_fallback_preserves_native_arguments_and_explicit_opt_out(self):
+        for arguments in (
+            ["resume", "--last", "--sandbox", "workspace-write"],
+            ["--model", "chosen", "Fix parser"],
+            ["--no-daemon", "resume"],
+            ["--", "--no-daemon"],
+        ):
+            with self.subTest(arguments=arguments):
+                args = parser().parse_args([
+                    "--policy", str(SOURCE / "clef/policy.json"),
+                    "launch", "--", *arguments,
+                ])
+                with (
+                    patch("clef.cli.catalog.refresh", return_value=self.available()),
+                    patch("clef.cli.Decisions.route", return_value=None),
+                    patch("clef.cli.launch_interactive", return_value=0) as launch,
+                ):
+                    self.assertEqual(run(args), 0)
+                fallback = launch.call_args.kwargs["fallback"]
+                if arguments[:1] == ["--no-daemon"]:
+                    self.assertIsNone(fallback)
+                    continue
+                ordinary_args, ordinary_env = fallback
+                self.assertEqual(ordinary_args, ["codex", *arguments])
+                self.assertEqual(ordinary_env["CODEX_CLEF_ENABLED"], "0")
+                self.assertNotIn("CODEX_CLEF_ROUTING_MODE", ordinary_env)
+                self.assertEqual(launch.call_args.args[1], ["codex", "--no-daemon", *arguments])
 
     def test_only_native_prompt_supplies_task_signals(self):
         cases = [

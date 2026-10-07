@@ -1,9 +1,12 @@
 """Recover only the pinned CLI's fatal pre-session account-routing timeout."""
 
 import os
+from pathlib import Path
 import re
 import select
 import signal
+import socket
+import struct
 import subprocess
 import sys
 import time
@@ -21,13 +24,48 @@ def _routing_timeout(status: int, stderr: bytes) -> bool:
     return status == 1 and bool(lines) and lines[-1].strip() == BOOTSTRAP_TIMEOUT
 
 
+def _ordinary_daemon_safe(env: dict) -> bool:
+    """Do not reuse a server whose captured hook environment opts into Clef."""
+    if env.get("CODEX_CLEF_ENABLED") == "1":
+        return False
+    home = Path(
+        env.get("CODEX_HOME") or Path(env.get("HOME") or Path.home()) / ".codex"
+    )
+    endpoint = home / "app-server-control/app-server-control.sock"
+    try:
+        try:
+            endpoint.stat()
+        except FileNotFoundError:
+            return True
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as peer:
+            peer.settimeout(0.2)
+            try:
+                peer.connect(str(endpoint))
+            except (FileNotFoundError, ConnectionRefusedError):
+                # Native startup can create a daemon from the disabled client environment.
+                return True
+            pid, uid, _ = struct.unpack(
+                "3i", peer.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, 12)
+            )
+            if pid <= 0 or uid != os.getuid():
+                return False
+            with Path(f"/proc/{pid}/environ").open("rb") as handle:
+                snapshot = handle.read(1_048_577)
+            if len(snapshot) > 1_048_576:
+                return False
+            return b"CODEX_CLEF_ENABLED=1" not in snapshot.split(b"\0")
+    except (OSError, ValueError, struct.error):
+        return False
+
+
 def launch_interactive(
-    binary: str, arguments: list[str], env: dict, *, backoff=1
+    binary: str, arguments: list[str], env: dict, *, backoff=1, fallback=None
 ) -> int:
     # Native TUI input/rendering retain the caller's terminal and foreground group.
     # Only stderr is relayed; retain a bounded tail in memory, never a transcript.
     child = None
     interrupted = None
+    ordinary = False
 
     def interrupt(signum, _frame):
         nonlocal interrupted
@@ -95,8 +133,25 @@ def launch_interactive(
                 raise
             finally:
                 child.stderr.close()
-            if interrupted or attempt == 2 or not _routing_timeout(status, bytes(tail)):
+            if interrupted or ordinary or not _routing_timeout(status, bytes(tail)):
                 return status if status >= 0 else 128 - status
+            if fallback is not None:
+                fallback_arguments, fallback_env = fallback
+                fallback = None
+                if _ordinary_daemon_safe(fallback_env):
+                    print(
+                        "Clef-assisted startup timed out; trying ordinary Codex without Clef routing hooks.",
+                        file=sys.stderr,
+                    )
+                    arguments, env = fallback_arguments, fallback_env
+                    ordinary = True
+                    continue
+                print(
+                    "Ordinary Codex fallback skipped: daemon hook state is enabled or could not be verified.",
+                    file=sys.stderr,
+                )
+            if attempt == 2:
+                return status
             print(
                 f"Codex account routing timed out; retrying startup ({attempt + 1}/2).",
                 file=sys.stderr,

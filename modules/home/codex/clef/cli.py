@@ -591,16 +591,23 @@ def run(args) -> object:
         # Hooks obtain their scoped token from the runtime file, not a shell-visible key.
         env.pop("CLOUDFLARE_API_TOKEN", None)
         env.pop("CLOUDFLARE_ACCOUNT_ID", None)
+        native_arguments = launch_arguments(
+            arguments, selected if args.mode == "apply" else None
+        )
+        fallback = None
+        if not context.no_daemon:
+            ordinary_env = dict(env, CODEX_CLEF_ENABLED="0")
+            ordinary_env.pop("CODEX_CLEF_ROUTING_MODE", None)
+            fallback = ([args.codex, *native_arguments], ordinary_env)
         return launch_interactive(
             args.codex,
             [
                 args.codex,
                 *([] if context.no_daemon else ["--no-daemon"]),
-                *launch_arguments(
-                    arguments, selected if args.mode == "apply" else None
-                ),
+                *native_arguments,
             ],
             env,
+            fallback=fallback,
         )
     if args.command == "vision":
         result = decisions.ask(
