@@ -56,6 +56,16 @@
         fi
       fi
 
+      # An explicit CA bundle selects Codex's Rustls HTTP client. Preserve custom
+      # trust bundles and use packaged roots when the system bundle is unavailable.
+      if [[ -z "''${CODEX_CA_CERTIFICATE:-}" && -z "''${SSL_CERT_FILE:-}" ]]; then
+        if [[ -r /etc/ssl/certs/ca-certificates.crt ]]; then
+          export CODEX_CA_CERTIFICATE=/etc/ssl/certs/ca-certificates.crt
+        else
+          export CODEX_CA_CERTIFICATE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt
+        fi
+      fi
+
       exec ${codexUpstream}/bin/codex "$@"
       EOF
       chmod +x "$out/bin/codex"
