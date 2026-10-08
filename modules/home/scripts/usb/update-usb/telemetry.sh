@@ -31,8 +31,10 @@ prune_update_reports() {
 
 start_update_report() {
   local directory="$1" source_dir="$2" target_mount="$3"
-  local source_revision device free_bytes tools_json
+  local source_revision device target_uuid free_bytes tools_json
   UPDATE_REPORT_FILE=""
+  UPDATE_REPORT_DIRECTORY="$directory"
+  UPDATE_REPORT_TARGET_UUID=""
   UPDATE_REPORT_STARTED_AT="$(date +%s)"
   if [ -L "$directory" ] || ! mkdir -p -- "$directory" || ! chmod 0700 "$directory"; then
     report_warning "$directory"
@@ -44,6 +46,8 @@ start_update_report() {
   fi
   source_revision="$(git -C "$source_dir" describe --always --dirty --abbrev=40 2>/dev/null || printf unknown)"
   device="$(findmnt -n -o SOURCE --target "$target_mount" 2>/dev/null || printf unknown)"
+  target_uuid="$(findmnt -n -o UUID --target "$target_mount" 2>/dev/null || true)"
+  UPDATE_REPORT_TARGET_UUID="$target_uuid"
   free_bytes="$(df -B1 --output=avail -- "$target_mount" 2>/dev/null | awk 'NR == 2 { print $1 }')" || free_bytes=0
   tools_json="$("${UPDATE_USB_JQ:-jq}" -n \
     --arg nix "$(nix --version 2>/dev/null || true)" \
@@ -58,11 +62,11 @@ start_update_report() {
     --arg updater_revision "${UPDATE_USB_REVISION:-unknown}" \
     --arg kernel "$(uname -r)" \
     --arg mode "${MODE:-unknown}" \
-    --arg mount "$target_mount" --arg device "$device" \
+    --arg mount "$target_mount" --arg device "$device" --arg target_uuid "$target_uuid" \
     --argjson free_bytes "${free_bytes:-0}" --argjson tools "$tools_json" \
     '{schema: 1, started_at: $started_at, status: "running", source_revision: $source_revision,
       updater_revision: $updater_revision, kernel: $kernel, mode: $mode, tools: $tools,
-      target: {mount: $mount, device: $device, free_bytes: $free_bytes}, phases: [], images: {}}' >"$UPDATE_REPORT_FILE"; then
+      target: {mount: $mount, device: $device, uuid: $target_uuid, free_bytes: $free_bytes}, phases: [], images: {}}' >"$UPDATE_REPORT_FILE"; then
     report_warning "$UPDATE_REPORT_FILE"
     rm -f -- "$UPDATE_REPORT_FILE"
     UPDATE_REPORT_FILE=""
@@ -71,9 +75,31 @@ start_update_report() {
   prune_update_reports "$directory" || report_warning 'report retention'
 }
 
+previous_phase_seconds() {
+  local phase="$1" context="$2" report seconds
+  [ -n "${UPDATE_REPORT_DIRECTORY:-}" ] && [ -n "${UPDATE_REPORT_TARGET_UUID:-}" ] && [ -n "$context" ] || return 0
+  while IFS= read -r report; do
+    [ "$report" != "${UPDATE_REPORT_FILE:-}" ] || continue
+    if seconds="$("${UPDATE_USB_JQ:-jq}" -er \
+      --arg phase "$phase" --arg context "$context" \
+      --arg mode "${MODE:-unknown}" --arg target_uuid "$UPDATE_REPORT_TARGET_UUID" '
+        select(.mode == $mode and .target.uuid == $target_uuid)
+        | [.phases[]? | select(.name == $phase and .status == "completed" and .storage == $context)
+            | .seconds | select(type == "number" and . > 0 and . < 604800) | ceil]
+        | last // empty' "$report" 2>/dev/null)"; then
+      # jq accepts concatenated JSON documents; an estimate must be one integer.
+      if [[ "$seconds" =~ ^[1-9][0-9]{0,5}$ ]] && [ "$seconds" -lt 604800 ]; then
+        printf '%s\n' "$seconds"
+        return 0
+      fi
+    fi
+  done < <(find "$UPDATE_REPORT_DIRECTORY" -maxdepth 1 -type f -name 'update-usb-*.json' -print | sort -r)
+}
+
 report_phase() {
-  report_update '.phases += [{name: $name, label: $label, seconds: $seconds, status: $status}]' \
-    --arg name "$1" --arg label "$2" --argjson seconds "$3" --arg status "${4:-completed}"
+  report_update '.phases += [{name: $name, label: $label, seconds: $seconds, status: $status, storage: $storage}]' \
+    --arg name "$1" --arg label "$2" --argjson seconds "$3" --arg status "${4:-completed}" \
+    --arg storage "${PHASE_STORAGE_CONTEXT:-}"
 }
 
 report_image() {

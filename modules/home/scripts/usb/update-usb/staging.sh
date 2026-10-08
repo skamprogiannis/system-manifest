@@ -151,7 +151,7 @@ cache_previous_image_if_room() {
     return 0
   fi
 
-  run_with_progress 'Copying previous image to SSD' cp "$MOUNT_POINT/nix-store.squashfs" "$STAGE_DIR/base.squashfs" || return 1
+  copy_with_progress "$MOUNT_POINT/nix-store.squashfs" "$STAGE_DIR/base.squashfs" 0 100 'Copying previous image to SSD' || return 1
   release_target_stage || return 1
   mount_stage_overlay "$STAGE_DIR/base.squashfs" || return 1
   bind_target_stage || return 1

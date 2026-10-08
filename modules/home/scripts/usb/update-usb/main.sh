@@ -149,6 +149,8 @@ if ! chroot "$MOUNT_POINT" "$TARGET_SYSTEM_TOPLEVEL/sw/bin/test" -f \
   "$TARGET_SYSTEM_TOPLEVEL/etc/systemd/system/home-manager-stefan.service"; then
   echo 'Warning: the new system does not provide the expected Home Manager service.' >&2
 fi
+phase_end
+phase_begin pruning-generations 'Keeping current and rollback generations'
 run_with_progress 'Keeping current and rollback generations' prune_usb_system_generations
 phase_end
 

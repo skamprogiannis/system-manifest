@@ -41,13 +41,27 @@ format_duration() {
 }
 
 command_progress() {
-  local description="$1" started_ms="$2" elapsed
+  local description="$1" started_ms="$2" elapsed remaining
   elapsed=$(( ($(date +%s%3N) - started_ms) / 1000 ))
-  printf '  %s — elapsed %s\n' "$description" "$(format_duration "$elapsed")"
+  if [ "${PROGRESS_COMMAND_DONE:-0}" -eq 1 ]; then
+    printf '  %s — finished in %s\n' "$description" "$(format_duration "$elapsed")"
+  elif [ -n "${PHASE_ESTIMATE_SECONDS:-}" ]; then
+    remaining=$((PHASE_ESTIMATE_SECONDS - ($(date +%s) - PHASE_STARTED_AT)))
+    if [ "$remaining" -gt 0 ]; then
+      printf '  %s — phase about %s remaining (previous run); elapsed %s\n' \
+        "$description" "$(format_duration "$remaining")" "$(format_duration "$elapsed")"
+    else
+      printf '  %s — phase taking longer than previous run; remaining time unknown; elapsed %s\n' \
+        "$description" "$(format_duration "$elapsed")"
+    fi
+  else
+    printf '  %s — remaining time unknown (no comparable phase timing); elapsed %s\n' \
+      "$description" "$(format_duration "$elapsed")"
+  fi
 }
 
 copy_progress() {
-  local description="$1" started_ms="$2" copied_bytes elapsed_ms percent rate
+  local description="$1" started_ms="$2" copied_bytes elapsed_ms percent rate remaining eta
   copied_bytes="$(stat -c '%s' "$PROGRESS_COPY_TARGET" 2>/dev/null || printf '0')"
   elapsed_ms=$(( $(date +%s%3N) - started_ms ))
   [ "$elapsed_ms" -gt 0 ] || elapsed_ms=1
@@ -57,8 +71,17 @@ copy_progress() {
     percent=$((copied_bytes * 100 / PROGRESS_COPY_BYTES))
   fi
   rate=$((copied_bytes * 1000 / elapsed_ms))
-  printf '  %s — %s%%, %s/%s bytes, %s B/s average, elapsed %s\n' \
-    "$description" "$percent" "$copied_bytes" "$PROGRESS_COPY_BYTES" "$rate" "$(format_duration "$((elapsed_ms / 1000))")"
+  eta='remaining time unknown (measuring transfer rate)'
+  if [ "${PROGRESS_COMMAND_DONE:-0}" -eq 1 ]; then
+    eta='copy finished'
+  elif [ "$copied_bytes" -ge "$PROGRESS_COPY_BYTES" ]; then
+    eta='finishing copy; remaining time unknown'
+  elif [ "$rate" -gt 0 ]; then
+    remaining=$(((PROGRESS_COPY_BYTES - copied_bytes + rate - 1) / rate))
+    eta="about $(format_duration "$remaining") remaining for copy"
+  fi
+  printf '  %s — %s%%, %s/%s bytes, %s B/s average, %s; elapsed %s\n' \
+    "$description" "$percent" "$copied_bytes" "$PROGRESS_COPY_BYTES" "$rate" "$eta" "$(format_duration "$((elapsed_ms / 1000))")"
 }
 
 stop_active_command() {
@@ -85,7 +108,7 @@ run_with_progress() {
   local description="$1"
   shift
   local log_file pid timer status=0 started_ms completed_pid monitor_was_set=0
-  local callback="${PROGRESS_CALLBACK:-command_progress}"
+  local callback="${PROGRESS_CALLBACK:-command_progress}" PROGRESS_COMMAND_DONE=0
   local poll_seconds="${PROGRESS_POLL_SECONDS:-10}"
 
   log_file="$(mktemp "${UPDATE_USB_TMP_DIR:-${TMPDIR:-/tmp}}/update-usb-progress.XXXXXX")" || return
@@ -128,6 +151,7 @@ run_with_progress() {
     printf 'Error: %s failed (exit %s).\n' "$description" "$status" >&2
     if [ -s "$log_file" ]; then cat "$log_file" >&2; fi
   else
+    PROGRESS_COMMAND_DONE=1
     "$callback" "$description" "$started_ms"
   fi
   rm -f "$log_file"
@@ -151,11 +175,30 @@ copy_with_progress() {
   run_with_progress "$description" cp -- "$source" "$target"
 }
 
+phase_storage_context() {
+  local lower=none
+  # Preparation may choose either lower image source; it has no comparable ETA.
+  case "$CURRENT_PHASE" in
+    preparing-stage|cleanup) return ;;
+    building-system) printf 'host\n'; return ;;
+  esac
+  if [ "${MODE:-}" = prebuild ]; then
+    if [ -f "${STAGE_DIR:-}/base.squashfs" ]; then lower=ssd;
+    elif [ -f "${MOUNT_POINT:-}/nix-store.squashfs" ]; then lower=usb; fi
+  fi
+  printf '%s|%s|%s\n' "${MODE:-unknown}" "${STAGE_DIR:-unknown}" "$lower"
+}
+
 phase_begin() {
   CURRENT_PHASE="$1"
   PHASE_LABEL="$2"
   PHASE_STARTED_AT="$(date +%s)"
   PHASE_ACTIVE=1
+  PHASE_STORAGE_CONTEXT="$(phase_storage_context)"
+  PHASE_ESTIMATE_SECONDS=""
+  if declare -F previous_phase_seconds >/dev/null; then
+    PHASE_ESTIMATE_SECONDS="$(previous_phase_seconds "$CURRENT_PHASE" "$PHASE_STORAGE_CONTEXT")"
+  fi
   progress_set 0 "$PHASE_LABEL"
 }
 

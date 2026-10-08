@@ -105,6 +105,7 @@ fi
   }
   df() { printf 'Avail\n%s\n' "$fixture_available"; }
   cp() {
+    [ "${1:-}" != -- ] || shift
     if [ "${1:-}" = "$MOUNT_POINT/nix-store.squashfs" ]; then
       fixture_copy_count=$((fixture_copy_count + 1))
       fixture_available=$((fixture_available - fixture_base_bytes))

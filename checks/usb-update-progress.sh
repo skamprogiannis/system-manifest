@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Helpers and shared variables are consumed by the sourced implementation.
-# shellcheck disable=SC2034,SC2329
+# Fixture subshells isolate simulated clocks and progress state.
+# shellcheck disable=SC2030,SC2031,SC2034,SC2329
 set -euo pipefail
 
 source_dir="${1:?usage: usb-update-progress.sh update-usb-source-directory}"
@@ -70,6 +71,29 @@ status=0
 copy_with_progress "$test_dir/source" "$test_dir/missing/target" 0 99 'Failed copy' >"$test_dir/failed-copy" 2>&1 || status=$?
 [ "$status" -ne 0 ] || fail 'failed copy succeeded'
 
+# Remaining-time estimates use observed bytes; completion is separate from
+# reaching the expected size because buffered I/O may still be finishing.
+(
+  date() { case "$1" in +%s%3N) printf '100000\n' ;; +%s) printf '100\n' ;; esac; }
+  PROGRESS_COPY_TARGET="$test_dir/partial-copy"
+  PROGRESS_COPY_BYTES=1000
+  truncate -s 250 "$PROGRESS_COPY_TARGET"
+  copy_progress 'Measured copy' 90000 >"$test_dir/copy-eta"
+  grep -q '25%.*25 B/s.*about 30s remaining for copy' "$test_dir/copy-eta" || fail 'byte-based copy ETA is wrong'
+  truncate -s 0 "$PROGRESS_COPY_TARGET"
+  copy_progress 'Starting copy' 100000 | grep -q 'remaining time unknown' || fail 'zero throughput invented an ETA'
+  truncate -s 1000 "$PROGRESS_COPY_TARGET"
+  copy_progress 'Buffered copy' 90000 | grep -q 'finishing copy; remaining time unknown' || fail 'full file size claimed completion early'
+  PROGRESS_COMMAND_DONE=1 copy_progress 'Completed copy' 90000 | grep -q 'copy finished' || fail 'completed copy lacks completion status'
+  PHASE_ESTIMATE_SECONDS=60
+  PHASE_STARTED_AT=80
+  command_progress 'Second command in phase' 95000 | grep -q 'phase about 40s remaining (previous run)' || fail 'phase ETA restarted for a later command'
+  PHASE_STARTED_AT=20
+  command_progress 'Slower phase' 95000 | grep -q 'taking longer.*remaining time unknown' || fail 'overrun invented a zero-second ETA'
+  PHASE_ESTIMATE_SECONDS=''
+  command_progress 'First run' 95000 | grep -q 'remaining time unknown (no comparable phase timing)' || fail 'first run invented an ETA'
+)
+
 for VERBOSE in 0 1; do
   worker() {
     printf '%s\n' "$BASHPID" >"$test_dir/worker-$VERBOSE"
@@ -102,6 +126,41 @@ done
 
 # shellcheck source=/dev/null
 . "$source_dir/telemetry.sh"
+# Completed phases in an interrupted run remain useful. Failed phases, corrupt
+# reports, and timings from a different storage path must not supply an ETA.
+(
+  MODE=prebuild
+  STAGE_DIR="$test_dir/eta-stage"
+  MOUNT_POINT="$test_dir/eta-usb"
+  UPDATE_REPORT_DIRECTORY="$test_dir/history"
+  UPDATE_REPORT_TARGET_UUID=test-usb-uuid
+  mkdir -p "$UPDATE_REPORT_DIRECTORY" "$STAGE_DIR" "$MOUNT_POINT"
+  touch "$MOUNT_POINT/nix-store.squashfs"
+  CURRENT_PHASE=installing-system
+  context="$(phase_storage_context)"
+  jq -n --arg storage "$context" '{mode: "prebuild", target: {uuid: "test-usb-uuid"}, status: "canceled", phases: [{name: "installing-system", status: "completed", seconds: 510, storage: $storage}]}' >"$UPDATE_REPORT_DIRECTORY/update-usb-1.json"
+  UPDATE_REPORT_FILE="$UPDATE_REPORT_DIRECTORY/update-usb-2.json"
+  jq '.phases[0].seconds = 999' "$UPDATE_REPORT_DIRECTORY/update-usb-1.json" >"$UPDATE_REPORT_FILE"
+  phase_begin installing-system 'Installing test system' >/dev/null
+  [ "$PHASE_ESTIMATE_SECONDS" = 510 ] || fail 'completed phase history was not loaded or current run was included'
+  jq '.phases[0].status = "failed"' "$UPDATE_REPORT_FILE" >"$UPDATE_REPORT_DIRECTORY/update-usb-3.json"
+  printf broken >"$UPDATE_REPORT_DIRECTORY/update-usb-4.json"
+  cat "$UPDATE_REPORT_FILE" "$UPDATE_REPORT_FILE" >"$UPDATE_REPORT_DIRECTORY/update-usb-5.json"
+  [ "$(previous_phase_seconds installing-system "$context")" = 510 ] || fail 'failed/corrupt/multiple-document history replaced usable timing'
+  phase_begin installing-system 'Installing with malformed recent history' >/dev/null
+  [ "$PHASE_ESTIMATE_SECONDS" = 510 ] || fail 'multiple estimates reached progress arithmetic'
+  UPDATE_REPORT_TARGET_UUID=other-usb-uuid
+  [ -z "$(previous_phase_seconds installing-system "$context")" ] || fail 'another USB supplied an ETA'
+  UPDATE_REPORT_TARGET_UUID=test-usb-uuid
+  touch "$STAGE_DIR/base.squashfs"
+  phase_begin installing-system 'Installing test system from SSD cache' >/dev/null
+  [ -z "$PHASE_ESTIMATE_SECONDS" ] || fail 'USB reads and SSD reads shared an ETA'
+  rm "$STAGE_DIR/base.squashfs"
+  STAGE_DIR="$test_dir/other-stage"
+  phase_begin installing-system 'Installing on another staging filesystem' >/dev/null
+  [ -z "$PHASE_ESTIMATE_SECONDS" ] || fail 'another staging location supplied an ETA'
+)
+
 mkdir -p "$test_dir/reports"
 printf keep >"$test_dir/reports/unrelated.json"
 for run in {1..12}; do
@@ -115,7 +174,7 @@ count="$(find "$test_dir/reports" -name 'update-usb-*.json' | wc -l)"
 [ "$count" -eq 10 ] || fail "retained $count reports instead of 10"
 [ "$(cat "$test_dir/reports/unrelated.json")" = keep ] || fail 'retention touched unrelated files'
 for report in "$test_dir"/reports/update-usb-*.json; do
-  jq -e '.status == "completed" and .exit_status == 0 and (.phases | length) == 1 and .images.candidate.bytes == 11 and .target.free_bytes > 0 and .kernel != "" and .tools.cp != ""' "$report" >/dev/null || fail 'run report is incomplete'
+  jq -e '.status == "completed" and .exit_status == 0 and (.phases | length) == 1 and .images.candidate.bytes == 11 and .target.free_bytes > 0 and .kernel != "" and .tools.cp != "" and (.phases[0].storage | type) == "string"' "$report" >/dev/null || fail 'run report is incomplete'
 done
 start_update_report "$test_dir/reports" "$source_dir" "$test_dir"
 phase_begin verification 'Verifying image' >/dev/null
