@@ -10,6 +10,8 @@
 
   checks = mergeChecks [
     ./hosts.nix
+    ./host-configuration-contracts.nix
+    ./installed-environment.nix
     ./usb-initrd-ordering.nix
     ./usb-steam.nix
     ./usb-update.nix
@@ -22,6 +24,7 @@
     ./codex-skills.nix
     ./codex-clef.nix
     ./bannerlord-codex.nix
+    ./bannerlord-speech-unit.nix
     ./bannerlord-speech.nix
     ./script-smoke.nix
     ./shellcheck.nix

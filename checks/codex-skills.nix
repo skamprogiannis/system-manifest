@@ -1,5 +1,5 @@
 {ctx}: let
-  inherit (ctx) desktopCheckHome desktopCodexSkillsRoot desktopPinchtabConfigActivationFile pkgs;
+  inherit (ctx) desktopPinchtabPackage desktopCodexSkillsRoot desktopPinchtabConfigActivationFile pkgs;
   expectedSkills = [
     "browser-automation"
     "caveman"
@@ -101,7 +101,7 @@ in {
 
       pinchtab_seed="$(sed -n 's|^[[:space:]]*cp \(/nix/store/[^ ]*pinchtab-config.json\) .*|\1|p' ${desktopPinchtabConfigActivationFile})"
       test -n "$pinchtab_seed"
-      PINCHTAB_CONFIG="$pinchtab_seed" "${desktopCheckHome}/bin/pinchtab" config validate
+      PINCHTAB_CONFIG="$pinchtab_seed" "${desktopPinchtabPackage}/bin/pinchtab" config validate
 
       touch "$out"
     '';

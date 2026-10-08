@@ -1,7 +1,8 @@
 {ctx}: let
   inherit
     (ctx)
-    desktopHome
+    desktopNeovimPackage
+    desktopNeovimToolPackages
     desktopNeovimInitFile
     neovimLangmapFile
     pkgs
@@ -82,7 +83,7 @@ in {
       mkdir -p "$HOME" "$XDG_CACHE_HOME" "$XDG_CONFIG_HOME" "$XDG_STATE_HOME"
 
       LANGMAP_FILE=${neovimLangmapFile} ${pkgs.coreutils}/bin/timeout 10s \
-        ${desktopHome}/bin/nvim --headless -n -u NONE -i NONE \
+        ${desktopNeovimPackage}/bin/nvim --headless -n -u NONE -i NONE \
         +"lua dofile('$PWD/check-command-key.lua')"
 
       touch "$out"
@@ -96,7 +97,7 @@ in {
     export XDG_CONFIG_HOME="$TMPDIR/config"
     export XDG_STATE_HOME="$TMPDIR/state"
     mkdir -p "$HOME" "$XDG_CACHE_HOME" "$XDG_CONFIG_HOME" "$XDG_STATE_HOME"
-    export PATH=${desktopHome}/bin:$PATH
+    export PATH=${pkgs.lib.makeBinPath desktopNeovimToolPackages}:$PATH
 
     cat > check-lsp-health.lua <<'LUA'
     vim.cmd("checkhealth vim.lsp")
@@ -403,27 +404,27 @@ in {
     LUA
 
     ${pkgs.coreutils}/bin/timeout 20s \
-      ${desktopHome}/bin/nvim --headless -n -i NONE -u ${desktopNeovimInitFile} \
+      ${desktopNeovimPackage}/bin/nvim --headless -n -i NONE -u ${desktopNeovimInitFile} \
       +"lua dofile('$PWD/check-lsp-health.lua')"
 
     ${pkgs.coreutils}/bin/timeout 20s \
-      ${desktopHome}/bin/nvim --headless -n -i NONE --cmd 'set columns=97 lines=40' -u ${desktopNeovimInitFile} \
+      ${desktopNeovimPackage}/bin/nvim --headless -n -i NONE --cmd 'set columns=97 lines=40' -u ${desktopNeovimInitFile} \
       +"lua local ok, err = pcall(dofile, '$PWD/check-hover.lua'); if not ok then vim.api.nvim_err_writeln(err); vim.cmd('cquit'); end"
 
     ${pkgs.coreutils}/bin/timeout 20s \
-      ${desktopHome}/bin/nvim --headless -n -i NONE -u ${desktopNeovimInitFile} \
+      ${desktopNeovimPackage}/bin/nvim --headless -n -i NONE -u ${desktopNeovimInitFile} \
       +"lua dofile('$PWD/check-web-tooling.lua')"
 
     ${pkgs.coreutils}/bin/timeout 20s \
-      ${desktopHome}/bin/nvim --headless -n -i NONE -u ${desktopNeovimInitFile} \
+      ${desktopNeovimPackage}/bin/nvim --headless -n -i NONE -u ${desktopNeovimInitFile} \
       +"lua dofile('$PWD/check-clang-format-indent.lua')"
 
     ${pkgs.coreutils}/bin/timeout 20s \
-      ${desktopHome}/bin/nvim --headless -n -i NONE -u ${desktopNeovimInitFile} \
+      ${desktopNeovimPackage}/bin/nvim --headless -n -i NONE -u ${desktopNeovimInitFile} \
       +"lua dofile('$PWD/check-go-format.lua')"
 
     ${pkgs.coreutils}/bin/timeout 20s \
-      ${desktopHome}/bin/nvim --headless -n -i NONE -u ${desktopNeovimInitFile} \
+      ${desktopNeovimPackage}/bin/nvim --headless -n -i NONE -u ${desktopNeovimInitFile} \
       +"lua local ok, err = pcall(dofile, '$PWD/check-treesitter.lua'); if not ok then vim.api.nvim_err_writeln(err); vim.cmd('cquit'); end"
 
     touch "$out"

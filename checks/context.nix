@@ -8,23 +8,41 @@
   serviceExec = service:
     builtins.head (pkgs.lib.splitString " " service.serviceConfig.ExecStart);
 
-  checkBinEnv = name: packages:
-    pkgs.buildEnv {
-      inherit name;
-      paths = builtins.filter (package: pkgs.lib.getName package != "voiden") packages;
-      pathsToLink = ["/bin"];
-      ignoreCollisions = true;
-    };
-  desktopHome = self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.path;
-  desktopCheckHome = checkBinEnv "desktop-check-bin-env" self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.packages;
+  homeConfig = host: self.nixosConfigurations.${host}.config.home-manager.users.stefan;
+  namedPackage = label: name: packages: let
+    matches = builtins.filter (package: pkgs.lib.getName package == name) packages;
+    count = builtins.length matches;
+  in
+    if count == 1
+    then builtins.head matches
+    else throw "${label}: expected one package named ${name}, found ${toString count}";
+  homePackage = host: name: namedPackage "${host} home.packages" name (homeConfig host).home.packages;
+  scriptArtifacts = host: commands:
+    pkgs.linkFarm "${host}-check-script-artifacts" (pkgs.lib.mapAttrsToList (command: packageName: {
+        name = "bin/${command}";
+        path = "${homePackage host packageName}/bin/${command}";
+      })
+      commands);
+  desktopScriptArtifacts = scriptArtifacts "desktop" {
+    codex = "codex-cli-wrapped";
+    codex-state-sync = "codex-state-sync";
+    gsr-record = "gsr-record";
+    torrent = "torrent";
+    transmission-port-sync = "transmission-port-sync";
+    update-usb = "update-usb";
+    zellij-sessionizer = "zellij-sessionizer";
+  };
   desktopHomeFiles = self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.file;
   desktopNvidiaDriverVersion = self.nixosConfigurations.desktop.config.hardware.nvidia.package.version;
   desktopGpuScreenRecorderPackage = self.nixosConfigurations.desktop.config.programs.gpu-screen-recorder.package;
-  desktopGpuScreenRecorderGtkPackage = builtins.head (
-    builtins.filter
-    (package: (package.pname or "") == "gpu-screen-recorder-gtk")
-    self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.packages
-  );
+  desktopGpuScreenRecorderGtkPackage = homePackage "desktop" "gpu-screen-recorder-gtk";
+  desktopBravePackage = (homeConfig "desktop").programs.brave.finalPackage;
+  desktopNeovimPackage = (homeConfig "desktop").programs.nixvim.build.package;
+  desktopNeovimToolPackages = map (homePackage "desktop") ["clang-tools" "go" "prettier" "stylelint"];
+  desktopPinchtabPackage = homePackage "desktop" "pinchtab";
+  codexConfigActivationFile = host:
+    pkgs.writeText "${host}-codex-config-activation" (homeConfig host).home.activation.ensureWritableCodexConfig.data;
+  desktopCodexConfigActivationFile = codexConfigActivationFile "desktop";
   desktopCodexSkillsRoot = pkgs.linkFarm "desktop-codex-skills" (
     map
     (name: {
@@ -36,7 +54,6 @@
       (builtins.attrNames desktopHomeFiles))
   );
   desktopPinchtabConfigActivationFile = pkgs.writeText "desktop-pinchtab-config-activation" self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.activation.ensurePinchTabConfig.data;
-  desktopActivation = self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.activationPackage;
   desktopBannerlordEnabled = self.nixosConfigurations.desktop.config.home-manager.users.stefan.system_manifest.bannerlord.enable;
   desktopSkwdWalldService = self.nixosConfigurations.desktop.config.systemd.user.services.skwd-walld;
   desktopSkwdWalldExec = desktopSkwdWalldService.serviceConfig.ExecStart;
@@ -49,7 +66,6 @@
   desktopNixpkgsSpotify = self.nixosConfigurations.desktop.pkgs.spotify;
   desktopSpotifyPackage = self.nixosConfigurations.desktop.config.home-manager.users.stefan.programs.spicetify.spotifyPackage;
   desktopSpicedSpotify = self.nixosConfigurations.desktop.config.home-manager.users.stefan.programs.spicetify.spicedSpotify;
-  desktopSpotifyDirectlyInstalled = builtins.elem desktopSpicedSpotify self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.packages;
   spotifyPlayerRemoved = builtins.all (host: let
     home = self.nixosConfigurations.${host}.config.home-manager.users.stefan;
   in
@@ -61,8 +77,12 @@
   desktopZellijLegacyArgsScrubActivationFile = pkgs.writeText "desktop-zellij-legacy-args-scrub-activation" self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.activation.scrubLegacyZellijContext7Args.data;
   desktopZellijPostCommandDiscoveryHook = self.nixosConfigurations.desktop.config.home-manager.users.stefan.programs.zellij.settings.post_command_discovery_hook;
   updateUsbSourceDir = ../modules/home/scripts/usb/update-usb;
-  usbHome = self.nixosConfigurations.usb.config.home-manager.users.stefan.home.path;
-  usbCheckHome = checkBinEnv "usb-check-bin-env" self.nixosConfigurations.usb.config.home-manager.users.stefan.home.packages;
+  usbScriptArtifacts = scriptArtifacts "usb" {
+    nixos-usb-store-status = "nixos-usb-store-status";
+    setup-persistent-usb = "setup-persistent-usb";
+    steam-host-scratch = "steam-host-scratch";
+    usb-host-scratch = "usb-host-scratch";
+  };
   usbSystem = self.nixosConfigurations.usb.config.system.build.toplevel;
   usbSteamEnabled = self.nixosConfigurations.usb.config.programs.steam.enable;
   usbSteamLauncher = "${self.nixosConfigurations.usb.config.programs.steam.package}/bin/steam";
@@ -72,7 +92,6 @@
   usbGraphics32Enabled = self.nixosConfigurations.usb.config.hardware.graphics.enable32Bit;
   usbGraphics32Package = self.nixosConfigurations.usb.config.hardware.graphics.package32;
   usbMesa32Package = self.nixosConfigurations.usb.pkgs.pkgsi686Linux.mesa;
-  usbActivation = self.nixosConfigurations.usb.config.home-manager.users.stefan.home.activationPackage;
   desktopHostFingerprintService = self.nixosConfigurations.desktop.config.systemd.services.system-manifest-host-fingerprint;
   laptopHostFingerprintService = self.nixosConfigurations.laptop.config.systemd.services.system-manifest-host-fingerprint;
   usbHostFingerprintService = self.nixosConfigurations.usb.config.systemd.services.system-manifest-host-fingerprint;
@@ -147,19 +166,17 @@
   usbDmsOutputsFile = pkgs.writeText "usb-dms-outputs.lua" self.nixosConfigurations.usb.config.home-manager.users.stefan.xdg.configFile."hypr/dms/outputs.lua".text;
   shellcheckScripts =
     pkgs.lib.optionals desktopBannerlordEnabled [
-      "${desktopCheckHome}/bin/bannerlord-codex"
-      "${desktopCheckHome}/bin/bannerlord-speech"
-      "${desktopCheckHome}/bin/bannerlord-speech-service"
+      "${homePackage "desktop" "bannerlord-codex"}/bin/bannerlord-codex"
     ]
     ++ [
-      "${desktopCheckHome}/bin/codex-state-sync"
-      "${desktopCheckHome}/bin/gsr-record"
-      "${desktopCheckHome}/bin/hypr-quit-active"
-      "${desktopCheckHome}/bin/screenshot-path-copy"
-      "${desktopCheckHome}/bin/torrent"
-      "${desktopCheckHome}/bin/transmission-port-sync"
-      "${desktopCheckHome}/bin/update-usb"
-      "${desktopCheckHome}/bin/zellij-sessionizer"
+      "${homePackage "desktop" "codex-state-sync"}/bin/codex-state-sync"
+      "${homePackage "desktop" "gsr-record"}/bin/gsr-record"
+      "${homePackage "desktop" "hypr-quit-active"}/bin/hypr-quit-active"
+      "${homePackage "desktop" "screenshot-path-copy"}/bin/screenshot-path-copy"
+      "${homePackage "desktop" "torrent"}/bin/torrent"
+      "${homePackage "desktop" "transmission-port-sync"}/bin/transmission-port-sync"
+      "${homePackage "desktop" "update-usb"}/bin/update-usb"
+      "${homePackage "desktop" "zellij-sessionizer"}/bin/zellij-sessionizer"
       "${desktopZellijLegacyArgsScrubActivationFile}"
       "${desktopZellijPostCommandDiscoveryHook}"
       "${updateUsbSourceDir}/args.sh"
@@ -175,14 +192,14 @@
       "${./usb-update-unit.sh}"
       "${./usb-update-integration.sh}"
       "${./usb-host-scratch-shutdown.sh}"
-      "${usbCheckHome}/bin/usb-host-scratch"
-      "${usbCheckHome}/bin/steam-host-scratch"
+      "${homePackage "usb" "usb-host-scratch"}/bin/usb-host-scratch"
+      "${homePackage "usb" "steam-host-scratch"}/bin/steam-host-scratch"
       "${usbSteamHostScratchPrepareScript}"
-      "${usbCheckHome}/bin/nixos-usb-store-status"
+      "${homePackage "usb" "nixos-usb-store-status"}/bin/nixos-usb-store-status"
       "${usbHostScratchStartScript}"
       "${usbHostScratchStopScript}"
       "${usbHostScratchSyncScript}"
       "${usbHostScratchShutdownCleanupScript}"
-      "${usbCheckHome}/bin/setup-persistent-usb"
+      "${homePackage "usb" "setup-persistent-usb"}/bin/setup-persistent-usb"
     ];
 }

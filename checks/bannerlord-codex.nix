@@ -1,11 +1,7 @@
 {ctx}: let
   inherit (ctx) pkgs self;
   runtime = pkgs.callPackage ../modules/home/bannerlord-codex/package.nix {};
-  codexCli = builtins.head (
-    builtins.filter
-    (package: (package.name or "") == "codex-cli-wrapped")
-    self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.packages
-  );
+  codexCli = ctx.homePackage "desktop" "codex-cli-wrapped";
   enabled = self.nixosConfigurations.desktop.config.home-manager.users.stefan.system_manifest.bannerlord.enable;
   service =
     if enabled
