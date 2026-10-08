@@ -63,27 +63,58 @@ for VERBOSE in 0 1; do
   grep -q corrupt-image "$test_dir/failed-verification" || fail 'failed command output was lost'
 done
 
+# Exercise actual scheduler defaults without waiting a minute.
+for VERBOSE in 0 1; do
+  (
+    unset PROGRESS_POLL_SECONDS
+    sleep() { printf '%s\n' "$1" >>"$test_dir/polls-$VERBOSE"; command sleep .02; }
+    run_with_progress 'Default cadence' bash -c 'sleep .08' >"$test_dir/cadence-$VERBOSE"
+    expected=60
+    if [ "$VERBOSE" -eq 1 ]; then expected=10; fi
+    [ "$(head -n 1 "$test_dir/polls-$VERBOSE")" = "$expected" ] || fail "verbose=$VERBOSE: wrong reporting cadence"
+  )
+done
+
+# Exercise rendering with a real pseudo-terminal.
+export USB_PROGRESS_TEST_SOURCE="$source_dir"
+export PROGRESS_POLL_SECONDS=.02
+cat >"$test_dir/terminal-test.sh" <<'TERMINAL'
+source "$USB_PROGRESS_TEST_SOURCE/phases.sh"
+VERBOSE=0
+run_with_progress 'Terminal heartbeat' sleep .1
+TERMINAL
+script -q -e -c "bash '$test_dir/terminal-test.sh'" "$test_dir/terminal" >/dev/null
+terminal_text="$(cat "$test_dir/terminal")"
+[[ "$terminal_text" == *$'\033[2K'* ]] || fail 'terminal progress appended lines instead of refreshing'
+[[ "$terminal_text" == *'finished in'* ]] || fail 'terminal progress lost completion'
+if grep -q $'\033' "$test_dir/heartbeat"; then fail 'redirected output contains terminal escapes'; fi
+export PROGRESS_POLL_SECONDS=.05
+
+VERBOSE=0
 printf 'image data\n' >"$test_dir/source"
 copy_with_progress "$test_dir/source" "$test_dir/target" 0 99 'Copying image' >"$test_dir/copy"
 cmp "$test_dir/source" "$test_dir/target" || fail 'copied contents differ'
-grep -q '100%.*bytes.*B/s.*elapsed' "$test_dir/copy" || fail 'copy needs actual bytes, percentage, rate and elapsed time'
+grep -q '100%.*copy finished.*elapsed' "$test_dir/copy" || fail 'copy lost measured progress or completion'
+VERBOSE=1 copy_with_progress "$test_dir/source" "$test_dir/target" 0 99 'Detailed copy' >"$test_dir/verbose-copy"
+grep -q '100%.*bytes.*B/s.*elapsed' "$test_dir/verbose-copy" || fail 'verbose copy lost byte counts and throughput'
 status=0
 copy_with_progress "$test_dir/source" "$test_dir/missing/target" 0 99 'Failed copy' >"$test_dir/failed-copy" 2>&1 || status=$?
 [ "$status" -ne 0 ] || fail 'failed copy succeeded'
 
-# Remaining-time estimates use observed bytes; completion is separate from
-# reaching the expected size because buffered I/O may still be finishing.
+# Buffered file growth cannot predict durable transfer time. Completion is
+# separate from reaching the expected size because I/O may still be finishing.
 (
   date() { case "$1" in +%s%3N) printf '100000\n' ;; +%s) printf '100\n' ;; esac; }
   PROGRESS_COPY_TARGET="$test_dir/partial-copy"
   PROGRESS_COPY_BYTES=1000
   truncate -s 250 "$PROGRESS_COPY_TARGET"
   copy_progress 'Measured copy' 90000 >"$test_dir/copy-eta"
-  grep -q '25%.*25 B/s.*about 30s remaining for copy' "$test_dir/copy-eta" || fail 'byte-based copy ETA is wrong'
+  grep -q '25%.*elapsed 10s' "$test_dir/copy-eta" || fail 'copy lost measured progress'
+  if grep -q 'remaining for copy' "$test_dir/copy-eta"; then fail 'buffered growth invented a copy ETA'; fi
   truncate -s 0 "$PROGRESS_COPY_TARGET"
-  copy_progress 'Starting copy' 100000 | grep -q 'remaining time unknown' || fail 'zero throughput invented an ETA'
+  copy_progress 'Starting copy' 100000 | grep -q '0%.*elapsed' || fail 'zero throughput lost copy progress'
   truncate -s 1000 "$PROGRESS_COPY_TARGET"
-  copy_progress 'Buffered copy' 90000 | grep -q 'finishing copy; remaining time unknown' || fail 'full file size claimed completion early'
+  copy_progress 'Buffered copy' 90000 | grep -q 'finishing copy' || fail 'full file size claimed completion early'
   PROGRESS_COMMAND_DONE=1 copy_progress 'Completed copy' 90000 | grep -q 'copy finished' || fail 'completed copy lacks completion status'
   PHASE_ESTIMATE_SECONDS=60
   PHASE_STARTED_AT=80
@@ -91,7 +122,7 @@ copy_with_progress "$test_dir/source" "$test_dir/missing/target" 0 99 'Failed co
   PHASE_STARTED_AT=20
   command_progress 'Slower phase' 95000 | grep -q 'taking longer.*remaining time unknown' || fail 'overrun invented a zero-second ETA'
   PHASE_ESTIMATE_SECONDS=''
-  command_progress 'First run' 95000 | grep -q 'remaining time unknown (no comparable phase timing)' || fail 'first run invented an ETA'
+  command_progress 'First run' 95000 | grep -q 'running; elapsed' || fail 'first run lost elapsed time'
 )
 
 for VERBOSE in 0 1; do

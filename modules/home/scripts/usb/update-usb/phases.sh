@@ -55,13 +55,13 @@ command_progress() {
         "$description" "$(format_duration "$elapsed")"
     fi
   else
-    printf '  %s — remaining time unknown (no comparable phase timing); elapsed %s\n' \
+    printf '  %s — running; elapsed %s\n' \
       "$description" "$(format_duration "$elapsed")"
   fi
 }
 
 copy_progress() {
-  local description="$1" started_ms="$2" copied_bytes elapsed_ms percent rate remaining eta
+  local description="$1" started_ms="$2" copied_bytes elapsed_ms percent rate state
   copied_bytes="$(stat -c '%s' "$PROGRESS_COPY_TARGET" 2>/dev/null || printf '0')"
   elapsed_ms=$(( $(date +%s%3N) - started_ms ))
   [ "$elapsed_ms" -gt 0 ] || elapsed_ms=1
@@ -71,17 +71,29 @@ copy_progress() {
     percent=$((copied_bytes * 100 / PROGRESS_COPY_BYTES))
   fi
   rate=$((copied_bytes * 1000 / elapsed_ms))
-  eta='remaining time unknown (measuring transfer rate)'
+  state='copying'
   if [ "${PROGRESS_COMMAND_DONE:-0}" -eq 1 ]; then
-    eta='copy finished'
+    state='copy finished'
   elif [ "$copied_bytes" -ge "$PROGRESS_COPY_BYTES" ]; then
-    eta='finishing copy; remaining time unknown'
-  elif [ "$rate" -gt 0 ]; then
-    remaining=$(((PROGRESS_COPY_BYTES - copied_bytes + rate - 1) / rate))
-    eta="about $(format_duration "$remaining") remaining for copy"
+    state='finishing copy'
   fi
-  printf '  %s — %s%%, %s/%s bytes, %s B/s average, %s; elapsed %s\n' \
-    "$description" "$percent" "$copied_bytes" "$PROGRESS_COPY_BYTES" "$rate" "$eta" "$(format_duration "$((elapsed_ms / 1000))")"
+  # File growth includes buffered writes and is not a stable transfer-time predictor.
+  if is_verbose; then
+    printf '  %s — %s%%, %s/%s bytes, %s B/s average, %s; elapsed %s\n' \
+      "$description" "$percent" "$copied_bytes" "$PROGRESS_COPY_BYTES" "$rate" "$state" "$(format_duration "$((elapsed_ms / 1000))")"
+  else
+    printf '  %s — %s%%, %s; elapsed %s\n' \
+      "$description" "$percent" "$state" "$(format_duration "$((elapsed_ms / 1000))")"
+  fi
+}
+
+render_progress() {
+  if [ "${PROGRESS_INLINE:-0}" -eq 1 ]; then
+    printf '\r\033[2K%s' "$("$callback" "$description" "$started_ms")"
+    if [ "${PROGRESS_COMMAND_DONE:-0}" -eq 1 ]; then printf '\n'; fi
+  else
+    "$callback" "$description" "$started_ms"
+  fi
 }
 
 stop_active_command() {
@@ -109,11 +121,14 @@ run_with_progress() {
   shift
   local log_file pid timer status=0 started_ms completed_pid monitor_was_set=0
   local callback="${PROGRESS_CALLBACK:-command_progress}" PROGRESS_COMMAND_DONE=0
-  local poll_seconds="${PROGRESS_POLL_SECONDS:-10}"
+  local poll_seconds=60 PROGRESS_INLINE=0
+  if is_verbose || [ -t 1 ]; then poll_seconds=10; fi
+  if ! is_verbose && [ -t 1 ]; then PROGRESS_INLINE=1; fi
+  poll_seconds="${PROGRESS_POLL_SECONDS:-$poll_seconds}"
 
   log_file="$(mktemp "${UPDATE_USB_TMP_DIR:-${TMPDIR:-/tmp}}/update-usb-progress.XXXXXX")" || return
   started_ms="$(date +%s%3N)"
-  "$callback" "$description" "$started_ms"
+  render_progress
   case "$-" in *m*) monitor_was_set=1 ;; esac
   # Job control gives shell functions their own process group without exporting state.
   set -m
@@ -141,18 +156,19 @@ run_with_progress() {
     fi
     wait "$timer" 2>/dev/null || true
     ACTIVE_PROGRESS_TIMER_PID=""
-    "$callback" "$description" "$started_ms"
+    render_progress
   done
 
   # Even a command that finished before the first poll must have its status read.
   wait "$pid" || status=$?
   ACTIVE_CHILD_PID=""
   if [ "$status" -ne 0 ]; then
+    if [ "$PROGRESS_INLINE" -eq 1 ]; then printf '\n'; fi
     printf 'Error: %s failed (exit %s).\n' "$description" "$status" >&2
     if [ -s "$log_file" ]; then cat "$log_file" >&2; fi
   else
     PROGRESS_COMMAND_DONE=1
-    "$callback" "$description" "$started_ms"
+    render_progress
   fi
   rm -f "$log_file"
   return "$status"
