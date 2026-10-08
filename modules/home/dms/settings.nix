@@ -263,20 +263,20 @@ in {
           small = true;
         })
       (controlCenterTile "volumeSlider" 0 1 4)
-      (controlCenterTile "wifi" 4 1 4)
-      ((controlCenterTile "diskUsage" 0 2 4)
+      (controlCenterTile "audioOutput" 4 1 4)
+      (controlCenterTile "audioInput" 0 2 4)
+      (controlCenterTile "wifi" 4 2 4)
+      (controlCenterTile "battery" 0 3 4)
+      ((controlCenterTile "diskUsage" 4 3 4)
         // {
           instanceId = "root-filesystem";
           mountPath = "/";
           showMountPath = true;
         })
-      (controlCenterTile "audioOutput" 4 2 4)
-      (controlCenterTile "audioInput" 0 3 4)
-      (controlCenterTile "battery" 4 3 4)
-      (controlCenterTile "doNotDisturb" 0 4 2)
-      (controlCenterTile "idleInhibitor" 2 4 2)
-      (controlCenterTile "darkMode" 4 4 2)
-      (controlCenterTile "nightMode" 6 4 2)
+      (controlCenterTile "darkMode" 0 4 2)
+      (controlCenterTile "nightMode" 2 4 2)
+      (controlCenterTile "doNotDisturb" 4 4 2)
+      (controlCenterTile "idleInhibitor" 6 4 2)
       ((enabledWidget "runningApps")
         // {
           w = 4;
