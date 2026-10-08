@@ -1,13 +1,77 @@
-"""Exercise the installed CLI's managed-daemon package copy without user state."""
+"""Exercise account bootstrap and the managed-daemon package without user state."""
 
 import json
 import os
+import select
 import signal
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import time
+
+
+def check_account_read(codex, root, env):
+    # A daemon version query alone does not exercise the TUI's account bootstrap.
+    # The fixture has no credentials: this checks protocol compatibility, not
+    # live ChatGPT workspace routing or account-service availability.
+    process = subprocess.Popen(
+        [codex, "app-server", "--listen", "stdio://"],
+        env=env,
+        cwd=root,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+    buffer = b""
+
+    def send(message):
+        process.stdin.write(json.dumps(message).encode() + b"\n")
+        process.stdin.flush()
+
+    def response(request_id):
+        nonlocal buffer
+        deadline = time.monotonic() + 30
+        while time.monotonic() < deadline:
+            while b"\n" in buffer:
+                line, buffer = buffer.split(b"\n", 1)
+                message = json.loads(line)
+                if message.get("id") == request_id:
+                    assert "error" not in message, message
+                    return message["result"]
+            remaining = deadline - time.monotonic()
+            if remaining <= 0 or not select.select([process.stdout], [], [], remaining)[0]:
+                break
+            chunk = os.read(process.stdout.fileno(), 65536)
+            assert chunk, f"app-server exited before response {request_id}"
+            buffer += chunk
+        raise AssertionError(f"app-server response {request_id} timed out")
+
+    try:
+        send({"id": 1, "method": "initialize", "params": {
+            "clientInfo": {"name": "system_manifest_smoke", "version": "1.0"}
+        }})
+        response(1)
+        send({"method": "initialized", "params": {}})
+        send({"id": 2, "method": "account/read", "params": {"refreshToken": False}})
+        account = response(2)
+        assert account["account"] is None, account
+        assert account["requiresOpenaiAuth"] is True, account
+        assert account.get("workspaceRouting") is None, account
+        print("Codex account/read bootstrap verified without credentials")
+    finally:
+        process.stdin.close()
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            os.killpg(process.pid, signal.SIGTERM)
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                os.killpg(process.pid, signal.SIGKILL)
+                process.wait()
+        process.stdout.close()
 
 
 def wait_for_managed_processes_to_exit(root):
@@ -80,6 +144,7 @@ def main():
 
         try:
             assert run("--version") == f"codex-cli {expected_version}"
+            check_account_read(codex, root, env)
             run("app-server", "daemon", "start")
             package = root / "codex/packages/app-server-daemon/current"
             manifest = json.loads((package / "codex-package.json").read_text())

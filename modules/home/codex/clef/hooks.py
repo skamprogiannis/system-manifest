@@ -258,7 +258,7 @@ class Hooks:
         with self.store.counters(session) as data:
             response = event.get("tool_response")
             if isinstance(response, str):
-                # 0.160.0 Bash hooks expose output text, not an exit status.
+                # 0.161.0 Bash hooks expose output text, not an exit status.
                 # Count only advisory failure signals; never infer a passed test.
                 failure_hint = bool(
                     re.search(

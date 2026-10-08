@@ -1,6 +1,6 @@
 {
   "version": "5",
-  "codex_version": "0.160.0",
+  "codex_version": "0.161.0",
   "provider_model": "clef",
   "timeout_seconds": 3,
   "max_text_bytes": 24000,

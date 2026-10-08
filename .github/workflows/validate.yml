@@ -24,7 +24,7 @@ jobs:
       - name: Test decisions, privacy, hooks and migrations without API keys
         env:
           PYTHONDONTWRITEBYTECODE: '1'
-        run: python checks/codex-clef-test.py modules/home/codex checks/fixtures/codex-0.160.0
+        run: python checks/codex-clef-test.py modules/home/codex checks/fixtures/codex-0.161.0
 
   host-check:
     name: Validate ${{ matrix.host }}

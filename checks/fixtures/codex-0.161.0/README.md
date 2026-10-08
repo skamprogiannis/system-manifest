@@ -1,9 +1,9 @@
 # Codex hook contracts
 
-Unmodified output schemas from `openai/codex`, tag `rust-v0.160.0`,
+Unmodified output schemas from `openai/codex`, tag `rust-v0.161.0`,
 `codex-rs/hooks/schema/generated`. Upstream Apache-2.0 license applies.
 
 These are contract fixtures, not mock API responses. Update them deliberately
 with the shared Codex version pin and re-run the hook tests.
 
-Source: https://github.com/openai/codex/tree/rust-v0.160.0/codex-rs/hooks/schema/generated
+Source: https://github.com/openai/codex/tree/rust-v0.161.0/codex-rs/hooks/schema/generated

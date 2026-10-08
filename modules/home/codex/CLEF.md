@@ -59,7 +59,7 @@ Local metadata logs also omit raw content.
 
 Automatic Clef skill/workflow, escalation and completion requests are disabled.
 Local turn resets, delegation limits and advisory failure counters remain.
-Output text cannot establish test success: pinned Codex 0.160.0 Bash hooks do not
+Output text cannot establish test success: pinned Codex 0.161.0 Bash hooks do not
 expose an exit status. Required tests and independent review remain mandatory.
 
 ## Commands and outcomes
@@ -112,10 +112,54 @@ The existing bounded account-routing startup timeout fallback is preserved: it
 tries ordinary Codex once with Clef disabled when daemon state can be verified.
 Explicit `--no-daemon` retains assisted retries; unrelated failures are not retried.
 
+The shared CLI pin includes the [upstream bootstrap-authentication fix](https://github.com/openai/codex/pull/49432)
+released in 0.161.0. It preserves configuration discovery when account ownership
+changes while revoking the previous account's content access. The package smoke
+check exercises `account/read` without credentials and verifies daemon packaging;
+authenticated workspace discovery still requires a check on the deployed desktop.
+
 Local state is under `~/.local/state/codex-clef`. Historical Clef/Jev logs are
 preserved. Disable integration with `system_manifest.codex.clef.enable = false`
 and rebuild; unrelated hooks and runtime records remain. Configuration changes
 require the repository's Codex checks and desktop dry-build before activation.
+
+### Daemon compatibility and version alignment
+
+The native "Background server has incompatible feature settings" dialog reports
+a difference between the CLI's effective settings and the shared daemon's. It is
+a separate check from the `account/read` workspace-routing timeout. Inspect both
+versions without changing the running server:
+
+```bash
+codex --version
+codex app-server daemon version
+```
+
+The daemon uses a separate managed package that can update independently of the
+Nix CLI. For example, [0.161.0 enables `api_key_model_discovery` by default](https://github.com/openai/codex/pull/49807),
+while 0.160.0 disables it. An older CLI connected to a newer daemon can therefore
+show the dialog even without a local feature override.
+
+After deploying a changed Nix CLI pin, let active and queued Codex work finish
+and close other clients before aligning the daemon:
+
+```bash
+codex app-server daemon update --from-cli
+codex app-server daemon version
+```
+
+The [native command](https://github.com/openai/codex/blob/rust-v0.161.0/codex-rs/app-server-daemon/src/prepare_install.rs)
+asks before copying the installed CLI package and pins that copy against
+scheduled production updates. A running daemon restarts after confirmation;
+the command does not refuse merely because work is active. Repeat this step
+after later Nix CLI upgrades. Plain `daemon update` returns to production
+updates, while `daemon restart` keeps the currently selected package.
+
+Package alignment preserves saved daemon feature overrides. If compatible
+versions still show the dialog, review local feature settings and the displayed
+restart settings before accepting a restart with other clients idle. "Run without
+daemon this time" leaves the shared daemon unchanged and can help distinguish
+compatibility from an account-routing failure.
 
 ## Evidence and cost
 
