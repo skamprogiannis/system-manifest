@@ -102,6 +102,7 @@ fixture_tests() {
   prepare_stage_directory
   prepare_target_stage
   [ "$(findmnt -n -o FSTYPE --mountpoint "$STAGE_STORE")" = overlay ] || fail "Staging did not use OverlayFS"
+  [ ! -e "$STAGE_DIR/base.squashfs" ] || fail "Preflight copied the previous image before checking capacity"
   set_profile "$MOUNT_POINT" "$FIXTURE_NEW"
   TARGET_SYSTEM_TOPLEVEL="$FIXTURE_NEW"
   TARGET_INIT_RELATIVE="${FIXTURE_NEW#/nix/store/}/init"
@@ -109,8 +110,12 @@ fixture_tests() {
   DESIRED_SYSTEM_TOPLEVEL="$FIXTURE_NEW"
   closure_bytes=$(nix path-info --json --json-format 1 --recursive "$FIXTURE_NEW" "$FIXTURE_OLD" "$FIXTURE_OLDEST" | jq '[.[].narSize] | add')
   expected_capacity=$((closure_bytes * 3 / 5 + 1073741824))
-  capacity_output=$(check_staging_capacity)
+  check_staging_capacity > "$RUNTIME_DIR/tmp/capacity-output"
+  capacity_output=$(cat "$RUNTIME_DIR/tmp/capacity-output")
   [[ "$capacity_output" == *"Estimated additional staging requirement: $expected_capacity bytes."* ]] || fail "Capacity estimate treats present packages as missing"
+  cache_previous_image_if_room
+  [ -f "$STAGE_DIR/base.squashfs" ] || fail "SSD fast path was not exercised"
+  [ "$(findmnt -n -o FSTYPE --mountpoint "$STAGE_STORE")" = overlay ] || fail "Caching the lower image lost the overlay mount"
   prune_usb_system_generations
   if mountpoint -q "$MOUNT_POINT/proc"; then fail "Target GC leaked its private proc mount"; fi
   generation_count=$(nix-env --store "$MOUNT_POINT" --profile "$MOUNT_POINT/nix/var/nix/profiles/system" --list-generations | wc -l)
@@ -142,7 +147,8 @@ fixture_tests() {
   cp "$STAGE_DIR/candidate.squashfs" "$STAGE_DIR/broken.squashfs"
   truncate -s 128 "$STAGE_DIR/broken.squashfs"
   expect_failure verify_image_closures "$STAGE_DIR/broken.squashfs"
-  detach_target_stage
+  release_target_stage
+  if mountpoint -q "$STAGE_DIR/lower" || mountpoint -q "$STAGE_STORE"; then fail "Stage mounts survived candidate verification"; fi
   [ "$(target_metadata_hash)" = "$original_metadata_hash" ] || fail "Staging changed published Nix metadata"
 
   cp "$STAGE_DIR/candidate.squashfs" "$MOUNT_POINT/nix-store.squashfs.tmp"
@@ -214,7 +220,7 @@ initial_install() {
   prune_usb_system_generations
   compress_store "$STAGE_STORE" "$STAGE_DIR/candidate.squashfs"
   verify_image_closures "$STAGE_DIR/candidate.squashfs"
-  detach_target_stage
+  release_target_stage
   cp "$STAGE_DIR/candidate.squashfs" "$MOUNT_POINT/nix-store.squashfs.tmp"
   sync -f "$MOUNT_POINT/nix-store.squashfs.tmp"
   IMAGE_SHA256=$(sha256sum "$MOUNT_POINT/nix-store.squashfs.tmp" | cut -d' ' -f1)
@@ -232,6 +238,9 @@ prepare_update() {
   prepare_generation_state
   prepare_stage_directory
   prepare_target_stage
+  # Exercise the space-saving path through real installation and publication;
+  # fixture_tests above covers remounting an optional SSD base copy.
+  [ ! -e "$STAGE_DIR/base.squashfs" ] || fail "USB-backed staging allocated a base copy"
   nixos-install --system "$NEW_SYSTEM" --root "$MOUNT_POINT" --no-root-passwd --no-channel-copy --no-bootloader
   TARGET_SYSTEM_TOPLEVEL="$NEW_SYSTEM"
   TARGET_INIT_RELATIVE="${NEW_SYSTEM#/nix/store/}/init"
@@ -239,7 +248,8 @@ prepare_update() {
   prune_usb_system_generations
   compress_store "$STAGE_STORE" "$STAGE_DIR/candidate.squashfs"
   verify_image_closures "$STAGE_DIR/candidate.squashfs"
-  detach_target_stage
+  release_target_stage
+  if mountpoint -q "$STAGE_DIR/lower"; then fail "Published image is still mounted as a staging lower"; fi
   [ "$(profile_store_target "$MOUNT_POINT/nix/var/nix/profiles/system")" = "$OLD_SYSTEM" ] || fail "Prepared update changed the published profile"
   cp "$STAGE_DIR/candidate.squashfs" "$MOUNT_POINT/nix-store.squashfs.tmp"
   sync -f "$MOUNT_POINT/nix-store.squashfs.tmp"

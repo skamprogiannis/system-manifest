@@ -136,6 +136,7 @@ prepare_stage_directory
 printf '%s\n' "$STAGE_DIR" > "$RUNTIME_DIR/stage-path"
 prepare_target_stage
 check_staging_capacity
+cache_previous_image_if_room
 phase_end
 
 phase_begin installing-system 'Installing into private staging'
@@ -165,7 +166,9 @@ run_with_progress 'Verifying current and rollback package contents' verify_image
 # shellcheck disable=SC2016
 run_with_progress 'Hashing completed image' bash -c 'sha256sum -- "$1" > "$2"' _ "$LOCAL_SQUASHFS" "$UPDATE_USB_TMP_DIR/image.sha256"
 IMAGE_SHA256="$(cut -d ' ' -f1 "$UPDATE_USB_TMP_DIR/image.sha256")"
-detach_target_stage
+# The low-space path reads the published USB image as its lower layer. Release
+# every reference before the transaction can replace that image.
+release_target_stage
 phase_end
 
 phase_begin copying-image 'Copying replacement image to USB'

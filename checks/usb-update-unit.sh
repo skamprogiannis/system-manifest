@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Shared variables and stub functions are consumed by the sourced updater.
-# shellcheck disable=SC2034,SC2329
+# Fixture subshells deliberately isolate paths and stubs from later scenarios.
+# shellcheck disable=SC2030,SC2031,SC2034,SC2329
 set -euo pipefail
 
 lib_dir="${1:?updater source directory required}"
@@ -74,6 +75,93 @@ if require_free_space "$STAGE_DIR" 999999999999999999 test; then
   echo 'Impossible capacity request was accepted' >&2
   exit 1
 fi
+
+# A copied lower image is optional: admit the update before spending its space,
+# and retain the USB-backed, read-only lower when an SSD copy would crowd it out.
+(
+  STAGE_DIR="$test_root/base-cache-stage"
+  MOUNT_POINT="$test_root/base-cache-target"
+  MODE=prebuild
+  PRESERVE_PREVIOUS_GENERATION=1
+  mkdir -p "$STAGE_DIR" "$MOUNT_POINT/nix/var/nix/db"
+  printf 'published-image\n' > "$MOUNT_POINT/nix-store.squashfs"
+  printf 'published-state\n' > "$MOUNT_POINT/nix/var/nix/db/sentinel"
+  fixture_base_bytes=12884901888
+  # Reproduce the reported 62,980,466,243-byte requirement against the reported
+  # 54,720,172,032 bytes left after copying a hypothetical 12-GiB old image.
+  STAGING_REQUIRED_BYTES=62980466243
+  fixture_available=$((54720172032 + fixture_base_bytes))
+  declare -A fixture_mounts=()
+  fixture_lower_source=""
+  fixture_copy_count=0
+  fixture_block_detach=0
+  run_with_progress() { shift; "$@"; }
+  stat() {
+    if [ "$*" = "-c %s $MOUNT_POINT/nix-store.squashfs" ]; then
+      printf '%s\n' "$fixture_base_bytes"
+    else
+      command stat "$@"
+    fi
+  }
+  df() { printf 'Avail\n%s\n' "$fixture_available"; }
+  cp() {
+    if [ "${1:-}" = "$MOUNT_POINT/nix-store.squashfs" ]; then
+      fixture_copy_count=$((fixture_copy_count + 1))
+      fixture_available=$((fixture_available - fixture_base_bytes))
+    fi
+    command cp "$@"
+  }
+  mount() {
+    local target="${!#}" args=("$@")
+    fixture_mounts["$target"]=1
+    if [ "$target" = "$STAGE_DIR/lower" ]; then
+      [[ " $* " == *' -o loop,ro '* ]] || fail 'lower image was not mounted read-only'
+      fixture_lower_source="${args[$# - 2]}"
+    fi
+  }
+  mountpoint() { [ "${fixture_mounts["$2"]:-0}" -eq 1 ]; }
+  umount() {
+    if [ "$1" = "$MOUNT_POINT/nix/store" ] && [ "$fixture_block_detach" -eq 1 ]; then return 1; fi
+    if [ "$1" = "$STAGE_DIR/store" ] && [ "${fixture_mounts["$MOUNT_POINT/nix/store"]:-0}" -eq 1 ]; then
+      fail 'overlay was released while the target still referenced it'
+    fi
+    if [ "$1" = "$STAGE_DIR/lower" ] && [ "${fixture_mounts["$STAGE_DIR/store"]:-0}" -eq 1 ]; then
+      fail 'lower image was released while the overlay still referenced it'
+    fi
+    unset 'fixture_mounts[$1]'
+  }
+
+  prepare_target_stage
+  [ "$fixture_copy_count" -eq 0 ] || fail 'previous image copied before capacity admission'
+  [ ! -e "$STAGE_DIR/base.squashfs" ] || fail 'preflight allocated an optional SSD copy'
+  [ "$fixture_lower_source" = "$MOUNT_POINT/nix-store.squashfs" ] || fail 'preflight did not use the published read-only lower'
+  # The sourced prepare_target_stage function assigns STAGE_STATE.
+  # shellcheck disable=SC2153
+  [ "$(cat "$STAGE_STATE/db/sentinel")" = published-state ] || fail 'private metadata was not copied'
+
+  cache_previous_image_if_room > "$test_root/base-cache-fallback-output"
+  [ "$fixture_copy_count" -eq 0 ] || fail 'low-space update copied the previous image'
+  [ "$fixture_available" -ge "$STAGING_REQUIRED_BYTES" ] || fail 'optional cache consumed required staging space'
+  [ "$fixture_lower_source" = "$MOUNT_POINT/nix-store.squashfs" ] || fail 'low-space fallback lost its USB-backed lower'
+  grep -Fq '12.00 GiB' "$test_root/base-cache-fallback-output" || fail 'fallback did not explain the saved image size'
+
+  # An exact fit for the update plus its cache must preserve the SSD fast path.
+  fixture_available=$((STAGING_REQUIRED_BYTES + fixture_base_bytes))
+  cache_previous_image_if_room > "$test_root/base-cache-fast-output"
+  [ "$fixture_copy_count" -eq 1 ] || fail 'sufficient space did not cache the previous image'
+  [ "$fixture_lower_source" = "$STAGE_DIR/base.squashfs" ] || fail 'fast path did not remount the cached lower'
+  [ "$fixture_available" -eq "$STAGING_REQUIRED_BYTES" ] || fail 'cache admission miscalculated remaining capacity'
+  cmp "$MOUNT_POINT/nix-store.squashfs" "$STAGE_DIR/base.squashfs" || fail 'cached image contents changed'
+  [ "$(cat "$MOUNT_POINT/nix/var/nix/db/sentinel")" = published-state ] || fail 'cache selection changed published metadata'
+  [ "${fixture_mounts["$MOUNT_POINT/nix/store"]:-0}" -eq 1 ] || fail 'cached store was not rebound to the target'
+
+  fixture_block_detach=1
+  if release_target_stage; then fail 'busy target bind was ignored'; fi
+  [ "${fixture_mounts["$STAGE_DIR/lower"]:-0}" -eq 1 ] || fail 'busy target lost its backing lower image'
+  fixture_block_detach=0
+  release_target_stage
+  [ "${#fixture_mounts[@]}" -eq 0 ] || fail 'stage image remained mounted after release'
+)
 
 # Capacity checks must count desired and retained rollback packages once, using
 # the target database for rollback metadata that may be absent from the host.
