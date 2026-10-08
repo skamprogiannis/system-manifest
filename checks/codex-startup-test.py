@@ -21,7 +21,7 @@ TIMEOUT = "Error: account/read failed during TUI bootstrap: account/read failed:
 
 
 class StartupTests(unittest.TestCase):
-    def exercise(self, mode, error=TIMEOUT, interrupt=None, fallback=False, unsafe_daemon=False):
+    def exercise(self, mode, error=TIMEOUT, interrupt=None, fallback=False, unsafe_daemon=False, ordinary=False):
         with tempfile.TemporaryDirectory(prefix="codex-startup-test-") as directory:
             root = Path(directory)
             fake = root / "native.py"
@@ -61,7 +61,7 @@ print('KEY:'+sys.stdin.readline().strip(),flush=True)
                 FIXTURE_ROOT=str(root),
                 FIXTURE_MODE=mode,
                 FIXTURE_ERROR=error,
-                CODEX_CLEF_ENABLED="1",
+                CODEX_CLEF_ENABLED="0" if ordinary else "1",
                 CODEX_CLEF_ROUTING_MODE="shadow",
                 CODEX_HOME=str(root / "codex"),
                 FIXTURE_FALLBACK=str(int(fallback)),
@@ -69,7 +69,8 @@ print('KEY:'+sys.stdin.readline().strip(),flush=True)
             )
             master, slave = pty.openpty()
             proc = subprocess.Popen(
-                [sys.executable, str(runner), str(SOURCE), str(fake)],
+                ([sys.executable, str(SOURCE / "launch.py"), sys.executable, str(SOURCE), str(fake), "--no-daemon", "task"]
+                 if ordinary else [sys.executable, str(runner), str(SOURCE), str(fake)]),
                 stdin=slave,
                 stdout=slave,
                 stderr=slave,
@@ -118,6 +119,25 @@ print('KEY:'+sys.stdin.readline().strip(),flush=True)
                     os.killpg(proc.pid, signal.SIGKILL)
                     proc.wait()
                 os.close(master)
+
+    def test_ordinary_launcher_recovers_exact_bootstrap_failure(self):
+        status, count, output, observed, _ = self.exercise("retry", ordinary=True)
+        self.assertEqual((status, count), (0, 3))
+        self.assertEqual(observed["args"], ["--no-daemon", "task"])
+        self.assertEqual(observed["enabled"], "0")
+        self.assertTrue(observed["stdin_tty"])
+        self.assertTrue(observed["stdout_tty"])
+        self.assertIn("KEY:hello", output)
+
+    def test_ordinary_launcher_does_not_restart_other_errors_or_completed_sessions(self):
+        for mode, error, sig, expected in (
+            ("other", "Error: permission denied", None, 1),
+            ("success", TIMEOUT, None, 0),
+            ("interrupt", TIMEOUT, signal.SIGTERM, 143),
+        ):
+            with self.subTest(mode=mode):
+                status, count, _, _, _ = self.exercise(mode, error, sig, ordinary=True)
+                self.assertEqual((status, count), (expected, 1))
 
     def test_exact_timeout_retries_twice_and_preserves_terminal_environment_arguments(
         self,
@@ -202,6 +222,43 @@ print('KEY:'+sys.stdin.readline().strip(),flush=True)
                 self.assertEqual((status, count), (expected, 1))
                 self.assertEqual(observed["enabled"], "1")
                 self.assertNotIn("ordinary Codex", output)
+
+
+class OrdinaryLaunchTests(unittest.TestCase):
+    def test_only_local_interactive_terminal_sessions_are_supervised(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("ordinary_launch", SOURCE / "launch.py")
+        launch = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(launch)
+        sys.path.insert(0, str(SOURCE))
+        from clef import startup
+        for arguments, tty, assisted, supervised in (
+            ([], True, False, True),
+            (["--no-daemon", "resume"], True, False, True),
+            (["--remote", "ws://example", "resume"], True, False, False),
+            (["doctor", "--json"], True, False, False),
+            (["exec", "task"], True, False, False),
+            (["--help"], True, False, False),
+            (["resume"], False, False, False),
+            (["resume"], True, True, False),
+        ):
+            with self.subTest(arguments=arguments, tty=tty, assisted=assisted):
+                with patch.object(sys, "argv", ["launch.py", "/native", str(SOURCE), *arguments]), \
+                     patch.object(sys.stdin, "isatty", return_value=tty), \
+                     patch.object(sys.stdout, "isatty", return_value=tty), \
+                     patch.object(sys.stderr, "isatty", return_value=tty), \
+                     patch.dict(os.environ, {"CODEX_CLEF_ENABLED": "1" if assisted else "0"}), \
+                     patch.object(startup, "launch_interactive", return_value=17) as recover, \
+                     patch.object(os, "execv") as execute:
+                    result = launch.main()
+                    if supervised:
+                        self.assertEqual(result, 17)
+                        recover.assert_called_once()
+                        self.assertEqual(recover.call_args.args[:2], ("/native", ["/native", *arguments]))
+                        execute.assert_not_called()
+                    else:
+                        execute.assert_called_once_with("/native", ["/native", *arguments])
+                        recover.assert_not_called()
 
 
 class StartupFailureTests(unittest.TestCase):

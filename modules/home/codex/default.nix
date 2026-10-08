@@ -66,7 +66,7 @@
         fi
       fi
 
-      exec ${codexUpstream}/bin/codex "$@"
+      exec ${pkgs.python3}/bin/python3 -B ${./launch.py} ${codexUpstream}/bin/codex ${./.} "$@"
       EOF
       chmod +x "$out/bin/codex"
     '';
