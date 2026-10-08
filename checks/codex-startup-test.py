@@ -225,6 +225,22 @@ print('KEY:'+sys.stdin.readline().strip(),flush=True)
 
 
 class OrdinaryLaunchTests(unittest.TestCase):
+    def test_terminfo_keeps_existing_profiles_custom_paths_and_default_search(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("ordinary_launch", SOURCE / "launch.py")
+        launch = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(launch)
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            installed = home / ".nix-profile/share/terminfo"
+            installed.mkdir(parents=True)
+            absent = home / ".local/state/nix/profile/share/terminfo"
+            custom = home / "custom missing terminfo"
+            raw = os.pathsep.join([str(installed), str(absent), str(custom), ""])
+            with patch.dict(os.environ, {"HOME": str(home), "TERMINFO_DIRS": raw}):
+                launch.normalize_terminfo_search()
+                self.assertEqual(os.environ["TERMINFO_DIRS"], os.pathsep.join([str(installed), str(custom), ""]))
+
     def test_only_local_interactive_terminal_sessions_are_supervised(self):
         import importlib.util
         spec = importlib.util.spec_from_file_location("ordinary_launch", SOURCE / "launch.py")
