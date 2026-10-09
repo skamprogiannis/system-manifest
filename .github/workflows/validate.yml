@@ -100,7 +100,7 @@ jobs:
         if: ${{ contains(fromJSON(needs.plan.outputs.plan).support, 'codex-clef') }}
         env:
           PYTHONDONTWRITEBYTECODE: '1'
-        run: python checks/codex-clef-test.py modules/home/codex checks/fixtures/codex-0.161.0
+        run: python checks/codex-clef-test.py modules/home/codex checks/fixtures/codex-0.162.0
       - name: Build selected lightweight unit checks
         if: ${{ !cancelled() && needs.plan.result == 'success' && toJSON(fromJSON(needs.plan.outputs.plan).units) != '[]' }}
         env:

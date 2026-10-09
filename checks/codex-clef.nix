@@ -69,7 +69,7 @@ in {
     assert config["plan_mode_reasoning_effort"] == "xhigh"
     PY
     python3 ${./codex-startup-test.py} ${../modules/home/codex}
-    python3 ${./codex-clef-test.py} ${../modules/home/codex} ${./fixtures/codex-0.161.0}
+    python3 ${./codex-clef-test.py} ${../modules/home/codex} ${./fixtures/codex-0.162.0}
     test ! -e ${clef}/bin/codex-clef
     ${clef}/bin/codex-auto status --json > "$TMPDIR/status.json"
     python3 - "$TMPDIR/status.json" <<'PY'
