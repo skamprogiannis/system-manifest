@@ -177,6 +177,8 @@ refresh_usb_mapper() {
 
 cleanup() {
   local status="${1:-$?}" mounts_clean=1 interrupted_phase="$CURRENT_PHASE" phase_status=failed
+  # EXIT can run inside copy_with_progress before its local callback unwinds.
+  local PROGRESS_CALLBACK=command_progress
   trap - EXIT
   trap '' HUP INT TERM
   if [ "$CANCELED" -eq 1 ]; then

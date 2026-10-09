@@ -155,6 +155,39 @@ for VERBOSE in 0 1; do
   done
 done
 
+# Cancellation exits while copy_with_progress locals are still in scope.
+# Exercise the real EXIT cleanup rather than unwinding the copy function first.
+cat >"$test_dir/cancel-copy.sh" <<'CANCEL_COPY'
+set -euo pipefail
+source "$1/phases.sh"
+source "$1/cleanup.sh"
+RUNTIME_DIR="$2/runtime"
+MOUNT_POINT="$RUNTIME_DIR/root"
+mkdir -p "$MOUNT_POINT" "$RUNTIME_DIR/tmp"
+UPDATE_USB_TMP_DIR="$RUNTIME_DIR/tmp"
+CURRENT_PHASE=copy
+CANCELED=0
+WORKSPACE_PREPARED=1
+CLOSE_MAPPER_ON_CLEANUP=0
+phase_begin() { :; }
+phase_end() { :; }
+finish_update_report() { :; }
+cleanup_mount_tree() { :; }
+cp() { kill -TERM "$supervisor"; sleep 30; }
+supervisor=$$
+trap 'cleanup "$?"' EXIT
+trap 'cancel_update TERM' TERM
+printf data > "$RUNTIME_DIR/source"
+copy_with_progress "$RUNTIME_DIR/source" "$MOUNT_POINT/target" 0 100 'Copying image'
+CANCEL_COPY
+status=0
+bash "$test_dir/cancel-copy.sh" "$source_dir" "$test_dir" >"$test_dir/cancel-copy" 2>&1 || status=$?
+[ "$status" -eq 143 ] || fail 'copy cleanup lost cancellation status'
+grep -q 'Unmounting target filesystems.*finished in' "$test_dir/cancel-copy" || fail 'copy cleanup lost completion'
+if grep -q 'Unmounting target filesystems.*%' "$test_dir/cancel-copy"; then
+  fail 'cleanup inherited copy progress from interrupted command'
+fi
+
 # shellcheck source=/dev/null
 . "$source_dir/telemetry.sh"
 # Completed phases in an interrupted run remain useful. Failed phases, corrupt
