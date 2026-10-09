@@ -101,6 +101,34 @@ status=0
 copy_with_progress "$test_dir/source" "$test_dir/missing/target" 0 99 'Failed copy' >"$test_dir/failed-copy" 2>&1 || status=$?
 [ "$status" -ne 0 ] || fail 'failed copy succeeded'
 
+# Include an aligned tail smaller than dd's 4 MiB block and an existing candidate.
+dd if=/dev/urandom of="$test_dir/direct-source" bs=4096 count=1025 status=none
+truncate -s 8M "$test_dir/direct-target"
+(
+  dd() {
+    [ "$(stat -c %s "$test_dir/direct-target")" -eq 0 ] || fail 'preallocation falsely reports a completed copy'
+    command dd "$@"
+  }
+  copy_usb_image_with_progress "$test_dir/direct-source" "$test_dir/direct-target"
+) >"$test_dir/direct-copy"
+cmp "$test_dir/direct-source" "$test_dir/direct-target" || fail 'direct image copy changed data or retained a stale tail'
+grep -q '100%.*copy finished' "$test_dir/direct-copy" || fail 'direct image copy lost completion'
+# Reject bad alignment before touching the destination.
+printf preserved >"$test_dir/direct-target"
+status=0
+copy_usb_image_with_progress "$test_dir/source" "$test_dir/direct-target" >"$test_dir/unaligned-copy" 2>&1 || status=$?
+[ "$status" -ne 0 ] || fail 'unaligned image copy succeeded'
+[ "$(cat "$test_dir/direct-target")" = preserved ] || fail 'invalid image overwrote destination'
+# Allocation failure must stop the writer, not fall back and hide storage errors.
+(
+  fallocate() { return 28; }
+  dd() { touch "$test_dir/unexpected-write"; }
+  status=0
+  copy_usb_image_with_progress "$test_dir/direct-source" "$test_dir/direct-target" >"$test_dir/allocation-failure" 2>&1 || status=$?
+  [ "$status" -eq 28 ] || fail 'image allocation failure status was lost'
+  [ ! -e "$test_dir/unexpected-write" ] || fail 'writer ran after allocation failed'
+)
+
 # Buffered file growth cannot predict durable transfer time. Completion is
 # separate from reaching the expected size because I/O may still be finishing.
 (

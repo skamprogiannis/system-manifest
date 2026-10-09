@@ -22,7 +22,7 @@ DEFAULT_MODE=prebuild
 MODE="$DEFAULT_MODE"
 FLAKE_DIR="$PWD"
 NIX_SHELL_PACKAGES=(squashfsTools cryptsetup util-linux coreutils findutils gnused gawk jq)
-REQUIRED_TOOLS=(nix nix-env nix-store nixos-install nixos-enter cryptsetup mount umount findmnt find rm du cut sort nproc mountpoint sed mktemp cp mv date chroot lsblk sleep sync stat cat tr tail flock mkdir chmod rmdir df realpath xargs sha256sum awk unshare env)
+REQUIRED_TOOLS=(dd fallocate nix nix-env nix-store nixos-install nixos-enter cryptsetup mount umount findmnt find rm du cut sort nproc mountpoint sed mktemp cp mv date chroot lsblk sleep sync stat cat tr tail flock mkdir chmod rmdir df realpath xargs sha256sum awk unshare env)
 UPDATE_USB_JQ="${UPDATE_USB_JQ:-jq}"
 FORCE_UPDATE=0
 VERBOSE=0
@@ -178,7 +178,7 @@ CANDIDATE_SQUASHFS="$MOUNT_POINT/nix-store.squashfs.tmp"
 METADATA_BYTES="$(du -s -B1 "$STAGE_STATE" | cut -f1)"
 if [ "$MODE" = prebuild ]; then
   require_free_space "$MOUNT_POINT" "$(( $(stat -c %s "$LOCAL_SQUASHFS") + METADATA_BYTES + 16777216 ))" 'replacement image and Nix metadata'
-  copy_with_progress "$LOCAL_SQUASHFS" "$CANDIDATE_SQUASHFS" 0 100 'Copying replacement image to USB'
+  copy_usb_image_with_progress "$LOCAL_SQUASHFS" "$CANDIDATE_SQUASHFS"
 else
   require_free_space "$MOUNT_POINT" "$((METADATA_BYTES + 16777216))" 'replacement Nix metadata'
   mv -T "$LOCAL_SQUASHFS" "$CANDIDATE_SQUASHFS"

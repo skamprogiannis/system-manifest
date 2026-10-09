@@ -191,6 +191,29 @@ copy_with_progress() {
   run_with_progress "$description" cp -- "$source" "$target"
 }
 
+write_usb_image() {
+  local source="$1" target="$2" bytes="$3"
+  # mksquashfs pads its output to 4 KiB; direct I/O also needs aligned writes.
+  if [ "$bytes" -le 0 ] || [ "$((bytes % 4096))" -ne 0 ]; then
+    echo 'Error: USB squashfs image must be nonempty and 4 KiB aligned.' >&2
+    return 1
+  fi
+  : > "$target" || return
+  # Reserve extents without growing the visible length used by copy progress.
+  fallocate --keep-size --length "$bytes" "$target" || return
+  # Keep the reservation and avoid accumulating a large dirty-page backlog.
+  # fdatasync must finish before the copy worker reports success.
+  dd if="$source" of="$target" bs=4M iflag=fullblock oflag=direct \
+    conv=notrunc,fdatasync status=none
+}
+
+copy_usb_image_with_progress() {
+  local source="$1" target="$2"
+  local PROGRESS_CALLBACK=copy_progress PROGRESS_COPY_TARGET="$target" PROGRESS_COPY_BYTES
+  PROGRESS_COPY_BYTES="$(stat -c '%s' "$source")" || return
+  run_with_progress 'Copying replacement image to USB' write_usb_image "$source" "$target" "$PROGRESS_COPY_BYTES"
+}
+
 phase_storage_context() {
   local lower=none
   # Preparation may choose either lower image source; it has no comparable ETA.

@@ -151,7 +151,7 @@ fixture_tests() {
   if mountpoint -q "$STAGE_DIR/lower" || mountpoint -q "$STAGE_STORE"; then fail "Stage mounts survived candidate verification"; fi
   [ "$(target_metadata_hash)" = "$original_metadata_hash" ] || fail "Staging changed published Nix metadata"
 
-  cp "$STAGE_DIR/candidate.squashfs" "$MOUNT_POINT/nix-store.squashfs.tmp"
+  copy_usb_image_with_progress "$STAGE_DIR/candidate.squashfs" "$MOUNT_POINT/nix-store.squashfs.tmp"
   IMAGE_SHA256=$(sha256sum "$MOUNT_POINT/nix-store.squashfs.tmp" | cut -d' ' -f1)
   available=$(df -B1 --output=avail "$MOUNT_POINT" | tail -n1 | tr -d ' ')
   fallocate -l "$((available - 8388608))" "$MOUNT_POINT/space-pressure"
@@ -166,7 +166,7 @@ fixture_tests() {
   [ "$(sha256sum "$MOUNT_POINT/nix-store.squashfs" | cut -d' ' -f1)" = "$original_image_hash" ] || fail "Corrupt candidate replaced current image"
   [ "$(target_metadata_hash)" = "$original_metadata_hash" ] || fail "Corrupt candidate replaced metadata"
   [ ! -e "$MOUNT_POINT/.update-usb-transaction" ] || fail "Rejected candidate blocks a fresh retry"
-  cp "$STAGE_DIR/candidate.squashfs" "$MOUNT_POINT/nix-store.squashfs.tmp"
+  copy_usb_image_with_progress "$STAGE_DIR/candidate.squashfs" "$MOUNT_POINT/nix-store.squashfs.tmp"
   prepare_usb_transaction "$MOUNT_POINT/nix-store.squashfs.tmp" "$STAGE_STATE"
 
   # Boot installation is covered with real NixOS generations below. Tiny
@@ -221,7 +221,7 @@ initial_install() {
   compress_store "$STAGE_STORE" "$STAGE_DIR/candidate.squashfs"
   verify_image_closures "$STAGE_DIR/candidate.squashfs"
   release_target_stage
-  cp "$STAGE_DIR/candidate.squashfs" "$MOUNT_POINT/nix-store.squashfs.tmp"
+  copy_usb_image_with_progress "$STAGE_DIR/candidate.squashfs" "$MOUNT_POINT/nix-store.squashfs.tmp"
   sync -f "$MOUNT_POINT/nix-store.squashfs.tmp"
   IMAGE_SHA256=$(sha256sum "$MOUNT_POINT/nix-store.squashfs.tmp" | cut -d' ' -f1)
   prepare_usb_transaction "$MOUNT_POINT/nix-store.squashfs.tmp" "$STAGE_STATE"
@@ -251,7 +251,7 @@ prepare_update() {
   release_target_stage
   if mountpoint -q "$STAGE_DIR/lower"; then fail "Published image is still mounted as a staging lower"; fi
   [ "$(profile_store_target "$MOUNT_POINT/nix/var/nix/profiles/system")" = "$OLD_SYSTEM" ] || fail "Prepared update changed the published profile"
-  cp "$STAGE_DIR/candidate.squashfs" "$MOUNT_POINT/nix-store.squashfs.tmp"
+  copy_usb_image_with_progress "$STAGE_DIR/candidate.squashfs" "$MOUNT_POINT/nix-store.squashfs.tmp"
   sync -f "$MOUNT_POINT/nix-store.squashfs.tmp"
   IMAGE_SHA256=$(sha256sum "$MOUNT_POINT/nix-store.squashfs.tmp" | cut -d' ' -f1)
   prepare_usb_transaction "$MOUNT_POINT/nix-store.squashfs.tmp" "$STAGE_STATE"
