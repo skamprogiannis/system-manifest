@@ -89,7 +89,8 @@ in {
   systemd.user.services.wallpaper-sync = {
     Unit = {
       Description = "Sync the applied wallpaper and palette to DMS and the greeter";
-      After = ["skwd-walld.service" "dms.service"];
+      # Explicit target ordering avoids the target implicitly waiting for us.
+      After = ["hyprland-session.target" "skwd-walld.service" "dms.service"];
       Wants = ["skwd-walld.service" "dms.service"];
       PartOf = ["hyprland-session.target"];
     };
