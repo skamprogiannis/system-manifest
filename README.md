@@ -35,7 +35,7 @@ Hyprland and its portal use Nixpkgs packages. Treesitter uses the editor Nixpkgs
 | Input | Source | Why |
 |-------|--------|-----|
 | `catppuccin` | `github:catppuccin/nix` | Shared static Mocha palette for supported Home Manager applications |
-| `ghostty` | `github:ghostty-org/ghostty` | Tracks upstream development for terminal features; keeps its own Nixpkgs revision for `ghostty.cachix.org` cache compatibility |
+| `ghostty` | `github:ghostty-org/ghostty` | Tracks upstream development for terminal features; follows system Nixpkgs so its graphics libraries remain compatible with the host Mesa driver |
 | `home-manager` | `github:nix-community/home-manager` | Tracks nixpkgs-unstable |
 | `neovim-nixpkgs` | `github:nixos/nixpkgs/nixos-unstable` | Editor and plugin packages can be refreshed independently of desktop packages |
 | `nixvim` | `github:nix-community/nixvim` | Full Neovim config in Nix |

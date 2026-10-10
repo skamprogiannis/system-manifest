@@ -75,8 +75,8 @@
 
     ghostty = {
       url = "github:ghostty-org/ghostty";
-      # Intentionally NOT following nixpkgs so ghostty uses its own pinned rev,
-      # matching what ghostty.cachix.org was built against for cache hits.
+      # Ghostty loads the host Mesa driver, so its libc must match the system.
+      inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
