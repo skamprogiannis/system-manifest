@@ -1,4 +1,8 @@
-{pkgs, ...}: let
+{
+  pkgs,
+  utils,
+  ...
+}: let
   userName = "stefan";
   userGroup = "users";
   userHome = "/home/${userName}";
@@ -566,14 +570,14 @@ in {
   # through umount.target so the shutdown-ramfs hook can close the scratch
   # mapper between unmounting the scratch filesystem and its host backing.
   systemd.units = {
-    "nix-.host-scratch.mount" = {
+    "${utils.escapeSystemdPath hostScratchMount}.mount" = {
       overrideStrategy = "asDropin";
       text = ''
         [Unit]
         DefaultDependencies=no
       '';
     };
-    "nix-.host-store.mount" = {
+    "${utils.escapeSystemdPath hostStoreMount}.mount" = {
       overrideStrategy = "asDropin";
       text = ''
         [Unit]
