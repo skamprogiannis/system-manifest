@@ -10,6 +10,7 @@
     ./hardware-configuration.nix
     ./dms-greeter.nix
     ./gpu-screen-recorder.nix
+    ./local-ai-search.nix
   ];
 
   networking.hostName = "desktop";
