@@ -1,4 +1,4 @@
-{pkgs, ...}: {
+{pkgs, lib, ...}: {
   services.open-webui = {
     enable = true;
     host = "127.0.0.1";
@@ -32,6 +32,10 @@
       };
     };
   };
+
+  # Leave both services installed but start them only through ai-search.
+  systemd.services.open-webui.wantedBy = lib.mkForce [];
+  systemd.services.searx.wantedBy = lib.mkForce [];
 
   # Keep the secret out of the world-readable Nix store.
   systemd.services.searx-secret = {

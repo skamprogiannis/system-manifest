@@ -5,6 +5,7 @@
   imports = [
     ../../home.nix
     ../../modules/home/dms/desktop.nix
+    ../../modules/home/scripts/ai-search.nix
     ../../modules/home/scripts/usb.nix
     ../../modules/home/bannerlord
     ../../modules/home/desktop-dictation

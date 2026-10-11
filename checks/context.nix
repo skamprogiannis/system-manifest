@@ -24,6 +24,7 @@
       })
       commands);
   desktopScriptArtifacts = scriptArtifacts "desktop" {
+    ai-search = "ai-search";
     codex = "codex-cli-wrapped";
     codex-state-sync = "codex-state-sync";
     gsr-record = "gsr-record";
@@ -169,6 +170,7 @@
       "${homePackage "desktop" "bannerlord-codex"}/bin/bannerlord-codex"
     ]
     ++ [
+      "${homePackage "desktop" "ai-search"}/bin/ai-search"
       "${homePackage "desktop" "codex-state-sync"}/bin/codex-state-sync"
       "${homePackage "desktop" "gsr-record"}/bin/gsr-record"
       "${homePackage "desktop" "hypr-quit-active"}/bin/hypr-quit-active"

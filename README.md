@@ -22,7 +22,7 @@ Managed via **Nix Flakes** and **Home Manager**.
   - **Brave + Vimium C:** Declarative browser setup with preseeded extension settings and portable keymaps.
 - **Vesktop:** Discord client with declarative Translucence theming and QuickCSS customization.
 - **Dev Ready:** Pre-configured environment for Node.js, Python, Go, Playwright, and Neovim (via nixvim), plus Clang build essentials. Neovim is also registered as the default text editor via an `nvim-text` desktop entry. Its LSP hover uses [md-render.nvim](https://github.com/delphinus/md-render.nvim) for compact Markdown and navigable links.
-- **Local AI web search (desktop):** Ollama-backed Open WebUI and SearXNG provide a loopback-only chat and web-research interface without Docker. Search results are fetched from external engines, while inference stays local.
+- **Local AI web search (desktop):** On-demand, Ollama-backed Open WebUI and SearXNG provide a loopback-only chat and web-research interface without Docker. Search results come from external engines, while inference stays local.
 - **AI Integrated:** Built-in configuration for **Codex CLI** with per-repo `AGENTS.md` instructions, global defaults in `~/.codex/AGENTS.md`, custom agents in `~/.codex/agents`, Linear/Context7/Etsy/OpenAI Docs MCP servers, and curated skills for visualization, browser automation, security analysis, frontend work, review, diagnosis, TDD, design, prototyping, and concise response modes. Native agent defaults support bounded Luna workers, Sol implementation/review and selective Astra escalation. Opt-in Cloudflare Clef observes a 20-assignment shadow trial with metadata-only logs. Codex uses native auto-review for approval requests.
   Linear MCP auth is local per machine; after first enabling a host, run `codex mcp login linear` once if Codex reports that Linear is not logged in. Context7 uses a local API key from `~/.config/context7/api-key` when present.
 - **Modular Architecture:** Configuration split across `hosts/` (system-level) and `modules/home/` (user-level) for maintainability.
@@ -31,9 +31,17 @@ Managed via **Nix Flakes** and **Home Manager**.
 
 ### Local AI Web Search (desktop)
 
-After `sudo nixos-rebuild switch --flake .#desktop`, open `http://127.0.0.1:8080`, create the initial administrator account, select an installed Ollama model, and enable Web Search in a chat. SearXNG runs at `http://127.0.0.1:8888` with JSON responses enabled. Neither service opens a firewall port or listens beyond localhost.
+Open WebUI and SearXNG are installed but **do not start at boot**. Ollama keeps its existing system service behavior. After `sudo nixos-rebuild switch --flake .#desktop`, manage both search services with:
 
-The SearXNG key is created once at `/var/lib/searx-local/secret.env` outside the Nix store. Inspect service health with `systemctl status ollama open-webui searx searx-init` and test the search API using `curl 'http://127.0.0.1:8888/search?q=nixos&format=json'`. Open WebUI stores administrative settings, so changes made in its admin panel can override the initial environment defaults.
+```bash
+ai-search start    # Start SearXNG, then Open WebUI (prompts for sudo)
+ai-search status   # Report whether both services are running
+ai-search stop     # Stop both services (prompts for sudo)
+```
+
+Open `http://127.0.0.1:8080` after starting the services, create the initial administrator account, select an installed Ollama model, and enable Web Search in a chat. SearXNG listens at `http://127.0.0.1:8888` with JSON responses enabled. Neither service opens a firewall port or listens beyond localhost.
+
+If upgrading from the earlier always-on configuration, run `ai-search stop` after the first rebuild to stop any services that were already running. The SearXNG secret persists at `/var/lib/searx-local/secret.env` outside the Nix store. Troubleshoot with `systemctl status open-webui searx searx-init` and `curl 'http://127.0.0.1:8888/search?q=nixos&format=json'` while the services are running. Open WebUI stores administrative settings, so its admin panel can override the initial environment defaults.
 
 ## Flake Inputs
 
@@ -84,6 +92,7 @@ Hyprland and its portal use Nixpkgs packages. Treesitter uses the editor Nixpkgs
 | `screenshot-path-copy` | Wraps `dms screenshot` to copy the saved file path to clipboard (instead of image) |
 | `hypr-quit-active` | Force-quits the active app process when a client minimizes to tray instead of exiting |
 | `gsr-record` | Emergency stop helper for active GPU Screen Recorder captures; `stop` finalizes recordings and clears stale runtime state |
+| `ai-search` | Manually starts, stops, and reports the status of the desktop Open WebUI and SearXNG services |
 | `torrent` | Manages the local Transmission daemon with readable `gui`, `list`, `add`, `start`, `stop`, `remove`, and guarded `delete --yes` commands |
 | `transmission-port-sync` | Syncs Transmission's configured peer port (for example after a VPN-forwarded port change) |
 | `codex-auto` | Assisted Codex launch, local health/usage with `status`, and advanced `clef` operations |
