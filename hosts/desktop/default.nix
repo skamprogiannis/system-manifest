@@ -139,11 +139,11 @@
       OLLAMA_CONTEXT_LENGTH = "65536";
     };
     loadModels = [
-      "gemma3:4b"
-      "huihui_ai/qwen2.5-abliterate:3b-instruct"
-      "qwen3:8b"
-      "qwen3-coder:30b"
+      "huihui_ai/qwen2.5-abliterate:7b"
+      "huihui_ai/qwen3.5-abliterated:9b"
     ];
+    # Uninstall all Ollama models not declared above.
+    syncModels = true;
   };
 
   # Gaming

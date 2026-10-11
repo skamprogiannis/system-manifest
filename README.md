@@ -31,6 +31,8 @@ Managed via **Nix Flakes** and **Home Manager**.
 
 ### Local AI Web Search (desktop)
 
+The desktop's Ollama model inventory is declared in `hosts/desktop/default.nix`: `huihui_ai/qwen3.5-abliterated:9b` (primary, tool-capable research and vision) and `huihui_ai/qwen2.5-abliterate:7b` (lighter non-thinking alternative). `services.ollama.syncModels = true` makes this authoritative: on model-loader runs, **all undeclared Ollama models are removed**, including those downloaded manually, and the declared models are pulled. This removes the earlier Gemma 3, Qwen2.5 3B, Qwen3 8B, and Qwen3-Coder 30B models. Downloads require network access and may continue after a rebuild. The existing server-wide 65K context setting is unchanged; use a smaller per-model context in Open WebUI when VRAM is constrained.
+
 Open WebUI and SearXNG are installed but **do not start at boot**. Ollama keeps its existing system service behavior. After `sudo nixos-rebuild switch --flake .#desktop`, manage both search services with:
 
 ```bash
