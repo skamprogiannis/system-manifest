@@ -33,9 +33,8 @@
     };
   };
 
-  # Leave both services installed but start them only through ai-search.
+  # SearXNG is always available; Open WebUI is started on demand.
   systemd.services.open-webui.wantedBy = lib.mkForce [];
-  systemd.services.searx.wantedBy = lib.mkForce [];
 
   # Keep the secret out of the world-readable Nix store.
   systemd.services.searx-secret = {
@@ -61,7 +60,24 @@
   };
 
   systemd.services.open-webui = {
-    wants = ["ollama.service" "searx.service"];
-    after = ["ollama.service" "searx.service"];
+    wants = ["ollama.service"];
+    after = ["ollama.service"];
   };
+
+  # Authorize only the active local desktop user to start or stop these units.
+  security.polkit.extraConfig = ''
+    polkit.addRule(function(action, subject) {
+      if (action.id !== "org.freedesktop.systemd1.manage-units" ||
+          subject.user !== "stefan" || !subject.local || !subject.active) {
+        return;
+      }
+
+      var unit = action.lookup("unit");
+      var verb = action.lookup("verb");
+      if ((unit === "open-webui.service" || unit === "searx.service") &&
+          (verb === "start" || verb === "stop")) {
+        return polkit.Result.YES;
+      }
+    });
+  '';
 }

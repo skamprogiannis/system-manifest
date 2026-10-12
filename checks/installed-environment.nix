@@ -63,6 +63,9 @@
         assert_file_contains "$profile/share/applications/com.brave.Browser.desktop" 'Exec=brave %U'
         assert_file_contains "$profile/share/applications/transmission.desktop" 'Exec=torrent gui'
         assert_file_contains "$profile/share/applications/torrent-add.desktop" 'Exec=torrent add %U'
+        assert_file_contains "$profile/share/applications/open-webui.desktop" 'Exec=ai-search launch'
+        test -x "$profile/bin/ai-search"
+        test -x "$profile/bin/searxngctl"
           ${pkgs.lib.optionalString ctx.desktopBannerlordEnabled ''
           shellcheck -S warning \
             ${homePackage "desktop" "bannerlord-speech-runtime"}/bin/bannerlord-speech \

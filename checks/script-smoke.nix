@@ -129,6 +129,17 @@ in {
         fi
       }
 
+      run_expect 0 ai-search-help "$desktop_home/bin/ai-search" --help
+      assert_log_contains 'Usage: ai-search {start|stop|status|launch}'
+      run_expect 2 ai-search-invalid "$desktop_home/bin/ai-search" invalid
+      run_expect 0 searxngctl-help "$desktop_home/bin/searxngctl" --help
+      assert_log_contains 'Usage: searxngctl {start|stop|status}'
+      run_expect 2 searxngctl-invalid "$desktop_home/bin/searxngctl" invalid
+      assert_file_contains "$desktop_home/bin/ai-search" 'start open-webui.service' "Expected independent Open WebUI start."
+      assert_not_file_contains "$desktop_home/bin/ai-search" 'searx.service' "Open WebUI must not manage SearXNG."
+      assert_file_contains "$desktop_home/bin/searxngctl" 'start searx.service' "Expected standalone SearXNG controls."
+      assert_not_file_contains "$desktop_home/bin/searxngctl" 'open-webui.service' "SearXNG must not manage Open WebUI."
+
       assert_file_contains "$desktop_home/bin/codex-state-sync" 'MOUNT_PARENT="/run/codex-state-sync"' "Expected Codex state sync to use an ephemeral runtime mountpoint."
       assert_file_contains "$desktop_home/bin/codex-state-sync" 'MOUNT="$MOUNT_PARENT/root"' "Expected Codex state sync to keep its mount beneath the owned runtime directory."
       assert_not_file_contains "$desktop_home/bin/codex-state-sync" 'MOUNT="/mnt/usb-sync"' "Expected Codex state sync not to leave a persistent /mnt mountpoint."
