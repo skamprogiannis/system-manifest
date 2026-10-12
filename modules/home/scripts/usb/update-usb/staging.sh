@@ -135,7 +135,13 @@ prepare_target_stage() {
       run_with_progress 'Expanding previous image on USB' unsquashfs -f -d "$STAGE_STORE" "$MOUNT_POINT/nix-store.squashfs" || return 1
     fi
   fi
-  bind_target_stage
+  bind_target_stage || return 1
+  if [ "$PRESERVE_PREVIOUS_GENERATION" -eq 1 ]; then
+    # Published metadata can register packages absent from the previous image.
+    # Reconcile only the private copy so installation recopies missing paths.
+    run_with_progress 'Reconciling staged Nix metadata' \
+      nix-store --store "$MOUNT_POINT" --verify || return 1
+  fi
 }
 
 cache_previous_image_if_room() {

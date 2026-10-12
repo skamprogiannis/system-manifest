@@ -84,9 +84,13 @@
       chmod +x "$out/init"
       printf '%s\n' '${shared}' '${extra}' '${name}' > "$out/references"
     '';
+  newDependency = pkgs.runCommand "usb-update-new-dependency" {} ''
+    mkdir -p "$out"
+    printf 'New generation dependency\n' > "$out/payload"
+  '';
   oldestFixture = fixture "oldest" obsolete;
   oldFixture = fixture "old" "";
-  newFixture = fixture "new" "";
+  newFixture = fixture "new" newDependency;
   integrationSources = pkgs.linkFarm "usb-update-integration-sources" (
     map (name: {
       inherit name;
@@ -100,6 +104,7 @@
     export NEW_SYSTEM=${newSystem}
     export FIXTURE_SHARED=${shared}
     export FIXTURE_OBSOLETE=${obsolete}
+    export FIXTURE_NEW_DEPENDENCY=${newDependency}
     export FIXTURE_OLDEST=${oldestFixture}
     export FIXTURE_OLD=${oldFixture}
     export FIXTURE_NEW=${newFixture}

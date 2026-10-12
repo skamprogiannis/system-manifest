@@ -95,6 +95,7 @@ fi
   fixture_lower_source=""
   fixture_copy_count=0
   fixture_block_detach=0
+  nix-store() { :; }
   run_with_progress() { shift; "$@"; }
   stat() {
     if [ "$*" = "-c %s $MOUNT_POINT/nix-store.squashfs" ]; then

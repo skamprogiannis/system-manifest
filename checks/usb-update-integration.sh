@@ -64,9 +64,34 @@ target_metadata_hash() {
     sort -z | xargs -0 sha256sum | sha256sum | cut -d' ' -f1
 }
 
+missing_retained_dependency_test() (
+  local fixture_root original_image_hash original_metadata_hash
+  fixture_root=$(mktemp -d /var/tmp/usb-update-missing-retained.XXXXXX)
+  MOUNT_POINT="$fixture_root/target"
+  STAGE_DIR="$fixture_root/stage"
+  mkdir -p "$MOUNT_POINT"
+  set_profile "$MOUNT_POINT" "$FIXTURE_OLD"
+  # Keep a valid referrer and its database entry while omitting its dependency.
+  rm -rf -- "$MOUNT_POINT$FIXTURE_SHARED"
+  compress_store "$MOUNT_POINT/nix/store" "$MOUNT_POINT/nix-store.squashfs"
+  original_image_hash=$(sha256sum "$MOUNT_POINT/nix-store.squashfs" | cut -d' ' -f1)
+  original_metadata_hash=$(target_metadata_hash)
+  find "$MOUNT_POINT/nix/store" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
+
+  prepare_generation_state
+  [ "$PRESERVE_PREVIOUS_GENERATION" = 1 ] || fail "Fixture lost its previous system root"
+  prepare_stage_directory
+  expect_failure prepare_target_stage
+  release_target_stage
+  [ "$(sha256sum "$MOUNT_POINT/nix-store.squashfs" | cut -d' ' -f1)" = "$original_image_hash" ] || fail "Rejected staging changed the published image"
+  [ "$(target_metadata_hash)" = "$original_metadata_hash" ] || fail "Rejected staging changed published metadata"
+  rm -rf -- "$fixture_root"
+)
+
 fixture_tests() {
   local fixture_root original_image_hash original_shared_hash original_metadata_hash
   local generation_count available capacity_output closure_bytes expected_capacity
+  missing_retained_dependency_test
   fixture_root=$(mktemp -d /var/tmp/usb-update-fixtures.XXXXXX)
   MOUNT_POINT="$fixture_root/target"
   STAGE_DIR="$fixture_root/stage"
@@ -93,6 +118,9 @@ fixture_tests() {
   compress_store "$MOUNT_POINT/nix/store" "$MOUNT_POINT/nix-store.squashfs"
   original_image_hash=$(sha256sum "$MOUNT_POINT/nix-store.squashfs" | cut -d' ' -f1)
   original_shared_hash=$(sha256sum "$FIXTURE_SHARED/payload" | cut -d' ' -f1)
+  # Match a published image with later metadata for an absent future dependency.
+  nix copy --no-check-sigs --to "$MOUNT_POINT" "$FIXTURE_NEW_DEPENDENCY"
+  nix-store --store "$MOUNT_POINT" --check-validity "$FIXTURE_NEW_DEPENDENCY"
   original_metadata_hash=$(target_metadata_hash)
   find "$MOUNT_POINT/nix/store" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
 
@@ -104,6 +132,7 @@ fixture_tests() {
   [ "$(findmnt -n -o FSTYPE --mountpoint "$STAGE_STORE")" = overlay ] || fail "Staging did not use OverlayFS"
   [ ! -e "$STAGE_DIR/base.squashfs" ] || fail "Preflight copied the previous image before checking capacity"
   set_profile "$MOUNT_POINT" "$FIXTURE_NEW"
+  cmp "$FIXTURE_NEW_DEPENDENCY/payload" "$STAGE_STORE/${FIXTURE_NEW_DEPENDENCY#/nix/store/}/payload" || fail "Stale registration prevented copying the new dependency"
   TARGET_SYSTEM_TOPLEVEL="$FIXTURE_NEW"
   TARGET_INIT_RELATIVE="${FIXTURE_NEW#/nix/store/}/init"
   TARGET_CONFIG_REVISION=fixture-new
