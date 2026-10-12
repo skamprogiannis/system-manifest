@@ -1,143 +1,34 @@
-# Agents & Workflows
+# Agents and Workflows
 
-## Useful Commands
+This file contains the default repository-wide rules. Read the relevant reference before changing a subsystem: [maintainer notes](docs/maintainers.md), [desktop/system](docs/system.md), [USB](docs/usb.md), [CI](docs/ci.md), or [Codex/Clef](modules/home/codex/CLEF.md).
 
-- **Dry Run Build:** `nixos-rebuild dry-build --flake .#desktop` (Use `.#usb` for the portable image and `.#laptop` for the laptop profile.)
-- **Check Configuration:** `nixos-rebuild test --flake .#desktop` (Builds and activates, but doesn't add to bootloader - good for temporary testing.)
-- **Flake Check:** `nix flake check` (This is the standard Nix flake command. In this repo it runs the host and support checks defined by the Check registry in `checks/registry.nix`.)
-- **List Generations:** `nixos-rebuild list-generations`
-- **Garbage Collect:** `nix-store --gc` (Deletes unreferenced store paths while preserving retained generations. Deleting generations is a separate step.)
+## Git and code changes
 
-## Agent Tips
+- Worktree-first repository: `~/system-manifest/main` is the main worktree; the bare git directory is `~/system-manifest/.bare`. Never edit `.bare`. Run commands from the intended worktree.
+- Use atomic **Conventional Commits** (`type(scope): summary`). Squash local fix-on-fix iterations before pushing. Commit before deploying so generation revisions remain traceable.
+- Keep system Git in `hosts/common/default.nix` so flakes work. Prefer Home Manager for non-bootstrap applications and put larger modules under `modules/`.
+- Keep comments about behavior and intent; remove dead/commented-out code. Update the README for durable user-facing changes, and keep implementation detail in the relevant guide.
+- Repository-wide Codex instructions live in `modules/home/codex/instructions.md` and are synchronized by Home Manager; `AGENTS.md` here is for repository contributors.
+- Preserve `system.configurationRevision = inputs.self.rev or inputs.self.dirtyRev or null;` in `hosts/common/default.nix`.
 
-- **Session Info:** `/session` command.
-- **Git & Gens:** Keep git commits atomic and descriptive.
-- **Commit Format:** Use **Conventional Commits** (`type(scope): message`).
-  - Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`.
-  - Scopes: `desktop`, `usb`, `laptop`, `common`, `home`, `system`, or specific module names.
-  - Example: `feat(desktop): enable steam and gamemode`
-  - Example: `fix(usb): correct luks mounting path`
-- **Worktree-First Git:** `/home/stefan/system-manifest` is the repo container; the bare Git dir lives at `/home/stefan/system-manifest/.bare`. Do not edit anything inside `.bare`.
-  - Main worktree: `/home/stefan/system-manifest/main`
-  - Create a feature worktree: `git --git-dir=/home/stefan/system-manifest/.bare worktree add /home/stefan/system-manifest/<dir> -b <branch> main`
-  - Keep worktree directories as sanitized direct children (for example `usb-fix`), even when the branch name contains slashes such as `feature/usb-fix`
-  - List active worktrees: `git --git-dir=/home/stefan/system-manifest/.bare worktree list`
-  - Remove merged worktree: `git --git-dir=/home/stefan/system-manifest/.bare worktree remove /home/stefan/system-manifest/<dir>` and then `git --git-dir=/home/stefan/system-manifest/.bare branch -d <branch>`
-  - Run all editing/build/git commands from the intended worktree path.
-- **System Git:** Ensure `git` stays in `hosts/common/default.nix` under `environment.systemPackages` (required for Flakes).
-- **Codex Instruction Source:** Repository-wide Codex defaults are edited in `modules/home/codex/instructions.md`, which is synced to `~/.codex/AGENTS.md` via Home Manager when you run `nixos-rebuild switch`.
-- **Codex Upgrades:** Update the shared version in `modules/home/codex/version.txt` and the release hash in `modules/home/codex/default.nix`. The Bannerlord adapter must use that same version: keep its packaged preflight expectation, tests, and README consistent on every Codex upgrade. Run the `bannerlord-codex` and `script-smoke` checks before deployment; do not leave a separate stale version pin in the adapter.
-- **Codex Package Layout:** Preserve the upstream release package, including `codex-package.json`, `bin/codex`, `bin/codex-code-mode-host`, `codex-path/rg`, and `codex-resources/bwrap`. Keep the direnv wrapper outside that package and execute its absolute `bin/codex` path. Verify actual daemon start, managed-package copy, version, and stop in isolated test state; `--version` and `exec` alone do not test interactive daemon startup.
-- **Squash Fix Chains:** If you need multiple attempts to fix something, squash them into a single commit before pushing (`git rebase -i` or `git commit --amend`). Avoid pushing fix→fix→fix chains that clutter history.
+## Validation and deployment
 
-- **Git Hygiene:** Always commit before `nixos-rebuild switch` so `nixos-rebuild list-generations` records a clean configuration revision for rollback and history tracking.
-- **README Updates:** Update `README.md` with significant durable changes. Keep it high-level: document capabilities, workflows, and entrypoints, not transient UI behavior or implementation trivia.
-- **Autonomy:** You are authorized to run `sudo nixos-rebuild switch --flake` autonomously when requested or implied by the workflow (e.g., "rebuild").
-- **Revision Tracking:** Keep `system.configurationRevision = inputs.self.rev or inputs.self.dirtyRev or null;` in `hosts/common/default.nix` so `nixos-rebuild list-generations` shows the commit hash.
-- **Dry Run:** Always use `nixos-rebuild dry-build` before asking the user to build, especially for complex derivations.
-- **Codex Sandbox Nix:** If a Nix command fails inside Codex with `fetcher-cache-v*.sqlite` / `eval-cache-v*.sqlite` access errors or `cannot connect to socket at '/nix/var/nix/daemon-socket/socket': Operation not permitted`, treat it as sandboxing and rerun the same command with escalation instead of changing Nix config.
-- **AppImages:** When wrapping AppImages with `appimageTools`, ensure common libraries like `webkitgtk`, `gtk4`, `libadwaita`, `graphene`, and `libsoup_3` are included in `extraPkgs` if the app has a GUI. Also include `gnome-themes-extra` and `gtk3` if theme errors occur.
-- **Pear Runtime**: Apps like PearPass may take several minutes to load on the first run due to P2P network discovery.
-- **Program Organization**: Organize `home.packages` in `home.nix` using clear comments for categories:
-  - `GUI`: Desktop applications (Discord, Obsidian, etc.)
-  - `CLI / Tools`: Command-line utilities and development tools.
-  - `Disk Utilities`: Partitioning and file system tools.
-  - `Fonts`: Icons and system fonts.
-  - Keep each list alphabetical within its category for readability.
-- **System Packages**: Only put essential bootstrap tools (like `git` if required by flakes for non-home-manager operations) in `hosts/common/default.nix`. Prefer `home.packages` for most user software.
-- **Code Organization**: Modularize configurations into `modules/` (e.g., `modules/git.nix`, `modules/hyprland.nix`) to keep `home.nix` clean.
-- **Comments**: Keep comments focused on "why" or "what" (e.g., "# Wrapper for native messaging"). Do NOT add meta-comments about your actions (e.g., "# I added this because user asked").
-- **No Commented-Out Code**: Do not leave commented-out code blocks. Use git history if you need to revert or reference old code.
+- Run `nix flake check` and the appropriate `nixos-rebuild dry-build --flake .#<host>` for configuration changes. Reproduce bugs where practical before fixing them.
+- Before reporting a desktop configuration change complete, run `nixos-rebuild dry-build --flake .#desktop`; resolve failures. For docs-only changes, review source accuracy and links.
+- Deployment remains manual: `sudo nixos-rebuild switch --flake .#desktop` / `.#laptop`, or `sudo update-usb ~/system-manifest/main`. Run from the correct worktree.
+- CI uses `checks/registry.nix`; keep check coverage and ownership aligned. Register shell entrypoints in `checks/context.nix`. CI success does not establish GPU, display, or USB hardware behavior.
+- For changes to USB storage, staging, recovery, or synchronization, **read [docs/usb.md](docs/usb.md)** and test on a real USB boot before declaring runtime correctness.
+- For wallpapers, greeter, blur, or keybindings, **read [docs/system.md](docs/system.md#desktop-maintenance)** and [DESIGN.md](DESIGN.md) before editing. Preserve their ownership boundaries.
+- For Codex packages/agents, follow [docs/maintainers.md](docs/maintainers.md) and the [Clef guide](modules/home/codex/CLEF.md). Keep shared version pins and adapter checks in sync.
 
-- **Rebuild Delegation:** When delegation is explicitly authorized or the session uses `codex-auto`, a bounded subagent may handle long rebuild validation. Plain `codex` handles it in the main session unless the user asks for delegation.
-- **Bug Reporting:** Prioritize a reproduction test before attempting a fix, then verify it passes. Delegate bounded implementation or validation work only when delegation is authorized.
-- **Pre-Completion Dry Build:** After any config/code change and before reporting "done," complete `nixos-rebuild dry-build --flake .#desktop` and fix any failures. Documentation-only changes need source and link review, without a system build.
-- **CI Shape:** `checks/registry.nix` owns exported checks and CI lane/ownership metadata. GitHub Actions evaluates all hosts, selects checks conservatively from changed paths, shares one store for lightweight support checks, and serializes affected host builds with their installed-environment integrations. Weekly/manual runs validate the complete registry. Main selection includes changes since the last successful ancestor run; unknown paths or missing baselines select everything. Keep selector/result regression fixtures and check coverage in sync. Lightweight checks must consume exact packages/configuration artifacts rather than complete Home Manager environments; preserve assembled activation and final installation assertions in host integration checks.
-- **ShellCheck Scope:** ShellCheck lints generated Home Manager shell entrypoints, host variants, extracted USB updater fragments, and standalone script fixtures registered in `checks/context.nix`. Register new shell sources there.
-- **Deadnix Hygiene:** Run `deadnix` after significant Nix refactors, package sweeps, or module rewiring before committing. Treat it as an occasional cleanup check, not a required gate for tiny config edits.
-- **Validation vs Deployment:** CI and `nix flake check` only validate buildability and scripted checks. Deployment is still manual: `nixos-rebuild switch --flake .#desktop` for desktop, `nixos-rebuild switch --flake .#laptop` for laptop, and `update-usb` for the USB image.
+## Commands
 
-## Hyprland Keybind Guidance
+```bash
+cd ~/system-manifest/main
+nix flake check
+nixos-rebuild dry-build --flake .#desktop
+nixos-rebuild test --flake .#desktop
+nixos-rebuild list-generations
+```
 
-- **Prefer readable key names**: use bindings like `x` or `Return` by default; only fall back to `code:<n>` when Hyprland rejects the named key or layout-independent behavior is truly required.
-- **Keyboard layouts**: This repo uses `us altgr-intl` and `gr simple`; `Super+Space` toggles between them.
-- **Validation**: After keybind changes, test in both US and Greek layouts.
-- **InvalidFormat troubleshooting**: Try a valid Hyprland key name first; use `code:<n>` only if the named key is rejected.
-
-## Greenfield Projects: Spec Kit Workflow
-
-Use **Spec Kit** (`specify` CLI) to scaffold spec-driven development for new projects. The Codex integration installs skills in `.agents/skills` and invokes them as `$speckit-*`.
-
-- **Initialize a project:** `specify init <PROJECT_NAME> --integration codex` (run in the project directory)
-- **Skills available after init:**
-  - `$speckit-constitution` — Define guiding principles
-  - `$speckit-specify` — Describe what to build
-  - `$speckit-plan` — Generate an implementation plan
-  - `$speckit-tasks` — Break down work into tasks
-  - `$speckit-implement` — Trigger implementation workflow
-- The `specify` binary is installed declaratively via a `uvx` wrapper — no manual installation needed.
-
-
-
-- **Native Glass Transparency:** Prefer app-native RGBA transparency plus Hyprland native blur. For text-heavy apps such as Ghostty, keep compositor opacity at `1.0 override` so glyphs stay opaque, and tune the app's own background opacity instead.
-- **Glass Token Source:** `modules/home/glass.nix` is the source of truth for Ghostty, Vesktop, DMS, Spicetify/Hazy, GTK popovers, and Hyprland glass values. Tune that module first instead of scattering one-off opacity numbers.
-- **Hyprland Blur Tuning:** For broad transparent surfaces, avoid excessive vibrancy because it can blend wallpaper colors into pastel blobs. Use the restrained native blur baseline (`size = 3`, `passes = 2`, `contrast = 0.9`) and tune app-side surface opacity/darkness toward the corrected Vesktop glass reference instead of increasing global blur.
-- **Systemd buffers:** When managing video surfaces (like `mpvpaper`) on Nvidia/Wayland, use systemd with `RestartSec=2.5` to prevent GPU buffer race conditions that crash the compositor.
-- **Cursor Baking:** Always manually symlink modern cursor names (`left_ptr`, `pointer`, `default`, `progress`, `alias`) in custom theme derivations to prevent Adwaita fallbacks in browsers and system bars.
-- **Hyprland Syntax:** `windowrulev2` is deprecated; use `windowrule` with `match:class` or `match:title` for all new configuration.
-- **Vesktop Glass Model:** Vesktop must stay compositor-opaque (`opacity = "1.0 override"`). Its transparency comes from `transparent = true`, `useQuickCss = true`, Translucence, and Matugen CSS surfaces; do not replace that with compositor opacity.
-- **Vesktop Darkness Rule:** The five-point darkness correction applies to Vesktop's pre-removal Translucence CSS surface ramp. Do not apply `+0.05` mechanically to Ghostty, DMS, or unrelated opacity settings; match them visually to the corrected Vesktop target.
-- **NIXOS_OZONE_WL Placement:** Must be in `home.sessionVariables` (e.g., in `modules/home/codex/default.nix`), NOT in Hyprland's `env =` block. Hyprland env= only propagates to keybind-launched apps, not DMS/QuickShell spotlight launchers. Session variables propagate to all user processes (D-Bus, systemd) and require log-out/log-in to take effect.
-- **Desktop Entry Exec Lines:** Cannot contain complex shell syntax, pipes, redirects, or unquoted special characters. Use `pkgs.writeShellScript` to create a wrapper script and reference it in `exec`. Example: Vesktop uses a wrapper to sync settings and regenerate the Translucence + QuickCSS theme bridge before launch.
-
-## USB Update Workflow
-
-- **Purpose:** Updates the bootable USB drive configuration from the `usb` flake output.
-- **Command:** `sudo update-usb /path/to/system-manifest/main`
-- **Ownership:** The USB installer workflow lives under `modules/home/scripts/usb/`; keep Nix focused on constants/packaging and runtime behavior in the extracted `update-usb` shell fragments.
-- **Flow:** Validates labeled partitions and locks the updater; recovers its `/run/update-usb` mounts and any pending publication; builds the desired system in the host store; stages a private USB store and Nix database on the SSD. The prior squashfs is a read-only OverlayFS lower layer, cached on the SSD only when it fits alongside the estimated update; otherwise it stays on the USB. Changed files use a private upper directory. `--stage-dir PATH` selects another Linux drive; `--in-place` expands staging on USB. Installation defers activation and bootloader changes. Target-local garbage collection runs in a private PID/mount namespace without activation. Both retained closures are verified and stage mounts are released before publishing image, metadata, and boot configuration in order.
-- **Recovery:** The completed `nix-store.squashfs` is persistent boot data. A `.tmp` image belonging to `.update-usb-transaction` is also protected during cleanup and recovered before no-op detection. Private staging is disposable only after target bindings and stage mounts are released. Marker ownership protects unrelated staging files. GRUB retains current and previous generations; inconsistent profile/image metadata starts a clean private install. The image and Nix state each publish atomically, but the root and EFI partitions are not one atomic transaction. Reports retain the latest ten runs under `/var/log/update-usb`. Always pass a worktree containing `flake.nix`.
-- **Boot Modes:** The USB keeps the default squashfs+tmpfs hybrid store path as native NixOS `fileSystems`, and also exposes manual `ram-store` and `host-auto-store` specialisations through small initrd preparation units. `ram-store` copies `nix-store.squashfs` into RAM before mounting `/nix/store`, uses USB-root scratch for the writable overlay backing directory, and falls back to the USB-backed lower layer if memory is tight. `host-auto-store` aggressively scans large non-removable host Linux partitions first, then `ntfs`/`ntfs3` and `exfat` fallbacks. When a host candidate works, it creates a per-boot encrypted sparse image under `.nixos-usb/session/<boot-id>/` and uses the decrypted `/nix/.host-scratch` mount for the copied squashfs lower image, writable overlay layer, Docker state, `~/.cache`, `~/.codex`, Brave profile, temporary Steam library at `~/games/SteamLibrary`, and temporary `repositories` directory. Clean shutdown syncs essential Codex and Brave state back to USB and removes host-side encrypted session files; a full `~/.cache` copy requires `usb-host-scratch checkpoint --include-cache`. Steam games are not checkpointed. Power loss can leave only ciphertext, which the next host-auto boot prunes. If host-auto setup fails, it falls back to the USB-backed lower layer and USB-root scratch. After boot, use `nixos-usb-store-status` and `nixos-usb-host-scratch-status` to inspect the selected mode, bind mounts, repositories path, and fallback diagnostics.
-- **Host Scratch Repositories:** On host-auto USB boots, use `cd "$(usb-host-scratch)"` before cloning repos for fast host-SSD I/O. The directory is named `repositories` inside encrypted host scratch.
-- **Runtime Validation:** `nix flake check` and `dry-build` do not prove USB-only runtime behavior. For cursor/rendering/DMS issues, update the stick and boot it on real target hardware before declaring the fix done.
-- **GH auth on foreign machines:** Prefer `gh auth login --web --git-protocol https`. If gnome-keyring is unavailable, log in again for that environment rather than exporting a long-lived PAT through `GH_TOKEN`.
-
-## Codex State Sync (Desktop <-> USB)
-
-Codex resumable state lives under `~/.codex/`. To share it between desktop and USB, plug in the USB and use `codex-state-sync`:
-
-- `codex-state-sync to-usb` — push desktop Codex state to USB (run before leaving for a lab)
-- `codex-state-sync from-usb` — pull USB Codex state back to desktop (run when back home)
-
-The script finds the USB automatically via the `NIXOS_USB_CRYPT` disk label, unlocks LUKS, mounts, merges only active rollout files under `~/.codex/sessions/`, and unmounts. It never deletes destination-only sessions, preserves newer destination copies, and backs up overwritten rollouts plus the destination state database under `~/.local/state/codex-state-sync/backups/`. When rollouts change, it requests a destination reindex for the next Codex launch.
-
-Close Codex before running `from-usb`; the command refuses to import while a local Codex process is active. Auth, declarative config, databases, archived sessions, goals, memories, skills, agents, caches, and logs remain local to each machine. Requires `sudo` for the USB unlock and mount steps.
-
-At the lab: `codex resume` to pick up synced sessions.
-
-Linear MCP auth is local to each machine. If Codex says Linear is not logged in, run `codex mcp login linear` once on that machine; do not sync the resulting auth state through `codex-state-sync`.
-
-**Zellij sessions** are process-based (in-RAM) and cannot be shared across machines — this is fundamental. Config is declarative and identical on both systems.
-
-## Known Issues / Fixes
-
-- **Attribute Re-definition:** Nix doesn't allow defining the same attribute set key (like `home.file`) multiple times in the same file. You must merge them into a single block.
-
-- **USB Tool Environments:** `setup-persistent-usb` and `update-usb` bootstrap their required Nix tool environments; use those commands directly. For manual disk operations, provide the required utilities, for example `sudo nix-shell -p gptfdisk parted cryptsetup dosfstools e2fsprogs util-linux --run '<command>'`.
-- **Neovim Swap Files:** If Neovim throws an `E325: ATTENTION` error or fails to open a file from `neo-tree`, it is blocked by a `.swp` file. Do not try to debug the plugin. The solution is to delete `~/.local/state/nvim/swap/*`. (Swap files are globally disabled in `opts.swapfile = false`, but old ones may linger).
-- **Zellij Stacking Action Name:** On Zellij `0.43.1`, `TogglePaneEmbedOrEject` is invalid and causes config parse failure. Use `TogglePaneEmbedOrFloating` instead.
-
-## Wallpaper System Architecture
-
-Wallpaper integration is split between the upstream skwd-wall v2 service and DMS session state.
-
-- `services.skwd-deck` is enabled system-wide from the upstream `github:liixini/skwd-wall/nix` module. It installs `skwd-wall-v2` and runs `skwd-walld`; do not reintroduce the retired v1 `skwd-daemon`/Quickshell patch stack.
-- `modules/home/wallpaper/default.nix` stays the thin shared entrypoint; `modules/home/wallpaper/skwd-wall-v2.nix` owns the declarative v2 colour contract.
-- skwd-wall v2 uses wallpaper-driven Matugen with skwd-wall as colour authority and DMS as a palette target. `skwd-walld` therefore needs `matugen` in its service PATH.
-- `wallpaper-sync` subscribes to successful skwd theme applications and synchronizes DMS session state plus a persistent applied snapshot under `~/.local/state/wallpaper-sync/current`. The system `wallpaper-greeter-sync.path` publishes its session, palette, and still together into `/var/lib/dms-greeter`, including changes between logins; previews must never update it. Inspect synchronization with `wallpaper-sync status --json`.
-- DMS runs with `DMS_DISABLE_MATUGEN=1`; its enabled application templates are rendered separately from supplied skwd colour roles. Keep `externalSet` state-only so DMS cannot regenerate a stale wallpaper palette. The skwd preview integration may temporarily change desktop colours; the latest applied wallpaper remains the global theme and greeter authority.
-- DMS watches `~/.cache/DankMaterialShell/dms-colors.json`; skwd-wall v2 publishes that full Material palette. Vesktop consumes `dms-colors.json` directly, normalizes the active dark/light roles into its legacy token contract, and a systemd path unit regenerates its Translucence/QuickCSS bridge after palette changes. Hyprland watches the DMS palette and updates normal, group, and groupbar border colours through `hyprctl eval` with one `hl.config({...})` expression. The config provider is Lua, so `hyprctl keyword` must not be used here. DMS's own Hyprland Matugen template is disabled so there is only one border owner. Do not replace this with a full compositor reload.
-- `modules/home/dms/session-state.nix` owns the baseline `~/.local/state/DankMaterialShell/session.json`. Runtime updates use DMS IPC; the greeter consumes the matching saved session from the applied snapshot. Do not write the removed `greeterWallpaperPath` setting.
-- `Super+W` launches `skwd-wall-v2`; the old custom skwd-wall keybind layer is intentionally abandoned.
-- Validation floor for wallpaper changes: run `nix flake check`, `nixos-rebuild dry-build --flake .#desktop`, and a manual wallpaper/greeter smoke test. If USB behavior changes, also run `update-usb` and boot the stick on real hardware.
-- `Super+Shift+W` (`dms ipc call dash toggle wallpaper`) still toggles the DMS wallpaper dashboard widget.
+See [docs/maintainers.md](docs/maintainers.md) for detailed worktree commands, model/package checks, troubleshooting, and coding conventions.
