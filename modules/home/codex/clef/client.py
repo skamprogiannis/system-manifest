@@ -1,6 +1,7 @@
 """Bounded HTTPS transport and strict System One response validation."""
 
 from dataclasses import dataclass
+import fcntl
 import http.client
 import json
 import math
@@ -16,7 +17,7 @@ class ClefError(Exception):
     """An error code safe to show or log without leaking upstream content."""
 
 
-def private_read(path: Path, limit: int) -> bytes:
+def private_read(path: Path, limit: int, *, shared_lock=False) -> bytes:
     fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
     try:
         info = os.fstat(fd)
@@ -28,6 +29,8 @@ def private_read(path: Path, limit: int) -> bytes:
             raise ClefError("insecure_file")
         if info.st_size > limit:
             raise ClefError("input_too_large")
+        if shared_lock:
+            fcntl.flock(fd, fcntl.LOCK_SH)
         with os.fdopen(fd, "rb", closefd=False) as handle:
             value = handle.read(limit + 1)
         if len(value) > limit:

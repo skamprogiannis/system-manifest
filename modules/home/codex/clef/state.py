@@ -14,6 +14,7 @@ from .client import ClefError, private_read
 
 EVENTS = {
     "route",
+    "choice_audit",
     "approval",
     "workflow",
     "completion",
@@ -52,6 +53,10 @@ FIELDS = {
     "selection_source",
     "abstention_reason",
     "trial_id",
+    "scope",
+    "assessment_level",
+    "sampling_reason",
+    "notice_shown",
 }
 
 
@@ -160,6 +165,43 @@ class Store:
                 daily.update(day=day, calls=count + 1)
         return True
 
+    def claim_audit(self, session, policy, scope, turn, task, pair, substantial, now):
+        """Claim local eligibility under one lock; never hold it during a request."""
+        with self.counters(session) as data:
+            sampling = data.setdefault("choice_sampling", {})
+            if sampling.get("trial_id") != policy["shadow_trial_id"]:
+                sampling.clear()
+                sampling["trial_id"] = policy["shadow_trial_id"]
+            state = sampling.setdefault(scope, {})
+            if scope == "agent":
+                seen = state.setdefault("tasks", [])
+                if task in seen:
+                    return None
+                state["tasks"] = (seen + [task])[-32:]
+                return "agent_assignment"
+            turns = state.setdefault("turns", [])
+            if turn in turns:
+                return None
+            state["turns"] = (turns + [turn])[-32:]
+            tasks = state.setdefault("tasks", [])
+            previous = state.get("pair")
+            reason = (
+                "first_choice"
+                if previous is None
+                else (
+                    "model_change"
+                    if previous != pair
+                    else "new_task" if substantial and task not in tasks else None
+                )
+            )
+            if reason is None or (
+                "time" in state
+                and now - state["time"] < policy["main_audit_cooldown_seconds"]
+            ):
+                return None
+            state.update(pair=pair, time=now, tasks=(tasks + [task])[-32:])
+            return reason
+
     def reserve_shadow_sample(self, policy: dict) -> bool:
         # Trial attempts are separate from the general daily/session call budget.
         with self.counters("shadow-trial-" + policy["shadow_trial_id"]) as data:
@@ -177,7 +219,8 @@ class Store:
             / (session_key("shadow-trial-" + policy["shadow_trial_id"]) + ".json")
         )
         try:
-            data = json.loads(private_read(path, 32768))
+            raw = private_read(path, 32768, shared_lock=True)
+            data = json.loads(raw) if raw else {}
         except FileNotFoundError:
             return 0
         except ValueError:

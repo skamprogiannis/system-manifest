@@ -33,34 +33,60 @@ required review. Keep small/sequential tasks in the main session; delegation
 ceilings are not targets. Use compact briefs, owned files, acceptance checks and
 separate worktrees for concurrent workers. Existing architect checkpoints remain.
 
-## Shadow trial
+## Advisory choice-audit trial
 
-The default launch does not request main-thread routing. Hooks observe only
-independent named agent assignments; inherited/forked/inlined context is skipped.
-Explicit native selections are observed without being rewritten. Four useful
-pairs from the table (Luna/high, Sol/medium, Sol/high, Astra/low) are intersected
-with the authenticated native model catalog, plus a keep option.
+`codex-auto` defaults to native model selection with advisory choice audits. A new
+`native-choice-audit-v1` trial permits **20 automatic attempts total**, shared
+across main sessions and independent named agents. It preserves the completed
+`native-routing-v1` counter and records; old "keep" results are not endorsements.
+General local limits remain 500 calls per UTC day and no per-session cap. These
+are local policy, not Cloudflare quota. Explicit evaluations remain available
+after the trial ends; there is no automatic promotion to apply mode.
 
-The `native-routing-v1` trial permits 20 eligible automatic routing attempts across
-sessions. Failed provider attempts count to prevent repeated retries. Missing or
-stale catalogs do not consume samples. After the trial completes, hooks stop
-sampling quietly and status reports completion. This is a bounded experiment,
-not a lifetime Clef allowance: explicit evaluations remain available under the
-general local daily limit of 500 calls; there is no per-session cap. These limits
-are local policy, not Cloudflare quota. There is no automatic promotion to apply.
+The selected model/effort is sent as allowlisted enum metadata, together with
+role, scope, booleans and size buckets. The judgment distinguishes **appropriate**,
+**cheaper choice likely sufficient**, **stronger choice warranted**, and
+**insufficient context**. Alternative judgments identify one of the four supported
+catalog pairs. Uncertainty is not agreement. Even a confident judgment from coarse
+signals is advice, not a capability guarantee or proof of usage savings.
 
-Logs record the winning suggested pair even below the apply guard, probability,
-margin, keep/guard reason, and requested native pair and selection source.
-Requested pairs do not prove an agent started or executed that model. Partial
-or unrecognized native choices are marked unknown rather than guessed.
-Automatic calls upload fixed categories, booleans and size buckets only. Raw
-prompts, source, output, paths, credentials and transcripts never enter them.
-Local metadata logs also omit raw content.
+Main-session checks use the existing `UserPromptSubmit` hook's active model.
+The documented native hook does not expose effort; it remains **unknown** unless
+an explicit effort field is supplied. No configuration default, transcript, or
+saved prior turn is used to guess it. Unknown effort permits a **model-only**
+judgment, never an effort endorsement or same-model effort recommendation. Unknown models
+are skipped without a provider request.
 
-Automatic Clef skill/workflow, escalation and completion requests are disabled.
-Local turn resets, delegation limits and advisory failure counters remain.
-Output text cannot establish test success: pinned Codex 0.161.0 Bash hooks do not
-expose an exit status. Required tests and independent review remain mandatory.
+Main sampling runs on the first nonempty prompt, a changed known selection, or
+a substantial new task. Substantial means an actionable prompt with substantial
+task signals or a long size bucket; this heuristic cannot reconstruct conversation
+history. A five-minute per-session cooldown applies, including model changes.
+A selection suppressed during cooldown can be checked on a later eligible turn.
+Repeated turn IDs and recent substantial-task fingerprints are suppressed under
+the local session lock. Fingerprints are local hashes; raw prompts are not saved
+or uploaded. History windows are bounded to 32 entries. Resuming a session does
+not reset its sampling state.
+
+Independent agent checks observe explicit selected pairs without rewriting them;
+inherited/forked/inlined context is still skipped. Replayed assignments are deduped.
+Missing/stale catalogs consume no sample. Failed provider attempts and locally
+budget-blocked attempts consume one sample to avoid retry storms. After 20 attempts
+sampling stops quietly. Main checks run in shadow mode; explicit advanced apply
+mode retains its existing guarded routing behavior.
+
+Every returned judgment is logged, including below-display-threshold opinions.
+Only judgments meeting the 70% probability and 10-point margin guard are surfaced
+as concise hook advice. The guard controls display, never model settings.
+Logs include selected pair, scope, model-only/pair assessment, alternative, probability,
+sampling reason and whether advice was displayed. An agent's requested pair does
+not prove it started or executed that model.
+
+Automatic skill/workflow, escalation and completion provider requests remain
+disabled. Local turn resets, delegation guards and failure counters remain.
+Raw prompts, source, output, paths, credentials and transcripts never enter an
+automatic request. Native Codex auto-review and the sandbox are unchanged.
+
+Native hook fields: [official Codex hooks documentation](https://learn.chatgpt.com/docs/hooks#common-input-fields).
 
 ## Commands and outcomes
 
@@ -74,10 +100,11 @@ codex-auto clef outcome --decision-id <32-character-id> --test-outcome passed --
 ```
 
 Status is offline and makes no inference or state writes. It reports trial
-attempts separately from evaluated assignments and general usage. Unknown
+attempts, main/agent scope counts, separate judgment categories, the latest decision
+ID, preserved historical routing counts, and general usage. Unknown
 outcomes remain unknown; repeated outcome updates use the latest record.
-The outcome command accepts selected and abstained routing decisions, including
-shadow advice below the guard. Outcomes are reviewed annotations, not automatic
+The outcome command accepts new choice-audit judgments, including those below
+the display guard, and historical selected/abstained routing decisions. Outcomes are reviewed annotations, not automatic
 proof. Review the logged ID and actual check evidence before recording one.
 
 Explicit apply mode retains the 70% probability and 10-point lead guard. It

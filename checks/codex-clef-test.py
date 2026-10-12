@@ -1,6 +1,7 @@
 """Offline unit, security, and upstream hook-contract regression tests."""
 
 from concurrent.futures import ThreadPoolExecutor
+from threading import Event
 import copy
 from datetime import datetime, timezone, timedelta
 import importlib.util
@@ -43,7 +44,7 @@ from clef.cli import (
     run,
 )
 from clef.hooks import Hooks, tool_outcome
-from clef.routing import Decisions, signals
+from clef.routing import Decisions, signals, selection
 from clef.state import Store, state_root
 
 
@@ -958,12 +959,13 @@ class ShadowTrialTests(Base):
         self.assertEqual(
             (row["native_model"], row["native_effort"]), ("gpt-6-luna", "high")
         )
-        self.assertEqual(row["suggested_model"], "gpt-6.1-sol")
-        self.assertEqual(row["abstention_reason"], "below_probability")
+        self.assertEqual(row["decision"], "appropriate")
+        self.assertFalse(row["notice_shown"])
         self.assertFalse(row["applied"])
         self.assertNotIn("SECRET", json.dumps(self.client.calls))
         self.assertNotIn("/private/path", json.dumps(self.store.records()))
-        self.assertNotIn("native_model", self.client.calls[0][0])
+        self.assertEqual(self.client.calls[0][0]["selected_model"], "gpt-6-luna")
+        self.assertEqual(self.client.calls[0][0]["selected_effort"], "high")
 
     def test_trial_limit_is_atomic_and_does_not_limit_explicit_calls(self):
         with ThreadPoolExecutor(max_workers=8) as executor:
@@ -989,7 +991,7 @@ class ShadowTrialTests(Base):
         with patch.object(
             self.client, "evaluate", side_effect=ClefError("transport_error")
         ):
-            self.spawn()
+            self.spawn(model="gpt-6-luna", reasoning_effort="high")
         self.assertEqual(self.store.shadow_samples(self.policy), 1)
         with (
             patch.object(catalog, "cached", side_effect=ClefError("stale_catalog")),
@@ -1004,32 +1006,27 @@ class ShadowTrialTests(Base):
             )
         self.assertEqual(self.store.shadow_samples(self.policy), 1)
 
-    def test_unknown_explicit_values_do_not_enter_logs(self):
-        self.spawn(model="SECRET-model", reasoning_effort="SECRET-effort")
-        row = self.store.records()[-1]
-        self.assertEqual(row["native_model"], "unknown")
-        self.assertEqual(row["native_effort"], "unknown")
-        self.assertNotIn("SECRET", json.dumps(self.store.records()))
-
-    def test_omitted_fields_are_unknown_even_with_different_native_fallback(self):
-        # The parent event model and local policy do not resolve profile/project
-        # overrides of native [agents] defaults. Never guess an omitted field.
-        for fields in ({}, {"reasoning_effort": "high"}, {"model": "gpt-6-luna"}):
-            with self.subTest(fields=fields):
-                self.spawn(**fields)
-                row = self.store.records()[-1]
-                self.assertEqual(row["native_model"], fields.get("model", "unknown"))
-                self.assertEqual(
-                    row["native_effort"], fields.get("reasoning_effort", "unknown")
-                )
-        status = doctor(self.store, self.policy)
+    def test_unknown_model_skips_without_sending_arbitrary_values(self):
         self.assertEqual(
-            status["shadow_trial"]["comparison"],
-            {"unknown_native_pair": 3, "tests_unknown": 3},
+            self.spawn(model="SECRET-model", reasoning_effort="SECRET-effort"), {}
         )
+        self.assertEqual(self.client.calls, [])
+        self.assertEqual(self.store.shadow_samples(self.policy), 0)
 
-    def test_outcomes_can_attach_to_abstention_and_latest_update_wins(self):
+    def test_omitted_fields_never_use_configuration_defaults(self):
+        self.assertEqual(self.spawn(), {})
+        self.assertEqual(self.spawn(reasoning_effort="high"), {})
+        result = self.spawn(model="gpt-6-luna")
+        row = self.store.records()[-1]
+        self.assertEqual(row["native_model"], "gpt-6-luna")
+        self.assertEqual(row["native_effort"], "unknown")
+        self.assertEqual(row["assessment_level"], "model")
+        self.assertEqual(len(self.client.calls), 1)
+        self.assertIn("effort unknown", json.dumps(result))
+
+    def test_outcomes_can_attach_to_low_probability_audit_and_latest_update_wins(self):
         self.client.p = 0.55
+        self.client.choices = {"assessment": "cheaper_r0"}
         self.spawn(model="gpt-6-luna", reasoning_effort="high")
         decision_id = self.store.records()[-1]["decision_id"]
         for outcome in ("failed", "passed"):
@@ -1048,7 +1045,7 @@ class ShadowTrialTests(Base):
         status = doctor(self.store, self.policy)
         self.assertEqual(
             status["shadow_trial"]["comparison"],
-            {"different_pair": 1, "tests_passed": 1},
+            {"cheaper": 1, "tests_passed": 1},
         )
 
     def test_shadow_default_does_not_route_main_prompt(self):
@@ -1066,6 +1063,298 @@ class ShadowTrialTests(Base):
         self.assertEqual(
             launch.call_args.args[1], ["codex", "--no-daemon", "Fix parser"]
         )
+
+
+class ChoiceAuditTests(Base):
+    def test_trial_read_waits_for_counter_writer_without_mutating_state(self):
+        import fcntl
+
+        entered = Event()
+        actual_lock = fcntl.flock
+
+        def observe_lock(fd, operation):
+            if operation == fcntl.LOCK_SH:
+                entered.set()
+            return actual_lock(fd, operation)
+
+        with (
+            ThreadPoolExecutor(max_workers=1) as pool,
+            patch("fcntl.flock", side_effect=observe_lock),
+        ):
+            with self.store.counters(
+                "shadow-trial-" + self.policy["shadow_trial_id"]
+            ) as data:
+                data["samples"] = 9
+                path = next((self.store.root / "sessions").glob("*.json"))
+                path.write_text('{"samples":')
+                future = pool.submit(self.store.shadow_samples, self.policy)
+                self.assertTrue(entered.wait(2), "reader must acquire a shared lock")
+                self.assertFalse(future.done())
+            before = (path.read_bytes(), path.stat().st_mtime_ns)
+            self.assertEqual(future.result(timeout=2), 9)
+            self.assertEqual((path.read_bytes(), path.stat().st_mtime_ns), before)
+
+    def available(self):
+        return [
+            dict(model=m, effort=e, description=m + "/" + e)
+            for m, e in [
+                ("gpt-6-luna", "high"),
+                ("gpt-6.1-sol", "medium"),
+                ("gpt-6.1-sol", "high"),
+                ("gpt-6-astra", "low"),
+            ]
+        ]
+
+    def prompt(
+        self,
+        text="Implement a focused fix SECRET /private/path",
+        turn="turn-1",
+        model="gpt-6-astra",
+        now=1000,
+        **fields,
+    ):
+        with (
+            patch.dict(os.environ, {"CODEX_CLEF_ROUTING_MODE": "shadow"}),
+            patch.object(catalog, "cached", return_value=self.available()),
+            patch("clef.hooks.time.time", return_value=now),
+        ):
+            return self.hooks.handle(
+                self.event(
+                    "UserPromptSubmit", prompt=text, turn_id=turn, model=model, **fields
+                )
+            )
+
+    def test_native_main_model_is_sent_effort_is_unknown_and_never_read_from_transcript(
+        self,
+    ):
+        with patch(
+            "pathlib.Path.open", side_effect=AssertionError("transcript access")
+        ):
+            result = self.prompt(transcript_path="/private/source.jsonl")
+        payload = self.client.calls[0][0]
+        self.assertEqual(payload["selected_model"], "gpt-6-astra")
+        self.assertEqual(payload["selected_effort"], "unknown")
+        self.assertEqual(payload["assessment_level"], "model")
+        self.assertEqual(payload["scope"], "main")
+        self.assertNotIn("SECRET", json.dumps(self.client.calls))
+        self.assertNotIn("/private", json.dumps(self.store.records()))
+        self.assertIn("model-only", json.dumps(result))
+        self.assertNotIn("updatedInput", json.dumps(result))
+        self.assert_contract("user-prompt-submit", result)
+
+    def test_explicit_hook_effort_is_used_without_guessing(self):
+        self.prompt(reasoning_effort="xhigh")
+        self.assertEqual(self.client.calls[0][0]["selected_effort"], "xhigh")
+        self.assertEqual(self.store.records()[-1]["assessment_level"], "pair")
+
+    def test_duplicate_hook_and_same_model_followups_do_not_sample(self):
+        self.prompt()
+        self.prompt()
+        self.prompt("Fix one small detail", turn="turn-2", now=1400)
+        self.assertEqual(len(self.client.calls), 1)
+
+    def test_model_change_survives_cooldown_without_duplicate_retry(self):
+        self.prompt()
+        self.prompt(turn="turn-2", model="gpt-6.1-sol", now=1100)
+        self.prompt(turn="turn-2", model="gpt-6.1-sol", now=1500)
+        self.assertEqual(len(self.client.calls), 1)
+        self.prompt(turn="turn-3", model="gpt-6.1-sol", now=1500)
+        self.assertEqual(len(self.client.calls), 2)
+        self.assertEqual(self.store.records()[-1]["sampling_reason"], "model_change")
+
+    def test_model_change_is_observed_on_a_short_continuation(self):
+        self.prompt("Plan the next steps")
+        self.prompt("Continue", turn="turn-2", model="gpt-6.1-sol", now=1400)
+        self.assertEqual(len(self.client.calls), 2)
+        self.assertEqual(self.store.records()[-1]["sampling_reason"], "model_change")
+        self.assertEqual(self.client.calls[-1][0]["selected_model"], "gpt-6.1-sol")
+
+    def test_substantial_new_task_has_fingerprint_deduplication(self):
+        self.prompt()
+        task = "Implement changes across multiple modules"
+        self.prompt(task, turn="turn-2", now=1400)
+        self.assertEqual(len(self.client.calls), 2)
+        self.assertEqual(self.store.records()[-1]["sampling_reason"], "new_task")
+        self.prompt(task, turn="turn-3", now=1800)
+        self.assertEqual(len(self.client.calls), 2)
+
+    def test_subagent_and_apply_prompt_events_do_not_start_main_audits(self):
+        self.assertEqual(self.prompt(agent_id="child"), {})
+        with patch.object(catalog, "cached", return_value=self.available()):
+            self.assertEqual(
+                self.hooks.handle(
+                    self.event("UserPromptSubmit", prompt="Implement fix")
+                ),
+                {},
+            )
+        self.assertEqual(self.client.calls, [])
+
+    def test_all_verdicts_are_recorded_below_display_guard(self):
+        self.client.p = 0.55
+        for choice, verdict in [
+            ("appropriate", "appropriate"),
+            ("insufficient_context", "insufficient_context"),
+            ("cheaper_r0", "cheaper"),
+            ("stronger_r3", "stronger"),
+        ]:
+            with self.subTest(choice=choice):
+                self.client.choices = {"assessment": choice}
+                self.assertEqual(
+                    self.prompt(turn=choice, session_id=choice, model="gpt-6.1-sol"), {}
+                )
+                row = self.store.records()[-1]
+                self.assertEqual(row["decision"], verdict)
+                self.assertFalse(row["notice_shown"])
+                self.assertFalse(row["applied"])
+        status = doctor(self.store, self.policy)
+        self.assertEqual(
+            status["shadow_trial"]["comparison"],
+            {
+                "appropriate": 1,
+                "insufficient_context": 1,
+                "cheaper": 1,
+                "stronger": 1,
+                "tests_unknown": 4,
+            },
+        )
+        self.assertEqual(status["shadow_trial"]["by_scope"], {"main": 4})
+        self.assertIn("Latest audit", format_status(status))
+        self.assertIn("effort unknown", format_status(status))
+        self.assertIn("below display guard", format_status(status))
+
+    def test_unknown_effort_removes_same_model_alternatives(self):
+        self.prompt()
+        criteria = self.client.calls[0][1]["assessment"]["criteria"]
+        self.assertNotIn("cheaper_r3", criteria)
+        self.assertNotIn("stronger_r3", criteria)
+        self.assertIn("cheaper_r1", criteria)
+
+    def test_lower_effort_of_same_model_cannot_be_labeled_stronger(self):
+        self.prompt(reasoning_effort="high")
+        criteria = self.client.calls[0][1]["assessment"]["criteria"]
+        self.assertIn("cheaper_r3", criteria)
+        self.assertNotIn("stronger_r3", criteria)
+
+    def test_catalog_failure_uses_no_sample_and_next_turn_can_recover(self):
+        with (
+            patch.dict(os.environ, {"CODEX_CLEF_ROUTING_MODE": "shadow"}),
+            patch.object(catalog, "cached", side_effect=ClefError("stale_catalog")),
+        ):
+            self.hooks.handle(self.event("UserPromptSubmit", prompt="Implement fix"))
+        self.assertEqual(self.store.shadow_samples(self.policy), 0)
+        self.prompt(turn="turn-2")
+        self.assertEqual(len(self.client.calls), 1)
+
+    def test_provider_failure_consumes_one_attempt_and_keeps_scope_metadata(self):
+        with patch.object(
+            self.client, "evaluate", side_effect=ClefError("transport_error")
+        ):
+            self.prompt()
+            self.prompt()
+        self.assertEqual(self.store.shadow_samples(self.policy), 1)
+        row = self.store.records()[-1]
+        self.assertEqual(row["status"], "fallback")
+        self.assertEqual(row["scope"], "main")
+        self.assertEqual(row["trial_id"], self.policy["shadow_trial_id"])
+
+    def test_daily_guard_still_blocks_the_fresh_trial(self):
+        self.policy["max_daily_calls"] = 0
+        self.prompt()
+        self.assertEqual(self.client.calls, [])
+        self.assertEqual(
+            self.store.records()[-1]["fallback_reason"], "budget_exhausted"
+        )
+
+    def test_concurrent_duplicate_prompts_claim_only_one_sample(self):
+        event = self.event(
+            "UserPromptSubmit", prompt="Implement fix", model="gpt-6-astra"
+        )
+        with (
+            patch.dict(os.environ, {"CODEX_CLEF_ROUTING_MODE": "shadow"}),
+            patch.object(catalog, "cached", return_value=self.available()),
+            ThreadPoolExecutor(max_workers=8) as pool,
+        ):
+            list(pool.map(lambda _: self.hooks.handle(event), range(16)))
+        self.assertEqual(len(self.client.calls), 1)
+        self.assertEqual(self.store.shadow_samples(self.policy), 1)
+
+    def test_mixed_scope_concurrent_trial_cap_and_old_trial_history(self):
+        old = dict(self.policy, shadow_trial_id="native-routing-v1")
+        for _ in range(20):
+            self.store.reserve_shadow_sample(old)
+        self.store.log(
+            event="route",
+            status="abstained",
+            trial_id="native-routing-v1",
+            abstention_reason="keep",
+        )
+        native = selection("gpt-6-astra", "high", self.policy, "explicit")
+        state = {
+            "role": "worker",
+            "read_only": False,
+            "task_signals": signals("Implement fix"),
+        }
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            list(
+                pool.map(
+                    lambda i: self.d.audit(
+                        str(i),
+                        state,
+                        self.available(),
+                        native,
+                        "main" if i % 2 else "agent",
+                        "first_choice" if i % 2 else "agent_assignment",
+                    ),
+                    range(40),
+                )
+            )
+        self.assertEqual(len(self.client.calls), 20)
+        self.assertEqual(self.store.shadow_samples(self.policy), 20)
+        self.assertEqual(self.store.shadow_samples(old), 20)
+        status = doctor(self.store, self.policy)
+        self.assertEqual(status["shadow_trial"]["historical_routing_assignments"], 1)
+        self.assertEqual(status["shadow_trial"]["state"], "complete")
+
+    def test_replayed_independent_assignment_is_audited_once_and_never_rewritten(self):
+        args = {
+            "agent_type": "worker",
+            "task_name": "bounded",
+            "fork_turns": "none",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "high",
+            "message": "Implement fix SECRET",
+        }
+        with (
+            patch.dict(os.environ, {"CODEX_CLEF_ROUTING_MODE": "shadow"}),
+            patch.object(catalog, "cached", return_value=self.available()),
+        ):
+            event = self.event("PreToolUse", tool_name="spawn_agent", tool_input=args)
+            first = self.hooks.handle(event)
+            self.assertEqual(self.hooks.handle(event), {})
+        self.assertEqual(len(self.client.calls), 1)
+        self.assertNotIn("updatedInput", json.dumps(first))
+        self.assert_contract("pre-tool-use", first)
+        self.assertEqual(self.client.calls[0][0]["selected_model"], "gpt-6-luna")
+        self.assertEqual(self.store.records()[-1]["scope"], "agent")
+
+    def test_audit_payload_allowlist_ignores_untrusted_extra_fields(self):
+        native = selection("gpt-6-astra", "high", self.policy, "explicit")
+        native["raw_prompt"] = "SECRET"
+        self.d.audit(
+            "s",
+            {
+                "role": "SECRET",
+                "read_only": "SECRET",
+                "raw_source": "SECRET",
+                "task_signals": {"diagnosis": "SECRET", "length_bucket": "SECRET"},
+            },
+            self.available(),
+            native,
+            "main",
+            "first_choice",
+        )
+        self.assertNotIn("SECRET", json.dumps(self.client.calls))
+        self.assertNotIn("SECRET", json.dumps(self.store.records()))
 
 
 class NativeForkTests(Base):

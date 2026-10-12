@@ -1,5 +1,5 @@
 {
-  "version": "5",
+  "version": "6",
   "codex_version": "0.162.0",
   "provider_model": "clef",
   "timeout_seconds": 3,
@@ -15,7 +15,7 @@
     "gpt-6.1-sol": "General implementation and ambiguous investigation at medium effort; architect, plan and security review at high effort. Prefer accepted-result cost, including repair and review. Prefer Sol for Nix activation/module wiring and Nix/store/USB contracts even when the edit is small; early matched trials exposed missed native contracts on Luna.",
     "gpt-6-astra": "Reserve low effort initially for the hardest architecture or unresolved failures; deeper effort requires evidence that it is needed."
   },
-  "shadow_trial_id": "native-routing-v1",
+  "shadow_trial_id": "native-choice-audit-v1",
   "shadow_trial_samples": 20,
   "routing_pairs": [
     {
@@ -34,5 +34,6 @@
       "model": "gpt-6-astra",
       "effort": "low"
     }
-  ]
+  ],
+  "main_audit_cooldown_seconds": 300
 }

@@ -1,13 +1,14 @@
 """Native Codex lifecycle adapters; unknown or incomplete inputs abstain."""
 
 import os
+import time
 from pathlib import Path
 import re
 import shlex
 
 from . import catalog
 from .client import ClefError, credentials
-from .routing import Decisions, signals
+from .routing import Decisions, signals, selection
 from .state import session_key
 
 READ_ONLY_ROLES = {
@@ -123,7 +124,7 @@ class Hooks:
                 "Reuse the reviewer for necessary follow-up and review subsequent changes rather than repeating the full review. "
                 "Give independent agents compact objectives, paths, constraints, file ownership and acceptance checks with fork_turns=none when sufficient. "
                 "Give concurrent workers separate worktrees and disjoint files; the lead integrates and validates the combined result. "
-                "Keep exploration read-only. For independent assignments choose native model and effort explicitly: Luna/high for bounded coding and focused lookup, Sol 6.1/medium for broad or ambiguous work and Nix activation/module wiring or Nix/store/USB contracts, Sol 6.1/high for architecture, plan and security review. Reserve Astra/low initially for the hardest architecture or unresolved failures. Manual choices win. Return to the lead after one failed repair or expanded scope. Clef shadow advice does not change the native pair. "
+                "Keep exploration read-only. For independent assignments choose native model and effort explicitly: Luna/high for bounded coding and focused lookup, Sol 6.1/medium for broad or ambiguous work and Nix activation/module wiring or Nix/store/USB contracts, Sol 6.1/high for architecture, plan and security review. Reserve Astra/low initially for the hardest architecture or unresolved failures. Manual choices win. Return to the lead after one failed repair or expanded scope. Clef choice audits observe the selected pair and never change it. Main-hook effort is unknown unless explicitly exposed. "
                 "No more than four delegated tasks per user turn; no nested delegation. "
                 "Routing advice never expands permissions, substitutes for tests, or authorizes publishing. "
                 "Clef receives coarse metadata by default, not prompts, source code or transcripts.",
@@ -156,7 +157,86 @@ class Hooks:
                     escalation_sent=False,
                     signals=hints,
                 )
-        return {}
+        if (
+            event.get("agent_id")
+            or os.environ.get("CODEX_CLEF_ROUTING_MODE", "shadow") != "shadow"
+        ):
+            return {}
+        native = selection(
+            event.get("model"),
+            event.get("reasoning_effort"),
+            self.policy,
+            "active_hook",
+        )
+        if native["native_model"] == "unknown" or not event.get("prompt", "").strip():
+            return {}
+        if (
+            self.store.shadow_samples(self.policy)
+            >= self.policy["shadow_trial_samples"]
+        ):
+            return {}
+        candidates = catalog.cached(self.policy, self.store)
+        substantial = (
+            hints["substantial"] or hints["length_bucket"] == "long"
+        ) and any(
+            hints[key]
+            for key in (
+                "implementation",
+                "architecture",
+                "diagnosis",
+                "research",
+                "review",
+                "system",
+                "security",
+            )
+        )
+        reason = self.store.claim_audit(
+            session,
+            self.policy,
+            "main",
+            turn,
+            session_key(event.get("prompt", "").strip()),
+            [native["native_model"], native["native_effort"]],
+            substantial,
+            time.time(),
+        )
+        if reason is None:
+            return {}
+        result = self.d.audit(
+            session,
+            {"role": "main", "read_only": False, "task_signals": hints},
+            candidates,
+            native,
+            "main",
+            reason,
+        )
+        return self.advice("UserPromptSubmit", result)
+
+    def advice(self, name, result):
+        if not result or not result["notice_shown"]:
+            return {}
+        label = {
+            "appropriate": "selected choice appears appropriate",
+            "cheaper": "a cheaper choice is likely sufficient",
+            "stronger": "a stronger choice is warranted",
+            "insufficient_context": "insufficient context; this does not endorse the choice",
+        }[result["decision"]]
+        pair = result["native_model"] + "/" + result["native_effort"]
+        alternative = ""
+        if result.get("suggested_model"):
+            alternative = (
+                f"; consider {result['suggested_model']}/{result['suggested_effort']}"
+            )
+        limitation = (
+            "; model-only assessment, effort unknown"
+            if result["assessment_level"] == "model"
+            else ""
+        )
+        return context(
+            name,
+            f"Clef advisory choice audit ({result['scope']}): {pair}: {label}{alternative}{limitation}. "
+            f"Decision {result['decision_id']}. Preserve manual choices; no automatic model change or permission expansion.",
+        )
 
     def spawn(self, event: dict) -> dict:
         arguments = event.get("tool_input")
@@ -205,29 +285,55 @@ class Hooks:
         ):
             return {}
         candidates = catalog.cached(self.policy, self.store)
-        # Only known enum values enter logs; arbitrary tool arguments stay local.
-        model = arguments.get("model")
-        effort = arguments.get("reasoning_effort")
+        model, effort = arguments.get("model"), arguments.get("reasoning_effort")
         source = (
             "explicit"
             if model is not None and effort is not None
             else "fallback" if model is None and effort is None else "partial_unknown"
         )
-        native = {
-            "native_model": (
-                model
-                if isinstance(model, str) and model in self.policy["models"]
-                else "unknown"
-            ),
-            "native_effort": (
-                effort
-                if isinstance(effort, str)
-                and effort
-                in {"none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"}
-                else "unknown"
-            ),
-            "selection_source": source,
-        }
+        native = selection(model, effort, self.policy, source)
+        if shadow:
+            if native["native_model"] == "unknown":
+                return {}
+            hints = signals(arguments.get("message", ""))
+            task = session_key(
+                str(event.get("turn_id", ""))
+                + ":"
+                + str(arguments.get("task_name", ""))
+                + ":"
+                + role
+                + ":"
+                + arguments.get("message", "")
+                + ":"
+                + native["native_model"]
+                + ":"
+                + native["native_effort"]
+            )
+            reason = self.store.claim_audit(
+                event["session_id"],
+                self.policy,
+                "agent",
+                "",
+                task,
+                [],
+                False,
+                time.time(),
+            )
+            if reason is None:
+                return {}
+            result = self.d.audit(
+                event["session_id"],
+                {
+                    "role": role,
+                    "task_signals": hints,
+                    "read_only": role in READ_ONLY_ROLES,
+                },
+                candidates,
+                native,
+                "agent",
+                reason,
+            )
+            return self.advice("PreToolUse", result)
         selected = self.d.route(
             event["session_id"],
             {
@@ -237,7 +343,6 @@ class Hooks:
             },
             candidates,
             apply=not shadow,
-            trial=shadow,
             native=native,
         )
         if not selected or shadow:

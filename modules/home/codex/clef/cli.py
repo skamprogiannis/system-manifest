@@ -271,35 +271,31 @@ def doctor(store: Store, policy: dict) -> dict:
     failures = [row for row in records if row.get("status") == "fallback"]
     today = [row for row in successes if row["timestamp"].startswith(day + "T")]
     samples = store.shadow_samples(policy)
-    routes = {
+    audits = {
         row["decision_id"]: row
         for row in records
-        if row.get("event") == "route"
+        if row.get("event") == "choice_audit"
         and row.get("trial_id") == policy["shadow_trial_id"]
-        and row.get("status") in {"selected", "abstained"}
+        and row.get("status") == "advised"
     }
+    historical_routes = [
+        row
+        for row in records
+        if row.get("event") == "route"
+        and row.get("trial_id")
+        and row.get("trial_id") != policy["shadow_trial_id"]
+        and row.get("status") in {"selected", "abstained"}
+    ]
     outcomes = {
         row["decision_id"]: row for row in records if row.get("event") == "outcome"
     }
     comparison = Counter()
-    for decision_id, row in routes.items():
-        if row.get("suggested_model") is None:
-            comparison["keep"] += 1
-        elif (
-            row.get("native_model") == "unknown"
-            or row.get("native_effort") == "unknown"
-        ):
-            comparison["unknown_native_pair"] += 1
-        elif (row["suggested_model"], row["suggested_effort"]) == (
-            row["native_model"],
-            row["native_effort"],
-        ):
-            comparison["same_pair"] += 1
-        else:
-            comparison["different_pair"] += 1
+    for decision_id, row in audits.items():
+        comparison[row["decision"]] += 1
         comparison[
             "tests_" + outcomes.get(decision_id, {}).get("test_outcome", "unknown")
         ] += 1
+    latest = next(reversed(audits.values()), None) if audits else None
     return {
         "shadow_trial": {
             "id": policy["shadow_trial_id"],
@@ -308,7 +304,10 @@ def doctor(store: Store, policy: dict) -> dict:
             "state": (
                 "complete" if samples >= policy["shadow_trial_samples"] else "sampling"
             ),
-            "evaluated_assignments": len(routes),
+            "evaluated_assignments": len(audits),
+            "by_scope": dict(Counter(row["scope"] for row in audits.values())),
+            "latest_advice": latest,
+            "historical_routing_assignments": len(historical_routes),
             "comparison": dict(comparison),
         },
         "credentials": credential_status,
@@ -386,6 +385,24 @@ def format_status(status: dict) -> str:
     failure = status["latest_failure"]
     limits = status["local_limits"]
     trial = status["shadow_trial"]
+    latest = trial["latest_advice"]
+    latest_label = "Latest audit: none recorded"
+    if latest:
+        alternative = (
+            f"; consider {latest['suggested_model']}/{latest['suggested_effort']}"
+            if latest.get("suggested_model")
+            else ""
+        )
+        level = (
+            "model only; effort unknown"
+            if latest["assessment_level"] == "model"
+            else "model and effort"
+        )
+        qualification = "surfaced" if latest["notice_shown"] else "below display guard"
+        latest_label = (
+            f"Latest audit ({latest['scope']}): {latest['native_model']}/{latest['native_effort']}: "
+            f"{status_label(latest['decision'])}{alternative}; {latest['probability']:.1%}; {level}; {qualification}; decision {latest['decision_id']}"
+        )
     session_limit = (
         "  No per-session call cap; the daily limit applies"
         if limits["max_session_calls"] is None
@@ -413,8 +430,12 @@ def format_status(status: dict) -> str:
             f"Assisted launch default: {launch_default}",
             "Approvals: Codex native reviewer; Clef permission hook disabled",
             "Automatic workflow, escalation and completion requests: disabled",
-            f"Shadow trial: {trial['attempts']}/{trial['limit']} eligible routing attempts; {trial['state']} (separate from call allowance)",
-            f"Shadow comparison with requested native pairs: {json.dumps(trial['comparison'], sort_keys=True)}",
+            f"Shadow choice-audit trial ({trial['id']}): {trial['attempts']}/{trial['limit']} eligible attempts; {trial['state']} (separate from call allowance)",
+            f"Audited scopes: {json.dumps(trial['by_scope'], sort_keys=True)}",
+            f"Choice judgments and outcomes: {json.dumps(trial['comparison'], sort_keys=True)}",
+            "Appropriate and insufficient context are different judgments; unknown effort means model-only advice.",
+            latest_label,
+            f"Preserved historical routing assignments: {trial['historical_routing_assignments']} (not new choice endorsements)",
             "Advice is not an executed model change; missing outcomes remain unknown.",
             "Local call limits (configured policy; not Cloudflare quota):",
             session_limit,
@@ -533,7 +554,7 @@ def parse_arguments(arguments: list[str]):
             "usage: codex-auto [--mode {apply,shadow}] [--brief-file PATH --acknowledge-upload] [-- CODEX_OPTIONS] [TASK_OR_SUBCOMMAND]\n"
             "       codex-auto status [--json]\n"
             "       codex-auto clef {catalog,evaluate,vision,outcome} ...\n\n"
-            "Launch native Codex with a bounded Clef shadow trial (default), inspect local usage, or run explicit evaluations.\n"
+            "Launch native Codex with a bounded Clef choice-audit trial (default), inspect local usage, or run explicit evaluations.\n"
             "Bare launch and resume preserve model settings. Use -- before leading native options or reserved status/clef task prompts.\n"
             "Use codex --help for native Codex options, and codex-auto clef --help for evaluations."
         )
@@ -571,8 +592,16 @@ def run(args) -> object:
             raise ClefError("invalid_decision_id")
         if not any(
             row.get("decision_id") == args.decision_id
-            and row.get("event") == "route"
-            and row.get("status") in {"selected", "abstained"}
+            and (
+                (
+                    row.get("event") == "route"
+                    and row.get("status") in {"selected", "abstained"}
+                )
+                or (
+                    row.get("event") == "choice_audit"
+                    and row.get("status") == "advised"
+                )
+            )
             for row in store.records()
         ):
             raise ClefError("unknown_decision_id")

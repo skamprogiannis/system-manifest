@@ -13,7 +13,7 @@ Personal, flake-based NixOS configuration with Home Manager, Hyprland, Dank Mate
 ## Highlights
 
 - **Desktop:** Hyprland, DMS, Ghostty, wallpaper-driven theming, Vesktop, Brave, and Spotify.
-- **Development:** Go, Python, TypeScript, Neovim/Nixvim, Codex CLI, reusable skills, and static-analysis tools.
+- **Development:** Go, Python, TypeScript, Neovim/Nixvim, Codex CLI, reusable skills, and static-analysis tools. Opt-in `codex-auto` adds a bounded advisory review of main/agent model choices, preserving manual selections.
 - **Local AI:** Desktop-only Ollama models, on-demand Open WebUI (DMS launcher), and always-on local SearXNG.
 - **Gaming:** Steam, GameMode, Gamescope, and optional Bannerlord dialogue/voice integrations.
 - **Productivity:** Transmission, local Whisper dictation (`Super+T`), Obsidian, and screenshots.
@@ -46,7 +46,7 @@ Deployment is manual. `nix flake check` validates configured host and support ch
 | `ai-search start\|stop\|status` | Control Open WebUI independently |
 | `searxngctl start\|stop\|status` | Control SearXNG (normally starts at boot) |
 | `torrent gui` | Open Transmission's local interface |
-| `codex-auto status` | Inspect Codex/Clef routing state |
+| `codex-auto status` | Inspect the bounded Clef choice-audit trial, judgments and local usage |
 | `wallpaper-sync status --json` | Inspect desktop wallpaper synchronization |
 | `nixos-usb-store-status` | Inspect USB store mode |
 | `usb-host-scratch status` | Inspect portable host-scratch state |
