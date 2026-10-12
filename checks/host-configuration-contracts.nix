@@ -12,18 +12,27 @@
     && !desktop.services.open-webui.openFirewall
     && !desktop.services.searx.openFirewall
     && !(builtins.elem "searx.service" desktop.systemd.services.open-webui.wants);
-  hasCommand = name: builtins.any
+  hasCommand = name:
+    builtins.any
     (package: lib.getName package == name)
     home.home.packages;
   hasLauncher =
     home.xdg.desktopEntries ? open-webui
     && home.xdg.desktopEntries.open-webui.exec == "ai-search launch"
     && !home.xdg.desktopEntries.open-webui.terminal;
+  guiOnAllHosts =
+    builtins.all
+    (host:
+      builtins.any (package: lib.getName package == "chatgpt-desktop")
+      (ctx.homeConfig host).home.packages)
+    ctx.registry.host;
 in {
   host-configuration-contracts = assert lib.assertMsg ctx.spotifyPlayerRemoved
   "spotify_player and its service/auth migration must remain removed from every host.";
   assert lib.assertMsg (aiServicesConfigured && hasCommand "ai-search" && hasCommand "searxngctl" && hasLauncher)
   "Desktop AI search must use an on-demand Open WebUI launcher, an always-on local SearXNG, and independent commands.";
+  assert lib.assertMsg guiOnAllHosts
+  "The official ChatGPT desktop app with Codex must be installed on every host.";
     ctx.pkgs.runCommand "host-configuration-contracts-check" {} ''
       touch "$out"
     '';

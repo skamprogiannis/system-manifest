@@ -13,7 +13,7 @@ Personal, flake-based NixOS configuration with Home Manager, Hyprland, Dank Mate
 ## Highlights
 
 - **Desktop:** Hyprland, DMS, Ghostty, wallpaper-driven theming, Vesktop, Brave, and Spotify.
-- **Development:** Go, Python, TypeScript, Neovim/Nixvim, Codex CLI, reusable skills, and static-analysis tools. Opt-in `codex-auto` adds a bounded advisory review of main/agent model choices, preserving manual selections.
+- **Development:** Go, Python, TypeScript, Neovim/Nixvim, Codex CLI and the official ChatGPT desktop app with Codex on all hosts, reusable skills, and static-analysis tools. Opt-in `codex-auto` adds a bounded advisory review of main/agent model choices, preserving manual selections.
 - **Local AI:** Desktop-only Ollama models, on-demand Open WebUI (DMS launcher), and always-on local SearXNG.
 - **Gaming:** Steam, GameMode, Gamescope, and optional Bannerlord dialogue/voice integrations.
 - **Productivity:** Transmission, local Whisper dictation (`Super+T`), Obsidian, and screenshots.

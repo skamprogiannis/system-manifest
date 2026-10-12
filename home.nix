@@ -35,6 +35,7 @@
   # --- PACKAGES ---
   home.packages = with pkgs; [
     # GUI
+    (pkgs.callPackage ./modules/home/codex/desktop-package.nix {})
     gpu-screen-recorder-gtk
     imv
     libreoffice-qt
