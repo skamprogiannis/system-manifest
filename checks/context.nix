@@ -171,6 +171,7 @@
       "${homePackage "desktop" "bannerlord-codex"}/bin/bannerlord-codex"
     ]
     ++ [
+      "${homePackage "desktop" "chatgpt-desktop"}/bin/chatgpt"
       "${homePackage "desktop" "ai-search"}/bin/ai-search"
       "${homePackage "desktop" "searxngctl"}/bin/searxngctl"
       "${homePackage "desktop" "codex-state-sync"}/bin/codex-state-sync"
