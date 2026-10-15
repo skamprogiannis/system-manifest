@@ -1,6 +1,7 @@
 {pkgs, lib, ...}: {
   services.open-webui = {
     enable = true;
+    package = import ./open-webui-package.nix {inherit pkgs;};
     host = "127.0.0.1";
     port = 8080;
     openFirewall = false;
