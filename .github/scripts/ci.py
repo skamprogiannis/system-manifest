@@ -166,7 +166,7 @@ def changed_paths(event_name, event, head, main_sha=None):
 
 
 def expected_jobs(plan):
-    return {'plan': True, 'source-unit': bool(plan['units'] or 'codex-clef' in plan['support']), 'support-check': bool(plan['support']), 'host-check': bool(plan['hosts'])}
+    return {'plan': True, 'source-unit': bool(plan['units'] or 'codex-auto' in plan['support']), 'support-check': bool(plan['support']), 'host-check': bool(plan['hosts'])}
 
 
 def gate(expected, needs):

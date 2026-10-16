@@ -13,7 +13,7 @@
     "neovim-lsp-health"
     "wallpaper-runtime"
     "codex-skills"
-    "codex-clef"
+    "codex-auto"
     "bannerlord-codex"
     "bannerlord-speech"
     "bannerlord-speech-unit"
@@ -35,7 +35,7 @@
     supportGroups = {
       desktop = ["hyprland-keybinds" "desktop-glass" "spotify-runtime" "desktop-runtime-config" "wallpaper-runtime"];
       neovim = ["neovim-langmap" "neovim-lsp-health"];
-      codex = ["codex-skills" "codex-clef" "bannerlord-codex"];
+      codex = ["codex-skills" "codex-auto" "bannerlord-codex"];
       scripts = ["script-smoke" "shellcheck"];
       registry = ["ci-registry"];
     };

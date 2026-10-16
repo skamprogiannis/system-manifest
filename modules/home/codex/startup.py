@@ -1,5 +1,6 @@
 """Recover only the pinned CLI's fatal pre-session account-routing timeout."""
 
+from dataclasses import dataclass
 import os
 from pathlib import Path
 import re
@@ -10,6 +11,111 @@ import struct
 import subprocess
 import sys
 import time
+
+
+_NATIVE_COMMANDS = {
+    "agents",
+    "exec",
+    "e",
+    "review",
+    "login",
+    "logout",
+    "mcp",
+    "plugin",
+    "app-server",
+    "remote-control",
+    "app",
+    "completion",
+    "update",
+    "doctor",
+    "sandbox",
+    "debug",
+    "execpolicy",
+    "apply",
+    "a",
+    "resume",
+    "queue",
+    "archive",
+    "delete",
+    "migrate-rollouts",
+    "unarchive",
+    "fork",
+    "cloud",
+    "cloud-tasks",
+    "responses-api-proxy",
+    "stdio-to-uds",
+    "exec-server",
+    "features",
+    "help",
+    "tcp-tunnel",
+}
+_NATIVE_VALUES = {
+    "--config",
+    "--model",
+    "--profile",
+    "--cd",
+    "--image",
+    "--sandbox",
+    "--ask-for-approval",
+    "--enable",
+    "--disable",
+    "--remote",
+    "--remote-auth-token-env",
+    "--local-provider",
+    "--add-dir",
+}
+_NATIVE_SHORT_VALUES = {
+    "-c": "--config",
+    "-m": "--model",
+    "-p": "--profile",
+    "-C": "--cd",
+    "-i": "--image",
+    "-s": "--sandbox",
+    "-a": "--ask-for-approval",
+}
+
+
+@dataclass(frozen=True)
+class LaunchContext:
+    interactive: bool
+    no_daemon: bool
+
+
+def launch_context(arguments: list[str]) -> LaunchContext:
+    """Classify native entrypoints only; preserve every user argument verbatim."""
+    no_daemon = False
+    positional = False
+    index = 0
+    while index < len(arguments):
+        token = arguments[index]
+        index += 1
+        if token == "--":
+            break
+        if token in {"-h", "--help", "-V", "--version"}:
+            return LaunchContext(False, False)
+        if token == "--no-daemon":
+            no_daemon = True
+            continue
+        option, separator, _ = token.partition("=")
+        if token.startswith("-") and not token.startswith("--"):
+            option = _NATIVE_SHORT_VALUES.get(token[:2], token)
+            separator = bool(token[2:])
+        if option == "--remote":
+            return LaunchContext(False, False)
+        if option in _NATIVE_VALUES:
+            if not separator:
+                index += 1
+                if option == "--image":
+                    while index < len(arguments) and not arguments[index].startswith("-"):
+                        index += 1
+            continue
+        if token.startswith("-"):
+            continue
+        if not positional and token in _NATIVE_COMMANDS:
+            if token not in {"resume", "fork"}:
+                return LaunchContext(False, False)
+        positional = True
+    return LaunchContext(True, no_daemon)
 
 
 BOOTSTRAP_TIMEOUT = (
@@ -25,8 +131,8 @@ def _routing_timeout(status: int, stderr: bytes) -> bool:
 
 
 def _ordinary_daemon_safe(env: dict) -> bool:
-    """Do not reuse a server whose captured hook environment opts into Clef."""
-    if env.get("CODEX_CLEF_ENABLED") == "1":
+    """Do not reuse a server whose captured environment enables assisted hooks."""
+    if any(env.get(key) == "1" for key in ("CODEX_AUTO_ENABLED", "CODEX_CLEF_ENABLED")):
         return False
     home = Path(
         env.get("CODEX_HOME") or Path(env.get("HOME") or Path.home()) / ".codex"
@@ -53,7 +159,7 @@ def _ordinary_daemon_safe(env: dict) -> bool:
                 snapshot = handle.read(1_048_577)
             if len(snapshot) > 1_048_576:
                 return False
-            return b"CODEX_CLEF_ENABLED=1" not in snapshot.split(b"\0")
+            return not {b"CODEX_AUTO_ENABLED=1", b"CODEX_CLEF_ENABLED=1"}.intersection(snapshot.split(b"\0"))
     except (OSError, ValueError, struct.error):
         return False
 
@@ -86,7 +192,7 @@ def launch_interactive(
                 return 128 + interrupted
             tail = bytearray()
             child = subprocess.Popen(
-                arguments, executable=binary, env=env, stderr=subprocess.PIPE
+                arguments, executable=binary, env=dict(env, CODEX_STARTUP_SUPERVISED="1"), stderr=subprocess.PIPE
             )
             try:
                 # Python can deliver a signal before Popen returns and assigns child.
@@ -140,7 +246,7 @@ def launch_interactive(
                 fallback = None
                 if _ordinary_daemon_safe(fallback_env):
                     print(
-                        "Clef-assisted startup timed out; trying ordinary Codex without Clef routing hooks.",
+                        "Assisted startup timed out; trying ordinary Codex without delegation hooks.",
                         file=sys.stderr,
                     )
                     arguments, env = fallback_arguments, fallback_env

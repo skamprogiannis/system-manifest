@@ -22,7 +22,7 @@
     ./neovim.nix
     ./wallpaper-runtime.nix
     ./codex-skills.nix
-    ./codex-clef.nix
+    ./codex-auto.nix
     ./bannerlord-codex.nix
     ./bannerlord-speech-unit.nix
     ./bannerlord-speech.nix

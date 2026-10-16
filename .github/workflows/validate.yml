@@ -90,17 +90,17 @@ jobs:
           save: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
           gc-max-store-size-linux: 5G
       - uses: actions/setup-python@v5
-        if: ${{ contains(fromJSON(needs.plan.outputs.plan).support, 'codex-clef') }}
+        if: ${{ contains(fromJSON(needs.plan.outputs.plan).support, 'codex-auto') }}
         with:
           python-version: '3.13'
-      - name: Install Clef test dependencies
-        if: ${{ contains(fromJSON(needs.plan.outputs.plan).support, 'codex-clef') }}
-        run: python -m pip install jsonschema pillow tomli-w
-      - name: Clef offline decisions, privacy, hooks and migrations
-        if: ${{ contains(fromJSON(needs.plan.outputs.plan).support, 'codex-clef') }}
+      - name: Install native Codex test dependencies
+        if: ${{ contains(fromJSON(needs.plan.outputs.plan).support, 'codex-auto') }}
+        run: python -m pip install jsonschema
+      - name: Native Codex delegation guards and hook migration
+        if: ${{ contains(fromJSON(needs.plan.outputs.plan).support, 'codex-auto') }}
         env:
           PYTHONDONTWRITEBYTECODE: '1'
-        run: python checks/codex-clef-test.py modules/home/codex checks/fixtures/codex-0.162.0
+        run: python checks/codex-auto-test.py modules/home/codex checks/fixtures/codex-0.162.0
       - name: Build selected lightweight unit checks
         if: ${{ !cancelled() && needs.plan.result == 'success' && toJSON(fromJSON(needs.plan.outputs.plan).units) != '[]' }}
         env:

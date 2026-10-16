@@ -11,7 +11,7 @@ import tempfile
 import time
 
 
-def check_account_read(codex, root, env):
+def check_account_read(codex, root, env, check_config=False):
     # A daemon version query alone does not exercise the TUI's account bootstrap.
     # The fixture has no credentials: this checks protocol compatibility, not
     # live ChatGPT workspace routing or account-service availability.
@@ -59,6 +59,14 @@ def check_account_read(codex, root, env):
         assert account["account"] is None, account
         assert account["requiresOpenaiAuth"] is True, account
         assert account.get("workspaceRouting") is None, account
+        if check_config:
+            send({"id": 3, "method": "config/read", "params": {"includeLayers": False}})
+            config = response(3)["config"]
+            assert config["model"] == "gpt-6.1-sol", config
+            assert config["model_reasoning_effort"] == "medium", config
+            assert config["plan_mode_reasoning_effort"] == "xhigh", config
+            assert config["agents"]["default_subagent_model"] == "gpt-6.1-sol", config["agents"]
+            assert config["agents"]["default_subagent_reasoning_effort"] == "medium", config["agents"]
         print("Codex account/read bootstrap verified without credentials")
     finally:
         process.stdin.close()
@@ -103,7 +111,7 @@ def wait_for_managed_processes_to_exit(root):
 
 
 def main():
-    codex, expected_version = sys.argv[1:]
+    codex, expected_version, *config_source = sys.argv[1:]
     # Keep Unix socket paths short, including inside a Nix build sandbox.
     with tempfile.TemporaryDirectory(prefix="cdx-", dir="/tmp") as temporary:
         root = Path(temporary)
@@ -125,6 +133,9 @@ def main():
             path.mkdir(mode=0o700)
             env[key] = str(path)
 
+        if config_source:
+            (root / "codex/config.toml").write_bytes(Path(config_source[0]).read_bytes())
+
         def run(*arguments):
             result = subprocess.run(
                 [codex, *arguments],
@@ -144,7 +155,7 @@ def main():
 
         try:
             assert run("--version") == f"codex-cli {expected_version}"
-            check_account_read(codex, root, env)
+            check_account_read(codex, root, env, bool(config_source))
             run("app-server", "daemon", "start")
             package = root / "codex/packages/app-server-daemon/current"
             manifest = json.loads((package / "codex-package.json").read_text())

@@ -2,7 +2,6 @@
   inherit (ctx) desktopPinchtabPackage desktopCodexSkillsRoot desktopPinchtabConfigActivationFile pkgs;
   expectedSkills = [
     "browser-automation"
-    "clef-decisions"
     "code-review"
     "codebase-design"
     "diagnose"

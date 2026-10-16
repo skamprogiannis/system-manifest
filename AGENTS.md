@@ -1,6 +1,6 @@
 # Agents and Workflows
 
-This file contains the default repository-wide rules. Read the relevant reference before changing a subsystem: [maintainer notes](docs/maintainers.md), [desktop/system](docs/system.md), [USB](docs/usb.md), [CI](docs/ci.md), or [Codex/Clef](modules/home/codex/CLEF.md).
+This file contains the default repository-wide rules. Read the relevant reference before changing a subsystem: [maintainer notes](docs/maintainers.md), [desktop/system](docs/system.md), [USB](docs/usb.md), [CI](docs/ci.md), or [Codex workflow](modules/home/codex/WORKFLOW.md).
 
 ## Git and code changes
 
@@ -19,7 +19,7 @@ This file contains the default repository-wide rules. Read the relevant referenc
 - CI uses `checks/registry.nix`; keep check coverage and ownership aligned. Register shell entrypoints in `checks/context.nix`. CI success does not establish GPU, display, or USB hardware behavior.
 - For changes to USB storage, staging, recovery, or synchronization, **read [docs/usb.md](docs/usb.md)** and test on a real USB boot before declaring runtime correctness.
 - For wallpapers, greeter, blur, or keybindings, **read [docs/system.md](docs/system.md#desktop-maintenance)** and [DESIGN.md](DESIGN.md) before editing. Preserve their ownership boundaries.
-- For Codex packages/agents, follow [docs/maintainers.md](docs/maintainers.md) and the [Clef guide](modules/home/codex/CLEF.md). Keep shared version pins and adapter checks in sync.
+- For Codex packages/agents, follow [docs/maintainers.md](docs/maintainers.md) and the [Codex workflow guide](modules/home/codex/WORKFLOW.md). Keep shared version pins and adapter checks in sync.
 
 ## Commands
 

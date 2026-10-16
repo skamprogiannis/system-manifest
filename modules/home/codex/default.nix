@@ -330,7 +330,6 @@
     test "$(IMPECCABLE_LAUNCHER_PROBE=1 "$out/scripts/impeccable" engine-probe)" = "impeccable-engine ${impeccableEngineVersion}"
   '';
   declarativeSkills = [
-    (mkSkill "clef-decisions" ./skills/clef-decisions "Use direct Clef typed decisions for explicit reviews, verification, ranking, and screenshot classification; inspect routing diagnostics.")
     (mkSkill "visual-explainer" visualExplainerSkill "Generate visual diagrams and HTML explainers for architecture, plans, diffs, and complex tables.")
     (mkSkill "technical-debt" ./skills/technical-debt "Audit code health, quantify technical debt, and produce focused refactoring roadmaps.")
     (mkSkill "browser-automation" "${inputs.pinchtab-src}/plugins/grok/skills/pinchtab" "Control Chrome with PinchTab for web UI testing, scraping, form filling, and browser workflows.")
@@ -432,7 +431,7 @@
     '';
   };
 in {
-  imports = [./clef.nix];
+  imports = [./auto.nix];
 
   _module.args = {
     codexCliPackage = codexCli;

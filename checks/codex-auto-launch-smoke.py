@@ -14,9 +14,9 @@ import time
 
 def main():
     codex, assisted = sys.argv[1:]
-    sys.path.insert(0, str(Path(assisted).resolve().parent.parent / "lib/codex-clef"))
-    from clef.startup import _ordinary_daemon_safe
-    with tempfile.TemporaryDirectory(prefix="clf-", dir="/tmp") as temporary:
+    sys.path.insert(0, str(Path(assisted).resolve().parent.parent / "lib/codex-auto"))
+    from startup import _ordinary_daemon_safe
+    with tempfile.TemporaryDirectory(prefix="auto-", dir="/tmp") as temporary:
         root = Path(temporary)
         env = {
             key: value
@@ -37,7 +37,6 @@ def main():
             ["--help"],
             ["status"],
             ["status", "--json"],
-            ["clef", "--help"],
         ):
             result = subprocess.run(
                 [assisted, *arguments],
@@ -52,8 +51,8 @@ def main():
                 "frontend exposes internal entrypoint"
             )
             if arguments == ["status", "--json"]:
-                assert json.loads(result.stdout)["usage_today"]["successful_calls"] == 0
-        assert not (root / "state/codex-clef").exists(), (
+                assert json.loads(result.stdout)["automatic_provider_calls"] is False
+        assert not (root / "state/codex-auto").exists(), (
             "diagnostics created decision state"
         )
 
@@ -68,10 +67,10 @@ def main():
             assert result.returncode == 0, result.stderr
             return json.loads(result.stdout) if command == "version" else None
 
-        def launch(mode):
+        def launch():
             master, slave = pty.openpty()
             process = subprocess.Popen(
-                [assisted, "--mode", mode, "--"], env=env, cwd=root,
+                [assisted, "--"], env=env, cwd=root,
                 stdin=slave, stdout=slave, stderr=slave, start_new_session=True,
             )
             os.close(slave)
@@ -115,20 +114,20 @@ def main():
 
         try:
             # Assisted startup first must leave no enabled environment in a daemon.
-            for mode in ("shadow", "apply"):
-                launch(mode)
-                assert daemon("version")["status"] != "running", "assisted launch started shared daemon"
+            launch()
+            assert daemon("version")["status"] != "running", "assisted launch started shared daemon"
             # A plain daemon started first must not absorb assisted invocations.
             daemon("start")
             assert _ordinary_daemon_safe(env), "ordinary daemon falsely rejected"
-            for mode in ("shadow", "apply"):
-                launch(mode)
-                assert daemon("version")["status"] == "running"
+            launch()
+            assert daemon("version")["status"] == "running"
             daemon("stop")
-            # A daemon started with Clef must never be used as an ordinary fallback.
-            daemon("start", dict(env, CODEX_CLEF_ENABLED="1", CODEX_CLEF_ROUTING_MODE="shadow"))
-            assert not _ordinary_daemon_safe(env), "Clef-enabled daemon accepted for ordinary fallback"
-            print("Installed assisted launcher isolated in both modes and startup orders")
+            # Both a new assisted daemon and an old Clef daemon must be rejected.
+            for flag in ("CODEX_AUTO_ENABLED", "CODEX_CLEF_ENABLED"):
+                daemon("start", dict(env, **{flag: "1"}))
+                assert not _ordinary_daemon_safe(env), "assisted daemon accepted for ordinary fallback"
+                daemon("stop")
+            print("Installed assisted launcher isolated in both startup orders")
         finally:
             daemon("stop")
 

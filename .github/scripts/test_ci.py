@@ -44,10 +44,10 @@ class SelectorTests(unittest.TestCase):
         self.assertEqual(plan['support'], ['ci-registry'])
         self.assertEqual(ci.expected_jobs(plan), {'plan': True, 'source-unit': True, 'support-check': True, 'host-check': False})
 
-    def test_deployed_markdown_selects_runtime_and_clef_contracts(self):
+    def test_deployed_markdown_selects_runtime_and_native_codex_contracts(self):
         plan = ci.selection(REGISTRY, ['modules/home/codex/instructions.md'])
         self.assertEqual(plan['hosts'], ['desktop', 'usb', 'laptop'])
-        self.assertIn('codex-clef', plan['support'])
+        self.assertIn('codex-auto', plan['support'])
         self.assertIn('bannerlord-codex', plan['support'])
         self.assertTrue(ci.expected_jobs(plan)['source-unit'])
 
@@ -86,7 +86,7 @@ class SelectorTests(unittest.TestCase):
                 self.assertEqual(plan['hosts'], [host])
                 self.assertIn(f'{host}-installed-environment', plan['hostChecks'][host])
                 self.assertIn('ci-registry', plan['support'])
-                self.assertNotIn('codex-clef', plan['support'])
+                self.assertNotIn('codex-auto', plan['support'])
 
     def test_combined_installed_environment_source_selects_desktop_and_usb(self):
         plan = ci.selection(REGISTRY, ['checks/installed-environment.nix'])
@@ -105,7 +105,7 @@ class SelectorTests(unittest.TestCase):
                 plan = ci.selection(REGISTRY, [path])
                 self.assertEqual(plan['hosts'], ['desktop', 'usb', 'laptop'])
                 self.assertIn('bannerlord-speech-unit', plan['units'])
-                self.assertIn('codex-clef', plan['support'])
+                self.assertIn('codex-auto', plan['support'])
 
     def test_diff_parser_retains_deleted_and_both_renamed_paths(self):
         paths = ci.parse_diff(b'D\0modules/home/bannerlord-speech/engine.py\0R100\0modules/home/codex/instructions.md\0docs/new\nname.md\0')
@@ -113,7 +113,7 @@ class SelectorTests(unittest.TestCase):
         plan = ci.selection(REGISTRY, paths)
         self.assertEqual(plan['hosts'], ['desktop', 'usb', 'laptop'])
         self.assertIn('bannerlord-speech-unit', plan['units'])
-        self.assertIn('codex-clef', plan['support'])
+        self.assertIn('codex-auto', plan['support'])
         with self.assertRaises(ValueError):
             ci.parse_diff(b'R100\0missing-second-path\0')
 
@@ -155,7 +155,7 @@ class GitFixtureTests(unittest.TestCase):
         self.assertEqual(baseline, self.base)
         paths = ci.changed_paths('push', {}, head, baseline)
         self.assertIn('modules/home/codex/instructions.md', paths)
-        self.assertIn('codex-clef', ci.selection(REGISTRY, paths)['support'])
+        self.assertIn('codex-auto', ci.selection(REGISTRY, paths)['support'])
 
     def test_pr_uses_pinned_base_and_tested_merge(self):
         self.command('checkout', '-qb', 'feature')
@@ -179,7 +179,7 @@ class GitFixtureTests(unittest.TestCase):
         head = self.commit()
         paths = ci.changed_paths('push', {}, head, base)
         self.assertCountEqual(paths, ['modules/home/codex/instructions.md', 'docs/old-prompt.md', 'modules/home/bannerlord-speech/engine.py'])
-        self.assertIn('codex-clef', ci.selection(REGISTRY, paths)['support'])
+        self.assertIn('codex-auto', ci.selection(REGISTRY, paths)['support'])
 
     def test_missing_and_nonancestor_baselines_fall_back_to_full(self):
         for event, data, baseline in [('push', {}, None), ('push', {}, 'f' * 40), ('pull_request', {'pull_request': {'base': {}}}, None), ('schedule', {}, None), ('workflow_dispatch', {}, None)]:
@@ -200,7 +200,7 @@ class GitFixtureTests(unittest.TestCase):
         plan = ci.selection(REGISTRY, paths)
         self.assertEqual(plan['hosts'], ['desktop', 'usb', 'laptop'])
         self.assertIn('bannerlord-speech-unit', plan['units'])
-        self.assertIn('codex-clef', plan['support'])
+        self.assertIn('codex-auto', plan['support'])
 
     def test_api_unavailability_is_a_full_baseline_fallback(self):
         with patch.dict(os.environ, {'GH_TOKEN': 'test-only', 'GITHUB_REPOSITORY': 'owner/repo'}), patch.object(ci.urllib.request, 'urlopen', side_effect=ci.urllib.error.URLError('unavailable')):

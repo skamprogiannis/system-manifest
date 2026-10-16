@@ -31,11 +31,12 @@ def main():
     binary, source, *arguments = sys.argv[1:]
     if (
         all(stream.isatty() for stream in (sys.stdin, sys.stdout, sys.stderr))
-        and os.environ.get("CODEX_CLEF_ENABLED") != "1"
+        and not any(os.environ.get(key) == "1" for key in (
+            "CODEX_STARTUP_SUPERVISED", "CODEX_AUTO_ENABLED", "CODEX_CLEF_ENABLED",
+        ))
     ):
         sys.path.insert(0, source)
-        from clef.cli import launch_context
-        from clef.startup import launch_interactive
+        from startup import launch_context, launch_interactive
 
         if launch_context(arguments).interactive:
             return launch_interactive(binary, [binary, *arguments], dict(os.environ))

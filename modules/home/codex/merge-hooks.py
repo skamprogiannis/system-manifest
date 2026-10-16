@@ -9,7 +9,7 @@ import tempfile
 import os
 
 OWN_COMMAND = re.compile(
-    r"^/nix/store/[a-z0-9]{32}-codex-clef/(?:bin/codex-clef hook|libexec/codex-auto-hook)$"
+    r"^/nix/store/[a-z0-9]{32}-(?:codex-clef/(?:bin/codex-clef hook|libexec/codex-auto-hook)|codex-auto/libexec/codex-auto-hook)$"
 )
 
 

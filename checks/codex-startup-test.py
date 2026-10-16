@@ -21,14 +21,14 @@ TIMEOUT = "Error: account/read failed during TUI bootstrap: account/read failed:
 
 
 class StartupTests(unittest.TestCase):
-    def exercise(self, mode, error=TIMEOUT, interrupt=None, fallback=False, unsafe_daemon=False, ordinary=False):
+    def exercise(self, mode, error=TIMEOUT, interrupt=None, fallback=False, unsafe_daemon=False, ordinary=False, already_supervised=False):
         with tempfile.TemporaryDirectory(prefix="codex-startup-test-") as directory:
             root = Path(directory)
             fake = root / "native.py"
             fake.write_text("""import json, os, pathlib, signal, sys, time
 root=pathlib.Path(os.environ['FIXTURE_ROOT']); count=root/'count'
 n=int(count.read_text())+1 if count.exists() else 1; count.write_text(str(n))
-(root/'observed.json').write_text(json.dumps({'args':sys.argv[1:],'enabled':os.environ['CODEX_CLEF_ENABLED'],'routing_mode':os.environ.get('CODEX_CLEF_ROUTING_MODE'),'stdin_tty':sys.stdin.isatty(),'stdout_tty':sys.stdout.isatty()}))
+(root/'observed.json').write_text(json.dumps({'args':sys.argv[1:],'enabled':os.environ['CODEX_AUTO_ENABLED'],'supervised':os.environ.get('CODEX_STARTUP_SUPERVISED'),'stdin_tty':sys.stdin.isatty(),'stdout_tty':sys.stdout.isatty()}))
 mode=os.environ['FIXTURE_MODE']
 if mode=='interrupt':
  (root/'ready').touch(); time.sleep(20)
@@ -46,12 +46,12 @@ print('KEY:'+sys.stdin.readline().strip(),flush=True)
 """)
             runner = root / "runner.py"
             runner.write_text(
-                'import os,sys\nsys.path.insert(0,sys.argv[1])\nfrom clef.startup import launch_interactive\n'
+                'import os,sys\nsys.path.insert(0,sys.argv[1])\nfrom startup import launch_interactive\n'
                 'if os.environ["FIXTURE_UNSAFE_DAEMON"]=="1":\n'
-                ' from clef import startup;startup._ordinary_daemon_safe=lambda _:False\n'
+                ' import startup;startup._ordinary_daemon_safe=lambda _:False\n'
                 'fallback=None\n'
                 'if os.environ["FIXTURE_FALLBACK"]=="1":\n'
-                ' env=dict(os.environ,CODEX_CLEF_ENABLED="0");env.pop("CODEX_CLEF_ROUTING_MODE",None)\n'
+                ' env=dict(os.environ,CODEX_AUTO_ENABLED="0")\n'
                 ' fallback=([sys.executable,sys.argv[2],"task"],env)\n'
                 'options={"fallback":fallback} if fallback is not None else {}\n'
                 'raise SystemExit(launch_interactive(sys.executable,[sys.executable,sys.argv[2],"--no-daemon","task"],dict(os.environ),backoff=0,**options))\n'
@@ -61,8 +61,9 @@ print('KEY:'+sys.stdin.readline().strip(),flush=True)
                 FIXTURE_ROOT=str(root),
                 FIXTURE_MODE=mode,
                 FIXTURE_ERROR=error,
-                CODEX_CLEF_ENABLED="0" if ordinary else "1",
-                CODEX_CLEF_ROUTING_MODE="shadow",
+                CODEX_AUTO_ENABLED="0" if ordinary else "1",
+                CODEX_CLEF_ENABLED="0",
+                CODEX_STARTUP_SUPERVISED="1" if already_supervised else "0",
                 CODEX_HOME=str(root / "codex"),
                 FIXTURE_FALLBACK=str(int(fallback)),
                 FIXTURE_UNSAFE_DAEMON=str(int(unsafe_daemon)),
@@ -119,6 +120,10 @@ print('KEY:'+sys.stdin.readline().strip(),flush=True)
                     os.killpg(proc.pid, signal.SIGKILL)
                     proc.wait()
                 os.close(master)
+
+    def test_supervised_child_does_not_add_another_retry_layer(self):
+        status, count, _, _, _ = self.exercise("exhaust", ordinary=True, already_supervised=True)
+        self.assertEqual((status, count), (1, 1))
 
     def test_ordinary_launcher_recovers_exact_bootstrap_failure(self):
         status, count, output, observed, _ = self.exercise("retry", ordinary=True)
@@ -190,7 +195,7 @@ print('KEY:'+sys.stdin.readline().strip(),flush=True)
         self.assertEqual((status, count), (0, 2))
         self.assertEqual(observed["args"], ["task"])
         self.assertEqual(observed["enabled"], "0")
-        self.assertIsNone(observed["routing_mode"])
+        self.assertEqual(observed["supervised"], "1")
         self.assertTrue(observed["stdin_tty"])
         self.assertTrue(observed["stdout_tty"])
         self.assertIn("KEY:hello", output)
@@ -247,7 +252,7 @@ class OrdinaryLaunchTests(unittest.TestCase):
         launch = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(launch)
         sys.path.insert(0, str(SOURCE))
-        from clef import startup
+        import startup
         for arguments, tty, assisted, supervised in (
             ([], True, False, True),
             (["--no-daemon", "resume"], True, False, True),
@@ -263,7 +268,7 @@ class OrdinaryLaunchTests(unittest.TestCase):
                      patch.object(sys.stdin, "isatty", return_value=tty), \
                      patch.object(sys.stdout, "isatty", return_value=tty), \
                      patch.object(sys.stderr, "isatty", return_value=tty), \
-                     patch.dict(os.environ, {"CODEX_CLEF_ENABLED": "1" if assisted else "0"}), \
+                     patch.dict(os.environ, {"CODEX_AUTO_ENABLED": "1" if assisted else "0", "CODEX_CLEF_ENABLED": "0", "CODEX_STARTUP_SUPERVISED": "0"}), \
                      patch.object(startup, "launch_interactive", return_value=17) as recover, \
                      patch.object(os, "execv") as execute:
                     result = launch.main()
@@ -280,7 +285,7 @@ class OrdinaryLaunchTests(unittest.TestCase):
 class StartupFailureTests(unittest.TestCase):
     def setUp(self):
         sys.path.insert(0, str(SOURCE))
-        from clef import startup
+        import startup
 
         self.startup = startup
         self.spawn = subprocess.Popen
@@ -288,7 +293,7 @@ class StartupFailureTests(unittest.TestCase):
 
     def test_daemon_metadata_access_failure_is_closed(self):
         with patch.object(self.startup.Path, "stat", side_effect=PermissionError):
-            self.assertFalse(self.startup._ordinary_daemon_safe({"CODEX_CLEF_ENABLED":"0"}))
+            self.assertFalse(self.startup._ordinary_daemon_safe({"CODEX_AUTO_ENABLED":"0"}))
 
     def tearDown(self):
         for child in self.children:

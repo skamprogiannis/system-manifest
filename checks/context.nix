@@ -27,6 +27,7 @@
     ai-search = "ai-search";
     searxngctl = "searxngctl";
     codex = "codex-cli-wrapped";
+    codex-auto = "codex-auto";
     codex-state-sync = "codex-state-sync";
     gsr-record = "gsr-record";
     torrent = "torrent";
@@ -174,6 +175,8 @@
       "${homePackage "desktop" "chatgpt-desktop"}/bin/chatgpt"
       "${homePackage "desktop" "ai-search"}/bin/ai-search"
       "${homePackage "desktop" "searxngctl"}/bin/searxngctl"
+      "${homePackage "desktop" "codex-auto"}/bin/codex-auto"
+      "${homePackage "desktop" "codex-auto"}/libexec/codex-auto-hook"
       "${homePackage "desktop" "codex-state-sync"}/bin/codex-state-sync"
       "${homePackage "desktop" "gsr-record"}/bin/gsr-record"
       "${homePackage "desktop" "hypr-quit-active"}/bin/hypr-quit-active"
