@@ -10,7 +10,7 @@
     version = codexVersion;
     src = pkgs.fetchurl {
       url = "https://github.com/openai/codex/releases/download/rust-v${codexVersion}/codex-package-x86_64-unknown-linux-musl.tar.gz";
-      hash = "sha256-pnb1ciquDYbL43ZDMvCOqx/didwKMAs61P+/SGEfo+M=";
+      hash = "sha256-WCZGxr8FYesN5UD3/IW5EhsAkagmvG6Wgwt/FyISIYI=";
     };
     dontUnpack = true;
     installPhase = ''
@@ -336,9 +336,6 @@
     (mkSkill "browser-automation" "${inputs.pinchtab-src}/plugins/grok/skills/pinchtab" "Control Chrome with PinchTab for web UI testing, scraping, form filling, and browser workflows.")
     (mkSkill "static-analysis" staticAnalysisSkill "Run scanner-backed security analysis with CodeQL, Semgrep, and SARIF interpretation.")
     (mkSkill "impeccable" impeccableSkill "Design, audit, and polish frontend interfaces, layouts, typography, motion, and UX details.")
-    (mkSkill "caveman" "${inputs.caveman}/skills/caveman" "Use terse caveman-mode responses with technical accuracy and minimal filler.")
-    (mkSkill "caveman-commit" "${inputs.caveman}/skills/caveman-commit" "Generate terse Conventional Commit messages in caveman style.")
-    (mkSkill "caveman-review" "${inputs.caveman}/skills/caveman-review" "Produce compact code review findings in caveman style.")
     (mkSkill "diagnose" "${inputs.mattpocock-skills}/skills/engineering/diagnosing-bugs" "Use a disciplined reproduce-minimize-hypothesize-instrument-fix loop for bugs and regressions.")
     (mkSkill "grilling" "${inputs.mattpocock-skills}/skills/productivity/grilling" "Grill users one decision at a time to stress-test plans and designs.")
     (mkSkill "domain-modeling" "${inputs.mattpocock-skills}/skills/engineering/domain-modeling" "Build and sharpen a project's domain vocabulary and architectural decisions.")

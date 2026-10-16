@@ -22,15 +22,10 @@ Always check the local repository for `AGENTS.md` first. Local repository instru
 - Use custom agents when the user explicitly asks for delegation, or in an explicitly enabled `codex-auto` session. Plain `codex` remains explicit-delegation-only.
 - Do not add Copilot co-author trailers or other AI co-author trailers to commit messages.
 
-## Caveman Persona Rule
-
-- When responding in caveman mode, use the name **Grug**.
-- When not in caveman mode, do not use the name Grug.
-
 ## Commit Hygiene
 
 - Use atomic commits: each commit should contain one self-contained, logical change so it stays easy to review, revert, and bisect.
-- When generating commit messages, prefer the `caveman-commit` skill for terse Conventional Commit phrasing.
+- Use short Conventional Commit subjects: `type(scope): summary`, with an optional scope. Use plain, direct wording; add a body only when useful to explain the change or its rationale.
 
 ## Available Skills
 
@@ -41,9 +36,6 @@ Always check the local repository for `AGENTS.md` first. Local repository instru
 | `browser-automation` | Control Chrome via PinchTab for testing, scraping, form filling | Ask to test a web UI, extract page content, or automate browser tasks |
 | `static-analysis` | Run CodeQL, Semgrep, and SARIF workflows | Ask for scanner-backed security audit, CodeQL/Semgrep scan, or SARIF interpretation |
 | `impeccable` | Frontend design skill covering typography, color, layout, motion, and anti-patterns | Any frontend/UI work |
-| `caveman` | Terse response style with technical accuracy and minimal filler | Ask for concise, low-token output |
-| `caveman-commit` | Terse Conventional Commit messages in caveman style | Ask for a commit message |
-| `caveman-review` | Compact code-review findings in caveman style | Ask for a terse review |
 | `diagnose` | Disciplined reproduce/minimize/hypothesize/instrument/fix loop | Hard bugs, broken behavior, or performance regressions |
 | `grilling` | Stress-test a plan or design one decision at a time | Ask to be grilled about a plan or design |
 | `domain-modeling` | Sharpen domain terminology and record durable decisions | Ask to define domain language or an architectural decision |

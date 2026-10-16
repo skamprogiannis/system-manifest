@@ -2,9 +2,6 @@
   inherit (ctx) desktopPinchtabPackage desktopCodexSkillsRoot desktopPinchtabConfigActivationFile pkgs;
   expectedSkills = [
     "browser-automation"
-    "caveman"
-    "caveman-commit"
-    "caveman-review"
     "clef-decisions"
     "code-review"
     "codebase-design"

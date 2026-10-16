@@ -20,22 +20,6 @@
         "type": "github"
       }
     },
-    "caveman": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1791092083,
-        "narHash": "sha256-ZkDCcKjrh5VybFBg28A29hlNz+b0Bi/wKbTzZ22diKY=",
-        "owner": "JuliusBrussee",
-        "repo": "caveman",
-        "rev": "6571943370f7c9d4de1946481177ee7b306cd8e8",
-        "type": "github"
-      },
-      "original": {
-        "owner": "JuliusBrussee",
-        "repo": "caveman",
-        "type": "github"
-      }
-    },
     "dank-greeter": {
       "inputs": {
         "dank-qml-common": "dank-qml-common",
@@ -336,7 +320,6 @@
     "root": {
       "inputs": {
         "catppuccin": "catppuccin",
-        "caveman": "caveman",
         "dank-greeter": "dank-greeter",
         "dms": "dms",
         "ghostty": "ghostty",
