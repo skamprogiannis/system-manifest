@@ -54,7 +54,7 @@
     };
 
     pinchtab-src = {
-      url = "github:pinchtab/pinchtab/96d1508b44721674e3bff2f3bbd21401ec270a63";
+      url = "github:pinchtab/pinchtab/a62662027f233444c579c29fbe42ad90df0d5bc7";
       flake = false;
     };
 

@@ -106,17 +106,31 @@
       body = text[end + 4:]
       if skill_name == "code-review":
           body = body.replace(
-              "The issue tracker should have been provided to you. If `docs/agents/issue-tracker.md` is missing, tell the user to run `/setup-matt-pocock-skills`.",
+              "The issue tracker should have been provided to you. If not, tell the user to run `/setup-matt-pocock-skills`.",
               "Issue-tracker configuration is optional. Discover specs from the user, commits, and repository files; if none is available, continue with the Standards axis and report that the Spec axis was unavailable.",
           )
           body = body.replace(
-              "fetched via the workflow in `docs/agents/issue-tracker.md`.",
-              "when a configured tracker integration is available.",
+              "fetched via the workflow in the tracker doc.",
+              "fetched when a configured tracker integration is available.",
           )
       if skill_name == "tdd":
           body = body.replace(
               'call the Skill tool with "codebase-design" for the vocabulary.',
               'read the installed `codebase-design` skill for the vocabulary.',
+          )
+      if skill_name == "browser-automation":
+          # The skill tracks upstream fixes; CLI examples target the packaged stable release.
+          body = body.replace('`--timeout-ms <ms>`', '`--timeout <ms>`')
+          for command in ("console", "errors"):
+              body = body.replace(
+                  f"pinchtab {command} [--clear] [--json]",
+                  f"pinchtab {command} [--clear]",
+              )
+          body = re.sub(
+              r"^- A click that navigates \*\*succeeds\*\*.*\n- `--wait-nav` is not permission to navigate.*$",
+              "- `click --wait-nav` waits for navigation to settle. The packaged stable release may report `Error 409: unexpected page navigation`. Confirm the landed page with a fresh `snap` or `text` before retrying; navigation invalidates the old refs.",
+              body,
+              flags=re.MULTILINE,
           )
       out = []
       skip_description_continuation = False
@@ -321,7 +335,7 @@
   impeccableEngineVersion = lib.strings.trim (builtins.readFile "${impeccableSource}/scripts/VERSION");
   impeccableEngine = pkgs.fetchurl {
     url = "https://github.com/pbakaus/impeccable/releases/download/engine-v${impeccableEngineVersion}/impeccable-linux-x64";
-    hash = "sha256-AiFgfh9TWvk36iZ8NHsfkCM7hdwlY8vS7u/fQuDlxZQ=";
+    hash = "sha256-tOLry5eyvl5aCucdSgNZbBLTZy8Zskz91yROME5nn7c=";
   };
   impeccableSkill = pkgs.runCommand "impeccable-skill-with-engine-${impeccableEngineVersion}" {} ''
     cp -r ${impeccableSource} "$out"

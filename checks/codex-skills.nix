@@ -31,6 +31,7 @@ in {
       from pathlib import Path
       import json
       import re
+      import subprocess
       import sys
 
       root = Path(sys.argv[1])
@@ -84,6 +85,20 @@ in {
               raise SystemExit(f"Codex-incompatible Skill tool instruction in {skill_file}")
           if name == "code-review" and "/setup-matt-pocock-skills" in text:
               raise SystemExit(f"Obsolete setup workflow in {skill_file}")
+
+      browser_text = (root / "browser-automation/SKILL.md").read_text(encoding="utf-8")
+      for command in ("wait", "console", "errors"):
+          examples = re.findall(rf"^pinchtab {command}\b[^\n]*", browser_text, re.MULTILINE)
+          if command == "wait":
+              examples += re.findall(r"^Timeout [^\n]*", browser_text, re.MULTILINE)
+          documented_flags = set(re.findall(r"--[a-z][a-z-]*", "\n".join(examples)))
+          help_text = subprocess.check_output(
+              ["${desktopPinchtabPackage}/bin/pinchtab", command, "--help"], text=True,
+          )
+          available_flags = set(re.findall(r"--[a-z][a-z-]*", help_text))
+          unsupported = documented_flags - available_flags
+          if unsupported:
+              raise SystemExit(f"Unsupported PinchTab {command} flags in skill: {sorted(unsupported)}")
       PY
 
       test -x "$skills_root/impeccable/scripts/impeccable"
@@ -94,6 +109,19 @@ in {
       test "$(IMPECCABLE_LAUNCHER_PROBE=1 "$skills_root/impeccable/scripts/impeccable" engine-probe)" = "impeccable-engine $impeccable_version"
       test -f "$skills_root/browser-automation/references/safety.md"
       test -f "$skills_root/browser-automation/agents/openai.yaml"
+      for reference in codeql semgrep sarif-parsing; do
+        test -s "$skills_root/static-analysis/references/$reference/SKILL.md"
+      done
+
+      CODEX_SKILLS_TEST_ROOT="$skills_root" node --input-type=module <<'JS'
+      import assert from 'node:assert/strict';
+
+      const { renderPage } = await import(process.env.CODEX_SKILLS_TEST_ROOT + '/visual-explainer/kit/render.mjs');
+      const result = renderPage('<!doctype html><html data-register="instrument"><head><link rel="stylesheet" href="kit.css" data-ve-kit></head><body><main><figure><figcaption>Skill packaging check</figcaption></figure></main></body></html>');
+      assert.deepEqual(result.errors, []);
+      assert.equal(result.kit, true);
+      assert.match(result.html, /<style/);
+      JS
 
       pinchtab_seed="$(sed -n 's|^[[:space:]]*cp \(/nix/store/[^ ]*pinchtab-config.json\) .*|\1|p' ${desktopPinchtabConfigActivationFile})"
       test -n "$pinchtab_seed"
