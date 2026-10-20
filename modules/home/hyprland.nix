@@ -635,6 +635,13 @@ in {
             match.class = "^(com\\.mitchellh\\.ghostty)$";
             opacity = "1.0 override";
           }
+          # XWayland menus include transparent padding that bypasses popup alpha clipping.
+          # Native Wayland glass surfaces keep the shared blur profile.
+          {
+            name = "xwayland-no-blur";
+            match.xwayland = true;
+            no_blur = true;
+          }
           # Center credential/auth dialogs so they don't spawn between monitors
           {
             name = "auth-dialogs";
