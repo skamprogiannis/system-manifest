@@ -8,6 +8,27 @@
   };
   # PostHog's test instrumentation still targets MCP 1; WebUI itself uses MCP 2.
   pythonPackages = pkgs.python3Packages.overrideScope (final: prev: {
+    mcp = prev.mcp.overridePythonAttrs (finalAttrs: old: {
+      version = "2.3.0";
+      src = pkgs.fetchFromGitHub {
+        owner = "modelcontextprotocol";
+        repo = "python-sdk";
+        tag = "v${finalAttrs.version}";
+        hash = "sha256-CnXi78zYxm0/R4fON/DzRYMSDYM/XM/9SE3s+Cf1BR0=";
+      };
+      # MCP 2.3 adds blocking-call detection to its test fixtures.
+      nativeCheckInputs = old.nativeCheckInputs ++ [
+        (prev.blockbuster.overridePythonAttrs (blockbusterAttrs: _: {
+          version = "1.5.27";
+          src = pkgs.fetchFromGitHub {
+            owner = "cbornet";
+            repo = "blockbuster";
+            tag = "v${blockbusterAttrs.version}";
+            hash = "sha256-r9UcyjBIZjnCxL/8RdMiGb5XiH0s8JnQ8fY9SIC4Hsw=";
+          };
+        }))
+      ];
+    });
     posthog = prev.posthog.override {mcp = final.mcp_1;};
   });
   base = pkgs.open-webui.override {python3Packages = pythonPackages;};
