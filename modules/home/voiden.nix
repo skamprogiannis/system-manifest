@@ -1,9 +1,9 @@
 {pkgs, ...}: let
-  version = "2.3.1";
+  version = "2.3.4";
   appImageName = "Voiden-${version}.AppImage";
   src = pkgs.fetchurl {
     url = "https://voiden.md/api/download/stable/linux/x64/${appImageName}";
-    hash = "sha256-NqKFUiwXp5qpp8T4msh39zHFk7agxm1cSOeMDm3q5C4=";
+    hash = "sha256-antO3kK5eHStYhXIkoCRf1KJm2/8y7/E2WwobuY7E24=";
   };
 
   extracted = pkgs.appimageTools.extract {
