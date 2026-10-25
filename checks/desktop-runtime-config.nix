@@ -86,32 +86,32 @@ in {
       assert_file_contains ${desktopMimeDefaultApplicationsFile} '"x-scheme-handler/magnet":["torrent-add.desktop"]'
       assert_file_contains ${desktopMimeDefaultApplicationsFile} '"application/x-bittorrent":["torrent-add.desktop"]'
       test -x ${desktopGreeterPackage}/bin/dms-greeter
-      assert_file_not_contains ${desktopDmsPackage}/share/quickshell/dms/Modals/DankLauncherV2/DankLauncherV2ModalHost.qml 'sourceRect.antialiasing'
-      assert_file_not_contains ${desktopDmsPackage}/share/quickshell/dms/Modals/DankLauncherV2/DankLauncherV2ModalHost.qml 'sourceRect.smooth'
-      assert_file_contains ${desktopDmsPackage}/share/quickshell/dms/Modules/DankBar/Widgets/Clock.qml 'showSeconds: root.widgetData?.showSeconds !== undefined ? root.widgetData.showSeconds : SettingsData.showSeconds'
+      assert_file_not_contains ${desktopDmsPackage}/share/quickshell/dms/Modals/DLauncherV2/DLauncherV2ModalHost.qml 'sourceRect.antialiasing'
+      assert_file_not_contains ${desktopDmsPackage}/share/quickshell/dms/Modals/DLauncherV2/DLauncherV2ModalHost.qml 'sourceRect.smooth'
+      assert_file_contains ${desktopDmsPackage}/share/quickshell/dms/Modules/DBar/Widgets/Clock.qml 'showSeconds: root.widgetData?.showSeconds !== undefined ? root.widgetData.showSeconds : SettingsData.showSeconds'
       assert_file_contains ${desktopDmsPackage}/share/quickshell/dms/Widgets/ClockContent.qml 'SettingsData.getEffectiveTimeFormat(root.showSeconds)'
       assert_file_contains ${desktopDmsPackage}/share/quickshell/dms/Widgets/ClockContent.qml 'precision: root.showSeconds ? SystemClock.Seconds : SystemClock.Minutes'
       assert_file_contains ${desktopDmsPackage}/share/quickshell/dms/Modals/NotificationModal.qml 'NotificationService.clearHistory();'
-      assert_file_contains ${usbDmsPackage}/share/quickshell/dms/Modules/DankBar/BarSurface.qml 'Shape.SoftwareRenderer : Shape.CurveRenderer'
-      assert_file_contains ${usbDmsPackage}/share/quickshell/dms/DankCommon/Widgets/CachingImage.qml 'if (!root._cacheTarget || Quickshell.env("QT_QUICK_BACKEND") === "software")'
+      assert_file_contains ${usbDmsPackage}/share/quickshell/dms/Modules/DBar/BarSurface.qml 'Shape.SoftwareRenderer : Shape.CurveRenderer'
+      assert_file_contains ${usbDmsPackage}/share/quickshell/dms/DCommon/Widgets/CachingImage.qml 'if (!root._cacheTarget || Quickshell.env("QT_QUICK_BACKEND") === "software")'
       assert_file_contains ${usbDmsPackage}/share/quickshell/dms/Modules/Settings/WallpaperColorsTab.qml 'Quickshell.execDetached(["skwd-wall-v2"]);'
       assert_file_not_contains ${usbDmsPackage}/share/quickshell/dms/Modules/Settings/WallpaperColorsTab.qml 'SessionData.setMaterialWallpaper'
       assert_file_not_contains ${usbDmsPackage}/share/quickshell/dms/Modules/Settings/WallpaperColorsTab.qml 'SessionData.setWallpaper('
       assert_file_not_contains ${usbDmsPackage}/share/quickshell/dms/Modules/Settings/WallpaperColorsTab.qml 'SessionData.setMonitorWallpaper('
       # Guard the packaged wake listener; real input/session-lock behavior
       # still requires a monitor-off-then-lock trial on hardware.
-      lock_wake_monitor="$TMPDIR/lock-wake-monitor.qml"
-      sed -n '/id: lockWakeMonitor/,/^    }/p' \
-        ${desktopDmsPackage}/share/quickshell/dms/Services/IdleService.qml > "$lock_wake_monitor"
-      if ! grep -Fxq '        enabled: root.enabled && root.isShellLocked && root.monitorsOff' "$lock_wake_monitor"; then
+      wake_monitor="$TMPDIR/wake-monitor.qml"
+      sed -n '/id: wakeMonitor/,/^    }/p' \
+        ${desktopDmsPackage}/share/quickshell/dms/Services/IdleService.qml > "$wake_monitor"
+      if ! grep -Fxq '        enabled: root.enabled && root.monitorsOff' "$wake_monitor"; then
         echo "Expected locked monitor wake for every monitor-off path, including automatic idle." >&2
-        cat "$lock_wake_monitor" >&2
+        cat "$wake_monitor" >&2
         exit 1
       fi
-      assert_file_contains "$lock_wake_monitor" 'timeout: 1'
-      assert_file_contains "$lock_wake_monitor" 'respectInhibitors: false'
-      assert_file_contains "$lock_wake_monitor" 'if (!isIdle && root.monitorsOff)'
-      assert_file_contains "$lock_wake_monitor" 'root.requestMonitorOn();'
+      assert_file_contains "$wake_monitor" 'timeout: 1'
+      assert_file_contains "$wake_monitor" 'respectInhibitors: false'
+      assert_file_contains "$wake_monitor" 'if (!isIdle && root.monitorsOff)'
+      assert_file_contains "$wake_monitor" 'root.requestMonitorOn();'
       for dms_package in ${desktopDmsPackage} ${usbDmsPackage}; do
         niri_service="$dms_package/share/quickshell/dms/Services/NiriService.qml"
         if ! grep -Fq 'readonly property string screenshotsDir: Paths.strip(StandardPaths.writableLocation(StandardPaths.PicturesLocation)) + "/screenshots"' "$niri_service"; then

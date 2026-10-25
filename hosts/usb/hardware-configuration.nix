@@ -151,7 +151,6 @@ in {
     # Enable LUKS support
     boot.initrd.luks.devices."root" = {
       device = usb.rootPartByLabel;
-      preLVM = true;
     };
 
     # File Systems

@@ -10,7 +10,7 @@
     version = codexVersion;
     src = pkgs.fetchurl {
       url = "https://github.com/openai/codex/releases/download/rust-v${codexVersion}/codex-package-x86_64-unknown-linux-musl.tar.gz";
-      hash = "sha256-WCZGxr8FYesN5UD3/IW5EhsAkagmvG6Wgwt/FyISIYI=";
+      hash = "sha256-PsVQUxCWCNUDj35QdQ99Jfdo39dA/vBxqnEOJVm2Oqw=";
     };
     dontUnpack = true;
     installPhase = ''
@@ -335,7 +335,7 @@
   impeccableEngineVersion = lib.strings.trim (builtins.readFile "${impeccableSource}/scripts/VERSION");
   impeccableEngine = pkgs.fetchurl {
     url = "https://github.com/pbakaus/impeccable/releases/download/engine-v${impeccableEngineVersion}/impeccable-linux-x64";
-    hash = "sha256-tOLry5eyvl5aCucdSgNZbBLTZy8Zskz91yROME5nn7c=";
+    hash = "sha256-RMDWAemFmAqcOXGP7hW0io98vmd3n2rgXv6RJIF6tik=";
   };
   impeccableSkill = pkgs.runCommand "impeccable-skill-with-engine-${impeccableEngineVersion}" {} ''
     cp -r ${impeccableSource} "$out"

@@ -16,7 +16,6 @@
           networking.hostName = "usb-update-target";
           documentation.enable = false;
           documentation.nixos.enable = false;
-          boot.initrd.systemd.enable = true;
           boot.initrd.availableKernelModules = ["virtio_pci" "virtio_blk"];
           boot.initrd.kernelModules = ["loop" "squashfs" "overlay"];
           boot.kernelParams = ["console=ttyS0"];

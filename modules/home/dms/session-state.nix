@@ -7,7 +7,7 @@
   sessionDefaultsJson = builtins.toJSON wallpaperContracts.dmsSessionDefaults;
   allowedTransitionsJson = builtins.toJSON wallpaperContracts.wallpaperTransitions.allowed;
 in {
-  xdg.configFile."DankMaterialShell/.firstlaunch".text = "";
+  xdg.configFile."dms/.firstlaunch".text = "";
 
   # Home Manager activation owns the baseline schema for
   # ~/.local/state/DankMaterialShell/session.json. Missing, malformed, or
