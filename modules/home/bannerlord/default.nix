@@ -1,8 +1,4 @@
-{
-  config,
-  lib,
-  ...
-}: {
+{lib, ...}: {
   imports = [
     ../player2-ai-influence
     ../bannerlord-codex

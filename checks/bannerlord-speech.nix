@@ -7,7 +7,7 @@
     config.cudaCapabilities = self.nixosConfigurations.desktop.pkgs.config.cudaCapabilities;
     config.allowUnfreePredicate = package:
       pkgs.lib.all
-      (license: (license.free or false) || builtins.elem license.shortName ["unfreeRedistributable" "issl" "CUDA EULA" "cuDNN EULA" "cuSPARSELt EULA"])
+      (license: (license.free or false) || builtins.elem license.shortName ["unfreeRedistributable" "issl" "CUDA EULA" "CUDA Python License" "cuDNN EULA" "cuSPARSELt EULA"])
       (pkgs.lib.toList package.meta.license);
   };
   runtime = speechPkgs.callPackage ../modules/home/bannerlord-speech/package.nix {};

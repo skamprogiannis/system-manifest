@@ -14,12 +14,12 @@
   };
   md-render = editorPkgs.vimUtils.buildVimPlugin {
     pname = "md-render.nvim";
-    version = "2026-10-01";
+    version = "2026-10-08";
     src = editorPkgs.fetchFromGitHub {
       owner = "delphinus";
       repo = "md-render.nvim";
-      rev = "cb79d5a1c4cd929fe0144c4d75be50a1ad4c2c74";
-      hash = "sha256-+b/PNIz9sVX1AyLR0BDvL2clfqNSzXpiTfKxo/cTGGE=";
+      rev = "39c731abe5bf4cfa69c754968a7228299dcbdc69";
+      hash = "sha256-TesNbPcOJn0sc/BiCygYa0wT/2VyeVHqx4wuKNIjc44=";
     };
   };
 in {

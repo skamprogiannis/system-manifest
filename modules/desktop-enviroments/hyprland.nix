@@ -5,6 +5,7 @@
   hyprlandNoUwsm = let
     joined = pkgs.symlinkJoin {
       name = hyprlandBase.name;
+      # NixOS capability wrappers must target the upstream ELF executables.
       paths = [hyprlandBase];
       passthru =
         hyprlandBase.passthru
@@ -19,22 +20,6 @@
         };
       postBuild = ''
         rm -f $out/share/wayland-sessions/hyprland-uwsm.desktop
-
-        rm -f $out/bin/start-hyprland $out/bin/Hyprland $out/bin/hyprland
-
-        cat > $out/bin/start-hyprland <<EOF
-        #!${pkgs.bash}/bin/bash
-        exec ${hyprlandBase}/bin/start-hyprland "\$@"
-        EOF
-        chmod +x $out/bin/start-hyprland
-
-        cat > $out/bin/Hyprland <<EOF
-        #!${pkgs.bash}/bin/bash
-        exec ${hyprlandBase}/bin/Hyprland "\$@"
-        EOF
-        chmod +x $out/bin/Hyprland
-
-        ln -s Hyprland $out/bin/hyprland
       '';
     };
   in

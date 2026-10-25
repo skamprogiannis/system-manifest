@@ -52,7 +52,7 @@ class Paths:
         self.current = self.root/'current'
         self.pending = self.root/'status.json'
         self.session = state/'DankMaterialShell/session.json'
-        self.settings = config/'DankMaterialShell/settings.json'
+        self.settings = config/'dms/settings.json'
         self.config = config
         self.palette = cache/'DankMaterialShell/dms-colors.json'
         self.templates = cache/'wallpaper-sync/templates'

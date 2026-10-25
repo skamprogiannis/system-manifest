@@ -49,6 +49,7 @@ in {
 
       export WALLPAPER_SYNC_SOURCE=${../modules/home/wallpaper/wallpaper-sync.py}
       python3 ${./wallpaper-sync-test.py}
+      python3 ${./dms-directory-migration-test.py} ${desktopDmsPackage}/bin/dms
       export WALLPAPER_GREETER_SYNC_SOURCE=${../modules/system/wallpaper-greeter-sync.py}
       python3 ${./wallpaper-greeter-sync-test.py}
 
