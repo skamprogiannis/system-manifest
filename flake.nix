@@ -67,12 +67,6 @@
       url = "github:AvengeMedia/dank-greeter";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-
-    ghostty = {
-      url = "github:ghostty-org/ghostty";
-      # Ghostty loads the host Mesa driver, so its libc must match the system.
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
 
   outputs = {

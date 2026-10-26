@@ -26,12 +26,11 @@ The SearXNG secret persists at `/var/lib/searx-local/secret.env` outside the Nix
 
 ## Flake Inputs
 
-Hyprland and its portal use Nixpkgs packages. Treesitter uses the editor Nixpkgs package and its matching grammars. These inputs remain independently tracked for configuration modules, upstream features, or release-matched resources:
+Hyprland, its portal, and stable Ghostty use system Nixpkgs packages. Ghostty shares the desktop graphics package set and uses the NixOS binary cache, avoiding development builds that exceed local RAM. Treesitter uses the editor Nixpkgs package and its matching grammars. These inputs remain independently tracked for configuration modules, upstream features, or release-matched resources:
 
 | Input | Source | Why |
 |-------|--------|-----|
 | `catppuccin` | `github:catppuccin/nix` | Shared static Mocha palette for supported Home Manager applications |
-| `ghostty` | `github:ghostty-org/ghostty` | Tracks upstream development for terminal features; follows system Nixpkgs so its graphics libraries remain compatible with the host Mesa driver |
 | `home-manager` | `github:nix-community/home-manager` | Tracks nixpkgs-unstable |
 | `neovim-nixpkgs` | `github:nixos/nixpkgs/nixos-unstable` | Editor and plugin packages can be refreshed independently of desktop packages |
 | `nixvim` | `github:nix-community/nixvim` | Full Neovim config in Nix |

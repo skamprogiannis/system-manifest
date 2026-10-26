@@ -30,6 +30,8 @@ Detailed development and troubleshooting rules for `system-manifest`. Agents sho
 - **Autonomy:** You are authorized to run `sudo nixos-rebuild switch --flake` autonomously when requested or implied by the workflow (e.g., "rebuild").
 - **Revision Tracking:** Keep `system.configurationRevision = inputs.self.rev or inputs.self.dirtyRev or null;` in `hosts/common/default.nix` so `nixos-rebuild list-generations` shows the commit hash.
 - **Dry Run:** Always use `nixos-rebuild dry-build` before asking the user to build, especially for complex derivations.
+- **Build Memory:** On constrained machines, run Nix commands sequentially with `--max-jobs 1 --cores 1` and monitor available RAM as well as disk space. Core limits reduce concurrency; they do not impose a memory ceiling.
+- **Ghostty Package:** Use the stable package from system Nixpkgs so the terminal and graphics libraries share a package set. Its NixOS binary cache avoids development builds that can exceed local RAM even with one compiler worker.
 - **Codex Sandbox Nix:** If a Nix command fails inside Codex with `fetcher-cache-v*.sqlite` / `eval-cache-v*.sqlite` access errors or `cannot connect to socket at '/nix/var/nix/daemon-socket/socket': Operation not permitted`, treat it as sandboxing and rerun the same command with escalation instead of changing Nix config.
 - **AppImages:** When wrapping AppImages with `appimageTools`, ensure common libraries like `webkitgtk`, `gtk4`, `libadwaita`, `graphene`, and `libsoup_3` are included in `extraPkgs` if the app has a GUI. Also include `gnome-themes-extra` and `gtk3` if theme errors occur.
 - **Pear Runtime**: Apps like PearPass may take several minutes to load on the first run due to P2P network discovery.

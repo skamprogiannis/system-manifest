@@ -1,13 +1,9 @@
-{
-  pkgs,
-  inputs,
-  ...
-}: let
+{pkgs, ...}: let
   glass = import ./glass.nix;
 in {
   programs.ghostty = {
     enable = true;
-    package = inputs.ghostty.packages.${pkgs.stdenv.hostPlatform.system}.ghostty;
+    package = pkgs.ghostty;
     enableBashIntegration = false;
     settings = {
       background-opacity = glass.ghostty.backgroundOpacity;
