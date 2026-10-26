@@ -148,6 +148,21 @@ restart settings before accepting a restart with other clients idle. "Run withou
 daemon this time" leaves the shared daemon unchanged and can help distinguish
 compatibility from an account-routing failure.
 
+### Voice on NixOS
+
+The upstream Linux voice helper embeds ALSA and expects `/usr/share/alsa` plus
+conventional distribution plugin paths. Its parent filters ALSA environment
+variables, so exporting them in a terminal does not repair native voice startup.
+The Nix package adapts the physical helper entrypoint with an ALSA configuration
+that uses native PipeWire plugins and avoids NixOS's multilib `libs` fields, which
+the embedded ALSA cannot read. System and personal ALSA configuration hooks remain.
+This adaptation is included when the native daemon copies the Nix CLI package;
+align that package after deployment using the idle-session procedure above.
+
+Package checks enumerate devices through the copied helper without opening audio
+streams. A live `/voice` conversation still requires desktop acceptance. Check
+the PipeWire defaults and output volume if devices open but audio is inaudible.
+
 ## Native references
 
 - [Subagents and model selection](https://learn.chatgpt.com/docs/agent-configuration/subagents)

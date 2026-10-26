@@ -5,6 +5,21 @@
   ...
 }: let
   codexVersion = lib.removeSuffix "\n" (builtins.readFile ./version.txt);
+  codexAlsa = pkgs.runCommand "codex-voice-alsa" {} ''
+    mkdir -p "$out"
+    # Upstream embeds ALSA without NixOS's libs.native/libs.32Bit extension.
+    cat > "$out/pipewire-native.conf" <<'EOF'
+    pcm_type.!pipewire {
+      lib "${pkgs.pipewire}/lib/alsa-lib/libasound_module_pcm_pipewire.so"
+    }
+    ctl_type.!pipewire {
+      lib "${pkgs.pipewire}/lib/alsa-lib/libasound_module_ctl_pipewire.so"
+    }
+    EOF
+    # Load native overrides after system fragments and before personal settings.
+    substitute ${pkgs.alsa-lib}/share/alsa/alsa.conf "$out/alsa.conf" \
+      --replace-fail '"/etc/alsa/conf.d"' "\"/etc/alsa/conf.d\" \"$out/pipewire-native.conf\""
+  '';
   codexUpstream = pkgs.stdenvNoCC.mkDerivation {
     pname = "codex-cli";
     version = codexVersion;
@@ -13,6 +28,7 @@
       hash = "sha256-PsVQUxCWCNUDj35QdQ99Jfdo39dA/vBxqnEOJVm2Oqw=";
     };
     dontUnpack = true;
+    nativeBuildInputs = [pkgs.patchelf pkgs.python3];
     installPhase = ''
       mkdir -p "$out"
       tar -xzf "$src" -C "$out"
@@ -21,6 +37,32 @@
       test -x "$out/bin/codex-code-mode-host"
       test -x "$out/codex-path/rg"
       test -x "$out/codex-resources/bwrap"
+      voice_bin="$out/codex-resources/voice/bin"
+      mv "$voice_bin/codex-voice-host" "$voice_bin/codex-voice-host.real"
+      patchelf --set-interpreter ${pkgs.stdenv.cc.bintools.dynamicLinker} "$voice_bin/codex-voice-host.real"
+      # The parent filters ALSA variables. Adapt its physical helper entrypoint
+      # so this also works after Codex copies the package into its managed daemon.
+      cat > "$voice_bin/codex-voice-host" <<'EOF'
+      #!${pkgs.bash}/bin/bash
+      export ALSA_CONFIG_PATH=${codexAlsa}/alsa.conf
+      export ALSA_CONFIG_DIR=${pkgs.alsa-lib}/share/alsa
+      voice_bin="''${BASH_SOURCE[0]%/*}"
+      exec "$voice_bin/codex-voice-host.real" "$@"
+      EOF
+      chmod +x "$voice_bin/codex-voice-host"
+      python3 - "$out/codex-resources/voice" <<'PY'
+      import hashlib
+      import json
+      from pathlib import Path
+      import sys
+
+      voice = Path(sys.argv[1])
+      path = voice / "manifest.json"
+      manifest = json.loads(path.read_text())
+      for name in ("codex-voice-host", "codex-voice-host.real"):
+          manifest["sha256"][f"codex-resources/voice/bin/{name}"] = hashlib.sha256((voice / "bin" / name).read_bytes()).hexdigest()
+      path.write_text(json.dumps(manifest, indent=2) + "\n")
+      PY
     '';
     meta = with lib; {
       description = "OpenAI Codex CLI";

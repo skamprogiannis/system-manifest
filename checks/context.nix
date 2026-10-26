@@ -173,6 +173,7 @@
     ]
     ++ [
       "${homePackage "desktop" "chatgpt-desktop"}/bin/chatgpt"
+      "${homePackage "desktop" "codex-cli-wrapped"}/codex-resources/voice/bin/codex-voice-host"
       "${homePackage "desktop" "ai-search"}/bin/ai-search"
       "${homePackage "desktop" "searxngctl"}/bin/searxngctl"
       "${homePackage "desktop" "codex-auto"}/bin/codex-auto"

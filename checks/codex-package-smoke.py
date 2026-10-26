@@ -1,14 +1,89 @@
 """Exercise account bootstrap and the managed-daemon package without user state."""
 
+import hashlib
 import json
 import os
 import select
 import signal
+import struct
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import threading
 import time
+
+
+def check_voice_devices(package, env, require_defaults=False):
+    """Exercise the copied helper without runtime, transport, or audio streams."""
+    env = {key: value for key, value in env.items() if key in {
+        "HOME", "XDG_RUNTIME_DIR", "DBUS_SESSION_BUS_ADDRESS", "PULSE_SERVER",
+        "PULSE_COOKIE", "PIPEWIRE_REMOTE", "TMPDIR",
+    }}
+    voice = package / "codex-resources/voice"
+    manifest = json.loads((voice / "manifest.json").read_text())
+    for name in ("codex-voice-host", "codex-voice-host.real"):
+        binary = voice / "bin" / name
+        assert binary.is_file() and os.access(binary, os.X_OK), binary
+        digest = hashlib.sha256(binary.read_bytes()).hexdigest()
+        assert manifest["sha256"][f"codex-resources/voice/bin/{name}"] == digest, name
+    assert (voice / "bin/codex-voice-host.real").read_bytes().startswith(b"\x7fELF")
+    process = subprocess.Popen(
+        [str(voice / "bin/codex-voice-host")], env=env,
+        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    )
+    errors = bytearray()
+
+    def drain():
+        while chunk := process.stderr.read(4096):
+            errors.extend(chunk[:max(0, 16384 - len(errors))])
+
+    reader = threading.Thread(target=drain, daemon=True)
+    reader.start()
+
+    def exact(size):
+        result = bytearray()
+        deadline = time.monotonic() + 10
+        while len(result) < size:
+            remaining = deadline - time.monotonic()
+            assert remaining > 0 and select.select([process.stdout], [], [], remaining)[0], "voice reply timed out"
+            chunk = os.read(process.stdout.fileno(), size - len(result))
+            assert chunk, "voice helper output closed"
+            result.extend(chunk)
+        return bytes(result)
+
+    def exchange(message):
+        data = json.dumps(message).encode()
+        process.stdin.write(struct.pack(">I", len(data)) + data)
+        process.stdin.flush()
+        length = struct.unpack(">I", exact(4))[0]
+        assert length <= 128 * 1024, length
+        return json.loads(exact(length))
+
+    try:
+        assert exchange({"type": "hello", "protocol": 1, "buildCommit": manifest["buildCommit"]}) == {"type": "ready"}
+        for kind in ("input", "output"):
+            response = exchange({"type": "listDevices", "kind": kind})
+            assert response["type"] == "deviceList", response
+            assert isinstance(response["devices"], list), response
+            if require_defaults:
+                assert any(device["isDefault"] for device in response["devices"]), (kind, response)
+        assert exchange({"type": "close"}) == {"type": "closed"}
+        assert process.wait(timeout=5) == 0
+    finally:
+        process.stdin.close()
+        if process.poll() is None:
+            process.kill()
+            process.wait(timeout=5)
+        reader.join(timeout=2)
+        process.stdout.close()
+        process.stderr.close()
+    diagnostics = errors.decode(errors="replace")
+    # Headless CI has no PipeWire server or hardware. Missing ALSA resources and
+    # NixOS's incompatible multilib syntax still indicate a packaging regression.
+    assert "Cannot access file" not in diagnostics, diagnostics
+    assert "Unknown field libs" not in diagnostics, diagnostics
+    print("Codex copied voice helper enumerated devices without opening streams")
 
 
 def check_account_read(codex, root, env, check_config=False):
@@ -177,6 +252,13 @@ def main():
             assert Path(version["managedCodexPath"]) == package / "bin/codex", version
             assert Path(version["socketPath"]).is_relative_to(root / "codex"), version
             print(f"Codex managed package and daemon verified: {version}")
+            require_audio = os.environ.get("SYSTEM_MANIFEST_REQUIRE_VOICE_DEFAULTS") == "1"
+            voice_env = dict(env)
+            if require_audio:
+                # Only enumeration uses the real desktop audio socket. The
+                # daemon and all persistent state stay in the private fixture.
+                voice_env["XDG_RUNTIME_DIR"] = os.environ["XDG_RUNTIME_DIR"]
+            check_voice_devices(package, voice_env, require_defaults=require_audio)
         except BaseException:
             try:
                 run("app-server", "daemon", "stop")
