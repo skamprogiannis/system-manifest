@@ -67,6 +67,9 @@ in {
         "$desktop_home/bin/codex" \
         "${pkgs.lib.removeSuffix "\n" (builtins.readFile ../modules/home/codex/version.txt)}"
 
+      ${pkgs.python3}/bin/python3 ${./codex-semgrep-smoke.py} \
+        ${ctx.homePackage "desktop" "semgrep"}/bin/semgrep
+
       run_expect() {
         local expected_status="$1"
         local label="$2"

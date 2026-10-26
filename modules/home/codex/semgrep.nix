@@ -1,21 +1,24 @@
 {pkgs}: let
   upstream = pkgs.semgrep;
+  compatiblePatchelf = pkgs.patchelf.overrideAttrs (_: {
+    version = "0.15.2";
+    src = pkgs.fetchurl {
+      url = "https://github.com/NixOS/patchelf/releases/download/0.15.2/patchelf-0.15.2.tar.bz2";
+      hash = "sha256-F3RfVkFZyOIo/EEtplogSLhGxLa0Igt3y/IkFuAvLXw=";
+    };
+  });
 in
-  if upstream.version == "1.172.0"
+  if upstream.version == "1.180.0"
   then
-    upstream.overridePythonAttrs (old: {
-      # This release pins PyJWT 2.13 while Nixpkgs supplies 2.14 through MCP.
-      # Keep the supported major version and return to stock on the next release.
-      postPatch =
-        (old.postPatch or "")
-        + ''
-          substituteInPlace pyproject.toml \
-            --replace-fail 'pyjwt[crypto]~=2.13.0' 'pyjwt[crypto]>=2.13.0,<3'
-        '';
-      postCheck =
-        (old.postCheck or "")
-        + ''
-          ${pkgs.python3.interpreter} ${./semgrep-jwt-check.py}
-        '';
-    })
+    upstream.override (
+      {
+        # This frontend still imports FastMCP, which MCP 2 removed.
+        mcp = pkgs.python3Packages.mcp_1;
+      }
+      // pkgs.lib.optionalAttrs (pkgs.stdenv.hostPlatform.system == "x86_64-linux" && pkgs.patchelf.version == "0.19.2") {
+        # Newer patchelf aborts rewriting this wheel's ELF layout. Preserve
+        # upstream no-strip/no-shrink handling until either version changes.
+        semgrep-core = upstream.semgrep-core.override {patchelf = compatiblePatchelf;};
+      }
+    )
   else upstream
