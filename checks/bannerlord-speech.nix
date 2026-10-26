@@ -13,7 +13,19 @@
   runtime = speechPkgs.callPackage ../modules/home/bannerlord-speech/package.nix {};
   dictationRuntime = pkgs.callPackage ../modules/home/bannerlord-speech/package.nix {dictationOnly = true;};
   unitTests = (import ./bannerlord-speech-unit.nix {inherit ctx;}).bannerlord-speech-unit;
-  enabled = self.nixosConfigurations.desktop.config.home-manager.users.stefan.system_manifest.bannerlord.enable;
+  home = self.nixosConfigurations.desktop.config.home-manager.users.stefan;
+  enabled = ctx.desktopBannerlordSpeechEnabled;
+  dictationEnabled = home.system_manifest.desktopDictation.enable;
+  bindings = builtins.toJSON home.wayland.windowManager.hyprland.settings.bind;
+  hasPackage = names: builtins.any (package: builtins.elem (pkgs.lib.getName package) names) home.home.packages;
+  dictationAbsent =
+    !(hasPackage ["desktop-dictation-runtime" "desktop-dictation"])
+    && !(pkgs.lib.hasInfix "desktop-dictation" bindings);
+  dictationConfigured =
+    if dictationEnabled
+    then hasPackage ["desktop-dictation"] && pkgs.lib.hasInfix "desktop-dictation start" bindings && pkgs.lib.hasInfix "desktop-dictation stop" bindings
+    else dictationAbsent;
+  dictationServiceJson = pkgs.writeText "desktop-dictation-service.json" (builtins.toJSON home.systemd.user.services.desktop-dictation);
   service =
     if enabled
     then self.nixosConfigurations.desktop.config.home-manager.users.stefan.systemd.user.services.bannerlord-speech
@@ -23,63 +35,102 @@
   dictationEnvironmentJson = pkgs.writeText "desktop-dictation-environment.json" (builtins.toJSON dictationRuntime.engineEnvironment);
 in {
   bannerlord-speech =
-    pkgs.runCommand "bannerlord-speech-check" {
-      nativeBuildInputs = [runtime.python];
-    } ''
-      export PYTHONPATH=${runtime}/lib
-      export PYTHONDONTWRITEBYTECODE=1 HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1
-      export OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2
-      test -e ${unitTests}
-      python3 - ${serviceJson} ${environmentJson} ${dictationEnvironmentJson} ${runtime} ${dictationRuntime} <<'PY'
-      import json
-      import importlib.metadata as metadata
-      from pathlib import Path
-      import sys
-      import torch
-      import pkg_resources
-      from packaging.requirements import Requirement
-      from misaki import en, espeak
+    if !enabled
+    then
+      assert pkgs.lib.assertMsg (!(home.systemd.user.services ? bannerlord-speech)
+        && !(hasPackage ["bannerlord-speech-runtime"])
+        && ((home.systemd.user.services ? desktop-dictation) == dictationEnabled)
+        && dictationConfigured)
+      "Disabled Bannerlord speech must be absent; desktop dictation must match its independent setting.";
+        pkgs.runCommand "bannerlord-speech-disabled-check" {
+          nativeBuildInputs = pkgs.lib.optionals dictationEnabled [dictationRuntime.python];
+        } ''
+          ${pkgs.lib.optionalString dictationEnabled ''
+            test -x ${ctx.homePackage "desktop" "desktop-dictation"}/bin/desktop-dictation
+            python3 - ${dictationServiceJson} ${dictationEnvironmentJson} ${dictationRuntime} <<'PY'
+            import json
+            from pathlib import Path
+            import sys
 
-      unit = json.loads(Path(sys.argv[1]).read_text())
-      environment = json.loads(Path(sys.argv[2]).read_text())
-      dictation_environment = json.loads(Path(sys.argv[3]).read_text())
-      service = unit.get("Service", {})
-      if unit:
-          assert not unit.get("Install", {}).get("WantedBy"), "must stay on demand"
-          assert service["MemoryHigh"] == "2G" and service["MemoryMax"] == "3G"
-          assert service["RuntimeDirectoryMode"] == service["StateDirectoryMode"] == "0700"
-          assert service["UMask"] == "0077"
-          assert service["KillMode"] == "control-group"
-          commands = service["ExecStart"] if isinstance(service["ExecStart"], list) else [service["ExecStart"]]
-          assert len(commands) == 1
-          assert "--port 11436" in commands[0]
-          assert "--runtime-dir %t/bannerlord-speech" in commands[0]
-      assert environment["HF_HUB_OFFLINE"] == environment["TRANSFORMERS_OFFLINE"] == "1"
-      assert all(environment[k] == "2" for k in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"))
-      assert "WHISPER_MODEL" in dictation_environment
-      assert not any(key.startswith("KOKORO_") for key in dictation_environment)
-      assert "TRANSFORMERS_OFFLINE" not in dictation_environment
-      assert environment["BANNERLORD_SPEECH_DEVICE"] == "auto"
-      assert "CUDA_VISIBLE_DEVICES" not in environment
-      assert dictation_environment["CUDA_VISIBLE_DEVICES"] == ""
-      assert torch.version.cuda == "13.0", "speech Python must use the pinned CUDA Torch binary"
-      setuptools_version = metadata.version("setuptools")
-      for requirement in map(Requirement, metadata.requires("torch") or []):
-          if requirement.name == "setuptools":
-              assert requirement.specifier.contains(setuptools_version), "Torch setuptools requirement must hold in the final environment"
-      for key in ("WHISPER_BIN", "WHISPER_MODEL", "KOKORO_MODEL", "KOKORO_CONFIG", "KOKORO_VOICES", "PW_RECORD_BIN"):
-          assert Path(environment[key]).exists(), key
-      voices = sorted(p.stem for p in Path(environment["KOKORO_VOICES"]).glob("*.pt"))
-      assert voices == ["af_bella", "af_heart", "am_fenrir", "am_michael", "am_onyx", "am_puck", "bf_alice", "bf_emma", "bf_isabella", "bf_lily", "bm_daniel", "bm_fable", "bm_george", "bm_lewis"]
-      assert {p.name for p in (Path(sys.argv[4]) / "lib").iterdir()} == {"service.py", "engine.py", "control.py"}
-      dictation_runtime = Path(sys.argv[5])
-      assert {p.name for p in (dictation_runtime / "lib").iterdir()} == {"service.py", "engine.py"}
-      assert not (dictation_runtime / "bin/bannerlord-speech").exists()
-      assert not (dictation_runtime / "share/bannerlord-speech").exists()
-      g2p = en.G2P(trf=False, british=True, fallback=espeak.EspeakFallback(british=True), unk="")
-      assert g2p("What service would earn your trust?")[0]
-      print("Speech service, scoped CUDA closure and offline English front-end checks passed; no recording or model generation.")
-      PY
-      touch "$out"
-    '';
+            unit = json.loads(Path(sys.argv[1]).read_text())
+            environment = json.loads(Path(sys.argv[2]).read_text())
+            runtime = Path(sys.argv[3])
+            assert not unit.get("Install", {}).get("WantedBy"), "dictation must stay on demand"
+            service = unit["Service"]
+            command = service["ExecStart"]
+            command = command[0] if isinstance(command, list) else command
+            assert command == f"{runtime}/bin/bannerlord-speech-service --dictation-only --port 11437 --runtime-dir %t/desktop-dictation"
+            assert service["MemoryHigh"] == "700M" and service["MemoryMax"] == "1G"
+            assert service["RuntimeDirectoryMode"] == "0700" and service["UMask"] == "0077"
+            assert environment["CUDA_VISIBLE_DEVICES"] == ""
+            assert not any(key.startswith("KOKORO_") for key in environment)
+            assert all(Path(environment[key]).exists() for key in ("WHISPER_BIN", "WHISPER_MODEL", "PW_RECORD_BIN"))
+            assert {path.name for path in (runtime / "lib").iterdir()} == {"service.py", "engine.py"}
+            assert not (runtime / "bin/bannerlord-speech").exists()
+            assert not (runtime / "share/bannerlord-speech").exists()
+            print("CPU-only desktop dictation packaging passed; Bannerlord speech is disabled.")
+            PY
+          ''}
+          touch "$out"
+        ''
+    else
+      pkgs.runCommand "bannerlord-speech-check" {
+        nativeBuildInputs = [runtime.python];
+      } ''
+        export PYTHONPATH=${runtime}/lib
+        export PYTHONDONTWRITEBYTECODE=1 HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1
+        export OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2
+        test -e ${unitTests}
+        python3 - ${serviceJson} ${environmentJson} ${dictationEnvironmentJson} ${runtime} ${dictationRuntime} <<'PY'
+        import json
+        import importlib.metadata as metadata
+        from pathlib import Path
+        import sys
+        import torch
+        import pkg_resources
+        from packaging.requirements import Requirement
+        from misaki import en, espeak
+
+        unit = json.loads(Path(sys.argv[1]).read_text())
+        environment = json.loads(Path(sys.argv[2]).read_text())
+        dictation_environment = json.loads(Path(sys.argv[3]).read_text())
+        service = unit.get("Service", {})
+        if unit:
+            assert not unit.get("Install", {}).get("WantedBy"), "must stay on demand"
+            assert service["MemoryHigh"] == "2G" and service["MemoryMax"] == "3G"
+            assert service["RuntimeDirectoryMode"] == service["StateDirectoryMode"] == "0700"
+            assert service["UMask"] == "0077"
+            assert service["KillMode"] == "control-group"
+            commands = service["ExecStart"] if isinstance(service["ExecStart"], list) else [service["ExecStart"]]
+            assert len(commands) == 1
+            assert "--port 11436" in commands[0]
+            assert "--runtime-dir %t/bannerlord-speech" in commands[0]
+        assert environment["HF_HUB_OFFLINE"] == environment["TRANSFORMERS_OFFLINE"] == "1"
+        assert all(environment[k] == "2" for k in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"))
+        assert "WHISPER_MODEL" in dictation_environment
+        assert not any(key.startswith("KOKORO_") for key in dictation_environment)
+        assert "TRANSFORMERS_OFFLINE" not in dictation_environment
+        assert environment["BANNERLORD_SPEECH_DEVICE"] == "auto"
+        assert "CUDA_VISIBLE_DEVICES" not in environment
+        assert dictation_environment["CUDA_VISIBLE_DEVICES"] == ""
+        assert torch.version.cuda == "13.0", "speech Python must use the pinned CUDA Torch binary"
+        setuptools_version = metadata.version("setuptools")
+        for requirement in map(Requirement, metadata.requires("torch") or []):
+            if requirement.name == "setuptools":
+                assert requirement.specifier.contains(setuptools_version), "Torch setuptools requirement must hold in the final environment"
+        for key in ("WHISPER_BIN", "WHISPER_MODEL", "KOKORO_MODEL", "KOKORO_CONFIG", "KOKORO_VOICES", "PW_RECORD_BIN"):
+            assert Path(environment[key]).exists(), key
+        voices = sorted(p.stem for p in Path(environment["KOKORO_VOICES"]).glob("*.pt"))
+        assert voices == ["af_bella", "af_heart", "am_fenrir", "am_michael", "am_onyx", "am_puck", "bf_alice", "bf_emma", "bf_isabella", "bf_lily", "bm_daniel", "bm_fable", "bm_george", "bm_lewis"]
+        assert {p.name for p in (Path(sys.argv[4]) / "lib").iterdir()} == {"service.py", "engine.py", "control.py"}
+        dictation_runtime = Path(sys.argv[5])
+        assert {p.name for p in (dictation_runtime / "lib").iterdir()} == {"service.py", "engine.py"}
+        assert not (dictation_runtime / "bin/bannerlord-speech").exists()
+        assert not (dictation_runtime / "share/bannerlord-speech").exists()
+        g2p = en.G2P(trf=False, british=True, fallback=espeak.EspeakFallback(british=True), unk="")
+        assert g2p("What service would earn your trust?")[0]
+        print("Speech service, scoped CUDA closure and offline English front-end checks passed; no recording or model generation.")
+        PY
+        touch "$out"
+      '';
 }

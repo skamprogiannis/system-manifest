@@ -1,5 +1,9 @@
 # Desktop local dictation
 
+Enabled with `system_manifest.desktopDictation.enable = true` in
+`hosts/desktop/home-manager.nix`, independently of Bannerlord speech. It uses
+CPU-only Whisper and does not require the CUDA synthesis dependencies.
+
 Hold `Super+T` to start an English recording and release it to transcribe
 locally with Whisper. The completed transcription is copied to the Wayland
 clipboard; it is not typed into the focused application. Notes uses `Super+N`.

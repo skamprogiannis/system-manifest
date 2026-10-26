@@ -13,6 +13,8 @@
 
   system_manifest.scripts.enableSetupPersistentUsb = false;
   system_manifest.bannerlord.enable = true;
+  system_manifest.bannerlord.speech.enable = false;
+  system_manifest.desktopDictation.enable = true;
 
   wayland.windowManager.hyprland.settings = {
     workspace_rule = [

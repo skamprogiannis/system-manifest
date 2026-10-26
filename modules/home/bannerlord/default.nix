@@ -5,5 +5,8 @@
     ../bannerlord-speech
   ];
 
-  options.system_manifest.bannerlord.enable = lib.mkEnableOption "Bannerlord AI and speech tooling";
+  options.system_manifest.bannerlord = {
+    enable = lib.mkEnableOption "Bannerlord AI tooling";
+    speech.enable = lib.mkEnableOption "local Bannerlord speech";
+  };
 }

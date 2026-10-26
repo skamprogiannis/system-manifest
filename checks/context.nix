@@ -58,6 +58,7 @@
   );
   desktopPinchtabConfigActivationFile = pkgs.writeText "desktop-pinchtab-config-activation" self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.activation.ensurePinchTabConfig.data;
   desktopBannerlordEnabled = self.nixosConfigurations.desktop.config.home-manager.users.stefan.system_manifest.bannerlord.enable;
+  desktopBannerlordSpeechEnabled = desktopBannerlordEnabled && self.nixosConfigurations.desktop.config.home-manager.users.stefan.system_manifest.bannerlord.speech.enable;
   desktopSkwdWalldService = self.nixosConfigurations.desktop.config.systemd.user.services.skwd-walld;
   desktopSkwdWalldExec = desktopSkwdWalldService.serviceConfig.ExecStart;
   desktopDmsPackage = self.nixosConfigurations.desktop.config.home-manager.users.stefan.programs.dank-material-shell.package;

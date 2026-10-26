@@ -1,5 +1,13 @@
 # Local Bannerlord speech
 
+Disabled in the desktop configuration. To restore it, set
+`system_manifest.bannerlord.speech.enable = true` alongside
+`system_manifest.bannerlord.enable = true`. Enabling it restores the local
+models and CUDA speech dependencies; the speech packaging check then validates
+that runtime. With speech disabled, the check verifies that its service and
+runtime are absent and checks the independently configured CPU-only desktop
+dictation runtime. Desktop dictation remains enabled through `Super+T`.
+
 Native English dictation and NPC speech accompany the existing Codex text
 adapter. Audio stays local. The declarative implementation is in the existing
 system-manifest worktree, `modules/home/bannerlord-speech/`.

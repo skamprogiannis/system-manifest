@@ -1,4 +1,9 @@
-{pkgs, lib, ...}: let
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}: let
   runtime = pkgs.callPackage ../bannerlord-speech/package.nix {dictationOnly = true;};
   desktopDictation = pkgs.writeShellApplication {
     name = "desktop-dictation";
@@ -14,31 +19,35 @@
   };
   shortcut = lua ''mod .. " + t"'';
 in {
-  home.packages = [desktopDictation];
+  options.system_manifest.desktopDictation.enable = lib.mkEnableOption "local desktop dictation";
 
-  systemd.user.services.desktop-dictation = {
-    Unit = {
-      Description = "Private on-demand desktop dictation";
+  config = lib.mkIf config.system_manifest.desktopDictation.enable {
+    home.packages = [desktopDictation];
+
+    systemd.user.services.desktop-dictation = {
+      Unit = {
+        Description = "Private on-demand desktop dictation";
+      };
+      Service = {
+        Type = "simple";
+        ExecStart = "${runtime}/bin/bannerlord-speech-service --dictation-only --port 11437 --runtime-dir %t/desktop-dictation";
+        RuntimeDirectory = "desktop-dictation";
+        RuntimeDirectoryMode = "0700";
+        UMask = "0077";
+        MemoryHigh = "700M";
+        MemoryMax = "1G";
+        CPUWeight = 15;
+        Nice = 5;
+        KillMode = "control-group";
+        TimeoutStartSec = 8;
+        TimeoutStopSec = 8;
+        NoNewPrivileges = true;
+      };
     };
-    Service = {
-      Type = "simple";
-      ExecStart = "${runtime}/bin/bannerlord-speech-service --dictation-only --port 11437 --runtime-dir %t/desktop-dictation";
-      RuntimeDirectory = "desktop-dictation";
-      RuntimeDirectoryMode = "0700";
-      UMask = "0077";
-      MemoryHigh = "700M";
-      MemoryMax = "1G";
-      CPUWeight = 15;
-      Nice = 5;
-      KillMode = "control-group";
-      TimeoutStartSec = 8;
-      TimeoutStopSec = 8;
-      NoNewPrivileges = true;
-    };
+
+    wayland.windowManager.hyprland.settings.bind = [
+      (bind shortcut (command "desktop-dictation start") {})
+      (bind shortcut (command "desktop-dictation stop") {release = true;})
+    ];
   };
-
-  wayland.windowManager.hyprland.settings.bind = [
-    (bind shortcut (command "desktop-dictation start") {})
-    (bind shortcut (command "desktop-dictation stop") {release = true;})
-  ];
 }

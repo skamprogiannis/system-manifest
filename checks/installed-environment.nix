@@ -66,7 +66,7 @@
         assert_file_contains "$profile/share/applications/open-webui.desktop" 'Exec=ai-search launch'
         test -x "$profile/bin/ai-search"
         test -x "$profile/bin/searxngctl"
-          ${pkgs.lib.optionalString ctx.desktopBannerlordEnabled ''
+          ${pkgs.lib.optionalString ctx.desktopBannerlordSpeechEnabled ''
           shellcheck -S warning \
             ${homePackage "desktop" "bannerlord-speech-runtime"}/bin/bannerlord-speech \
             ${homePackage "desktop" "bannerlord-speech-runtime"}/bin/bannerlord-speech-service

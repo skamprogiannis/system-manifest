@@ -62,7 +62,7 @@ On the desktop, `services.ollama.syncModels = true` removes **every undeclared O
 - [Maintainer notes](docs/maintainers.md) and [agent instructions](AGENTS.md): development conventions and subsystem invariants.
 - [Visual design](DESIGN.md) and [product principles](PRODUCT.md).
 - [Codex workflow](modules/home/codex/WORKFLOW.md).
-- [Bannerlord dialogue](modules/home/bannerlord-codex/README.md), [Bannerlord speech](modules/home/bannerlord-speech/README.md), and [desktop dictation](modules/home/desktop-dictation/README.md).
+- [Bannerlord dialogue](modules/home/bannerlord-codex/README.md) and CPU-only [desktop dictation](modules/home/desktop-dictation/README.md) remain enabled. [Bannerlord speech](modules/home/bannerlord-speech/README.md) is optional and currently disabled.
 
 ## License
 
