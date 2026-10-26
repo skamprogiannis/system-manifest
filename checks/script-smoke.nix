@@ -67,7 +67,9 @@ in {
         "$desktop_home/bin/codex" \
         "${pkgs.lib.removeSuffix "\n" (builtins.readFile ../modules/home/codex/version.txt)}"
 
-      ${pkgs.python3}/bin/python3 ${./codex-semgrep-smoke.py} \
+      # Semgrep initializes TLS even for local scans; sandbox defaults have no CA file.
+      SSL_CERT_FILE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt \
+        ${pkgs.python3}/bin/python3 ${./codex-semgrep-smoke.py} \
         ${ctx.homePackage "desktop" "semgrep"}/bin/semgrep
 
       run_expect() {
