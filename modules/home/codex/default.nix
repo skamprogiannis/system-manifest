@@ -442,6 +442,9 @@
     cli_auth_credentials_store = "file"
     suppress_unstable_features_warning = true
 
+    [realtime]
+    voice = "vale"
+
     [tui]
     notifications = ["agent-turn-complete", "approval-requested"]
     notification_method = "bel"
@@ -460,6 +463,7 @@
     goals = true
     multi_agent = true
     plugins = true
+    realtime_conversation = true
     remote_plugin = false
 
     ${skillConfigToml}

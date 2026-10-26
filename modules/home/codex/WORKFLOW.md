@@ -150,6 +150,12 @@ compatibility from an account-routing failure.
 
 ### Voice on NixOS
 
+Home Manager enables `/voice` through `features.realtime_conversation` and sets
+`realtime.voice = "vale"` in the writable Codex configuration. Vale and the
+alternative Sol are supported by the [pinned CLI's voice configuration](https://github.com/openai/codex/blob/rust-v0.164.0/codex-rs/core/config.schema.json).
+This chooses the speaking voice; the main coding model remains independently
+configurable. Audio device preferences continue to follow the local setup.
+
 The upstream Linux voice helper embeds ALSA and expects `/usr/share/alsa` plus
 conventional distribution plugin paths. Its parent filters ALSA environment
 variables, so exporting them in a terminal does not repair native voice startup.

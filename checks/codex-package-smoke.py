@@ -142,6 +142,8 @@ def check_account_read(codex, root, env, check_config=False):
             assert config["plan_mode_reasoning_effort"] == "xhigh", config
             assert config["agents"]["default_subagent_model"] == "gpt-6.1-sol", config["agents"]
             assert config["agents"]["default_subagent_reasoning_effort"] == "medium", config["agents"]
+            assert config["features"]["realtime_conversation"] is True, config["features"]
+            assert config["realtime"]["voice"] == "vale", config["realtime"]
         print("Codex account/read bootstrap verified without credentials")
     finally:
         process.stdin.close()
