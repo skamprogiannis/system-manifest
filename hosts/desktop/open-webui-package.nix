@@ -36,7 +36,7 @@
   });
   base = pkgs.open-webui.override {python3Packages = pythonPackages;};
   # Update both halves together while retaining Nixpkgs' packaging hooks.
-  frontend = base.frontend.overrideAttrs {
+  frontend = base.frontend.overrideAttrs (old: {
     inherit version src;
     name = "open-webui-frontend-${version}";
     npmDeps = pkgs.fetchNpmDeps {
@@ -44,7 +44,15 @@
       name = "open-webui-frontend-${version}-npm-deps";
       hash = "sha256-CB4r96Rd6/i33Dzq3J0iou7XRjcS9msmndqE0GaVebg=";
     };
-  };
+    # Nixpkgs supplies Pyodide in preBuild; 0.12.4 changed the command its
+    # offline-build patch matches. Keep those assets and Vite's default heap.
+    postPatch =
+      old.postPatch
+      + ''
+        substituteInPlace package.json \
+          --replace-fail "npm run pyodide:fetch && node --max-old-space-size=12288 node_modules/vite/bin/vite.js build" "vite build"
+      '';
+  });
 in
   base.overridePythonAttrs (old: {
     inherit version src;
