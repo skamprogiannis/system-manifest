@@ -220,9 +220,9 @@ fixture_tests() {
 
 mount_target() {
   mkdir -p "$MOUNT_POINT"
-  mount LABEL=usb-test-root "$MOUNT_POINT"
+  mount -t ext4 LABEL=usb-test-root "$MOUNT_POINT"
   mkdir -p "$MOUNT_POINT/boot"
-  mount LABEL=USBTESTBOOT "$MOUNT_POINT/boot"
+  mount -t vfat LABEL=USBTESTBOOT "$MOUNT_POINT/boot"
 }
 
 unmount_target() {
