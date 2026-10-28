@@ -1,4 +1,5 @@
 {
+  config,
   lib,
   pkgs,
   inputs,
@@ -441,6 +442,9 @@
     sandbox_mode = "workspace-write"
     cli_auth_credentials_store = "file"
     suppress_unstable_features_warning = true
+
+    [desktop]
+    projectlessWorkspaceRoot = "${config.home.homeDirectory}/documents/Codex"
 
     [realtime]
     voice = "vale"

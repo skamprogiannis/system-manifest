@@ -148,6 +148,14 @@ restart settings before accepting a restart with other clients idle. "Run withou
 daemon this time" leaves the shared daemon unchanged and can help distinguish
 compatibility from an account-routing failure.
 
+### Projectless chat files
+
+Home Manager sets `desktop.projectlessWorkspaceRoot` to `~/documents/Codex`.
+This is the desktop app's **Settings → General → Projectless chat folder**
+preference; the upstream default uses `~/Documents/Codex` independently of XDG
+user directories. Existing chats retain their workspace paths, so changing the
+default alone does not relocate old chats.
+
 ### Voice on NixOS
 
 Home Manager enables `/voice` through `features.realtime_conversation` and sets
