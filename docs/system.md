@@ -41,6 +41,7 @@ Hyprland, its portal, and stable Ghostty use system Nixpkgs packages. Ghostty sh
 | `mattpocock-skills` | `github:mattpocock/skills` | Engineering skills used here for diagnosis, grilling, domain and module design, review, TDD, and prototyping |
 | `trailofbits-skills` | `github:trailofbits/skills` | Security and analysis skill marketplace used here as the upstream source for the compact `static-analysis` skill |
 | `pinchtab-src` | `github:pinchtab/pinchtab` | Release-matched PinchTab skill and safety references for browser automation |
+| `dux-files` | `github:duxlabs-dev/dux-files/v2.0.0` | Stable graphical file manager and on-demand file chooser portal; Nixpkgs follows the root input, while its release QML dependency remains pinned independently |
 | `dms` | `github:AvengeMedia/DankMaterialShell` | Fast-moving shell UI |
 
 ## Workflow & UI
@@ -52,7 +53,9 @@ Hyprland, its portal, and stable Ghostty use system Nixpkgs packages. Ghostty sh
 - **Keyboard Layout:** `us altgr-intl` + `gr simple`. `Super+Space` toggles layouts, and IBus is started with the Hyprland session for Greek dead-key composition.
 - **Window Controls:** Super-based Hyprland keybindings cover moving, resizing, grouped-window tabs, monitor focus, and monitor-to-monitor window moves.
 - **Hard Quit:** `Super+Shift+X` force-terminates the active app process for clients like Vesktop or ProtonVPN that minimize to tray on normal close.
-- **Launcher Shortcuts:** Common launch actions cover Yazi, wallpapers, screenshots, and the DMS notepad.
+- **File manager:** `Super+E` runs `dfiles show`, opening Dux Files or reusing its running window. Folder links (`xdg-open`) use its upstream `dev.duxlabs.files.desktop` entry. Yazi remains available in the terminal as `yazi` or the `y` shell wrapper.
+- **File dialogs:** The Hyprland portal routes FileChooser requests to Dux Files, with GTK as fallback. Portal-aware apps, including Brave, use its open/save dialogs. Settings stays on GTK, and screen sharing/screenshots stay on the Hyprland backend. D-Bus starts Dux Files on demand; there is no always-running file-manager service.
+- **Launcher Shortcuts:** Common launch actions cover Dux Files, wallpapers, screenshots, and the DMS notepad.
 - **DMS Shell:** Core shell layout, widget placement, and launcher behavior are managed declaratively in Nix. `Super+C` toggles the control panel, with a pinned widget grid for volume, network, root-disk usage, audio devices, power profile, quick toggles, and running apps.
 - **Screenshots:** Region/window/full keybinds use `dms screenshot` to save under `~/pictures/screenshots` and copy the image to the clipboard. `screenshot-path-copy` copies the file path instead (useful for sharing with AI agents).
 - **Screen Recording:** GPU Screen Recorder's GTK UI handles capture setup, backed by GPU Screen Recorder. `gsr-record stop` is kept as an emergency stop helper for finalizing active clips under `~/videos/screencasts`.
@@ -93,6 +96,10 @@ Hyprland, its portal, and stable Ghostty use system Nixpkgs packages. Ghostty sh
 - **Keyboard layouts**: This repo uses `us altgr-intl` and `gr simple`; `Super+Space` toggles between them.
 - **Validation**: After keybind changes, test in both US and Greek layouts.
 - **InvalidFormat troubleshooting**: Try a valid Hyprland key name first; use `code:<n>` only if the named key is rejected.
+
+### File manager validation
+
+After activating and starting a fresh Hyprland session, check `Super+E` in both US and Greek layouts, run `xdg-open "$HOME/downloads"`, and open/save a file in Brave. Confirm that reopening Dux Files reuses its window and that screen sharing still uses the Hyprland picker. `xdg-mime query default inode/directory` should report `dev.duxlabs.files.desktop`. The portal is configured declaratively; do not run `dfiles portal install`, which writes competing user portal preferences. Existing app processes may need restarting after the session refresh. These runtime checks are separate from configuration/package checks.
 
 ### Desktop integration invariants
 

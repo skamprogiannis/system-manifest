@@ -8,40 +8,6 @@
     cp ${(config.programs.firefox.package or pkgs.firefox)}/share/applications/firefox.desktop $out
     ${pkgs.gnused}/bin/sed -i '/^GenericName=/a Comment=Fast, standards-focused web browser' $out
   '';
-  openYazi = pkgs.writeShellScript "open-yazi" ''
-    set -euo pipefail
-
-    target="''${1:-$HOME}"
-    case "$target" in
-      file://*)
-        target="''${target#file://}"
-        target="''${target//%20/ }"
-        ;;
-      "~" | "~/"*)
-        target="$HOME''${target#"~"}"
-        ;;
-    esac
-
-    if [ -f "$target" ]; then
-      target="''${target%/*}"
-    elif [ ! -d "$target" ]; then
-      target="$HOME"
-    fi
-
-    systemd_env=()
-    [ -n "''${WAYLAND_DISPLAY-}" ] && systemd_env+=(--setenv=WAYLAND_DISPLAY="$WAYLAND_DISPLAY")
-    [ -n "''${DISPLAY-}" ] && systemd_env+=(--setenv=DISPLAY="$DISPLAY")
-    [ -n "''${DBUS_SESSION_BUS_ADDRESS-}" ] && systemd_env+=(--setenv=DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS")
-
-    if ${pkgs.systemd}/bin/systemd-run --user --collect --same-dir \
-      "''${systemd_env[@]}" \
-      ${pkgs.ghostty}/bin/ghostty -e ${pkgs.yazi}/bin/yazi "$target"; then
-      exit 0
-    fi
-
-    env -u LD_LIBRARY_PATH -u STEAM_RUNTIME -u PRESSURE_VESSEL_RUNTIME \
-      ${pkgs.ghostty}/bin/ghostty -e ${pkgs.yazi}/bin/yazi "$target"
-  '';
 in {
   gtk = {
     enable = true;
@@ -142,16 +108,6 @@ in {
       name = "Neovim";
       noDisplay = true;
     };
-    yazi = {
-      name = "Yazi";
-      genericName = "Terminal File Manager";
-      comment = "Browse files in Yazi using Ghostty";
-      exec = "${openYazi} %U";
-      icon = "system-file-manager";
-      terminal = false;
-      mimeType = ["inode/directory"];
-      categories = ["System" "Utility" "FileManager"];
-    };
     khal = {
       name = "ikhal";
       noDisplay = true;
@@ -200,16 +156,6 @@ in {
         "application/x-sh"
       ];
       categories = ["Utility" "TextEditor"];
-    };
-  };
-
-  xdg.mimeApps = {
-    enable = true;
-    associations.added = {
-      "inode/directory" = ["yazi.desktop"];
-    };
-    defaultApplications = {
-      "inode/directory" = ["yazi.desktop"];
     };
   };
 }

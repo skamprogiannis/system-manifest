@@ -1,4 +1,8 @@
-{pkgs, ...}: let
+{
+  inputs,
+  pkgs,
+  ...
+}: let
   hyprlandBase = pkgs.hyprland;
   # Remove the uwsm session entry — DMS greeter ignores Hidden=true so the
   # .desktop file must be physically absent from the sessions directory.
@@ -41,11 +45,15 @@ in {
     enable = true;
     config.hyprland = {
       default = ["hyprland" "gtk"];
+      "org.freedesktop.impl.portal.FileChooser" = ["dfiles" "gtk"];
       "org.freedesktop.impl.portal.Settings" = ["gtk"];
       "org.freedesktop.impl.portal.ScreenCast" = ["hyprland"];
       "org.freedesktop.impl.portal.Screenshot" = ["hyprland"];
     };
-    extraPortals = [pkgs.xdg-desktop-portal-gtk];
+    extraPortals = [
+      inputs.dux-files.packages.${pkgs.stdenv.hostPlatform.system}.dux-files
+      pkgs.xdg-desktop-portal-gtk
+    ];
   };
 
   services.power-profiles-daemon.enable = true;

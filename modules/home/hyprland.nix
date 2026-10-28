@@ -527,7 +527,7 @@ in {
             (bind (modKey "x") (lua "hl.dsp.window.close()"))
             (execBind (modKey "SHIFT + x") "hypr-quit-active")
             (execBind (modKey "m") "spotify")
-            (execBind (modKey "e") "ghostty -e yazi")
+            (execBind (modKey "e") "dfiles show")
             (bind (modKey "v") (lua ''hl.dsp.window.float({ action = "toggle" })''))
             (bind (modKey "f") (fullscreen "fullscreen"))
             (bind (modKey "SHIFT + f") (fullscreen "maximized"))

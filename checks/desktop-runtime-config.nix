@@ -4,6 +4,8 @@
     desktopAccountsServiceAvatarScript
     desktopBraveExtensionsFile
     desktopDmsPackage
+    desktopDuxFilesPackage
+    desktopPortalConfigFile
     desktopDmsLegacyProfileFile
     desktopDmsOutputsFile
     desktopGreeterPackage
@@ -83,6 +85,12 @@ in {
         assert_file_contains ${desktopGpuScreenRecorderGtkPackage}/bin/.gpu-screen-recorder-gtk-wrapped "${desktopGpuScreenRecorderGtkPackage}$recorder_icon"
         assert_file_not_contains ${desktopGpuScreenRecorderGtkPackage}/bin/.gpu-screen-recorder-gtk-wrapped "/usr$recorder_icon"
       done
+      test -x ${desktopDuxFilesPackage}/bin/dfiles
+      assert_file_contains ${desktopDuxFilesPackage}/share/applications/dev.duxlabs.files.desktop 'Exec=dfiles open %U'
+      assert_file_contains ${desktopDuxFilesPackage}/share/xdg-desktop-portal/portals/dfiles.portal 'Interfaces=org.freedesktop.impl.portal.FileChooser;'
+      assert_file_contains ${desktopDuxFilesPackage}/share/dbus-1/services/org.freedesktop.impl.portal.desktop.dfiles.service 'Exec=${desktopDuxFilesPackage}/bin/dfiles run --hidden --portal-activated'
+      assert_file_contains ${desktopPortalConfigFile} '"org.freedesktop.impl.portal.FileChooser":"dfiles;gtk"'
+      assert_file_contains ${desktopMimeDefaultApplicationsFile} '"inode/directory":["dev.duxlabs.files.desktop"]'
       assert_file_contains ${desktopMimeDefaultApplicationsFile} '"x-scheme-handler/magnet":["torrent-add.desktop"]'
       assert_file_contains ${desktopMimeDefaultApplicationsFile} '"application/x-bittorrent":["torrent-add.desktop"]'
       test -x ${desktopGreeterPackage}/bin/dms-greeter

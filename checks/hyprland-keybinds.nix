@@ -131,6 +131,8 @@ in {
           fi
         }
 
+        assert_contains_in_file 'hl.bind((mod .. " + e"), (hl.dsp.exec_cmd("dfiles show")))'
+        assert_not_contains_in_file 'ghostty -e yazi'
         assert_contains_in_file 'hl.bind((mod .. " + h"), (hl.dsp.focus({ direction = "left" })))'
         assert_contains_in_file 'hl.bind((mod .. " + l"), (hl.dsp.focus({ direction = "right" })))'
         assert_contains_in_file 'hl.bind((mod .. " + SHIFT + h"), (hl.dsp.window.move({ direction = "left", group_aware = true })))'

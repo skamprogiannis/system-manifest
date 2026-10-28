@@ -18,6 +18,7 @@
     ./modules/home/wallpaper
     ./modules/home/pearpass.nix
     ./modules/home/xdg.nix
+    ./modules/home/dux-files.nix
     ./modules/home/brave.nix
     ./modules/home/codex
     ./modules/home/firefox.nix

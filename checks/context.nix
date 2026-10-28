@@ -39,6 +39,8 @@
   desktopNvidiaDriverVersion = self.nixosConfigurations.desktop.config.hardware.nvidia.package.version;
   desktopGpuScreenRecorderPackage = self.nixosConfigurations.desktop.config.programs.gpu-screen-recorder.package;
   desktopGpuScreenRecorderGtkPackage = homePackage "desktop" "gpu-screen-recorder-gtk";
+  desktopDuxFilesPackage = (homeConfig "desktop").programs.dux-files.package;
+  desktopPortalConfigFile = pkgs.writeText "desktop-portals.json" (builtins.toJSON self.nixosConfigurations.desktop.config.xdg.portal.config.hyprland);
   desktopBravePackage = (homeConfig "desktop").programs.brave.finalPackage;
   desktopNeovimPackage = (homeConfig "desktop").programs.nixvim.build.package;
   desktopNeovimToolPackages = map (homePackage "desktop") ["clang-tools" "go" "prettier" "stylelint"];
