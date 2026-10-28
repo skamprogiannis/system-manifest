@@ -45,6 +45,8 @@ in {
       assert_file_contains ${desktopHyprlandLuaFile} 'hl.window_rule({'
       assert_file_contains ${desktopHyprlandLuaFile} '["name"] = "pearpass-no-blur"'
       assert_file_contains ${desktopHyprlandLuaFile} '["name"] = "ghostty-native-glass"'
+      assert_file_contains ${desktopHyprlandLuaFile} '["name"] = "dux-files-native-glass"'
+      assert_file_contains ${desktopHyprlandLuaFile} '["class"] = "^(dev\\.duxlabs\\.files)$"'
       assert_file_contains ${desktopHyprlandLuaFile} '["class"] = "^(com\\.mitchellh\\.ghostty)$"'
       assert_file_contains ${desktopHyprlandLuaFile} '["opacity"] = "1.0 override"'
       assert_file_contains ${desktopHyprlandLuaFile} '["name"] = "vesktop-opaque"'

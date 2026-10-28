@@ -15,6 +15,7 @@ The visual reference is Vesktop with its pre-native-blur Translucence surface ra
 - Vesktop: compositor opacity stays `1.0 override`; visible transparency comes from Translucence, QuickCSS, and Matugen CSS surface variables.
 - Ghostty: compositor opacity stays `1.0 override`; visible transparency comes from Ghostty's native black background opacity so glyphs remain opaque.
 - DMS: shell popups and bar widgets use the same density family as Vesktop, with native Hyprland blur on selected layer namespaces.
+- Dux Files: file-manager and chooser windows follow the DMS palette and floating-window glass values. App-side surface alpha provides transparency; compositor opacity stays at `1.0 override` to preserve text and icons.
 - Spotify: Spicetify/Hazy keeps its music-art background, but its dark backdrops and blur are overridden from the shared glass contract to stay close to the Vesktop density ramp.
 - GTK: popovers and menus use the shared glass token values, but GTK/WebKit app windows themselves are not made transparent.
 - Hyprland: blur stays restrained. Excessive blur or vibrancy blends wallpaper colors into milky pastel blobs and should not be used to create darkness.

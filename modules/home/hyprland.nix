@@ -635,6 +635,11 @@ in {
             match.class = "^(com\\.mitchellh\\.ghostty)$";
             opacity = "1.0 override";
           }
+          {
+            name = "dux-files-native-glass";
+            match.class = "^(dev\\.duxlabs\\.files)$";
+            opacity = "1.0 override";
+          }
           # XWayland menus include transparent padding that bypasses popup alpha clipping.
           # Native Wayland glass surfaces keep the shared blur profile.
           {

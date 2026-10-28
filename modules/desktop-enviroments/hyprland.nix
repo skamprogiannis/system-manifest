@@ -51,7 +51,7 @@ in {
       "org.freedesktop.impl.portal.Screenshot" = ["hyprland"];
     };
     extraPortals = [
-      inputs.dux-files.packages.${pkgs.stdenv.hostPlatform.system}.dux-files
+      (import ../home/dux-files-package.nix {inherit inputs pkgs;})
       pkgs.xdg-desktop-portal-gtk
     ];
   };
