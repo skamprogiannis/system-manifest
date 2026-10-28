@@ -23,5 +23,12 @@ in
           core/internal/shellembed/dist/Modules/MainWindow.qml \
           core/internal/shellembed/dist/Modules/ChooserWindow.qml \
           --replace-fail $'    color: Theme.surface\n' $'    color: Theme.floatingWindowSurface\n'
+
+        substituteInPlace \
+          core/internal/shellembed/dist/Modules/BookmarksSection.qml \
+          core/internal/shellembed/dist/Modules/TabManager.qml \
+          core/internal/shellembed/dist/Modules/TrashView.qml \
+          --replace-fail 'I18n.tr("Trash", "trash view header and sidebar entry")' \
+            'I18n.tr("Trash", "trash view header and sidebar entry").toLowerCase()'
       '';
   })
