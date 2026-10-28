@@ -3,6 +3,13 @@
   lib,
   ...
 }: let
+  compatiblePatchelf = pkgs.patchelf.overrideAttrs (_: {
+    version = "0.15.2";
+    src = pkgs.fetchurl {
+      url = "https://github.com/NixOS/patchelf/releases/download/0.15.2/patchelf-0.15.2.tar.bz2";
+      hash = "sha256-F3RfVkFZyOIo/EEtplogSLhGxLa0Igt3y/IkFuAvLXw=";
+    };
+  });
   app = pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
     pname = "chatgpt-desktop";
     version = "26.1023.51421";
@@ -51,6 +58,21 @@
     # ANGLE loads OpenGL dynamically, so it is not inferred from ELF dependencies.
     runtimeDependencies = map lib.getLib [pkgs.libGL pkgs.libsecret pkgs.libnotify pkgs.vulkan-loader];
 
+    preFixup = lib.optionalString (finalAttrs.version == "26.1023.51421" && pkgs.patchelf.version == "0.19.2") ''
+      repairBundledNode() {
+        local node="$out/lib/chatgpt/resources/cua_node/bin/node"
+        local interpreter rpath
+        interpreter="$(patchelf --print-interpreter "$node")"
+        rpath="$(patchelf --print-rpath "$node")"
+        # patchelf 0.19.2 corrupts this Node ELF layout. Preserve its bundled
+        # runtime and ABI, applying the discovered Nix paths with 0.15.2 only here.
+        cp usr/lib/chatgpt/resources/cua_node/bin/node "$node"
+        ${compatiblePatchelf}/bin/patchelf --set-interpreter "$interpreter" "$node"
+        ${compatiblePatchelf}/bin/patchelf --set-rpath "$rpath" "$node"
+      }
+      postFixupHooks+=(repairBundledNode)
+    '';
+
     unpackPhase = ''
       runHook preUnpack
       dpkg-deb -x "$src" .
@@ -78,6 +100,19 @@
       desktop-file-validate "$out/share/applications/chatgpt.desktop"
       test -x "$out/bin/chatgpt"
       test -s "$out/share/pixmaps/chatgpt.png"
+      node="$out/lib/chatgpt/resources/cua_node/bin/node"
+      "$node" --version
+      "$node" -e '
+        const assert = require("node:assert/strict");
+        const { spawnSync } = require("node:child_process");
+        const { generateKeyPairSync, sign, verify } = require("node:crypto");
+        const child = spawnSync(process.execPath, ["--version"], { encoding: "utf8" });
+        assert.equal(child.status, 0, child.stderr);
+        assert.equal(child.stdout.trim(), process.version);
+        const { privateKey, publicKey } = generateKeyPairSync("ed25519");
+        const payload = Buffer.from("workspace-helper-check");
+        assert.ok(verify(null, payload, publicKey, sign(null, payload, privateKey)));
+      '
       ${pkgs.glibc.bin}/bin/ldd "$out/lib/chatgpt/ChatGPT" > dependencies.txt
       if grep -q 'not found' dependencies.txt; then
         cat dependencies.txt
