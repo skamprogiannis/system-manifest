@@ -5,11 +5,11 @@
 }: let
   app = pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
     pname = "chatgpt-desktop";
-    version = "26.1021.22027";
+    version = "26.1023.51421";
 
     src = pkgs.fetchurl {
       url = "https://persistent.oaistatic.com/codex-app-prod/linux/deb/pool/main/c/chatgpt/chatgpt_${finalAttrs.version}_amd64.deb";
-      hash = "sha256-6wgxxzTxVPk/jrzw4X0RjaDep9wXN9xhoecURDdb8ZA=";
+      hash = "sha256-RITcK1T8CXi+sjuNjXF0lOTgtPvqsKh2c5EF5QtE3lo=";
     };
 
     nativeBuildInputs = with pkgs; [dpkg autoPatchelfHook makeWrapper wrapGAppsHook3];
