@@ -117,16 +117,16 @@ assert lib.assertMsg (builtins.elem hostType ["desktop" "usb" "laptop"]) "hostTy
       "VaapiVideoEncoder"
     ]
     ++ lib.optionals (hostType != "usb") [
-      "Vulkan"
       "UseSkiaRenderer"
     ];
 
   braveDisabledFeatures =
     [
       "HardwareMediaKeyHandling"
+      # Chromium cannot present Vulkan surfaces through its native Wayland backend.
+      "Vulkan"
     ]
     ++ lib.optionals (hostType == "usb") [
-      "Vulkan"
       "UseSkiaRenderer"
     ];
 
