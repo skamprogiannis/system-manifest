@@ -73,6 +73,19 @@
   execBindWith = key: command: options: bindWith key (execCallback command) options;
   focusDirection = direction: lua ''hl.dsp.focus({ direction = ${builtins.toJSON direction} })'';
   focusWorkspace = workspace: lua ''hl.dsp.focus({ workspace = ${builtins.toJSON workspace} })'';
+  cycleWindow = forward:
+    lua ''
+      function()
+        local workspace = hl.get_active_special_workspace() or hl.get_active_workspace()
+        local window = hl.get_active_window()
+        -- Avoid following stale focus onto another workspace or display.
+        if not workspace or not window or not window.workspace or window.workspace.id ~= workspace.id then
+          return
+        end
+        hl.dispatch(hl.dsp.window.cycle_next({ next = ${lib.boolToString forward} }))
+        hl.dispatch(hl.dsp.window.alter_zorder({ mode = "top" }))
+      end
+    '';
   moveWindowOrGroupDirection = direction: lua ''hl.dsp.window.move({ direction = ${builtins.toJSON direction}, group_aware = true })'';
   moveWindowMonitor = monitor:
     lua ''
@@ -537,8 +550,8 @@ in {
             (bind (modKey "p") (lua "hl.dsp.window.pseudo()"))
             (bind (modKey "backslash") (lua ''hl.dsp.layout("togglesplit")''))
             (bind (modKey "g") (lua "hl.dsp.group.toggle()"))
-            (bind (modKey "Tab") (lua "hl.dsp.group.next()"))
-            (bind (modKey "SHIFT + Tab") (lua "hl.dsp.group.prev()"))
+            (bind (modKey "ALT + Tab") (lua "hl.dsp.group.next()"))
+            (bind (modKey "ALT + SHIFT + Tab") (lua "hl.dsp.group.prev()"))
             (bind (modKey "SHIFT + g") (lua ''hl.dsp.window.move({ out_of_group = true })''))
             (bind (modKey "CTRL + g") (lua ''hl.dsp.group.lock_active({ action = "toggle" })''))
             (bind (modKey "ALT + g") (lua ''hl.dsp.group.lock({ action = "toggle" })''))
@@ -546,6 +559,8 @@ in {
             (bind (modKey "CTRL + SHIFT + Tab") (lua ''hl.dsp.group.move_window({ forward = false })''))
 
             # --- Navigation ---
+            (bind (modKey "Tab") (cycleWindow true))
+            (bind (modKey "SHIFT + Tab") (cycleWindow false))
             (bind (modKey "h") (focusDirection "left"))
             (bind (modKey "l") (focusDirection "right"))
             (bind (modKey "k") (focusDirection "up"))
@@ -566,6 +581,9 @@ in {
           ++ workspaceBinds
           ++ [
             # --- Special Workspaces ---
+            (bind (modKey "minus") (toggleSpecialWorkspace ""))
+            (bind (modKey "SHIFT + minus") (moveToWorkspace "special" true))
+            (bind (modKey "CTRL + minus") (moveToWorkspace "special" false))
             (bind (modKey "grave") (toggleSpecialWorkspace "music"))
             (bind (modKey "SHIFT + grave") (moveToWorkspace "special:music" true))
             (bind (modKey "CTRL + grave") (moveToWorkspace "special:music" false))
