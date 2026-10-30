@@ -3,6 +3,14 @@
   replacementsPython,
 }:
 package.overrideAttrs (old: {
+  # Home Manager wraps Lua keys/actions in parentheses; DMS must read those
+  # declarative bindings without taking over their ownership.
+  patches = (old.patches or []) ++ [./hyprland-parentheses.patch];
+  postCheck =
+    (old.postCheck or "")
+    + ''
+      go test ./internal/keybinds/providers
+    '';
   postInstall =
     (old.postInstall or "")
     + ''

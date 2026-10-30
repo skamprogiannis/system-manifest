@@ -28,6 +28,9 @@ in {
   # DMS greeter (greetd + QuickShell) replaces GDM.
   services.displayManager.gdm.enable = false;
 
+  # DMS Settings detects the installed greeter with command -v.
+  environment.systemPackages = [config.programs.dms-greeter.package];
+
   programs.dms-greeter = {
     enable = true;
     compositor = {

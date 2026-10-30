@@ -2,6 +2,7 @@
   inherit
     (ctx)
     desktopGreeterHyprlandLuaFile
+    desktopDmsPackage
     desktopHyprlandLuaFile
     desktopHyprlandPackage
     laptopHyprlandLuaFile
@@ -15,6 +16,7 @@ in {
         pkgs.findutils
         pkgs.gnugrep
         pkgs.gnused
+        pkgs.python3
       ];
     } ''
       set -euo pipefail
@@ -193,6 +195,11 @@ in {
 
       verify_hyprland_lua ${desktopHyprlandLuaFile}
       verify_hyprland_lua ${desktopGreeterHyprlandLuaFile}
+
+      # Read the actual generated Lua through DMS's CLI. This must discover
+      # declarative IPC bindings without creating DMS-owned duplicate binds.
+      python3 ${./hyprland-dms-keybinds-test.py} ${desktopDmsPackage}/bin/dms \
+        ${desktopHyprlandLuaFile} ${laptopHyprlandLuaFile} ${usbHyprlandLuaFile}
 
       touch "$out"
     '';

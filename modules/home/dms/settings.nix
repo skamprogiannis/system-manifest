@@ -1,8 +1,14 @@
-{config, ...}: let
+{
+  config,
+  hostType ? "desktop",
+  ...
+}: let
   glass = import ../glass.nix;
   wallpaperContracts = import ../wallpaper/contracts.nix;
   monitorIdentity = wallpaperContracts.dmsMonitorIdentity;
   sessionDefaults = wallpaperContracts.dmsSessionDefaults;
+  overview = builtins.fromJSON (builtins.readFile ./overview.json);
+  portableBar = hostType != "desktop";
   enabledWidget = id: {
     inherit id;
     enabled = true;
@@ -76,7 +82,7 @@
     popupGapsManual = 4;
     maximizeDetection = false;
     scrollEnabled = true;
-    scrollXBehavior = "column";
+    scrollXBehavior = "focusWindow";
     scrollYBehavior = "workspace";
     shadowIntensity = 0;
     shadowOpacity = 60;
@@ -103,8 +109,18 @@
   };
 in {
   programs.dank-material-shell.settings = {
-    configVersion = 37;
+    configVersion = 42;
     muxType = "zellij";
+    workspaceNameIcons = {
+      special = {
+        type = "icon";
+        value = "terminal";
+      };
+      music = {
+        type = "icon";
+        value = "headphones";
+      };
+    };
 
     # Keep settings declarative while removing setup prompts in DMS UI.
     barConfigs = [
@@ -113,16 +129,47 @@ in {
           id = "default";
           name = "Main Bar";
           enabled = true;
+          widgetPadding = 10;
+          barLengthPadding = 0;
+          barInsetPadding = 6;
+          innerPadding = 4;
+          fontScale = 1.02;
+          iconScale = 1.1;
           position = 0;
-          screenPreferences = [
-            (monitorPreference monitorIdentity.primary)
-          ];
-          showOnLastDisplay = false;
+          screenPreferences =
+            if portableBar
+            then ["all"]
+            else [(monitorPreference monitorIdentity.primary)];
+          showOnLastDisplay = portableBar;
           leftWidgets = [
-            workspaceSwitcherWidget
+            (launcherButtonWidget
+              // {
+                launcherLogoSizeOffset = 6;
+              })
+            (workspaceSwitcherWidget
+              // {
+                overflowMode = "bar";
+                workspaceFollowFocus = false;
+                workspaceOccupiedColorMode = "secondaryContainer";
+                workspaceIndicatorStyle = "pills";
+                workspaceIndicatorCompact = false;
+                workspaceIndicatorRoundness = -1;
+                showSpecialWorkspaces = false;
+                workspaceUnfocusedMonitorSeparateAppearance = false;
+                workspaceOccupiedCustomColor = "#625B71";
+              })
             compactRunningAppsWidget
-            compactFocusedWindowWidget
-            (enabledWidget "systemTray")
+            (compactFocusedWindowWidget
+              // {
+                # A single bar follows keyboard focus across both monitors.
+                focusedWindowFollowFocus = true;
+                focusedWindowShowIcon = false;
+                focusedWindowSize = 1;
+              })
+            ((enabledWidget "systemTray")
+              // {
+                trayUseInlineExpansion = false;
+              })
           ];
           centerWidgets = [
             {
@@ -163,7 +210,7 @@ in {
         // {
           id = "bar1774633251014";
           name = "Secondary Bar";
-          enabled = true;
+          enabled = false;
           position = 0;
           screenPreferences = [
             (monitorPreference monitorIdentity.secondary)
@@ -192,104 +239,89 @@ in {
             workspaceSwitcherWidget
           ];
         })
-      (commonBarStyle
-        // topShadowStyle
-        // {
-          id = "bar1774633251575";
-          name = "Unified Bar";
-          enabled = true;
-          position = 0;
-          screenPreferences = [];
-          showOnLastDisplay = true;
-          leftWidgets = [
-            launcherButtonWidget
-            workspaceSwitcherWidget
-            (enabledWidget "systemTray")
-            compactRunningAppsWidget
-            (enabledWidget "focusedWindow")
-          ];
-          centerWidgets = [
-            {
-              id = "clock";
-              enabled = true;
-              clockCompactMode = true;
-              showSeconds = false;
-            }
-            {
-              id = "music";
-              enabled = true;
-              mediaSize = 0;
-            }
-            "weather"
-          ];
-          rightWidgets = [
-            (enabledWidget "cpuUsage")
-            {
-              id = "memUsage";
-              enabled = true;
-              showSwap = true;
-            }
-            {
-              id = "gpuTemp";
-              enabled = true;
-              selectedGpuIndex = 0;
-              pciId = "";
-              minimumWidth = true;
-            }
-            (enabledWidget "notificationButton")
-            (enabledWidget "battery")
-            (enabledWidget "controlCenterButton")
-          ];
-        })
     ];
 
+    # --- OVERVIEW ---
+    dashCards = overview.dashCards;
+    dashOptions = overview.dashOptions;
+
     # --- CONTROL CENTER ---
-    controlCenterColumns = 8;
+    controlCenterColumns = 9;
     controlCenterIconScale = 1.0;
     controlCenterTileColorMode = "primary";
     controlCenterFooterPosition = "bottom";
     controlCenterWidgets = [
       (controlCenterTile "user" 0 0 5)
-      ((controlCenterTile "settings" 5 0 1)
+      ((controlCenterTile "lock" 7 0 1)
         // {
           small = true;
         })
-      ((controlCenterTile "lock" 6 0 1)
+      ((controlCenterTile "power" 8 0 1)
         // {
           small = true;
         })
-      ((controlCenterTile "power" 7 0 1)
+      ((controlCenterTile "volumeSlider" 0 2 5)
         // {
           small = true;
         })
-      (controlCenterTile "volumeSlider" 0 1 4)
-      (controlCenterTile "audioOutput" 4 1 4)
-      (controlCenterTile "audioInput" 0 2 4)
-      (controlCenterTile "wifi" 4 2 4)
-      (controlCenterTile "battery" 0 3 4)
-      ((controlCenterTile "diskUsage" 4 3 4)
+      ((controlCenterTile "audioOutput" 5 2 4)
+        // {
+          small = true;
+        })
+      ((controlCenterTile "audioInput" 5 3 4)
+        // {
+          small = true;
+        })
+      ((controlCenterTile "wifi" 0 4 5)
+        // {
+          small = true;
+        })
+      ((controlCenterTile "battery" 6 0 1)
+        // {
+          small = true;
+        })
+      ((controlCenterTile "diskUsage" 0 1 5)
         // {
           instanceId = "root-filesystem";
           mountPath = "/";
           showMountPath = true;
-        })
-      (controlCenterTile "darkMode" 0 4 2)
-      (controlCenterTile "nightMode" 2 4 2)
-      (controlCenterTile "doNotDisturb" 4 4 2)
-      (controlCenterTile "idleInhibitor" 6 4 2)
-      ((enabledWidget "runningApps")
-        // {
-          w = 4;
-          h = 1;
-          footer = true;
-        })
-      ((enabledWidget "edit")
-        // {
-          w = 1;
-          h = 1;
-          footer = true;
           small = true;
-          footerEnd = true;
+        })
+      ((controlCenterTile "darkMode" 5 0 1)
+        // {
+          small = true;
+        })
+      ((controlCenterTile "nightMode" 6 1 1)
+        // {
+          small = true;
+        })
+      ((controlCenterTile "doNotDisturb" 7 1 1)
+        // {
+          small = true;
+        })
+      ((controlCenterTile "idleInhibitor" 8 1 1)
+        // {
+          small = true;
+        })
+      ((controlCenterTile "runningApps" 0 5 7.5)
+        // {
+          small = true;
+        })
+      ((controlCenterTile "edit" 7.5 5 1.5)
+        // {
+          small = true;
+        })
+      ((controlCenterTile "inputVolumeSlider" 0 3 5)
+        // {
+          small = true;
+        })
+      ((controlCenterTile "builtin_vpn" 5 4 4)
+        // {
+          small = true;
+        })
+      ((controlCenterTile "settings" 5 1 1)
+        // {
+          small = true;
         })
     ];
 
@@ -342,6 +374,7 @@ in {
     floatingWindowForegroundLayers = true;
     floatingWindowForegroundTransparency = glass.dms.floatingWindowForegroundTransparency;
     notepadTransparencyOverride = glass.dms.notepadTransparency;
+    notepadLastCustomTransparency = 0.6;
     systemMonitorTransparency = glass.dms.systemMonitorTransparency;
 
     # --- LAUNCHER ---
@@ -361,6 +394,15 @@ in {
       dms_settings.enabled = false;
       dms_notepad.enabled = false;
       dms_sysmon.enabled = true;
+      dms_qr_generator = {
+        trigger = "qrg";
+      };
+      dms_power = {
+        trigger = "pw";
+      };
+      dms_clipboard_search = {
+        trigger = "cb";
+      };
       dms_settings_search = {
         enabled = true;
         trigger = "?";
@@ -405,13 +447,31 @@ in {
     useAutoLocation = true;
     use24HourClock = true;
     radiusStrength = 38;
+    animationDuration = 350;
     enablePerModeWallpapers = false;
     nightModeEnabled = sessionDefaults.nightModeEnabled;
     themeModeAutoEnabled = sessionDefaults.themeModeAutoEnabled;
 
     # --- OSD ---
+    osdAlwaysShowValue = false;
+    osdPosition = 7;
+    osdPositionOverrides = {
+      powerProfile = 3;
+      audioOutput = 3;
+      idleInhibitor = 3;
+    };
+    osdMediaVolumeEnabled = true;
+    osdMediaPlaybackEnabled = false;
+    osdIdleInhibitorEnabled = true;
     osdCapsLockEnabled = false;
     osdPowerProfileEnabled = true;
+    osdWorkspaceEnabled = false;
+    osdVolumeEnabled = true;
+    osdBrightnessEnabled = true;
+    osdMicMuteEnabled = true;
+    osdMicVolumeEnabled = true;
+    osdTouchpadEnabled = true;
+    osdAudioOutputEnabled = true;
 
     # --- POWER & SLEEP ---
     acMonitorTimeout = 600;
@@ -424,6 +484,12 @@ in {
     fadeToDpmsEnabled = true;
 
     # --- NOTIFICATIONS ---
+    notificationPopupPosition = 0;
+    notificationFocusedMonitor = true;
+    notificationOverlayEnabled = false;
+    notificationCompactMode = false;
+    notificationDedupeEnabled = true;
+    notificationPopupBodyInvokesAction = false;
     notificationTimeoutNormal = 10000;
     notificationTimeoutLow = 5000;
     notificationHistorySaveLow = false;

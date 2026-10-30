@@ -63,6 +63,30 @@
     ],
   '';
 
+  # Main-only bars may follow the focused output; popup geometry stays on parentScreen.
+  focusedAppFollowFocus = ''
+    root / "Common/settings/BarWidgetDefaults.js": [
+        (
+            "    focusedWindow: {\n        focusedWindowCompactMode: false,",
+            "    focusedWindow: {\n        focusedWindowFollowFocus: false,\n        focusedWindowCompactMode: false,",
+        ),
+    ],
+    root / "Modules/DBar/Widgets/FocusedApp.qml": [
+        (
+            '    property var widgetData: null',
+            '    property var widgetData: null\n    property bool followFocus: SettingsData.widgetOption("focusedWindow", widgetData, "focusedWindowFollowFocus")',
+        ),
+        (
+            '    readonly property string screenName: parentScreen?.name ?? ""',
+            '    readonly property string screenName: followFocus ? CompositorService.getFocusedScreenName() : (parentScreen?.name ?? "")\n\n    onScreenNameChanged: updateActiveWindow()',
+        ),
+        (
+            'CompositorService.activeWindowForScreen(parentScreen ? parentScreen.name : null, activeWindow, popoutVisible)',
+            'CompositorService.activeWindowForScreen(screenName || null, activeWindow, popoutVisible)',
+        ),
+    ],
+  '';
+
   # DMS unified its standalone and connected hosts; preserve local glass on both.
   # CalendarOverviewCard inherits Card, and upstream now includes locked idle wake.
   common = ''
@@ -97,6 +121,7 @@
     ${appSearchService}
     ${wallpaperCyclingExternalSet}
     ${niriScreenshotDirectory}
+    ${focusedAppFollowFocus}
     root / "Modules/Notifications/Popup/NotificationPopup.qml": [
       ${notificationPopupBorderFallback}
     ],
