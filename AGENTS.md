@@ -13,15 +13,17 @@ This file contains the default repository-wide rules. Read the relevant referenc
 
 ## Validation and deployment
 
-- Run `nix flake check` and the appropriate `nixos-rebuild dry-build --flake .#<host>` for configuration changes. Reproduce bugs where practical before fixing them.
-- Before reporting a desktop configuration change complete, run `nixos-rebuild dry-build --flake .#desktop`; resolve failures. For docs-only changes, review source accuracy and links.
-- Deployment remains manual: `sudo nixos-rebuild switch --flake .#desktop` / `.#laptop`, or `sudo update-usb ~/system-manifest/main`. Run from the correct worktree.
+- Choose checks proportional to the affected behavior and risk. Run relevant package and contract checks; evaluate or build affected host configurations when integration warrants it. Use `nix flake check` for broad shared changes, uncertain impact, or comprehensive validation, rather than every small change. Reproduce bugs where practical.
+- Build or dry-build the affected desktop configuration before desktop deployment or when desktop integration changes; an actual system build satisfies this check. For docs-only changes, review source accuracy and links. Report unrun checks and hardware limitations.
+- Checks do not deploy. Activate only when requested or already authorized, using `sudo nixos-rebuild switch --flake .#desktop` / `.#laptop`, or `sudo update-usb ~/system-manifest/main`. Commit first and run from the correct worktree.
 - CI uses `checks/registry.nix`; keep check coverage and ownership aligned. Register shell entrypoints in `checks/context.nix`. CI success does not establish GPU, display, or USB hardware behavior.
 - For changes to USB storage, staging, recovery, or synchronization, **read [docs/usb.md](docs/usb.md)** and test on a real USB boot before declaring runtime correctness.
 - For wallpapers, greeter, blur, or keybindings, **read [docs/system.md](docs/system.md#desktop-maintenance)** and [DESIGN.md](DESIGN.md) before editing. Preserve their ownership boundaries.
 - For Codex packages/agents, follow [docs/maintainers.md](docs/maintainers.md) and the [Codex workflow guide](modules/home/codex/WORKFLOW.md). Keep shared version pins and adapter checks in sync.
 
 ## Commands
+
+Examples; select the checks appropriate to the change:
 
 ```bash
 cd ~/system-manifest/main

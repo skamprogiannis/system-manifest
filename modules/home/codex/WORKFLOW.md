@@ -108,7 +108,7 @@ hooks. Restart clients after rebuilding so new instructions and hooks are loaded
 The shared CLI pin includes the upstream bootstrap-authentication fix released in
 0.161.0. Package checks exercise `account/read` without credentials and managed
 daemon packaging; authenticated workspace discovery still requires a deployed
-check. Configuration changes require the Codex checks and desktop dry-build.
+check. Select relevant Codex checks for the affected contracts, and build or dry-build the desktop when its integration or deployment warrants it.
 
 ### Daemon compatibility and version alignment
 
