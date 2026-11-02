@@ -4,6 +4,8 @@ Update, boot, repair, and synchronize the portable NixOS installation. Start fro
 
 ## Update USB Drive
 
+Run updates while booted from another system, with the USB root unmounted. The updater refuses a root already mounted outside its own workspace, including the USB you are currently running.
+
 ```bash
 sudo update-usb /path/to/system-manifest/main
 ```
@@ -30,6 +32,18 @@ A lock serializes updates, and the updater recovers its own mounts under `/run/u
 
 The workflow lives in `modules/home/scripts/usb/`. The `usb-update-integration` check uses small real Nix stores and EFI boots to exercise staging, garbage collection, interrupted publication, and rollback. Validation still requires a real update and boot on target hardware before claiming USB runtime behavior is working. After boot, inspect `nixos-version --json` and `readlink -f /run/current-system`.
 
+## Choose a Previous Generation
+
+The top-level GRUB entries select the current generation's Default, `host-auto-store`, or `ram-store` mode. Open **NixOS - All configurations** at the bottom to see the retained generations. Open the older **Configuration** entry, identified by its number and date, then choose the desired mode, such as **host-auto-store**. Generation numbers change after updates.
+
+The updater retains the current generation and one complete previous generation when available. The boot menu stays visible for five seconds; press an arrow key to stop the countdown while choosing.
+
+## DMS on Portable Hosts
+
+Desktop and USB share the committed DMS appearance and control-center settings. The USB adds automatic monitor selection, portable lock/power settings, and rendering compatibility. On unfamiliar displays it uses the Unified Bar rather than the desktop's two monitor-specific bars.
+
+Changing or pulling the repository does not refresh the running session. Update the USB image from another booted system to make those settings part of the next USB generation. A temporary Home Manager refresh can update the current session, but packages built into the writable host-scratch store do not survive shutdown; the persistent image still needs its own update.
+
 ## USB RAM Store Mode
 
 Choose the USB **`ram-store` specialisation** from the bootloader when you want the system to copy `nix-store.squashfs` into RAM before NixOS mounts `/nix/store`.
@@ -50,7 +64,7 @@ nixos-usb-host-scratch-status
 
 `writable-encrypted-host-auto-overlay` means store reads and writes are backed by the encrypted host scratch image. If no suitable partition can be mounted or copied to, the specialisation falls back to the USB-backed squashfs and encrypted USB-root scratch writable layer. `nixos-usb-store-status` prints the selected store mode, host candidates, mount diagnostics, and relevant initrd service logs. `nixos-usb-host-scratch-status` shows Docker/cache/Codex/Brave/Steam bind mounts and the active repositories path.
 
-To make essential Codex and Brave changes durable before shutdown:
+To make essential Codex and Brave changes durable before shutdown, quit Brave normally first so its saved session is consistent, then checkpoint. You can reopen Brave afterwards:
 
 ```bash
 usb-host-scratch checkpoint

@@ -17,7 +17,7 @@ Personal, flake-based NixOS configuration with Home Manager, Hyprland, Dank Mate
 - **Local AI:** Desktop-only Ollama models, on-demand Open WebUI (DMS launcher), and always-on local SearXNG.
 - **Gaming:** Steam, GameMode, Gamescope, and optional Bannerlord dialogue/voice integrations.
 - **Productivity:** Dux Files (`Super+E`, folder links, and portal open/save dialogs), terminal Yazi (`y`), Transmission, local Whisper dictation (`Super+T`), Obsidian, and screenshots.
-- **Portability:** USB squashfs store, rollback generations, optional encrypted host scratch, and Codex session sync.
+- **Portability:** USB squashfs store, rollback generations, shared DMS appearance with portable display handling, optional encrypted host scratch, and Codex session sync.
 
 ## Getting started
 
