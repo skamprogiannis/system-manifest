@@ -76,11 +76,9 @@
     openssl
   ];
   programs.gpu-screen-recorder.enable = true;
-  services.skwd-deck = {
-    enable = true;
-    # The daemon invokes Matugen, SteamCMD, and shell/setsid integration hooks.
-    extraPackages = [pkgs.bash pkgs.matugen pkgs.steamcmd pkgs.util-linux];
-  };
+  services.skwd-deck.enable = true;
+  # Supply the daemon's tools without exposing private dependencies globally.
+  systemd.user.services.skwd-walld.path = [pkgs.bash pkgs.matugen pkgs.steamcmd pkgs.util-linux];
 
   # Allow the user to rebuild the system without a password
   security.sudo.extraRules = [

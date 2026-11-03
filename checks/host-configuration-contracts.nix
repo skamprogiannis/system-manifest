@@ -26,6 +26,14 @@
       builtins.any (package: lib.getName package == "chatgpt-desktop")
       (ctx.homeConfig host).home.packages)
     ctx.registry.host;
+  wallpaperToolsOnAllHosts = builtins.all (host: let
+    system = ctx.self.nixosConfigurations.${host}.config;
+    pkgs = ctx.self.nixosConfigurations.${host}.pkgs;
+    daemonPath = map toString system.systemd.user.services.skwd-walld.path;
+  in
+    builtins.all (package: builtins.elem (toString package) daemonPath)
+    [pkgs.bash pkgs.matugen pkgs.steamcmd pkgs.util-linux])
+  ctx.registry.host;
   filesOnAllHosts = builtins.all (host: let
     system = ctx.self.nixosConfigurations.${host}.config;
     home = ctx.homeConfig host;
@@ -56,6 +64,8 @@ in {
   "Dux Files must handle folders and file chooser portals on every host, with on-demand activation, GTK fallback, and terminal Yazi preserved.";
   assert lib.assertMsg guiOnAllHosts
   "The official ChatGPT desktop app with Codex must be installed on every host.";
+  assert lib.assertMsg wallpaperToolsOnAllHosts
+  "The wallpaper daemon must retain its shell, Matugen, SteamCMD, and setsid tools on every host.";
     ctx.pkgs.runCommand "host-configuration-contracts-check" {} ''
       touch "$out"
     '';
