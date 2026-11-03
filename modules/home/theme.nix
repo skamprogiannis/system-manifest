@@ -50,7 +50,6 @@ in {
       variant = config.catppuccin.flavor;
       accents = [config.catppuccin.accent];
     })
-    dracula-icon-theme
     hicolor-icon-theme
   ];
 

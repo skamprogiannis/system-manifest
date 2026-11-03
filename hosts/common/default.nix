@@ -174,20 +174,8 @@
   # Required for Home Manager XDG portals
   environment.pathsToLink = ["/share/applications" "/share/xdg-desktop-portal"];
 
-  # List packages installed in system profile.
-  environment.systemPackages = with pkgs; [
-    adwaita-icon-theme
-    wget
-    git
-    inotify-tools
-    # GStreamer plugins for video playback and subtitles
-    gst_all_1.gstreamer
-    gst_all_1.gst-plugins-base
-    gst_all_1.gst-plugins-good
-    gst_all_1.gst-plugins-bad
-    gst_all_1.gst-plugins-ugly
-    gst_all_1.gst-libav
-  ];
+  # Keep Git available for flakes before the user environment is activated.
+  environment.systemPackages = [pkgs.git];
 
   # This value determines the NixOS release from which the default
   # settings for stateful data, like file locations and database versions

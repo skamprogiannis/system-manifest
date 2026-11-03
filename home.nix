@@ -40,12 +40,10 @@
     gpu-screen-recorder-gtk
     imv
     libreoffice-qt
-    linux-wallpaperengine
     mpv
     pkgs.mailspring
     obsidian
     (pkgs.callPackage ./modules/home/proton-vpn/package.nix {})
-    vesktop
 
     # CLI / Tools
     _7zz
@@ -59,16 +57,13 @@
     eslint
     fastfetch
     fd
-    ffmpegthumbnailer
     file
-    gcr_3
     glow
     gnumake
     go
     gopls
     imagemagick
     jq
-    libsecret
     nil
     nodejs_24
     omnisharp-roslyn

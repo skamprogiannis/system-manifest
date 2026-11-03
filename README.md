@@ -2,6 +2,8 @@
 
 Personal, flake-based NixOS configuration with Home Manager, Hyprland, Dank Material Shell (DMS), and a portable USB installation.
 
+NixOS owns bootstrap tools, system services, hardware integration, and greeter assets. Home Manager owns personal applications and tools; application packages and service environments supply their private runtime dependencies, including media codecs.
+
 ## Hosts
 
 | Host | Purpose |

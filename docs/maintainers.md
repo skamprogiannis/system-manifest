@@ -44,6 +44,7 @@ Detailed development and troubleshooting rules for `system-manifest`. Agents sho
   - `Fonts`: Icons and system fonts.
   - Keep each list alphabetical within its category for readability.
 - **System Packages**: Only put essential bootstrap tools (like `git` if required by flakes for non-home-manager operations) in `hosts/common/default.nix`. Prefer `home.packages` for most user software.
+- **Package Ownership**: Keep system service dependencies, greeter assets, and host diagnostic/recovery tools in their owning NixOS modules. Give application packages their own libraries/codecs and service units their own tool PATH instead of installing private dependencies globally. Personal applications and interactive tools belong in Home Manager; dedicated application modules own their installation. Repeated store paths from modules with distinct roles do not by themselves indicate redundant ownership.
 - **Code Organization**: Modularize configurations into `modules/` (e.g., `modules/git.nix`, `modules/hyprland.nix`) to keep `home.nix` clean.
 - **Comments**: Keep comments focused on "why" or "what" (e.g., "# Wrapper for native messaging"). Do NOT add meta-comments about your actions (e.g., "# I added this because user asked").
 - **No Commented-Out Code**: Do not leave commented-out code blocks. Use git history if you need to revert or reference old code.

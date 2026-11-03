@@ -29,7 +29,11 @@ in {
   services.displayManager.gdm.enable = false;
 
   # DMS Settings detects the installed greeter with command -v.
-  environment.systemPackages = [config.programs.dms-greeter.package];
+  environment.systemPackages = [
+    config.programs.dms-greeter.package
+    # The greeter account needs the cursor theme outside Home Manager.
+    pkgs.adwaita-icon-theme
+  ];
 
   programs.dms-greeter = {
     enable = true;
