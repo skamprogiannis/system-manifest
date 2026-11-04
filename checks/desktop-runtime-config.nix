@@ -101,6 +101,7 @@ in {
       assert_file_contains ${desktopDmsPackage}/share/quickshell/dms/Widgets/ClockContent.qml 'SettingsData.getEffectiveTimeFormat(root.showSeconds)'
       assert_file_contains ${desktopDmsPackage}/share/quickshell/dms/Widgets/ClockContent.qml 'precision: root.showSeconds ? SystemClock.Seconds : SystemClock.Minutes'
       assert_file_contains ${desktopDmsPackage}/share/quickshell/dms/Modals/NotificationModal.qml 'NotificationService.clearHistory();'
+      node ${./desktop-runtime-config-dms-controls-test.mjs} ${desktopDmsPackage}/share/quickshell/dms
       node ${./desktop-runtime-config-dms-focused-app-test.mjs} ${desktopDmsPackage}/share/quickshell/dms
       node ${./desktop-runtime-config-dms-focused-app-test.mjs} ${usbDmsPackage}/share/quickshell/dms
       assert_file_contains ${usbDmsPackage}/share/quickshell/dms/Modules/DBar/BarSurface.qml 'Shape.SoftwareRenderer : Shape.CurveRenderer'

@@ -28,8 +28,8 @@
   notificationModal = ''
     root / "Modals/NotificationModal.qml": [
         (
-            '        function clearAll(): string {\n            notificationModal.clearAll();\n            return "NOTIFICATION_MODAL_CLEAR_ALL_SUCCESS";\n        }',
-            '        function clearAll(): string {\n            notificationModal.clearAll();\n            return "NOTIFICATION_MODAL_CLEAR_ALL_SUCCESS";\n        }\n\n        function clearHistory(): string {\n            NotificationService.clearHistory();\n            return "NOTIFICATION_MODAL_CLEAR_HISTORY_SUCCESS";\n        }',
+            '        function clearAll(): string {\n            NotificationService.clearAllNotifications();\n            return "NOTIFICATION_MODAL_CLEAR_ALL_SUCCESS";\n        }',
+            '        function clearAll(): string {\n            NotificationService.clearAllNotifications();\n            return "NOTIFICATION_MODAL_CLEAR_ALL_SUCCESS";\n        }\n\n        function clearHistory(): string {\n            NotificationService.clearHistory();\n            return "NOTIFICATION_MODAL_CLEAR_HISTORY_SUCCESS";\n        }',
         ),
     ],
   '';
@@ -141,10 +141,8 @@ in {
         ("precision: SettingsData.showSeconds ?", "precision: root.showSeconds ?"),
     ],
     root / "Common/SettingsData.qml": [
-        ("    function getEffectiveTimeFormat() {", "    function getEffectiveTimeFormat(seconds = showSeconds) {"),
-        ("return showSeconds ? \"hh:mm:ss\"", "return seconds ? \"hh:mm:ss\""),
-        ("return showSeconds ? \"hh:mm:ss AP\"", "return seconds ? \"hh:mm:ss AP\""),
-        ("return showSeconds ? \"h:mm:ss AP\"", "return seconds ? \"h:mm:ss AP\""),
+        ("    function getEffectiveTimeFormat() {", "    function getEffectiveTimeFormat(includeSeconds = showSeconds) {"),
+        ("        const seconds = showSeconds ? \":ss\" : \"\";", "        const seconds = includeSeconds ? \":ss\" : \"\";"),
     ],
   '';
 

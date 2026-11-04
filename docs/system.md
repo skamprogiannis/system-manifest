@@ -37,7 +37,7 @@ Hyprland, its portal, and stable Ghostty use system Nixpkgs packages. Ghostty sh
 | `spicetify-nix` | `github:Gerg-L/spicetify-nix` | Declarative Spicetify wrapper for the themed Spotify GUI |
 | `skwd-wall` | `github:liixini/skwd-wall/nix` | skwd-wall v2 wallpaper selector/engine, daemon, and semantic model suite |
 | `visual-explainer` | `github:nicobailon/visual-explainer` | HTML visualization generator for architecture diagrams and code explanations |
-| `impeccable` | `github:pbakaus/impeccable` | Frontend design skill bundle with its matching engine packaged for offline typography, color, layout, and motion tools |
+| `impeccable` | `github:pbakaus/impeccable` (pinned revision) | Frontend design skill bundle kept with its pinned 0.1.17 engine for offline typography, color, layout, and motion tools |
 | `mattpocock-skills` | `github:mattpocock/skills` | Engineering skills used here for diagnosis, grilling, domain and module design, review, TDD, and prototyping |
 | `trailofbits-skills` | `github:trailofbits/skills` | Security and analysis skill marketplace used here as the upstream source for the compact `static-analysis` skill |
 | `pinchtab-src` | `github:pinchtab/pinchtab` | Release-matched PinchTab skill and safety references for browser automation |
