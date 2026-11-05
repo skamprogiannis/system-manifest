@@ -120,6 +120,7 @@ After activating and starting a fresh Hyprland session, check `Super+E` in both 
 - **Desktop Entry Exec Lines:** Cannot contain complex shell syntax, pipes, redirects, or unquoted special characters. Use `pkgs.writeShellScript` to create a wrapper script and reference it in `exec`. Example: Vesktop uses a wrapper to sync settings and regenerate the Translucence + QuickCSS theme bridge before launch.
 
 - **Launcher app overrides:** `modules/home/dms/launcher-app-overrides.json` owns the complete per-app exception list. Home Manager replaces that map on activation so removed exceptions stay removed; other runtime state is preserved.
+- **Wellbeing game titles:** Digital wellbeing reads game titles locally from Steam's configured libraries at shell startup and whenever its panel opens. `modules/home/dms/game-title-aliases.json` supplies explicit display names for ambiguous IDs, including `steam_app_0` as Crowns & Blades. Aliases take precedence over Steam metadata, followed by DMS's desktop-entry fallback. This changes labels, including limit labels and notifications; recorded app IDs, totals, limits, and icons stay intact. Uninstalled or unknown games use the existing fallback name.
 
 ## Wallpaper System Architecture
 
