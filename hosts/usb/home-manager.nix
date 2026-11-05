@@ -14,11 +14,6 @@
 
   system_manifest.scripts.enableSteamHostScratch = true;
 
-  programs.zellij.settings = {
-    pane_frames = false;
-    simplified_ui = true;
-    default_layout = "dev";
-  };
   # Auto-detect monitor (USB is portable across machines)
   wayland.windowManager.hyprland.settings = {
     monitor = {

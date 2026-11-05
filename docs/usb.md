@@ -147,4 +147,4 @@ At the lab: `codex resume` to pick up synced sessions.
 
 Linear MCP auth is local to each machine. If Codex says Linear is not logged in, run `codex mcp login linear` once on that machine; do not sync the resulting auth state through `codex-state-sync`.
 
-**Zellij sessions** are process-based (in-RAM) and cannot be shared across machines — this is fundamental. Config is declarative and identical on both systems.
+**tmux sessions** remain on the machine where their server is running; rebuilding or booting the USB elsewhere does not transfer running processes. A session can be reattached over SSH to that same running machine. The optional tmux configuration is shared across hosts.

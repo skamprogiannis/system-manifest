@@ -6,7 +6,7 @@ This machine normally uses:
 
 - **OS**: NixOS
 - **WM**: Hyprland
-- **Terminal**: Ghostty + Zellij
+- **Terminal**: Ghostty (optional tmux sessions)
 - **Editor**: Neovim
 - **Shell**: Bash
 - **Keyboard layouts**: Greek + US

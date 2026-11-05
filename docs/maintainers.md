@@ -76,6 +76,5 @@ Use **Spec Kit** (`specify` CLI) to scaffold spec-driven development for new pro
 
 - **USB Tool Environments:** `setup-persistent-usb` and `update-usb` bootstrap their required Nix tool environments; use those commands directly. For manual disk operations, provide the required utilities, for example `sudo nix-shell -p gptfdisk parted cryptsetup dosfstools e2fsprogs util-linux --run '<command>'`.
 - **Neovim Swap Files:** Investigate the named swap file and any active editor first; preserve recoverable edits before removing a confirmed stale swap.
-- **Zellij Stacking Action Name:** On Zellij `0.43.1`, `TogglePaneEmbedOrEject` is invalid and causes config parse failure. Use `TogglePaneEmbedOrFloating` instead.
 
 For subsystem-specific requirements, also read [desktop maintenance](system.md#desktop-maintenance), [USB maintainer constraints](usb.md#maintainer-constraints), and [CI maintainer rules](ci.md#maintainer-rules).

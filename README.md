@@ -14,7 +14,7 @@ NixOS owns bootstrap tools, system services, hardware integration, and greeter a
 
 ## Highlights
 
-- **Desktop:** Hyprland, DMS, stable Ghostty from Nixpkgs, wallpaper-driven theming, Vesktop, Brave, and Spotify.
+- **Desktop:** Hyprland, DMS, stable Ghostty from Nixpkgs, optional tmux for detachable terminal sessions, wallpaper-driven theming, Vesktop, Brave, and Spotify.
 - **Development:** Go, Python, TypeScript, Neovim/Nixvim, Codex CLI and the official ChatGPT desktop app with Codex on all hosts, reusable skills, and static-analysis tools. Codex `/voice` uses the declarative Vale voice preference. Opt-in `codex-auto` enables bounded native delegation with task-specific model/effort choices and native auto-review.
 - **Local AI:** Desktop-only Ollama models, on-demand Open WebUI (DMS launcher), and always-on local SearXNG.
 - **Gaming:** Steam, GameMode, Gamescope, and optional Bannerlord dialogue/voice integrations.
@@ -48,6 +48,7 @@ Deployment is manual. `nix flake check` validates configured host and support ch
 | `ai-search start\|stop\|status` | Control Open WebUI independently |
 | `searxngctl start\|stop\|status` | Control SearXNG (normally starts at boot) |
 | `torrent gui` | Open Transmission's local interface |
+| `tmux new -As work` | Create or reattach to an optional terminal session (`Ctrl+B`, then `D` detaches) |
 | `codex-auto status` | Inspect native workflow ownership and local delegation limits (offline) |
 | `wallpaper-sync status --json` | Inspect desktop wallpaper synchronization |
 | `nixos-usb-store-status` | Inspect USB store mode |

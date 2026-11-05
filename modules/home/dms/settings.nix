@@ -110,7 +110,7 @@
 in {
   programs.dank-material-shell.settings = {
     configVersion = 42;
-    muxType = "zellij";
+    muxType = "tmux";
     workspaceNameIcons = {
       special = {
         type = "icon";
@@ -507,7 +507,6 @@ in {
     matugenTemplateVesktop = false;
     matugenTemplateGhostty = false;
     matugenTemplateNeovim = true;
-    matugenTemplateZellij = true;
     matugenTemplateDgop = true;
     matugenTemplateKcolorscheme = true;
     matugenTemplateNiri = false;
