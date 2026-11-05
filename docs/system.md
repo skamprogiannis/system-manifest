@@ -97,6 +97,7 @@ Hyprland, its portal, and stable Ghostty use system Nixpkgs packages. Ghostty sh
 - **Keyboard layouts**: This repo uses `us altgr-intl` and `gr simple`; `Super+Space` toggles between them.
 - **Validation**: After keybind changes, test in both US and Greek layouts.
 - **InvalidFormat troubleshooting**: Try a valid Hyprland key name first; use `code:<n>` only if the named key is rejected.
+- **Managed config reloads:** The launcher selects the Home Manager symlink through `HYPRLAND_CONFIG`, so reloads follow rebuilt configurations. Explicit `--config` paths are canonicalized by Hyprland at startup and can retain an older Nix store file until the next login.
 - **Window cycling:** `Super+Tab` cycles windows on the current workspace, including floating windows; `Super+Shift+Tab` reverses direction. `Super+Alt+Tab` and `Super+Alt+Shift+Tab` cycle tabs within a window group.
 - **Scratchpads:** `Super+Minus` toggles the default scratchpad; `Super+Grave` toggles music. Add `Shift` to move the focused window there and follow it, or `Ctrl` to move it without following.
 

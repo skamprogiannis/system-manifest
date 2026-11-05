@@ -39,7 +39,9 @@
         fi
 
         config_home="''${XDG_CONFIG_HOME:-$HOME/.config}"
-        exec ${hyprland-pkg}/bin/Hyprland --config "$config_home/hypr/hyprland.lua" "$@"
+        # --config is canonicalized at startup, pinning a Home Manager store file.
+        export HYPRLAND_CONFIG="$config_home/hypr/hyprland.lua"
+        exec ${hyprland-pkg}/bin/Hyprland "$@"
         EOF
         chmod +x $out/bin/Hyprland
 

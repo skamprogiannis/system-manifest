@@ -204,6 +204,19 @@ in {
       verify_hyprland_lua ${desktopHyprlandLuaFile}
       verify_hyprland_lua ${desktopGreeterHyprlandLuaFile}
 
+      # The default launcher must keep the managed symlink reloadable. Hyprland
+      # canonicalizes --config at startup, unlike its HYPRLAND_CONFIG path.
+      managed_config_home="$TMPDIR/managed-config"
+      mkdir -p "$managed_config_home/hypr"
+      ln -s ${desktopHyprlandLuaFile} "$managed_config_home/hypr/hyprland.lua"
+      managed_verify_output="$(XDG_CONFIG_HOME="$managed_config_home" ${desktopHyprlandPackage}/bin/Hyprland --verify-config 2>&1)"
+      if ! grep -Fq 'config ok' <<< "$managed_verify_output" ||
+        grep -Fq 'User-specified config location:' <<< "$managed_verify_output"; then
+        echo "Expected the launcher to load the managed config without canonicalizing --config" >&2
+        echo "$managed_verify_output" >&2
+        exit 1
+      fi
+
       # Read the actual generated Lua through DMS's CLI. This must discover
       # declarative IPC bindings without creating DMS-owned duplicate binds.
       python3 ${./hyprland-dms-keybinds-test.py} ${desktopDmsPackage}/bin/dms \
