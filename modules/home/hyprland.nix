@@ -553,8 +553,8 @@ in {
             (bind (modKey "ALT + Tab") (lua "hl.dsp.group.next()"))
             (bind (modKey "ALT + SHIFT + Tab") (lua "hl.dsp.group.prev()"))
             (bind (modKey "SHIFT + g") (lua ''hl.dsp.window.move({ out_of_group = true })''))
-            (bind (modKey "CTRL + g") (lua ''hl.dsp.group.lock_active({ action = "toggle" })''))
-            (bind (modKey "ALT + g") (lua ''hl.dsp.group.lock({ action = "toggle" })''))
+            (bind (modKey "CTRL + g") (lua ''hl.dsp.group.lock({ action = "toggle" })''))
+            (bind (modKey "ALT + g") (lua ''hl.dsp.group.lock({ all = true, action = "toggle" })''))
             (bind (modKey "CTRL + Tab") (lua ''hl.dsp.group.move_window({ forward = true })''))
             (bind (modKey "CTRL + SHIFT + Tab") (lua ''hl.dsp.group.move_window({ forward = false })''))
 
