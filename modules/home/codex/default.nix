@@ -533,6 +533,7 @@ in {
     skillHomeFiles
     // {
       ".codex/AGENTS.md".text = builtins.readFile ./instructions.md;
+      ".codex/DELEGATION.md".text = builtins.readFile ./delegation.md;
       ".codex/diagrams/.keep".text = "";
     };
 

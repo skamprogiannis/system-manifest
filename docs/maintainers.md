@@ -19,7 +19,7 @@ Detailed development and troubleshooting rules for `system-manifest`. Agents sho
   - Remove merged worktree: `git --git-dir=/home/stefan/system-manifest/.bare worktree remove /home/stefan/system-manifest/<dir>` and then `git --git-dir=/home/stefan/system-manifest/.bare branch -d <branch>`
   - Run all editing/build/git commands from the intended worktree path.
 - **System Git:** Ensure `git` stays in `hosts/common/default.nix` under `environment.systemPackages` (required for Flakes).
-- **Codex Instruction Source:** Repository-wide Codex defaults are edited in `modules/home/codex/instructions.md`, which is synced to `~/.codex/AGENTS.md` via Home Manager when you run `nixos-rebuild switch`.
+- **Codex Instruction Source:** Repository-wide Codex defaults are edited in `modules/home/codex/instructions.md`, which is synced to `~/.codex/AGENTS.md` via Home Manager when you run `nixos-rebuild switch`. The conditional delegation policy in `modules/home/codex/delegation.md` is installed as `~/.codex/DELEGATION.md`. Restart clients after activation to load the new global instructions.
 - **Codex Upgrades:** Update the shared version in `modules/home/codex/version.txt` and the release hash in `modules/home/codex/default.nix`. The Bannerlord adapter must use that same version: keep its packaged preflight expectation, tests, and README consistent on every Codex upgrade. Run `bannerlord-codex` and verify the built Codex package and managed daemon. `script-smoke` includes that package smoke check; equivalent focused validation is suitable when broader shell checks are unaffected. Do not leave a separate stale version pin in the adapter.
 - **Codex Package Layout:** Preserve the upstream release package, including `codex-package.json`, `bin/codex`, `bin/codex-code-mode-host`, `codex-path/rg`, and `codex-resources/bwrap`. Keep the direnv wrapper outside that package and execute its absolute `bin/codex` path. Verify actual daemon start, managed-package copy, version, and stop in isolated test state; `--version` and `exec` alone do not test interactive daemon startup.
 - **Codex GUI Validation:** Test a private profile on the real desktop display with GPU rendering enabled. Headless Xvfb tests must isolate their socket directory and lock files from the desktop; auto-selecting a display in shared `/tmp` can remove live XWayland sockets when the test cannot see compositor PIDs.
@@ -59,7 +59,7 @@ Detailed development and troubleshooting rules for `system-manifest`. Agents sho
 
 ## Greenfield Projects: Spec Kit Workflow
 
-Use **Spec Kit** (`specify` CLI) to scaffold spec-driven development for new projects. The Codex integration installs skills in `.agents/skills` and invokes them as `$speckit-*`.
+Use **Spec Kit** (`specify` CLI) for substantial greenfield projects intended for ongoing development. Small experiments and throwaway prototypes may start directly; honor an explicitly requested workflow. The Codex integration installs skills in `.agents/skills` and invokes them as `$speckit-*`.
 
 - **Initialize a project:** `specify init <PROJECT_NAME> --integration codex` (run in the project directory)
 - **Skills available after init:**

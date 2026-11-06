@@ -11,15 +11,10 @@ import stat
 MAX_DELEGATIONS = 4
 SPAWN_TOOLS = {"spawn_agent", "Agent", "collaborationspawn_agent"}
 SESSION_CONTEXT = (
-    "Native codex-auto session. Bounded delegation is enabled under the installed "
-    "Codex Global Instructions. Keep small or sequential tasks in the main session. "
-    "For substantial independent work, use at most two task agents plus one focused "
-    "reviewer; these are ceilings, not targets. No more than four delegated tasks "
-    "per user turn; no nested delegation. Choose model and effort explicitly for "
-    "independent assignments using the native workflow starting policy; manual "
-    "choices win. Keep required tests, architect checkpoints, and permission scope. "
-    "Use the normal integration review to notice costly repairs or escalation; "
-    "do not add monitoring agents or duplicate runs merely to score model choices."
+    "Native codex-auto session. Bounded delegation is enabled. Keep small or "
+    "sequential tasks in the main session. Before assigning any agent, read "
+    "~/.codex/DELEGATION.md for limits, model/effort choices, and required reviews. "
+    "Native permission scope and explicit user settings remain authoritative."
 )
 
 

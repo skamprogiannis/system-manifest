@@ -6,34 +6,14 @@ effort, speed, sandbox and approval settings. There is no routing service, model
 catalog, classifier or background model-choice audit. Native Codex auto-review
 handles eligible approval requests within the existing permission scope.
 
-## Starting policy
+## Delegation policy
 
-| Assignment | Model | Effort |
-| --- | --- | --- |
-| Narrow, clear implementation or focused lookup with straightforward verification | gpt-6-luna | high |
-| Routine implementation with an established approach | gpt-6.1-sol | medium |
-| Ambiguous implementation, difficult debugging, substantial review | gpt-6.1-sol | high |
-| Consequential architecture and demanding planning | gpt-6.1-sol | xhigh |
-| Hardest problems requiring broader analysis | gpt-6-astra | xhigh |
-
-These are provisional starting choices, not benchmark-proven optima. Main coding
-and the independent-agent fallback remain Sol/medium; main Plan mode uses xhigh.
-The lead selects explicit native model/effort for independent assignments. Manual
-choices win. Role TOMLs remain unpinned because their settings override spawn
-choices. Full-history forks inherit parent settings; supply no model or effort
-override with `fork_turns="all"`. Instructions never change an active selection.
-
-Use at least Sol for Nix activation/module wiring and Nix/store/USB contracts.
-Choose stronger settings upfront for clearly difficult work. If Luna's scope
-expands, context is missing or a focused repair fails, return evidence to the lead
-for a Sol assignment. Astra/xhigh still requires normal validation and review.
-
-Keep small or sequential work in the main session. For substantial independent
-work, use at most two task agents plus one focused reviewer; these are ceilings,
-not targets. Use compact briefs, disjoint files and separate worktrees for
-concurrent writers. Architect checkpoints remain: consequential architecture,
-two genuinely failed approaches, and a substantial final diff. Reuse reviewers
-for follow-up instead of restarting the same review.
+[The canonical delegation policy](delegation.md) is installed by Home Manager as
+`~/.codex/DELEGATION.md`, alongside the global `~/.codex/AGENTS.md`. Read it before
+assigning agents from any repository. It owns model/effort choices, delegation
+limits, assignment contracts, review checkpoints, and evidence requirements.
+The global file keeps the authorization rules and architect-review triggers visible
+without loading the full policy for every task.
 
 ## Commands and local hooks
 
@@ -73,16 +53,10 @@ the native loader refuses final-component symlinks.
 
 ## Learning from ordinary work
 
-Use the required integration review and acceptance checks to identify material
-misses, repeated repairs and escalations. Adjust recurring assignment choices
-from that evidence. Avoid continuous transcript inspection, monitoring agents,
-extra judge calls and duplicate work solely for measurement.
-
-If a specific choice remains uncertain, run an explicitly requested, bounded
-matched comparison on representative completed tasks with identical starting
-snapshots and acceptance checks. Compare accepted-result usage including repair
-and review; keep speed fixed and run sequentially to limit RAM. Natural outcomes
-can reveal problems but cannot prove counterfactual savings.
+The [delegation policy](delegation.md#review-and-evidence) defines how ordinary
+acceptance evidence informs assignment choices and when matched comparisons are
+appropriate. Historical benchmark evidence follows; it is not an additional
+always-loaded instruction source.
 
 The [2026-10-07 benchmark](benchmarks/2026-10-07.md) compared Luna/high and
 Sol/medium on five bounded tasks, once each. Sol was accepted on all five; Luna

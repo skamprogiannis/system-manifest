@@ -64,7 +64,7 @@ On the desktop, `services.ollama.syncModels = true` removes **every undeclared O
 - [CI and validation](docs/ci.md): check registry, workflows, and validation expectations.
 - [Maintainer notes](docs/maintainers.md) and [agent instructions](AGENTS.md): development conventions and subsystem invariants.
 - [Visual design](DESIGN.md) and [product principles](PRODUCT.md).
-- [Codex workflow](modules/home/codex/WORKFLOW.md).
+- [Codex workflow](modules/home/codex/WORKFLOW.md): global defaults are installed as `~/.codex/AGENTS.md`; the detailed delegation policy is loaded from `~/.codex/DELEGATION.md` when assigning agents.
 - [Bannerlord dialogue](modules/home/bannerlord-codex/README.md) and CPU-only [desktop dictation](modules/home/desktop-dictation/README.md) remain enabled. [Bannerlord speech](modules/home/bannerlord-speech/README.md) is optional and currently disabled.
 
 ## License

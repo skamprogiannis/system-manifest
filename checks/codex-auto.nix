@@ -12,6 +12,12 @@ in {
     export PYTHONDONTWRITEBYTECODE=1
     mkdir -p "$HOME" "$XDG_STATE_HOME" "$XDG_CONFIG_HOME"
     run() { "$@"; }
+    # Consume the exported Home Manager files without building its full environment.
+    mkdir -p "$HOME/.codex"
+    ln -s ${ctx.desktopHomeFiles.".codex/AGENTS.md".source} "$HOME/.codex/AGENTS.md"
+    ln -s ${ctx.desktopHomeFiles.".codex/DELEGATION.md".source} "$HOME/.codex/DELEGATION.md"
+    cmp ${../modules/home/codex/instructions.md} "$HOME/.codex/AGENTS.md"
+    cmp ${../modules/home/codex/delegation.md} "$HOME/.codex/DELEGATION.md"
     # Check both a fresh home and migration from Home Manager's previous links.
     ${ctx.self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.activation.ensureCodexAgents.data}
     for role in architect explorer plan-reviewer researcher security-reviewer worker; do

@@ -62,7 +62,10 @@ class GuardTests(Base):
     def test_session_context_uses_native_workflow_without_state(self):
         result = workflow.handle(self.event(hook_event_name="SessionStart"))
         self.contract("session-start", result)
-        self.assertIn("Native codex-auto", result["hookSpecificOutput"]["additionalContext"])
+        context = result["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("Native codex-auto", context)
+        self.assertIn("~/.codex/DELEGATION.md", context)
+        self.assertIn("Before assigning any agent", context)
         self.assertFalse(workflow.state_root().exists())
 
     def test_four_spawns_replay_and_new_turn_or_session(self):
