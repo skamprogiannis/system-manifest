@@ -90,6 +90,12 @@
   # DMS unified its standalone and connected hosts; preserve local glass on both.
   # CalendarOverviewCard inherits Card, and upstream now includes locked idle wake.
   common = ''
+    root / "Services/CompositorService.qml": [
+        (
+            '    function workspaceUrgent(record, loadedUrgent) {\n        switch (compositor) {',
+            '    function workspaceUrgent(record, loadedUrgent) {\n        switch (compositor) {\n        case "hyprland":\n            // Ghostty BEL activation lacks the serial required by Hyprland 0.57.\n            // Its bell title clears on interaction, preserving attention lifetime.\n            return record?.urgent === true || windowsOnWorkspace(record).some(window =>\n                window.appId === "com.mitchellh.ghostty" && (window.title || "").startsWith("🔔"));',
+        ),
+    ],
     root / "Modules/DDash/Overview/Card.qml": [
         ("    restRadius: DashMetrics.cardRadius", "    restRadius: DashMetrics.cardRadius\n    color: Theme.withAlpha(surfaceColor, Math.max(0.0, Theme.popupTransparency - 0.22))"),
     ],

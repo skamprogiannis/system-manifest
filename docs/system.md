@@ -112,6 +112,7 @@ After activating and starting a fresh Hyprland session, check `Super+E` in both 
 
 ### Desktop integration invariants
 
+- **Terminal attention:** Codex emits BEL on completion and approval requests; Ghostty keeps its bell title until interaction. DMS treats that marker on Ghostty windows as workspace urgency alongside native urgency. This bridges Ghostty's serial-less Wayland activation request, which Hyprland 0.57 rejects. Other applications retain their native urgency behavior.
 - **Native Glass Transparency:** Prefer app-native RGBA transparency plus Hyprland native blur. For text-heavy apps such as Ghostty, keep compositor opacity at `1.0 override` so glyphs stay opaque, and tune the app's own background opacity instead.
 - **Glass Token Source:** `modules/home/glass.nix` is the source of truth for Ghostty, Vesktop, DMS, Spicetify/Hazy, GTK popovers, and Hyprland glass values. Tune that module first instead of scattering one-off opacity numbers.
 - **Hyprland Blur Tuning:** For broad transparent surfaces, avoid excessive vibrancy because it can blend wallpaper colors into pastel blobs. Use the restrained native blur baseline (`size = 3`, `passes = 2`, `contrast = 0.9`) and tune app-side surface opacity/darkness toward the corrected Vesktop glass reference instead of increasing global blur.

@@ -54,5 +54,8 @@ in
             path.chmod(path.stat().st_mode & ~stat.S_IWUSR & ~stat.S_IWGRP & ~stat.S_IWOTH)
         PY
         ${steamTitlesPython}/bin/python3 ${../../../checks/dms-steam-titles-test.py} ${./steam-titles.py}
+        ${pkgs.nodejs}/bin/node ${../../../checks/dms-workspace-urgency-test.cjs} \
+          "$out/share/quickshell/dms/Services/CompositorService.qml" \
+          "$out/share/quickshell/dms/Common/WorkspaceModel.js"
       '';
   })
