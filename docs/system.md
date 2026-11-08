@@ -90,6 +90,12 @@ Hyprland, its portal, and stable Ghostty use system Nixpkgs packages. Ghostty sh
 
 ## Desktop maintenance
 
+### NVIDIA compositor scheduling
+
+The desktop sets `HYPRLAND_NO_RT=1` for login sessions and the greetd service, so both the user and greeter compositors use normal scheduling. Hyprland 0.57.1 can otherwise exceed rtkit's 200 ms real-time CPU limit during NVIDIA display-connector queries and receive a kernel `SIGKILL`, followed by a restart into recovery configuration. Normal scheduling avoids that fatal limit; a slow driver operation can still cause a temporary stall. Idle, monitor power-off, locking, and suspend settings remain enabled.
+
+After rebuilding, a fresh login or reboot applies the environment setting. Verify the user compositor with `chrt -p "$(pgrep -u "$USER" -x '.Hyprland-wrapp')"`; its policy should be `SCHED_OTHER` (possibly with `SCHED_RESET_ON_FORK`) at priority `0`. Idle/wake testing on the physical desktop is still required after activation.
+
 ### Hyprland keybinds
 
 - **Prefer readable key names**: use bindings like `x` or `Return` by default; only fall back to `code:<n>` when Hyprland rejects the named key or layout-independent behavior is truly required.
