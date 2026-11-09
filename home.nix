@@ -21,6 +21,7 @@
     ./modules/home/dux-files.nix
     ./modules/home/brave.nix
     ./modules/home/codex
+    ./modules/home/antigravity
     ./modules/home/firefox.nix
     ./modules/home/theme.nix
     ./modules/home/obsidian.nix
@@ -48,7 +49,6 @@
     # CLI / Tools
     _7zz
     alejandra
-    antigravity-cli
     btop
     clang
     clang-tools

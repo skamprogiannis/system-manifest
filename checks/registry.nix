@@ -61,7 +61,7 @@
         units = [];
       };
       codex = {
-        prefixes = ["modules/home/codex/" "modules/home/bannerlord-codex/" "modules/home/bannerlord/" "modules/home/player2-ai-influence/"];
+        prefixes = ["modules/home/codex/" "modules/home/antigravity/" "modules/home/bannerlord-codex/" "modules/home/bannerlord/" "modules/home/player2-ai-influence/"];
         checkPrefixes = ["codex-" "bannerlord-codex" "fixtures/codex-"];
         support = ["codex" "scripts"];
         units = [];

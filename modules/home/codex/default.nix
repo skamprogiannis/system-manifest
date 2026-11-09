@@ -204,9 +204,13 @@
   mkSkill = name: source: description: {
     inherit name source description;
   };
+  sanitizedDeclarativeSkills = map (skill: {
+    inherit (skill) name description;
+    package = sanitizeSkill skill.name skill.description skill.source;
+  }) checkedDeclarativeSkills;
   skillHomeFile = skill: {
     name = ".agents/skills/${skill.name}";
-    value = skillDir (sanitizeSkill skill.name skill.description skill.source);
+    value = skillDir skill.package;
   };
   skillConfig = skill: ''
     [[skills.config]]
@@ -419,8 +423,8 @@
     if unresolvedSkillDependencies == []
     then declarativeSkills
     else throw "Codex skill catalog has unresolved workflow dependencies: ${builtins.concatStringsSep ", " unresolvedSkillDependencies}";
-  skillHomeFiles = builtins.listToAttrs (map skillHomeFile checkedDeclarativeSkills);
-  skillConfigToml = lib.concatMapStringsSep "\n" skillConfig checkedDeclarativeSkills;
+  skillHomeFiles = builtins.listToAttrs (map skillHomeFile sanitizedDeclarativeSkills);
+  skillConfigToml = lib.concatMapStringsSep "\n" skillConfig sanitizedDeclarativeSkills;
   codexConfigPython = pkgs.python3.withPackages (ps: [ps.tomli-w]);
   context7Mcp = pkgs.writeShellScriptBin "context7-mcp" ''
     api_key="''${CONTEXT7_API_KEY:-}"
@@ -501,6 +505,8 @@ in {
   _module.args = {
     codexCliPackage = codexCli;
     pinchtabConfigSeed = pinchtabConfigSeed;
+    agentSkills = sanitizedDeclarativeSkills;
+    context7McpPackage = context7Mcp;
   };
 
   home.packages = [
