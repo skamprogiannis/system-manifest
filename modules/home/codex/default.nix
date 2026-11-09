@@ -399,6 +399,7 @@
     (mkSkill "code-review" "${inputs.mattpocock-skills}/skills/engineering/code-review" "Review changes against repository standards and the originating specification.")
     (mkSkill "tdd" "${inputs.mattpocock-skills}/skills/engineering/tdd" "Use red-green-refactor test-driven development for features and bug fixes.")
     (mkSkill "prototype" "${inputs.mattpocock-skills}/skills/engineering/prototype" "Build a throwaway prototype to validate data, state, or UI design choices.")
+    (mkSkill "socratic-tutor" "${inputs.janestreet-skills}/socratic-tutor" "Structured Socratic tutoring for explicit requests to teach, quiz, or drill a topic to mastery. Uses diagnostic placement, skill levels, and spaced review. Not for one-off explanations.")
   ];
   skillDependencies = {
     tdd = ["code-review"];

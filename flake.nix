@@ -49,6 +49,11 @@
       flake = false;
     };
 
+    janestreet-skills = {
+      url = "github:janestreet/agent_skills/7c6715c29548a3b39d4a9545c698ee4fd17a7213";
+      flake = false;
+    };
+
     trailofbits-skills = {
       url = "github:trailofbits/skills";
       flake = false;
