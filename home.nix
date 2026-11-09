@@ -48,6 +48,7 @@
     # CLI / Tools
     _7zz
     alejandra
+    antigravity-cli
     btop
     clang
     clang-tools

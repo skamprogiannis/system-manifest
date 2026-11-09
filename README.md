@@ -50,6 +50,7 @@ Deployment is manual. `nix flake check` validates configured host and support ch
 | `torrent gui` | Open Transmission's local interface |
 | `tmux new -As work` | Create or reattach to an optional terminal session (`Ctrl+B`, then `D` detaches) |
 | `codex-auto status` | Inspect native workflow ownership and local delegation limits (offline) |
+| `agy` | Launch the official Antigravity CLI; authenticate interactively with a Google account |
 | `wallpaper-sync status --json` | Inspect desktop wallpaper synchronization |
 | `nixos-usb-store-status` | Inspect USB store mode |
 | `usb-host-scratch status` | Inspect portable host-scratch state |
