@@ -67,7 +67,11 @@ in {
     pkgs.antigravity-cli
   ];
 
-  home.file = skillHomeFiles;
+  home.file =
+    skillHomeFiles
+    // {
+      ".gemini/config/AGENTS.md".text = builtins.readFile ./instructions.md;
+    };
 
   home.activation.ensureWritableAntigravityMcpConfig = lib.hm.dag.entryAfter ["linkGeneration"] ''
     run mkdir -p "$HOME/.gemini/config"

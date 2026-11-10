@@ -5,10 +5,11 @@ This file contains the default repository-wide rules. Read the relevant referenc
 ## Git and code changes
 
 - Worktree-first repository: `~/system-manifest/main` is the main worktree; the bare git directory is `~/system-manifest/.bare`. Never edit `.bare`. Run commands from the intended worktree.
+- Uphold code stewardship: build cleanly, modularly, and with proper separation of concerns. Do not bolt on ad-hoc configurations or duplicate modules; propose a refactor if an addition does not fit naturally.
 - Use atomic **Conventional Commits** (`type(scope): summary`). Squash local fix-on-fix iterations before pushing. Commit before deploying so generation revisions remain traceable.
 - Keep system Git in `hosts/common/default.nix` so flakes work. Prefer Home Manager for non-bootstrap applications and put larger modules under `modules/`.
 - Keep comments about behavior and intent; remove dead/commented-out code. Update the README for durable user-facing changes, and keep implementation detail in the relevant guide.
-- Repository-wide Codex instructions live in `modules/home/codex/instructions.md` and are synchronized by Home Manager; `AGENTS.md` here is for repository contributors.
+- Global agent instructions live in `modules/home/codex/instructions.md` (synced to `~/.codex/AGENTS.md`) and `modules/home/antigravity/instructions.md` (synced to `~/.gemini/config/AGENTS.md`); `AGENTS.md` here is for repository contributors.
 - Preserve `system.configurationRevision = inputs.self.rev or inputs.self.dirtyRev or null;` in `hosts/common/default.nix`.
 
 ## Validation and deployment
