@@ -368,11 +368,6 @@
       "application/pdf" = ["org.pwmt.zathura.desktop"];
       "application/msword" = ["libreoffice-writer.desktop"];
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document" = ["libreoffice-writer.desktop"];
-      "text/plain" = ["nvim-text.desktop"];
-      "text/markdown" = ["nvim-text.desktop"];
-      "text/css" = ["nvim-text.desktop"];
-      "application/json" = ["nvim-text.desktop"];
-      "application/x-shellscript" = ["nvim-text.desktop"];
     };
   };
 }
