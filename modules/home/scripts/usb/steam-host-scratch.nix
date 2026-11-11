@@ -1,6 +1,29 @@
 {pkgs}:
 pkgs.writeShellScriptBin "steam-host-scratch" ''
     set -eu
+    # shellcheck disable=SC2034
+
+    # TTY & NO_COLOR aware ANSI palette
+    if [ -t 1 ] && [ "''${TERM:-}" != "dumb" ] && [ -z "''${NO_COLOR:-}" ]; then
+      BOLD="\033[1m"
+      GREEN="\033[0;32m"
+      BLUE="\033[0;34m"
+      YELLOW="\033[0;33m"
+      RED="\033[0;31m"
+      NC="\033[0m"
+    else
+      BOLD=""
+      GREEN=""
+      BLUE=""
+      YELLOW=""
+      RED=""
+      NC=""
+    fi
+
+    log_info() { printf "%b\n" "''${BLUE}''${BOLD}[INFO]''${NC} $*"; }
+    log_ok()   { printf "%b\n" "''${GREEN}''${BOLD}[OK]''${NC} $*"; }
+    log_warn() { printf "%b\n" "''${YELLOW}''${BOLD}[WARN]''${NC} $*"; }
+    log_err()  { printf "%b\n" "''${RED}''${BOLD}[ERROR]''${NC} $*" >&2; }
 
     mode_file="''${STEAM_HOST_SCRATCH_MODE_FILE:-/run/usb-host-scratch.mode}"
     steam_dir="''${STEAM_HOST_SCRATCH_STEAM_DIR:-/nix/.host-scratch/user/stefan/steam/Steam}"
@@ -80,20 +103,44 @@ pkgs.writeShellScriptBin "steam-host-scratch" ''
       checkpoint)
         prepare_steam_dir
         sync_persistent_state
-        printf '%s\n' "Steam account, config, and userdata checkpointed to persistent USB home."
+        if [ -t 1 ] && [ -n "$BOLD" ]; then
+          log_ok "Steam account, config, and userdata checkpointed to persistent USB home."
+        else
+          printf '%s\n' "Steam account, config, and userdata checkpointed to persistent USB home."
+        fi
         ;;
       status)
         if host_scratch_active; then
-          printf '%s\n' "Steam host-scratch: active"
+          if [ -t 1 ] && [ -n "$BOLD" ]; then
+            printf '%bSteam host-scratch:%b %bactive%b\n' "$BOLD" "$NC" "$GREEN" "$NC"
+          else
+            printf '%s\n' "Steam host-scratch: active"
+          fi
           printf 'Client and default library: %s\n' "$steam_dir"
           if [ -d "$steam_dir" ]; then
-            printf '%s\n' "State: ready"
+            if [ -t 1 ] && [ -n "$BOLD" ]; then
+              printf '%bState:%b %bready%b\n' "$BOLD" "$NC" "$GREEN" "$NC"
+            else
+              printf '%s\n' "State: ready"
+            fi
           else
-            printf '%s\n' "State: not prepared"
+            if [ -t 1 ] && [ -n "$BOLD" ]; then
+              printf '%bState:%b %bnot prepared%b\n' "$BOLD" "$NC" "$YELLOW" "$NC"
+            else
+              printf '%s\n' "State: not prepared"
+            fi
           fi
-          printf '%s\n' "Durability: temporary; erased during shutdown"
+          if [ -t 1 ] && [ -n "$BOLD" ]; then
+            printf '%bDurability:%b %btemporary; erased during shutdown%b\n' "$BOLD" "$NC" "$YELLOW" "$NC"
+          else
+            printf '%s\n' "Durability: temporary; erased during shutdown"
+          fi
         else
-          printf '%s\n' "Steam host-scratch: inactive"
+          if [ -t 1 ] && [ -n "$BOLD" ]; then
+            printf '%bSteam host-scratch:%b %binactive%b\n' "$BOLD" "$NC" "$YELLOW" "$NC"
+          else
+            printf '%s\n' "Steam host-scratch: inactive"
+          fi
           printf '%s\n' "Boot the host-auto-store specialisation to use the temporary SSD library."
         fi
         ;;

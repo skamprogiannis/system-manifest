@@ -1,6 +1,30 @@
 {pkgs}:
 pkgs.writeShellScriptBin "usb-host-scratch" ''
     set -eu
+    # shellcheck disable=SC2034
+
+    # TTY & NO_COLOR aware ANSI palette
+    if [ -t 1 ] && [ "''${TERM:-}" != "dumb" ] && [ -z "''${NO_COLOR:-}" ]; then
+      BOLD="\033[1m"
+      GREEN="\033[0;32m"
+      BLUE="\033[0;34m"
+      YELLOW="\033[0;33m"
+      RED="\033[0;31m"
+      NC="\033[0m"
+    else
+      BOLD=""
+      GREEN=""
+      BLUE=""
+      YELLOW=""
+      RED=""
+      NC=""
+    fi
+
+    log_info() { printf "%b\n" "''${BLUE}''${BOLD}[INFO]''${NC} $*"; }
+    log_step() { printf "\n%b\n" "''${BOLD}==>''${NC} ''${BOLD}$*''${NC}"; }
+    log_ok()   { printf "%b\n" "''${GREEN}''${BOLD}[OK]''${NC} $*"; }
+    log_warn() { printf "%b\n" "''${YELLOW}''${BOLD}[WARN]''${NC} $*"; }
+    log_err()  { printf "%b\n" "''${RED}''${BOLD}[ERROR]''${NC} $*" >&2; }
 
     mode_file="''${USB_HOST_SCRATCH_MODE_FILE:-/run/usb-host-scratch.mode}"
     repo_dir="''${USB_HOST_SCRATCH_REPO_DIR:-/nix/.host-scratch/repositories}"
@@ -10,14 +34,14 @@ pkgs.writeShellScriptBin "usb-host-scratch" ''
 
     usage() {
       ${pkgs.coreutils}/bin/cat <<'USAGE'
-  Usage: usb-host-scratch [path|checkpoint [--include-cache]|status]
+Usage: usb-host-scratch [path|checkpoint [--include-cache]|status]
 
-  Commands:
-    path        Print the encrypted host scratch repositories path.
-    checkpoint  Copy essential Codex and Brave state back to the USB now.
-                Add --include-cache for an unbounded full ~/.cache copy.
-    status      Show host scratch diagnostics and the last sync result.
-  USAGE
+Commands:
+  path        Print the encrypted host scratch repositories path.
+  checkpoint  Copy essential Codex and Brave state back to the USB now.
+              Add --include-cache for an unbounded full ~/.cache copy.
+  status      Show host scratch diagnostics and the last sync result.
+USAGE
     }
 
     cmd="''${1:-path}"
@@ -62,7 +86,11 @@ pkgs.writeShellScriptBin "usb-host-scratch" ''
         else
           "$SUDO" "$SYSTEMCTL" start --wait "$checkpoint_service"
         fi
-        printf '%s\n' "USB host-scratch checkpoint completed."
+        if [ -t 1 ] && [ -n "$BOLD" ]; then
+          log_ok "USB host-scratch checkpoint completed."
+        else
+          printf '%s\n' "USB host-scratch checkpoint completed."
+        fi
         ;;
       status)
         exec nixos-usb-host-scratch-status
