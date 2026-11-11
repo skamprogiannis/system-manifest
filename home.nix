@@ -12,6 +12,7 @@
     inputs.spicetify-nix.homeManagerModules.spicetify
     ./modules/home/catppuccin.nix
     ./modules/home/git.nix
+    ./modules/home/ssh.nix
     ./modules/home/ghostty.nix
     ./modules/home/neovim.nix
     ./modules/home/hyprland.nix

@@ -33,20 +33,4 @@
       };
     };
   };
-
-  # Enable ssh-agent service for persistent authentication
-  services.ssh-agent.enable = true;
-
-  # SSH configuration for multi-host support
-  programs.ssh = {
-    enable = true;
-    enableDefaultConfig = false;
-    settings = {
-      "github.com" = {
-        AddKeysToAgent = "yes";
-        IdentityFile = ["~/.ssh/id_ed25519_github"];
-        IdentitiesOnly = true;
-      };
-    };
-  };
 }
