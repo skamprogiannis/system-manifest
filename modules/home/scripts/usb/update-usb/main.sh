@@ -79,8 +79,8 @@ fi
 FLAKE_DIR="$(realpath "$FLAKE_DIR")"
 EXPECTED_CONFIG_REVISION="$(read_expected_config_revision || true)"
 capture_desired_system_metadata
-echo "Source flake: $FLAKE_DIR"
-echo "Desired revision: ${EXPECTED_CONFIG_REVISION:-unknown}"
+log_info "Source flake: $FLAKE_DIR"
+log_info "Desired revision: ${EXPECTED_CONFIG_REVISION:-unknown}"
 if [ ! -e "$USB_ROOT_PART" ] || [ ! -e "$USB_BOOT_DEV" ]; then
   echo 'Error: labeled USB root and boot partitions are required.' >&2
   exit 1
@@ -196,5 +196,6 @@ phase_end
 resume_usb_transaction
 report_image published "$MOUNT_POINT/nix-store.squashfs"
 CURRENT_PHASE='done'
-echo "Published system: $TARGET_SYSTEM_TOPLEVEL"
+log_ok "Published system: $TARGET_SYSTEM_TOPLEVEL"
+log_ok "USB update completed successfully!"
 # The EXIT handler flushes cleanup and reports completion only after unmounting.

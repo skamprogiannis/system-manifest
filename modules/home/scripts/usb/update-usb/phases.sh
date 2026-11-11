@@ -1,6 +1,33 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2034
 
+# TTY & NO_COLOR aware ANSI palette
+if [ -t 1 ] && [ "${TERM:-}" != "dumb" ] && [ -z "${NO_COLOR:-}" ]; then
+  BOLD="\033[1m"
+  DIM="\033[2m"
+  GREEN="\033[0;32m"
+  BLUE="\033[0;34m"
+  YELLOW="\033[0;33m"
+  RED="\033[0;31m"
+  CYAN="\033[0;36m"
+  NC="\033[0m"
+else
+  BOLD=""
+  DIM=""
+  GREEN=""
+  BLUE=""
+  YELLOW=""
+  RED=""
+  CYAN=""
+  NC=""
+fi
+
+log_info() { printf "%b\n" "${BLUE}${BOLD}[INFO]${NC} $*"; }
+log_step() { printf "\n%b\n" "${BOLD}==>${NC} ${BOLD}$*${NC}"; }
+log_ok()   { printf "%b\n" "${GREEN}${BOLD}[OK]${NC} $*"; }
+log_warn() { printf "%b\n" "${YELLOW}${BOLD}[WARN]${NC} $*"; }
+log_err()  { printf "%b\n" "${RED}${BOLD}[ERROR]${NC} $*" >&2; }
+
 is_verbose() {
   [ "${VERBOSE:-0}" -eq 1 ]
 }
@@ -14,9 +41,14 @@ verbose_log() {
 # Compatibility for callers that formerly supplied estimated overall percentages.
 progress_set() {
   shift
-  local line="=== USB Update: $* ==="
+  local line
+  if [ -t 1 ] && [ -n "$BOLD" ]; then
+    line="${BOLD}==>${NC} ${CYAN}${BOLD}USB Update: $*${NC}"
+  else
+    line="=== USB Update: $* ==="
+  fi
   if [ "${LAST_PROGRESS_LINE:-}" != "$line" ]; then
-    printf '%s\n' "$line"
+    printf '%b\n' "$line"
     LAST_PROGRESS_LINE="$line"
   fi
 }
@@ -44,7 +76,7 @@ command_progress() {
   local description="$1" started_ms="$2" elapsed remaining
   elapsed=$(( ($(date +%s%3N) - started_ms) / 1000 ))
   if [ "${PROGRESS_COMMAND_DONE:-0}" -eq 1 ]; then
-    printf '  %s — finished in %s\n' "$description" "$(format_duration "$elapsed")"
+    printf '  %s — %bfinished in %s%b\n' "$description" "${GREEN}" "$(format_duration "$elapsed")" "${NC}"
   elif [ -n "${PHASE_ESTIMATE_SECONDS:-}" ]; then
     remaining=$((PHASE_ESTIMATE_SECONDS - ($(date +%s) - PHASE_STARTED_AT)))
     if [ "$remaining" -gt 0 ]; then
@@ -260,12 +292,24 @@ phase_end_estimated() {
 print_timing_summary() {
   if [ "${#TIMINGS[@]}" -eq 0 ]; then return; fi
   local total=0 timing label seconds
-  echo "=== USB Update: Timing Summary ==="
+  if [ -t 1 ] && [ -n "$BOLD" ]; then
+    printf "\n%b\n" "${BOLD}==>${NC} ${BOLD}USB Update: Timing Summary${NC}"
+  else
+    echo "=== USB Update: Timing Summary ==="
+  fi
   for timing in "${TIMINGS[@]}"; do
     label="${timing%%|*}"
     seconds="${timing##*|}"
     total=$((total + seconds))
-    printf '  - %s: %s\n' "$label" "$(format_duration "$seconds")"
+    if [ -t 1 ] && [ -n "$BOLD" ]; then
+      printf '  - %-45s %s\n' "$label:" "$(format_duration "$seconds")"
+    else
+      printf '  - %s: %s\n' "$label" "$(format_duration "$seconds")"
+    fi
   done
-  printf '  - total: %s\n' "$(format_duration "$total")"
+  if [ -t 1 ] && [ -n "$BOLD" ]; then
+    printf '  - %-45s %b%s%b\n' "Total elapsed:" "${BOLD}" "$(format_duration "$total")" "${NC}"
+  else
+    printf '  - total: %s\n' "$(format_duration "$total")"
+  fi
 }

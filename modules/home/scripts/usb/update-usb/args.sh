@@ -3,15 +3,25 @@
 
 usage() {
   cat <<EOF
+Portable NixOS USB Drive Updater
+
 Usage:
   sudo update-usb [-v|--verbose] [--in-place] [--stage-dir PATH] [--force] [--no-rollback] [path-to-flake-dir]
 
+Options:
+  -v, --verbose      Show detailed command output, copy speeds, and frequent heartbeats
+  --in-place         Stage and expand update directly on the USB (slower, saves host SSD space)
+  --stage-dir PATH   Specify custom staging directory on host SSD (default: /var/tmp/update-usb-stage)
+  --force            Rewrite and rebuild an otherwise current USB installation
+  --no-rollback      Build single-generation image without retaining previous rollback generation
+  -h, --help         Show this help message
+
 Defaults:
-  mode:      $DEFAULT_MODE
-  stage dir: /var/tmp/update-usb-stage (private SSD workspace)
-  flake dir: $PWD
-  usb root:  $USB_ROOT_PART
-  usb boot:  $USB_BOOT_DEV
+  mode:              $DEFAULT_MODE
+  stage dir:         /var/tmp/update-usb-stage (private SSD workspace)
+  flake dir:         $PWD
+  usb root:          $USB_ROOT_PART
+  usb boot:          $USB_BOOT_DEV
 
 Examples:
   sudo update-usb /path/to/system-manifest
