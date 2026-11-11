@@ -76,7 +76,11 @@ command_progress() {
   local description="$1" started_ms="$2" elapsed remaining
   elapsed=$(( ($(date +%s%3N) - started_ms) / 1000 ))
   if [ "${PROGRESS_COMMAND_DONE:-0}" -eq 1 ]; then
-    printf '  %s — %bfinished in %s%b\n' "$description" "${GREEN}" "$(format_duration "$elapsed")" "${NC}"
+    if [ "${PROGRESS_INLINE:-0}" -eq 1 ] && [ -n "$GREEN" ]; then
+      printf '  %s — %bfinished in %s%b\n' "$description" "$GREEN" "$(format_duration "$elapsed")" "$NC"
+    else
+      printf '  %s — finished in %s\n' "$description" "$(format_duration "$elapsed")"
+    fi
   elif [ -n "${PHASE_ESTIMATE_SECONDS:-}" ]; then
     remaining=$((PHASE_ESTIMATE_SECONDS - ($(date +%s) - PHASE_STARTED_AT)))
     if [ "$remaining" -gt 0 ]; then
