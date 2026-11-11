@@ -161,5 +161,5 @@ pkgs.writeShellScriptBin "setup-persistent-usb" ''
   OPENED_MAPPER=0
 
   echo "USB is partitioned and formatted."
-  echo "Next step: sudo update-usb /path/to/system-manifest/main"
+  echo "Next step: sudo update-usb /path/to/system-manifest"
 ''

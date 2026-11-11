@@ -14,12 +14,12 @@ Defaults:
   usb boot:  $USB_BOOT_DEV
 
 Examples:
-  sudo update-usb /path/to/system-manifest/main
-  sudo update-usb --verbose /path/to/system-manifest/main
-  sudo update-usb --in-place /path/to/system-manifest/main
-  sudo update-usb --stage-dir /mnt/ssd/update-usb-stage /path/to/system-manifest/main
-  sudo update-usb --force /path/to/system-manifest/main
-  sudo update-usb --no-rollback /path/to/system-manifest/main
+  sudo update-usb /path/to/system-manifest
+  sudo update-usb --verbose /path/to/system-manifest
+  sudo update-usb --in-place /path/to/system-manifest
+  sudo update-usb --stage-dir /mnt/ssd/update-usb-stage /path/to/system-manifest
+  sudo update-usb --force /path/to/system-manifest
+  sudo update-usb --no-rollback /path/to/system-manifest
 EOF
 }
 

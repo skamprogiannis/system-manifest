@@ -185,22 +185,17 @@
             fg = "#00bcd4";
           }
           {
-            url = "**/system-manifest/.bare/";
-            text = "";
-            fg = "#00bcd4";
-          }
-          {
-            url = "**/system-manifest/*/";
+            url = "**/system-manifest/";
             text = "";
             fg = "#00bcd4";
           }
           {
-            url = "**/system-manifest/*/hosts/";
+            url = "**/system-manifest/hosts/";
             text = "";
             fg = "#00bcd4";
           }
           {
-            url = "**/system-manifest/*/modules/";
+            url = "**/system-manifest/modules/";
             text = "";
             fg = "#00bcd4";
           }

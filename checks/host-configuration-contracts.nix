@@ -20,12 +20,9 @@
     home.xdg.desktopEntries ? open-webui
     && home.xdg.desktopEntries.open-webui.exec == "ai-search launch"
     && !home.xdg.desktopEntries.open-webui.terminal;
-  guiOnAllHosts =
-    builtins.all
-    (host:
-      builtins.any (package: lib.getName package == "chatgpt-desktop")
-      (ctx.homeConfig host).home.packages)
-    ctx.registry.host;
+  guiOnDesktop =
+    builtins.any (package: lib.getName package == "chatgpt-desktop")
+    (ctx.homeConfig "desktop").home.packages;
   wallpaperToolsOnAllHosts = builtins.all (host: let
     system = ctx.self.nixosConfigurations.${host}.config;
     pkgs = ctx.self.nixosConfigurations.${host}.pkgs;
@@ -62,8 +59,8 @@ in {
   "Desktop AI search must use an on-demand Open WebUI launcher, an always-on local SearXNG, and independent commands.";
   assert lib.assertMsg filesOnAllHosts
   "Dux Files must handle folders and file chooser portals on every host, with on-demand activation, GTK fallback, and terminal Yazi preserved.";
-  assert lib.assertMsg guiOnAllHosts
-  "The official ChatGPT desktop app with Codex must be installed on every host.";
+  assert lib.assertMsg guiOnDesktop
+  "The official ChatGPT desktop app with Codex must be installed on the desktop host.";
   assert lib.assertMsg wallpaperToolsOnAllHosts
   "The wallpaper daemon must retain its shell, Matugen, SteamCMD, and setsid tools on every host.";
     ctx.pkgs.runCommand "host-configuration-contracts-check" {} ''

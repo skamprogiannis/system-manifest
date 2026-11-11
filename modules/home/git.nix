@@ -22,7 +22,10 @@
         "https://platform.zone01.gr".helper = ["" "store"]; # Clear global helper (manager) to force local store
       };
 
-      safe.directory = "/home/stefan/system_manifest";
+      safe.directory = [
+        "/home/stefan/system-manifest"
+        "/home/stefan/system_manifest"
+      ];
 
       init = {
         defaultBranch = "main";

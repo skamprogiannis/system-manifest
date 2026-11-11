@@ -23,10 +23,10 @@ NixOS owns bootstrap tools, system services, hardware integration, and greeter a
 
 ## Getting started
 
-Run these commands **from the system-manifest worktree**, not another project's flake:
+Run these commands **from the system-manifest repository**, not another project's flake:
 
 ```bash
-cd ~/system-manifest/main
+cd ~/system-manifest
 git pull --ff-only
 nixos-rebuild dry-build --flake .#desktop
 sudo nixos-rebuild switch --flake .#desktop
@@ -35,7 +35,7 @@ sudo nixos-rebuild switch --flake .#desktop
 For the laptop, use `.#laptop`. Update the USB using:
 
 ```bash
-sudo update-usb ~/system-manifest/main
+sudo update-usb ~/system-manifest
 ```
 
 Deployment is manual. `nix flake check` validates configured host and support checks; it does not activate a host or replace device testing.

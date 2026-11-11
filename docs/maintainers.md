@@ -11,13 +11,11 @@ Detailed development and troubleshooting rules for `system-manifest`. Agents sho
   - Scopes: `desktop`, `usb`, `laptop`, `common`, `home`, `system`, or specific module names.
   - Example: `feat(desktop): enable steam and gamemode`
   - Example: `fix(usb): correct luks mounting path`
-- **Worktree-First Git:** `/home/stefan/system-manifest` is the repo container; the bare Git dir lives at `/home/stefan/system-manifest/.bare`. Do not edit anything inside `.bare`.
-  - Main worktree: `/home/stefan/system-manifest/main`
-  - Create a feature worktree: `git --git-dir=/home/stefan/system-manifest/.bare worktree add /home/stefan/system-manifest/<dir> -b <branch> main`
-  - Keep worktree directories as sanitized direct children (for example `usb-fix`), even when the branch name contains slashes such as `feature/usb-fix`
-  - List active worktrees: `git --git-dir=/home/stefan/system-manifest/.bare worktree list`
-  - Remove merged worktree: `git --git-dir=/home/stefan/system-manifest/.bare worktree remove /home/stefan/system-manifest/<dir>` and then `git --git-dir=/home/stefan/system-manifest/.bare branch -d <branch>`
-  - Run all editing/build/git commands from the intended worktree path.
+- **Standard Git Repository:** `/home/stefan/system-manifest` is the repository and flake root, with standard `.git`.
+  - Isolated workspaces for agents or subtasks are created in `/tmp/` using standard git worktrees: `git worktree add /tmp/<dir> -b <branch> main` (or `--detach`).
+  - List active worktrees: `git worktree list`
+  - Remove merged worktree: `git worktree remove /tmp/<dir>` and prune: `git worktree prune`.
+  - Run editing/build/git commands directly from `/home/stefan/system-manifest`.
 - **System Git:** Ensure `git` stays in `hosts/common/default.nix` under `environment.systemPackages` (required for Flakes).
 - **Global Agent Instructions Source:** Machine-wide agent defaults are edited in `modules/home/codex/instructions.md` (for `~/.codex/AGENTS.md`) and `modules/home/antigravity/instructions.md` (for `~/.gemini/config/AGENTS.md`), which are synced via Home Manager when you run `nixos-rebuild switch`. The conditional delegation policy in `modules/home/codex/delegation.md` is installed as `~/.codex/DELEGATION.md`. Restart clients after activation to load the new global instructions.
 - **Codex Upgrades:** Update the shared version in `modules/home/codex/version.txt` and the release hash in `modules/home/codex/default.nix`. The Bannerlord adapter must use that same version: keep its packaged preflight expectation, tests, and README consistent on every Codex upgrade. Run `bannerlord-codex` and verify the built Codex package and managed daemon. `script-smoke` includes that package smoke check; equivalent focused validation is suitable when broader shell checks are unaffected. Do not leave a separate stale version pin in the adapter.
