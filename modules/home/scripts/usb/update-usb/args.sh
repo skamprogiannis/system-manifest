@@ -4,7 +4,7 @@
 usage() {
   cat <<EOF
 Usage:
-  sudo update-usb [-v|--verbose] [--in-place] [--stage-dir PATH] [--force] [path-to-flake-dir]
+  sudo update-usb [-v|--verbose] [--in-place] [--stage-dir PATH] [--force] [--no-rollback] [path-to-flake-dir]
 
 Defaults:
   mode:      $DEFAULT_MODE
@@ -19,6 +19,7 @@ Examples:
   sudo update-usb --in-place /path/to/system-manifest/main
   sudo update-usb --stage-dir /mnt/ssd/update-usb-stage /path/to/system-manifest/main
   sudo update-usb --force /path/to/system-manifest/main
+  sudo update-usb --no-rollback /path/to/system-manifest/main
 EOF
 }
 
@@ -42,6 +43,10 @@ parse_args() {
         ;;
       --force)
         FORCE_UPDATE=1
+        shift
+        ;;
+      --no-rollback)
+        NO_ROLLBACK=1
         shift
         ;;
       -v | --verbose)

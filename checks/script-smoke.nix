@@ -878,7 +878,7 @@ in {
       assert_log_contains "Error: unknown option '--mode'."
 
       run_expect 0 update-usb-help "$desktop_home/bin/update-usb" --help
-      assert_log_contains "sudo update-usb [-v|--verbose] [--in-place] [--stage-dir PATH] [--force] [path-to-flake-dir]"
+      assert_log_contains "sudo update-usb [-v|--verbose] [--in-place] [--stage-dir PATH] [--force] [--no-rollback] [path-to-flake-dir]"
       assert_log_not_contains "--mode"
 
       args_test="$TMPDIR/update-usb-args"
@@ -913,6 +913,7 @@ in {
         MODE="$DEFAULT_MODE"
         VERBOSE=0
         FORCE_UPDATE=0
+        NO_ROLLBACK=0
         FLAKE_DIR=/start
         USB_ROOT_PART=/dev/root
         USB_BOOT_DEV=/dev/boot
@@ -930,6 +931,33 @@ in {
       if ! cmp -s "$args_test/expected-long-verbose" "$args_test/long-verbose"; then
         echo "Expected update-usb parser to handle --verbose." >&2
         ${pkgs.gnused}/bin/sed 's/^/  /' "$args_test/long-verbose" >&2
+        exit 1
+      fi
+
+      (
+        DEFAULT_MODE=prebuild
+        MODE="$DEFAULT_MODE"
+        VERBOSE=0
+        FORCE_UPDATE=0
+        NO_ROLLBACK=0
+        FLAKE_DIR=/start
+        USB_ROOT_PART=/dev/root
+        USB_BOOT_DEV=/dev/boot
+        # shellcheck disable=SC1091
+        . "$update_usb_source_dir/args.sh"
+        parse_args --no-rollback /flake
+        printf 'mode=%s\nverbose=%s\nforce=%s\nno_rollback=%s\nflake=%s\n' "$MODE" "$VERBOSE" "$FORCE_UPDATE" "$NO_ROLLBACK" "$FLAKE_DIR"
+      ) > "$args_test/no-rollback"
+      cat > "$args_test/expected-no-rollback" <<'EOF'
+      mode=prebuild
+      verbose=0
+      force=0
+      no_rollback=1
+      flake=/flake
+      EOF
+      if ! cmp -s "$args_test/expected-no-rollback" "$args_test/no-rollback"; then
+        echo "Expected update-usb parser to handle --no-rollback." >&2
+        ${pkgs.gnused}/bin/sed 's/^/  /' "$args_test/no-rollback" >&2
         exit 1
       fi
 
