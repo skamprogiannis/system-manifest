@@ -38,10 +38,8 @@
   # --- PACKAGES ---
   home.packages = with pkgs; [
     # GUI
-    (pkgs.callPackage ./modules/home/codex/desktop-package.nix {})
     gpu-screen-recorder-gtk
     imv
-    libreoffice-qt
     mpv
     pkgs.mailspring
     obsidian
@@ -68,7 +66,6 @@
     jq
     nil
     nodejs_24
-    omnisharp-roslyn
     pacvim
     pandoc
     playwright-test

@@ -512,7 +512,6 @@ in {
   home.packages = [
     pkgs.bubblewrap
     codexCli
-    pkgs.codeql
     pinchtab
     pkgs.python3Packages."sarif-tools"
     (import ./semgrep.nix {inherit pkgs;})

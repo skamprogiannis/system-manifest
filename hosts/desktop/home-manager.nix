@@ -1,4 +1,4 @@
-{...}: {
+{pkgs, ...}: {
   # Keep this file as thin host wiring only. Shared modules may branch on
   # `hostType` for lightweight defaults, but desktop-owned runtime behavior,
   # patches, or session contracts should stay in dedicated host modules.
@@ -9,6 +9,13 @@
     ../../modules/home/scripts/usb.nix
     ../../modules/home/bannerlord
     ../../modules/home/desktop-dictation
+  ];
+
+  home.packages = with pkgs; [
+    (pkgs.callPackage ../../modules/home/codex/desktop-package.nix {})
+    libreoffice-qt
+    omnisharp-roslyn
+    codeql
   ];
 
   system_manifest.scripts.enableSetupPersistentUsb = false;
