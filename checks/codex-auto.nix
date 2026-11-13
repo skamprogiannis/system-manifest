@@ -29,10 +29,26 @@ in {
     test "$(cat "$HOME/.codex/agents/custom.keep")" = "unmanaged role"
     cat > "$HOME/.codex/config.toml" <<'TOML'
     approvals_reviewer = "user"
+    [features]
+    multi_agent = true
     [projects."/unmanaged-project"]
     trust_level = "trusted"
     TOML
     ${ctx.self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.activation.ensureWritableCodexConfig.data}
+    python3 - <<'PY'
+    import pathlib, tomllib
+    path = pathlib.Path.home() / ".codex/config.toml"
+    text = path.read_text()
+    config = tomllib.loads(text)
+    assert config["agents"]["enabled"] is True
+    assert "multi_agent" not in config["features"]
+    assert "[features]\n" in text
+    path.write_text(text.replace("[features]\n", "[features]\nmulti_agent = false\n", 1))
+    PY
+    ${ctx.self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.activation.ensureWritableCodexConfig.data}
+    cp "$HOME/.codex/config.toml" "$TMPDIR/config-once.toml"
+    ${ctx.self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.activation.ensureWritableCodexConfig.data}
+    cmp "$HOME/.codex/config.toml" "$TMPDIR/config-once.toml"
     # Exercise real activation against retired hooks and preserved private history.
     python3 - <<'PYTEST'
     import json, os
@@ -78,6 +94,8 @@ in {
     assert config["model_reasoning_effort"] == "medium"
     assert config["plan_mode_reasoning_effort"] == "xhigh"
     assert config["agents"]["default_subagent_model"] == "gpt-6.1-sol"
+    assert config["agents"]["enabled"] is True
+    assert "multi_agent" not in config["features"]
     assert config["agents"]["default_subagent_reasoning_effort"] == "medium"
     assert hooks["hooks"]["Stop"][0]["hooks"][0]["command"] == "user-hook"
     owned = [h["command"] for groups in hooks["hooks"].values() for g in groups for h in g["hooks"] if "codex-auto-hook" in h.get("command", "")]

@@ -464,13 +464,13 @@
     trust_level = "trusted"
 
     [agents]
+    enabled = true
     default_subagent_model = "gpt-6.1-sol"
     default_subagent_reasoning_effort = "medium"
 
     [features]
     hooks = true
     goals = true
-    multi_agent = true
     plugins = true
     realtime_conversation = true
     remote_plugin = false
