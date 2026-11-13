@@ -64,7 +64,7 @@
   }) agentSkills);
 in {
   home.packages = [
-    pkgs.antigravity-cli
+    (pkgs.callPackage ./package.nix {})
   ];
 
   home.file =
