@@ -134,7 +134,7 @@ default alone does not relocate old chats.
 
 Home Manager enables `/voice` through `features.realtime_conversation` and sets
 `realtime.voice = "vale"` in the writable Codex configuration. Vale and the
-alternative Sol are supported by the [pinned CLI's voice configuration](https://github.com/openai/codex/blob/rust-v0.167.0/codex-rs/core/config.schema.json).
+alternative Sol are supported by the [pinned CLI's voice configuration](https://github.com/openai/codex/blob/rust-v0.169.0/codex-rs/core/config.schema.json).
 This chooses the speaking voice; the main coding model remains independently
 configurable. Audio device preferences continue to follow the local setup.
 

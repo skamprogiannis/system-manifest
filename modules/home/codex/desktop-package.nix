@@ -12,11 +12,11 @@
   });
   app = pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
     pname = "chatgpt-desktop";
-    version = "26.1023.51421";
+    version = "26.1111.21308";
 
     src = pkgs.fetchurl {
       url = "https://persistent.oaistatic.com/codex-app-prod/linux/deb/pool/main/c/chatgpt/chatgpt_${finalAttrs.version}_amd64.deb";
-      hash = "sha256-RITcK1T8CXi+sjuNjXF0lOTgtPvqsKh2c5EF5QtE3lo=";
+      hash = "sha256-S0Q7xVc1ChsZO8LxuuIHyeo8n7XZT3yUpdPbqotVI1I=";
     };
 
     nativeBuildInputs = with pkgs; [dpkg autoPatchelfHook makeWrapper wrapGAppsHook3];
@@ -58,7 +58,7 @@
     # ANGLE loads OpenGL dynamically, so it is not inferred from ELF dependencies.
     runtimeDependencies = map lib.getLib [pkgs.libGL pkgs.libsecret pkgs.libnotify pkgs.vulkan-loader];
 
-    preFixup = lib.optionalString (finalAttrs.version == "26.1023.51421" && pkgs.patchelf.version == "0.19.2") ''
+    preFixup = lib.optionalString (finalAttrs.version == "26.1111.21308" && pkgs.patchelf.version == "0.19.2") ''
       repairBundledNode() {
         local node="$out/lib/chatgpt/resources/cua_node/bin/node"
         local interpreter rpath
