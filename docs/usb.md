@@ -46,6 +46,16 @@ Changing or pulling the repository does not refresh the running session. Update 
 
 USB enables UPower for DMS battery readings in the bar and control center. The bar battery widget sits immediately left of notifications and appears only when UPower detects a laptop battery, including when the USB runs on laptop hardware. Desktop hosts without a laptop battery do not show a placeholder. UPower also needs system-bus registration; having its package in the store alone does not make battery telemetry available to DMS.
 
+Closing the lid is configured to leave the system awake on battery, AC power, and while docked; explicit sleep remains available. Keep ventilation clear when closing a running laptop. This avoids lid-triggered suspend but does not establish a fix for compositor crashes during manual suspend/resume.
+
+Before a USB image update, a temporary lid inhibitor can be started without a rebuild:
+
+```bash
+systemd-run --user --unit=usb-ignore-lid systemd-inhibit --what=handle-lid-switch --mode=block --who="USB session" --why="Keep portable USB awake on lid close" sleep infinity
+```
+
+Inspect it with `systemd-inhibit --list`. Stop it with `systemctl --user stop usb-ignore-lid.service`. It lasts until stopped or the user manager exits.
+
 ## USB RAM Store Mode
 
 Choose the USB **`ram-store` specialisation** from the bootloader when you want the system to copy `nix-store.squashfs` into RAM before NixOS mounts `/nix/store`.
