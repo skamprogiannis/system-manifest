@@ -48,7 +48,7 @@ Deployment is manual. `nix flake check` validates configured host and support ch
 | `torrent gui` | Open Transmission's local interface |
 | `codex-auto status` | Inspect native workflow ownership and local delegation limits (offline) |
 | `wallpaper-sync status --json` | Inspect desktop wallpaper synchronization |
-| `nixos-usb-store-status` | Inspect USB store mode |
+| `nixos-usb-store-status` | Inspect USB store mode and host-partition fallback diagnostics |
 | `usb-host-scratch status` | Inspect portable host-scratch state |
 | `codex-state-sync to-usb\|from-usb` | Sync active Codex sessions with the USB |
 

@@ -64,6 +64,10 @@ nixos-usb-host-scratch-status
 
 `writable-encrypted-host-auto-overlay` means store reads and writes are backed by the encrypted host scratch image. If no suitable partition can be mounted or copied to, the specialisation falls back to the USB-backed squashfs and encrypted USB-root scratch writable layer. `nixos-usb-store-status` prints the selected store mode, host candidates, mount diagnostics, and relevant initrd service logs. `nixos-usb-host-scratch-status` shows Docker/cache/Codex/Brave/Steam bind mounts and the active repositories path.
 
+Host-auto does not unlock BitLocker or other encrypted host partitions. If the main Windows partition is BitLocker-encrypted and only small EFI/recovery partitions remain, `no-candidates` is expected. On this fallback, `nixos-usb-store-status` also shows a current partition inventory and explains the exclusions; this inventory is separate from the recorded boot diagnostics. A supported partition needs both sufficient total size and free space, as reported by `min_candidate_bytes`, and must mount writable.
+
+If the owner chooses to turn off Windows device encryption, let Windows finish fully decrypting the volume before booting USB. Suspending BitLocker protection leaves the filesystem encrypted and is insufficient. Use a full Windows shutdown before host-auto writes NTFS; do not use a hibernated Windows volume or force a dirty volume to mount. Decryption removes protection for Windows files; host scratch remains separately encrypted. Verify NTFS scratch operation on a real boot.
+
 To make essential Codex and Brave changes durable before shutdown, quit Brave normally first so its saved session is consistent, then checkpoint. You can reopen Brave afterwards:
 
 ```bash

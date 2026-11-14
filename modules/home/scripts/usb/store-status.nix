@@ -28,6 +28,15 @@ pkgs.writeShellScriptBin "nixos-usb-store-status" ''
   print_file "store mode" /run/nixos-usb-store-mode
   print_file "store diagnostics" /run/nixos-usb-store-diagnostics
 
+  if ${pkgs.gnugrep}/bin/grep -qx 'fallback_reason=no-candidates' /run/nixos-usb-store-diagnostics 2>/dev/null; then
+    printf '== current host partition inspection (not boot-time inventory) ==\n'
+    printf '%s\n' 'BitLocker and other encrypted host partitions are not unlocked by host-auto.'
+    printf '%s\n' 'Supported partitions must meet min_candidate_bytes above, then have that much free space and mount writable.'
+    printf '%s\n' 'Small EFI and Windows recovery partitions cannot provide host scratch.'
+    ${pkgs.util-linux}/bin/lsblk -p -o NAME,TYPE,RM,FSTYPE,SIZE || true
+    printf '\n'
+  fi
+
   if [ -e /run/nixos-usb-host-store-candidates ]; then
     print_file "host candidates" /run/nixos-usb-host-store-candidates
   fi
