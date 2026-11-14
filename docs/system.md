@@ -96,6 +96,29 @@ The desktop sets `HYPRLAND_NO_RT=1` for login sessions and the greetd service, s
 
 After rebuilding, a fresh login or reboot applies the environment setting. Verify the user compositor with `chrt -p "$(pgrep -u "$USER" -x '.Hyprland-wrapp')"`; its policy should be `SCHED_OTHER` (possibly with `SCHED_RESET_ON_FORK`) at priority `0`. Idle/wake testing on the physical desktop is still required after activation.
 
+### Crashed lockscreen recovery
+
+Hyprland allows a replacement locker to restore a crashed session lock on every host. The session stays locked while DMS restarts; recovery does not automatically unlock it. USB does not restart DMS in response to an event-socket log message, because restarting the shell also kills its active locker.
+
+If Hyprland shows a crashed-lockscreen screen, switch to a TTY with `Ctrl+Alt+F3` and authenticate as the desktop user. Run `hyprctl instances`, identify the affected session, and export its instance signature. On an older USB generation, first stop the legacy watchdog with `systemctl --user stop dms-hyprland-event-watchdog.service`.
+
+```bash
+export HYPRLAND_INSTANCE_SIGNATURE='<affected instance signature>'
+hyprctl --instance "$HYPRLAND_INSTANCE_SIGNATURE" --quiet eval 'hl.config({ misc = { allow_session_lock_restore = true } })'
+systemctl --user restart dms.service
+dms ipc call lock lock
+```
+
+Wait for DMS IPC to become available before issuing the lock command; retry that command if the shell is still starting. Return to the graphical session and authenticate at the restored lockscreen. The targeted `hl.config(...)` evaluation changes only the running instance; persist the setting through the normal configuration update. Avoid a full configuration reload during recovery, because generated DMS Lua files may contain a separate startup error.
+
+If restoring the locker fails and the authenticated local user deliberately chooses to expose the desktop, the installed Lua API provides this last-resort command from the authenticated TTY:
+
+```bash
+hyprctl --instance "$HYPRLAND_INSTANCE_SIGNATURE" --quiet eval 'hl.clear_crashed_lockscreen()'
+```
+
+This clears a crashed lockscreen; it must remain a manual recovery action, never a watchdog or automatic unlock policy. Package/configuration checks do not establish successful recovery on actual displays; test a fresh lock and authentication after updating the session.
+
 ### Hyprland keybinds
 
 - **Prefer readable key names**: use bindings like `x` or `Return` by default; only fall back to `code:<n>` when Hyprland rejects the named key or layout-independent behavior is truly required.

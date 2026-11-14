@@ -42,6 +42,8 @@ The updater retains the current generation and one complete previous generation 
 
 Desktop and USB share the committed DMS appearance and control-center settings. The USB adds automatic monitor selection, portable lock/power settings, and rendering compatibility. On unfamiliar displays it uses the Unified Bar rather than the desktop's two monitor-specific bars.
 
+USB permits a replacement locker to restore a crashed session lock and has no log-triggered DMS restart watchdog. Restarting DMS kills its active locker, so recover from an authenticated TTY by enabling lock restoration in the affected running instance, restarting DMS, and requesting the lock again. Follow [crashed lockscreen recovery](system.md#crashed-lockscreen-recovery) for the targeted Lua commands and the manual last-resort `hl.clear_crashed_lockscreen()` API. Recovery must not automatically unlock the session. Verify locking and authentication after a real USB update and boot.
+
 Changing or pulling the repository does not refresh the running session. Update the USB image from another booted system to make those settings part of the next USB generation. A temporary Home Manager refresh can update the current session, but packages built into the writable host-scratch store do not survive shutdown; the persistent image still needs its own update.
 
 USB enables UPower for DMS battery readings in the bar and control center. The bar battery widget sits immediately left of notifications and appears only when UPower detects a laptop battery, including when the USB runs on laptop hardware. Desktop hosts without a laptop battery do not show a placeholder. UPower also needs system-bus registration; having its package in the store alone does not make battery telemetry available to DMS.

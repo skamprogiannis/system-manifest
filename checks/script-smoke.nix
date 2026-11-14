@@ -60,6 +60,9 @@ in {
       export XDG_RUNTIME_DIR="$TMPDIR/runtime"
       mkdir -p "$HOME" "$XDG_RUNTIME_DIR"
 
+      ${pkgs.python3}/bin/python3 ${./brave-state-smoke.py} \
+        ${ctx.homePackage "usb" "brave-apply-state"}/bin/brave-apply-state
+
       ${pkgs.python3}/bin/python3 ${./codex-package-smoke.py} \
         "$desktop_home/bin/codex" \
         "${pkgs.lib.removeSuffix "\n" (builtins.readFile ../modules/home/codex/version.txt)}"

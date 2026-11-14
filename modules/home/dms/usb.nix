@@ -19,20 +19,6 @@
     package = dmsBasePackage;
     replacementsPython = dmsPatches.usbReplacementsPython;
   };
-  dmsHyprlandEventWatchdog = pkgs.writeShellScript "dms-hyprland-event-watchdog" ''
-    set -eu
-
-    ${pkgs.systemd}/bin/journalctl --user -b -n 0 -f -u dms.service -o cat |
-      while IFS= read -r line; do
-        case "$line" in
-          *"Hyprland event socket error: QLocalSocket::PeerClosedError"*)
-            echo "dms-hyprland-event-watchdog: restarting dms.service after Hyprland event socket disconnect" >&2
-            ${pkgs.systemd}/bin/systemctl --user restart dms.service
-            ${pkgs.coreutils}/bin/sleep 5
-            ;;
-        esac
-      done
-  '';
 in {
   programs.dank-material-shell = {
     package = lib.mkForce usbDmsPackage;
@@ -60,18 +46,4 @@ in {
   wayland.windowManager.hyprland.extraConfig = lib.mkAfter ''
     require("system-manifest.usb-outputs")
   '';
-
-  systemd.user.services.dms-hyprland-event-watchdog = {
-    Unit = {
-      Description = "Restart DMS if its Hyprland event socket disconnects";
-      PartOf = ["hyprland-session.target"];
-    };
-    Service = {
-      Type = "simple";
-      ExecStart = "${dmsHyprlandEventWatchdog}";
-      Restart = "always";
-      RestartSec = 2;
-    };
-    Install.WantedBy = ["hyprland-session.target"];
-  };
 }
