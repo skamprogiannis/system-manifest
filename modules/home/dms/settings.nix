@@ -1,4 +1,8 @@
-{config, ...}: let
+{
+  config,
+  hostType,
+  ...
+}: let
   glass = import ../glass.nix;
   wallpaperContracts = import ../wallpaper/contracts.nix;
   monitorIdentity = wallpaperContracts.dmsMonitorIdentity;
@@ -151,7 +155,10 @@ in {
               id = "gpuTemp";
               enabled = true;
               selectedGpuIndex = 0;
-              pciId = "10de:220a";
+              pciId =
+                if hostType == "usb"
+                then ""
+                else "10de:220a";
             }
             (enabledWidget "notificationButton")
             (enabledWidget "battery")

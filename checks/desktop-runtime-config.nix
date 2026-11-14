@@ -20,9 +20,18 @@
     usbDmsPackage
     usbDmsOutputsFile
     ;
+  usbGpuWidgets =
+    builtins.filter
+    (widget: builtins.isAttrs widget && widget.id or "" == "gpuTemp")
+    (ctx.pkgs.lib.concatMap
+      (bar: (bar.leftWidgets or []) ++ (bar.centerWidgets or []) ++ (bar.rightWidgets or []))
+      (ctx.homeConfig "usb").programs.dank-material-shell.settings.barConfigs);
   minimumCompatibleNvidiaDriver = "610";
 in {
   desktop-runtime-config = assert pkgs.lib.assertMsg
+  (usbGpuWidgets != [] && builtins.all (widget: widget.pciId or "" == "") usbGpuWidgets)
+  "USB GPU widgets must auto-select host hardware instead of pinning a desktop GPU.";
+  assert pkgs.lib.assertMsg
   (pkgs.lib.versionOlder desktopNvidiaDriverVersion minimumCompatibleNvidiaDriver)
   ''
     GPU Screen Recorder compatibility pin review required: desktop NVIDIA
@@ -140,6 +149,7 @@ in {
       assert_file_contains ${desktopDmsLegacyProfileFile} 'monitor = desc:BNQ BenQ XL2411Z 54G01103SL0, 1920x1080@60.000, 1920x0, 1, vrr, 0'
       assert_file_contains ${laptopDmsOutputsFile} 'hl.monitor({ output = "", mode = "preferred", position = "auto", scale = "1" })'
       assert_file_contains ${usbDmsOutputsFile} 'hl.monitor({ output = "", mode = "preferred", position = "auto", scale = "1" })'
+
 
       touch "$out"
     '';
