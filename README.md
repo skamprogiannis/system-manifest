@@ -15,7 +15,7 @@ NixOS owns bootstrap tools, system services, hardware integration, and greeter a
 ## Highlights
 
 - **Desktop:** Hyprland, DMS, stable Ghostty from Nixpkgs, optional tmux for detachable terminal sessions, wallpaper-driven theming, Vesktop, Brave, and Spotify. The NVIDIA desktop uses normal compositor scheduling to avoid real-time CPU-limit termination during display changes; see [desktop maintenance](docs/system.md#nvidia-compositor-scheduling).
-- **Development:** Go 1.27.4, Python, TypeScript, Neovim/Nixvim, Codex CLI and the official ChatGPT desktop app with Codex on all hosts, reusable skills, and static-analysis tools. Codex `/voice` uses the declarative Vale voice preference. Opt-in `codex-auto` enables bounded native delegation with task-specific model/effort choices and native auto-review.
+- **Development:** Go 1.27.4, Python, TypeScript, Neovim/Nixvim, Codex CLI, reusable skills, and static-analysis tools on all hosts. The desktop also installs the official ChatGPT desktop app with Codex. Codex `/voice` uses the declarative Vale voice preference. Opt-in `codex-auto` enables bounded native delegation with task-specific model/effort choices and native auto-review.
 - **Local AI:** Desktop-only Ollama models, on-demand Open WebUI (DMS launcher), and always-on local SearXNG.
 - **Gaming:** Steam, GameMode, Gamescope, and optional Bannerlord dialogue/voice integrations.
 - **Productivity:** Dux Files (`Super+E`, folder links, and portal open/save dialogs), terminal Yazi (`y`), Transmission, local Whisper dictation (`Super+T`), Obsidian, and screenshots.

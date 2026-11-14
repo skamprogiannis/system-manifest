@@ -40,7 +40,7 @@ The updater retains the current generation and one complete previous generation 
 
 ## DMS on Portable Hosts
 
-Desktop and USB share the committed DMS appearance and control-center settings. The USB adds automatic monitor selection, portable lock/power settings, and rendering compatibility. On unfamiliar displays it uses the Unified Bar rather than the desktop's two monitor-specific bars.
+Desktop and USB share the committed DMS appearance, Main Bar layout, and control-center settings. The USB adds automatic monitor selection, portable lock/power settings, and rendering compatibility. Its Main Bar is available on all connected displays; the desktop pins it to the primary monitor. The Secondary Bar is disabled on both hosts.
 
 USB permits a replacement locker to restore a crashed session lock and has no log-triggered DMS restart watchdog. Restarting DMS kills its active locker, so recover from an authenticated TTY by enabling lock restoration in the affected running instance, restarting DMS, and requesting the lock again. Follow [crashed lockscreen recovery](system.md#crashed-lockscreen-recovery) for the targeted Lua commands and the manual last-resort `hl.clear_crashed_lockscreen()` API. Recovery must not automatically unlock the session. Verify locking and authentication after a real USB update and boot.
 
