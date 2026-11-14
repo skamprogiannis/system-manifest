@@ -37,10 +37,10 @@
         if builtins.isAttrs widget
         then widget.id
         else widget) (bar.rightWidgets or []);
-      before = pkgs.lib.takeWhile (id: id != "notificationButton") ids;
+      notificationIndex = pkgs.lib.lists.findFirstIndex (id: id == "notificationButton") null ids;
     in
-      !(builtins.elem "notificationButton" ids)
-      || (before != [] && pkgs.lib.last before == "battery"))
+      notificationIndex == null
+      || (notificationIndex > 0 && builtins.elemAt ids (notificationIndex - 1) == "battery"))
     (ctx.homeConfig host).programs.dank-material-shell.settings.barConfigs;
   minimumCompatibleNvidiaDriver = "610";
 in {
