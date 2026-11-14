@@ -60,7 +60,7 @@
     file
     glow
     gnumake
-    go
+    (pkgs.callPackage ./modules/home/go/package.nix {})
     gopls
     imagemagick
     jq

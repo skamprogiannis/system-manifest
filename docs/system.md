@@ -147,3 +147,11 @@ Wallpaper integration is split between the upstream skwd-wall v2 service and DMS
 - `Super+W` launches `skwd-wall-v2`; the old custom skwd-wall keybind layer is intentionally abandoned.
 - Validation floor for wallpaper changes: run `nix flake check`, `nixos-rebuild dry-build --flake .#desktop`, and a manual wallpaper/greeter smoke test. If USB behavior changes, also run `update-usb` and boot the stick on real hardware.
 - `Super+Shift+W` (`dms ipc call dash toggle wallpaper`) still toggles the DMS wallpaper dashboard widget.
+
+## Go toolchain
+
+All hosts use the shared Go 1.27.4 package override under `modules/home/go/`. The override retains Nixpkgs' Go 1.27 patches without changing the default Go dependency of unrelated applications.
+
+On a running USB that cannot be rebuilt, install the checksum-verified upstream Linux AMD64 SDK under `~/.local/share/go/1.27.4/go`. Keep the `go` launcher and `gofmt` link under `~/.local/bin`; the launcher defaults unset `CC`/`CXX` to `cc`/`c++` for the installed compiler wrappers. Respect explicit compiler choices and let the SDK infer GOROOT. This user installation persists outside host-scratch caches.
+
+After a future declarative activation provides the same or newer Go, remove only these owned launcher links so they no longer shadow managed upgrades. Confirm `command -v go`, `go version`, formatting and a CGO build. No NixOS or USB activation is needed for the standalone SDK.
