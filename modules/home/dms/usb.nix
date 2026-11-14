@@ -49,8 +49,16 @@ in {
   };
 
   xdg.configFile."hypr/dms/outputs.lua".text = ''
-    -- USB displays are hardware-specific; let Hyprland auto-select the panel.
+    -- Keep the default lab display behavior.
     hl.monitor({ output = "", mode = "preferred", position = "auto", scale = "1" })
+  '';
+
+  # DMS rewrites outputs.lua on startup; apply hardware exceptions afterwards.
+  xdg.configFile."hypr/system-manifest/usb-outputs.lua".text = ''
+    hl.monitor({ output = "desc:Samsung Display Corp. 0x4154", mode = "preferred", position = "auto", scale = "2" })
+  '';
+  wayland.windowManager.hyprland.extraConfig = lib.mkAfter ''
+    require("system-manifest.usb-outputs")
   '';
 
   systemd.user.services.dms-hyprland-event-watchdog = {
