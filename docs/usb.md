@@ -56,6 +56,8 @@ systemd-run --user --unit=usb-ignore-lid systemd-inhibit --what=handle-lid-switc
 
 Inspect it with `systemd-inhibit --list`. Stop it with `systemctl --user stop usb-ignore-lid.service`. It lasts until stopped or the user manager exits.
 
+USB Brave preference synchronization clears stale crash-recovery markers while preserving session restoration and right-hand vertical tabs. This runs during Home Manager activation only when Brave is stopped; to reapply it manually, close Brave completely and run `brave-apply-state`. That command also restores the configured Vimium C state. A running browser is left untouched. If tabs are blank again, verify the recovery marker and a clean restart before changing graphics flags or deleting profile data.
+
 ## USB RAM Store Mode
 
 Choose the USB **`ram-store` specialisation** from the bootloader when you want the system to copy `nix-store.squashfs` into RAM before NixOS mounts `/nix/store`.
