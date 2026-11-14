@@ -12,6 +12,13 @@
 
   services.upower.enable = true;
 
+  # Keep removable-media sessions awake when a laptop lid is closed.
+  services.logind.settings.Login = {
+    HandleLidSwitch = "ignore";
+    HandleLidSwitchExternalPower = "ignore";
+    HandleLidSwitchDocked = "ignore";
+  };
+
   # Bootloader (Hollow GRUB style)
   boot.loader.grub = {
     enable = true;
