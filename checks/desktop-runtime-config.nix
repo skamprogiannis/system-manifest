@@ -19,6 +19,7 @@
     pkgs
     usbDmsPackage
     usbDmsOutputsFile
+    usbHyprlandLuaFile
     ;
   usbGpuWidgets =
     builtins.filter
@@ -26,6 +27,9 @@
     (ctx.pkgs.lib.concatMap
       (bar: (bar.leftWidgets or []) ++ (bar.centerWidgets or []) ++ (bar.rightWidgets or []))
       (ctx.homeConfig "usb").programs.dank-material-shell.settings.barConfigs);
+  usbPortableOutputsFile =
+    pkgs.writeText "usb-portable-outputs.lua"
+    (ctx.homeConfig "usb").xdg.configFile."hypr/system-manifest/usb-outputs.lua".text;
   minimumCompatibleNvidiaDriver = "610";
 in {
   desktop-runtime-config = assert pkgs.lib.assertMsg
@@ -149,7 +153,11 @@ in {
       assert_file_contains ${desktopDmsLegacyProfileFile} 'monitor = desc:BNQ BenQ XL2411Z 54G01103SL0, 1920x1080@60.000, 1920x0, 1, vrr, 0'
       assert_file_contains ${laptopDmsOutputsFile} 'hl.monitor({ output = "", mode = "preferred", position = "auto", scale = "1" })'
       assert_file_contains ${usbDmsOutputsFile} 'hl.monitor({ output = "", mode = "preferred", position = "auto", scale = "1" })'
-
+      assert_file_contains ${usbHyprlandLuaFile} 'require("system-manifest.usb-outputs")'
+      outputs_line=$(grep -nF 'require_optional("dms.outputs")' ${usbHyprlandLuaFile} | cut -d: -f1)
+      override_line=$(grep -nF 'require("system-manifest.usb-outputs")' ${usbHyprlandLuaFile} | cut -d: -f1)
+      test "$override_line" -gt "$outputs_line"
+      assert_file_contains ${usbPortableOutputsFile} 'hl.monitor({ output = "desc:Samsung Display Corp. 0x4154", mode = "preferred", position = "auto", scale = "2" })'
 
       touch "$out"
     '';
