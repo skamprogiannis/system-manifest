@@ -44,6 +44,15 @@ class SelectorTests(unittest.TestCase):
         self.assertEqual(plan['support'], ['ci-registry'])
         self.assertEqual(ci.expected_jobs(plan), {'plan': True, 'source-unit': True, 'support-check': True, 'host-check': False})
 
+    def test_go_toolchain_changes_select_go_without_documentation_overhead(self):
+        for path, hosts in [('modules/home/go/package.nix', ['desktop', 'usb', 'laptop']), ('checks/go-toolchain.nix', [])]:
+            with self.subTest(path=path):
+                plan = ci.selection(REGISTRY, [path])
+                self.assertEqual(plan['hosts'], hosts)
+                self.assertCountEqual(plan['units'], ['go-toolchain', 'host-configuration-contracts'])
+                self.assertEqual(plan['support'], ['ci-registry'])
+        self.assertNotIn('go-toolchain', ci.selection(REGISTRY, ['docs/system.md'])['units'])
+
     def test_deployed_markdown_selects_runtime_and_native_codex_contracts(self):
         plan = ci.selection(REGISTRY, ['modules/home/codex/instructions.md'])
         self.assertEqual(plan['hosts'], ['desktop', 'usb', 'laptop'])
