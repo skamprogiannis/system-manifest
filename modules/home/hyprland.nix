@@ -389,6 +389,8 @@ in {
 
         config = {
           misc = {
+            # Let a replacement locker recover a locked session after a crash.
+            allow_session_lock_restore = true;
             disable_hyprland_logo = true;
             disable_splash_rendering = true;
             force_default_wallpaper = 0;
