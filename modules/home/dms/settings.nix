@@ -198,7 +198,10 @@ in {
               id = "gpuTemp";
               enabled = true;
               selectedGpuIndex = 0;
-              pciId = "10de:220a";
+              pciId =
+                if hostType == "usb"
+                then ""
+                else "10de:220a";
             }
             (enabledWidget "notificationButton")
             (enabledWidget "battery")
