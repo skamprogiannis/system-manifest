@@ -3,9 +3,15 @@
   desktop = ctx.self.nixosConfigurations.desktop.config;
   home = desktop.home-manager.users.stefan;
   usb = ctx.self.nixosConfigurations.usb.config;
+  usbLidPolicy = usb.services.logind.settings.Login;
   portableBatteryTelemetry =
     usb.services.upower.enable
     && ctx.self.nixosConfigurations.laptop.config.services.upower.enable;
+  usbLidIgnored =
+    usbLidPolicy.HandleLidSwitch
+    == "ignore"
+    && usbLidPolicy.HandleLidSwitchExternalPower == "ignore"
+    && usbLidPolicy.HandleLidSwitchDocked == "ignore";
   aiServicesConfigured =
     desktop.services.open-webui.enable
     && desktop.services.searx.enable
@@ -65,6 +71,8 @@ in {
   "Dux Files must handle folders and file chooser portals on every host, with on-demand activation, GTK fallback, and terminal Yazi preserved.";
   assert lib.assertMsg portableBatteryTelemetry
   "USB and laptop hosts must provide DMS battery telemetry.";
+  assert lib.assertMsg usbLidIgnored
+  "USB must ignore lid closure on battery, AC, and while docked.";
   assert lib.assertMsg guiOnDesktop
   "The official ChatGPT desktop app with Codex must be installed on the desktop host.";
   assert lib.assertMsg wallpaperToolsOnAllHosts
