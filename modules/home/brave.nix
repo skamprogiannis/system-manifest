@@ -86,7 +86,14 @@ assert lib.assertMsg (builtins.elem hostType ["desktop" "usb" "laptop"]) "hostTy
       # false = use system title bar and borders
       custom_chrome_frame = false;
     };
-    profile.password_manager_enabled = true;
+    profile =
+      {password_manager_enabled = true;}
+      // lib.optionalAttrs (hostType == "usb") {
+        # Applied only while Brave is stopped, alongside saved-session restore.
+        # Stale crash recovery can leave right-hand vertical tabs unrendered.
+        exit_type = "Normal";
+        exited_cleanly = true;
+      };
     session.restore_on_startup = 1;
     account_values.browser.enable_spellchecking = true;
     privacy_sandbox = {
