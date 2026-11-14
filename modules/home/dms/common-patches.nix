@@ -12,6 +12,21 @@
     ],
   '';
 
+  laptopBatteryVisibility = ''
+    root / "Modules/SurfaceWidgets/SurfaceWidgetHost.qml": [
+        (
+            '            "cpuUsage": dgopAvailable,',
+            '            "battery": BatteryService.batteryAvailable,\n            "cpuUsage": dgopAvailable,',
+        ),
+    ],
+    root / "Modules/SurfaceWidgets/SurfaceWidgetFactory.qml": [
+        (
+            '            "cpuUsage": DgopService.dgopAvailable,',
+            '            "battery": BatteryService.batteryAvailable,\n            "cpuUsage": DgopService.dgopAvailable,',
+        ),
+    ],
+  '';
+
   commonLists = ''
     root / "Common/settings/Lists.qml": [
         (
@@ -94,6 +109,7 @@
         ("                    border.width: BlurService.borderWidth", "                    border.width: BlurService.enabled ? BlurService.borderWidth : root.borderWidth"),
         ("                    color: \"transparent\"\n                    border.color:", "                    color: \"transparent\"\n                    antialiasing: true\n                    border.color:"),
     ],
+    ${laptopBatteryVisibility}
     ${appSearchService}
     ${wallpaperCyclingExternalSet}
     ${niriScreenshotDirectory}

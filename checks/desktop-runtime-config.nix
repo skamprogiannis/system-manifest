@@ -30,11 +30,25 @@
   usbPortableOutputsFile =
     pkgs.writeText "usb-portable-outputs.lua"
     (ctx.homeConfig "usb").xdg.configFile."hypr/system-manifest/usb-outputs.lua".text;
+  batteryBeforeNotifications = host:
+    builtins.all
+    (bar: let
+      ids = map (widget:
+        if builtins.isAttrs widget
+        then widget.id
+        else widget) (bar.rightWidgets or []);
+      before = pkgs.lib.takeWhile (id: id != "notificationButton") ids;
+    in
+      !(builtins.elem "notificationButton" ids)
+      || (before != [] && pkgs.lib.last before == "battery"))
+    (ctx.homeConfig host).programs.dank-material-shell.settings.barConfigs;
   minimumCompatibleNvidiaDriver = "610";
 in {
   desktop-runtime-config = assert pkgs.lib.assertMsg
   (usbGpuWidgets != [] && builtins.all (widget: widget.pciId or "" == "") usbGpuWidgets)
   "USB GPU widgets must auto-select host hardware instead of pinning a desktop GPU.";
+  assert pkgs.lib.assertMsg (builtins.all batteryBeforeNotifications ["desktop" "usb" "laptop"])
+  "The laptop battery widget must immediately precede notifications wherever that section is present.";
   assert pkgs.lib.assertMsg
   (pkgs.lib.versionOlder desktopNvidiaDriverVersion minimumCompatibleNvidiaDriver)
   ''
@@ -82,6 +96,12 @@ in {
           exit 1
         fi
       }
+
+      for dms_package in ${desktopDmsPackage} ${usbDmsPackage}; do
+        for component in SurfaceWidgetHost SurfaceWidgetFactory; do
+          assert_file_contains "$dms_package/share/quickshell/dms/Modules/SurfaceWidgets/$component.qml" '"battery": BatteryService.batteryAvailable,'
+        done
+      done
 
       assert_file_contains ${desktopHyprlandPackage}/bin/Hyprland '--config'
       assert_file_contains ${desktopHyprlandPackage}/bin/Hyprland 'hyprland.lua'

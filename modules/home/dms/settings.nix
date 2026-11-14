@@ -160,8 +160,8 @@ in {
                 then ""
                 else "10de:220a";
             }
-            (enabledWidget "notificationButton")
             (enabledWidget "battery")
+            (enabledWidget "notificationButton")
             (enabledWidget "controlCenterButton")
           ];
         })
@@ -243,8 +243,8 @@ in {
               pciId = "";
               minimumWidth = true;
             }
-            (enabledWidget "notificationButton")
             (enabledWidget "battery")
+            (enabledWidget "notificationButton")
             (enabledWidget "controlCenterButton")
           ];
         })

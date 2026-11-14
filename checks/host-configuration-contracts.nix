@@ -2,6 +2,10 @@
   inherit (ctx.pkgs) lib;
   desktop = ctx.self.nixosConfigurations.desktop.config;
   home = desktop.home-manager.users.stefan;
+  usb = ctx.self.nixosConfigurations.usb.config;
+  portableBatteryTelemetry =
+    usb.services.upower.enable
+    && ctx.self.nixosConfigurations.laptop.config.services.upower.enable;
   aiServicesConfigured =
     desktop.services.open-webui.enable
     && desktop.services.searx.enable
@@ -54,6 +58,8 @@ in {
   "Desktop AI search must use an on-demand Open WebUI launcher, an always-on local SearXNG, and independent commands.";
   assert lib.assertMsg filesOnAllHosts
   "Dux Files must handle folders and file chooser portals on every host, with on-demand activation, GTK fallback, and terminal Yazi preserved.";
+  assert lib.assertMsg portableBatteryTelemetry
+  "USB and laptop hosts must provide DMS battery telemetry.";
   assert lib.assertMsg guiOnAllHosts
   "The official ChatGPT desktop app with Codex must be installed on every host.";
     ctx.pkgs.runCommand "host-configuration-contracts-check" {} ''

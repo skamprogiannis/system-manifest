@@ -10,6 +10,8 @@
 
   networking.hostName = "nixos-usb";
 
+  services.upower.enable = true;
+
   # Bootloader (Hollow GRUB style)
   boot.loader.grub = {
     enable = true;
