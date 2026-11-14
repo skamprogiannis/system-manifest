@@ -68,6 +68,8 @@ Host-auto does not unlock BitLocker or other encrypted host partitions. If the m
 
 If the owner chooses to turn off Windows device encryption, let Windows finish fully decrypting the volume before booting USB. Suspending BitLocker protection leaves the filesystem encrypted and is insufficient. Use a full Windows shutdown before host-auto writes NTFS; do not use a hibernated Windows volume or force a dirty volume to mount. Decryption removes protection for Windows files; host scratch remains separately encrypted. Verify NTFS scratch operation on a real boot.
 
+USB display defaults remain at 100% scaling for lab computers. The Samsung Display Corp. 0x4154 high-density panel has a specific 200% rule, preserving its preferred native resolution and refresh rate. That rule lives in `hypr/system-manifest/usb-outputs.lua`, loaded after DMS output configuration so DMS startup cannot overwrite it.
+
 USB GPU widgets use portable selection instead of pinning the desktop NVIDIA device. Confirm GPU temperature after DMS startup and after moving to another host; package/configuration checks do not establish hardware monitoring correctness.
 
 To make essential Codex and Brave changes durable before shutdown, quit Brave normally first so its saved session is consistent, then checkpoint. You can reopen Brave afterwards:
