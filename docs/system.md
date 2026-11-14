@@ -102,6 +102,10 @@ Hyprland, its portal, and stable Ghostty use system Nixpkgs packages. Ghostty sh
 
 After activating and starting a fresh Hyprland session, check `Super+E` in both US and Greek layouts, run `xdg-open "$HOME/downloads"`, and open/save a file in Brave. Confirm that reopening Dux Files reuses its window and that screen sharing still uses the Hyprland picker. `xdg-mime query default inode/directory` should report `dev.duxlabs.files.desktop`. The portal is configured declaratively; do not run `dfiles portal install`, which writes competing user portal preferences. Existing app processes may need restarting after the session refresh. These runtime checks are separate from configuration/package checks.
 
+### Vesktop blank-window recovery
+
+A transparent window with no Discord UI can result from outdated Vencord startup patches. Inspect the renderer error before changing graphics or glass settings. Quit Vesktop, back up `~/.config/vesktop/sessionData/vencordFiles`, run `vesktop --repair`, and reopen through the normal launcher. Repair refreshes the downloaded Vencord bundle; it does not require a NixOS rebuild or deleting the login/profile. Verify that Discord renders after repair. A login screen still needs user authentication.
+
 ### Desktop integration invariants
 
 - **Native Glass Transparency:** Prefer app-native RGBA transparency plus Hyprland native blur. For text-heavy apps such as Ghostty, keep compositor opacity at `1.0 override` so glyphs stay opaque, and tune the app's own background opacity instead.
