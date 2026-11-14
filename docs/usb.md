@@ -44,6 +44,8 @@ Desktop and USB share the committed DMS appearance and control-center settings. 
 
 Changing or pulling the repository does not refresh the running session. Update the USB image from another booted system to make those settings part of the next USB generation. A temporary Home Manager refresh can update the current session, but packages built into the writable host-scratch store do not survive shutdown; the persistent image still needs its own update.
 
+USB enables UPower for DMS battery readings in the bar and control center. The bar battery widget sits immediately left of notifications and appears only when UPower detects a laptop battery, including when the USB runs on laptop hardware. Desktop hosts without a laptop battery do not show a placeholder. UPower also needs system-bus registration; having its package in the store alone does not make battery telemetry available to DMS.
+
 ## USB RAM Store Mode
 
 Choose the USB **`ram-store` specialisation** from the bootloader when you want the system to copy `nix-store.squashfs` into RAM before NixOS mounts `/nix/store`.
