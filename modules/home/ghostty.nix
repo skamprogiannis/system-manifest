@@ -20,8 +20,9 @@ in {
       alpha-blending = "linear-corrected";
       # Boost contrast ratio threshold so text stays readable on bright wallpapers.
       minimum-contrast = glass.ghostty.minimumContrast;
-      # Codex uses BEL for "needs input"; attention maps it to Hyprland urgency.
+      # Codex and agy use BEL for "needs input"; attention maps it to Hyprland urgency.
       bell-features = "no-system,no-audio,attention,title,no-border";
+      desktop-notifications = false;
       cursor-style = "block";
       cursor-style-blink = false;
       shell-integration-features = "no-cursor";
@@ -31,7 +32,7 @@ in {
         "kp_enter=text:\\r"
         "backspace=text:\\x7f"
 
-        # Unbind Ghostty-intercepted shortcuts (let Zellij/apps handle them)
+        # Unbind Ghostty-intercepted shortcuts so terminal applications receive them
         "ctrl+shift+t=unbind"
         "ctrl+shift+w=unbind"
         "ctrl+shift+e=unbind"

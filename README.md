@@ -2,6 +2,8 @@
 
 Personal, flake-based NixOS configuration with Home Manager, Hyprland, Dank Material Shell (DMS), and a portable USB installation.
 
+NixOS owns bootstrap tools, system services, hardware integration, and greeter assets. Home Manager owns personal applications and tools; application packages and service environments supply their private runtime dependencies, including media codecs.
+
 ## Hosts
 
 | Host | Purpose |
@@ -12,8 +14,8 @@ Personal, flake-based NixOS configuration with Home Manager, Hyprland, Dank Mate
 
 ## Highlights
 
-- **Desktop:** Hyprland, DMS, stable Ghostty from Nixpkgs, wallpaper-driven theming, Vesktop, Brave, and Spotify.
-- **Development:** Go, Python, TypeScript, Neovim/Nixvim, Codex CLI and the official ChatGPT desktop app with Codex on all hosts, reusable skills, and static-analysis tools. Codex `/voice` uses the declarative Vale voice preference. Opt-in `codex-auto` enables bounded native delegation with task-specific model/effort choices and native auto-review.
+- **Desktop:** Hyprland, DMS, stable Ghostty from Nixpkgs, optional tmux for detachable terminal sessions, wallpaper-driven theming, Vesktop, Brave, and Spotify. The NVIDIA desktop uses normal compositor scheduling to avoid real-time CPU-limit termination during display changes; see [desktop maintenance](docs/system.md#nvidia-compositor-scheduling).
+- **Development:** Go 1.27.4, Python, TypeScript, Neovim/Nixvim, Codex CLI and the official ChatGPT desktop app with Codex on all hosts, reusable skills, and static-analysis tools. Codex `/voice` uses the declarative Vale voice preference. Opt-in `codex-auto` enables bounded native delegation with task-specific model/effort choices and native auto-review.
 - **Local AI:** Desktop-only Ollama models, on-demand Open WebUI (DMS launcher), and always-on local SearXNG.
 - **Gaming:** Steam, GameMode, Gamescope, and optional Bannerlord dialogue/voice integrations.
 - **Productivity:** Dux Files (`Super+E`, folder links, and portal open/save dialogs), terminal Yazi (`y`), Transmission, local Whisper dictation (`Super+T`), Obsidian, and screenshots.
@@ -21,10 +23,10 @@ Personal, flake-based NixOS configuration with Home Manager, Hyprland, Dank Mate
 
 ## Getting started
 
-Run these commands **from the system-manifest worktree**, not another project's flake:
+Run these commands **from the system-manifest repository**, not another project's flake:
 
 ```bash
-cd ~/system-manifest/main
+cd ~/system-manifest
 git pull --ff-only
 nixos-rebuild dry-build --flake .#desktop
 sudo nixos-rebuild switch --flake .#desktop
@@ -33,7 +35,7 @@ sudo nixos-rebuild switch --flake .#desktop
 For the laptop, use `.#laptop`. Update the USB using:
 
 ```bash
-sudo update-usb ~/system-manifest/main
+sudo update-usb ~/system-manifest
 ```
 
 Deployment is manual. `nix flake check` validates configured host and support checks; it does not activate a host or replace device testing.
@@ -46,7 +48,9 @@ Deployment is manual. `nix flake check` validates configured host and support ch
 | `ai-search start\|stop\|status` | Control Open WebUI independently |
 | `searxngctl start\|stop\|status` | Control SearXNG (normally starts at boot) |
 | `torrent gui` | Open Transmission's local interface |
+| `tmux new -As work` | Create or reattach to an optional terminal session (`Ctrl+B`, then `D` detaches) |
 | `codex-auto status` | Inspect native workflow ownership and local delegation limits (offline) |
+| `agy` | Launch the official Antigravity CLI; authenticate interactively with a Google account |
 | `wallpaper-sync status --json` | Inspect desktop wallpaper synchronization |
 | `nixos-usb-store-status` | Inspect USB store mode and host-partition fallback diagnostics |
 | `usb-host-scratch status` | Inspect portable host-scratch state |
@@ -61,7 +65,7 @@ On the desktop, `services.ollama.syncModels = true` removes **every undeclared O
 - [CI and validation](docs/ci.md): check registry, workflows, and validation expectations.
 - [Maintainer notes](docs/maintainers.md) and [agent instructions](AGENTS.md): development conventions and subsystem invariants.
 - [Visual design](DESIGN.md) and [product principles](PRODUCT.md).
-- [Codex workflow](modules/home/codex/WORKFLOW.md).
+- [Codex workflow](modules/home/codex/WORKFLOW.md): global defaults are installed as `~/.codex/AGENTS.md`; the detailed delegation policy is loaded from `~/.codex/DELEGATION.md` when assigning agents.
 - [Bannerlord dialogue](modules/home/bannerlord-codex/README.md) and CPU-only [desktop dictation](modules/home/desktop-dictation/README.md) remain enabled. [Bannerlord speech](modules/home/bannerlord-speech/README.md) is optional and currently disabled.
 
 ## License

@@ -9,6 +9,5 @@
     bat.enable = true;
     brave.enable = true;
     ghostty.enable = true;
-    zellij.enable = true;
   };
 }

@@ -26,6 +26,7 @@ REQUIRED_TOOLS=(dd fallocate nix nix-env nix-store nixos-install nixos-enter cry
 UPDATE_USB_JQ="${UPDATE_USB_JQ:-jq}"
 FORCE_UPDATE=0
 VERBOSE=0
+NO_ROLLBACK=0
 CLOSE_MAPPER_ON_CLEANUP=0
 WORKSPACE_PREPARED=0
 STAGE_PREPARED=0
@@ -78,8 +79,8 @@ fi
 FLAKE_DIR="$(realpath "$FLAKE_DIR")"
 EXPECTED_CONFIG_REVISION="$(read_expected_config_revision || true)"
 capture_desired_system_metadata
-echo "Source flake: $FLAKE_DIR"
-echo "Desired revision: ${EXPECTED_CONFIG_REVISION:-unknown}"
+log_info "Source flake: $FLAKE_DIR"
+log_info "Desired revision: ${EXPECTED_CONFIG_REVISION:-unknown}"
 if [ ! -e "$USB_ROOT_PART" ] || [ ! -e "$USB_BOOT_DEV" ]; then
   echo 'Error: labeled USB root and boot partitions are required.' >&2
   exit 1
@@ -195,5 +196,6 @@ phase_end
 resume_usb_transaction
 report_image published "$MOUNT_POINT/nix-store.squashfs"
 CURRENT_PHASE='done'
-echo "Published system: $TARGET_SYSTEM_TOPLEVEL"
+log_ok "Published system: $TARGET_SYSTEM_TOPLEVEL"
+log_ok "USB update completed successfully!"
 # The EXIT handler flushes cleanup and reports completion only after unmounting.

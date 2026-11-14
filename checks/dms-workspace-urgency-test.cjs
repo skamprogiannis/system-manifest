@@ -1,0 +1,32 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+
+const [servicePath, modelPath] = process.argv.slice(2);
+const source = fs.readFileSync(servicePath, 'utf8');
+const start = source.indexOf('    function workspaceUrgent(');
+const end = source.indexOf('    function loadWorkspaceUrgent(', start);
+assert(start >= 0 && end > start);
+const model = fs.readFileSync(modelPath, 'utf8').replace(/^\.pragma.*$/gm, '');
+const ws2 = { id: 2, name: '2', urgent: false };
+const ws3 = { id: 3, name: '3', urgent: false };
+const ghostty = { appId: 'com.mitchellh.ghostty', title: '🔔 Codex' };
+const other = { appId: 'other.app', title: '🔔 Other' };
+const windows = [ghostty, other];
+const toplevels = windows.map(wayland => ({ wayland, workspace: ws2 }));
+const ctx = vm.createContext({ compositor: 'hyprland' });
+vm.runInContext(model, ctx);
+ctx.windowsOnWorkspace = record => ctx.hyprlandWindowsOnWorkspace(windows, record, toplevels);
+vm.runInContext(source.slice(start, end), ctx);
+
+assert.equal(ctx.workspaceUrgent(ws2, false), true, 'Ghostty BEL must mark its workspace urgent');
+assert.equal(ctx.workspaceUrgent(ws3, false), false, 'Do not mark other workspaces');
+ghostty.title = 'Codex';
+assert.equal(ctx.workspaceUrgent(ws2, false), false, 'Clearing the bell must clear fallback urgency');
+assert.equal(ctx.workspaceUrgent({ ...ws2, urgent: true }, false), true, 'Preserve native urgency');
+ghostty.title = '';
+assert.equal(ctx.workspaceUrgent(ws2, false), false, 'Other apps must not trigger the fallback');
+ctx.compositor = 'niri';
+assert.equal(ctx.workspaceUrgent(ws2, true), true);
+assert.equal(ctx.workspaceUrgent(ws2, false), false);
+console.log('Workspace urgency: Ghostty bell, clearing, workspace isolation and native signals passed');

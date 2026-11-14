@@ -1,9 +1,11 @@
 {
   config,
   pkgs,
+  lib,
   ...
 }: let
   glass = import ./glass.nix;
+  editorMimeTypes = import ./editor-mimetypes.nix;
   firefoxDesktopFile = pkgs.runCommand "firefox-desktop-with-comment" {} ''
     cp ${(config.programs.firefox.package or pkgs.firefox)}/share/applications/firefox.desktop $out
     ${pkgs.gnused}/bin/sed -i '/^GenericName=/a Comment=Fast, standards-focused web browser' $out
@@ -50,7 +52,6 @@ in {
       variant = config.catppuccin.flavor;
       accents = [config.catppuccin.accent];
     })
-    dracula-icon-theme
     hicolor-icon-theme
   ];
 
@@ -145,17 +146,11 @@ in {
       exec = "ghostty -e nvim %F";
       icon = "nvim";
       terminal = false;
-      mimeType = [
-        "text/plain"
-        "text/markdown"
-        "text/css"
-        "text/javascript"
-        "text/x-script.python"
-        "application/json"
-        "application/x-shellscript"
-        "application/x-sh"
-      ];
+      mimeType = editorMimeTypes;
       categories = ["Utility" "TextEditor"];
     };
   };
+
+  xdg.mimeApps.defaultApplications =
+    lib.genAttrs editorMimeTypes (_: ["nvim-text.desktop"]);
 }

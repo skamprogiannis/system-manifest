@@ -98,6 +98,8 @@ def main():
     merged = merge(seed, load_current_config(config_path))
     if isinstance(merged.get("features"), dict):
         merged["features"].pop("experimental_use_rmcp_client", None)
+        # The managed agents.enabled setting replaces the deprecated flag.
+        merged["features"].pop("multi_agent", None)
     migrate_memory_feature(merged)
     migrate_retired_jev(merged)
     atomic_write(config_path, tomli_w.dumps(merged))

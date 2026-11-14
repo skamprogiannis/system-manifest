@@ -87,6 +87,11 @@
   # Load the NVIDIA driver
   services.xserver.videoDrivers = ["nvidia"];
 
+  # Display connector queries can exceed rtkit's 200 ms real-time CPU limit,
+  # causing a kernel SIGKILL. Set this before either compositor starts.
+  environment.sessionVariables.HYPRLAND_NO_RT = "1";
+  systemd.services.greetd.environment.HYPRLAND_NO_RT = "1";
+
   hardware.nvidia = {
     modesetting.enable = true;
     powerManagement.enable = true; # Fixes suspend/resume issues

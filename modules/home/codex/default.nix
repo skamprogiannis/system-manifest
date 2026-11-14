@@ -26,7 +26,7 @@
     version = codexVersion;
     src = pkgs.fetchurl {
       url = "https://github.com/openai/codex/releases/download/rust-v${codexVersion}/codex-package-x86_64-unknown-linux-musl.tar.gz";
-      hash = "sha256-HUSyi8SsmTfX01MiZLqmilB842SVag1Ou4VvMxze4lQ=";
+      hash = "sha256-O47QkRScxjpZBGufCUvPohzbTdoV7eRBzjabzuSnG6A=";
     };
     dontUnpack = true;
     nativeBuildInputs = [pkgs.patchelf pkgs.python3];
@@ -204,9 +204,13 @@
   mkSkill = name: source: description: {
     inherit name source description;
   };
+  sanitizedDeclarativeSkills = map (skill: {
+    inherit (skill) name description;
+    package = sanitizeSkill skill.name skill.description skill.source;
+  }) checkedDeclarativeSkills;
   skillHomeFile = skill: {
     name = ".agents/skills/${skill.name}";
-    value = skillDir (sanitizeSkill skill.name skill.description skill.source);
+    value = skillDir skill.package;
   };
   skillConfig = skill: ''
     [[skills.config]]
@@ -399,6 +403,7 @@
     (mkSkill "code-review" "${inputs.mattpocock-skills}/skills/engineering/code-review" "Review changes against repository standards and the originating specification.")
     (mkSkill "tdd" "${inputs.mattpocock-skills}/skills/engineering/tdd" "Use red-green-refactor test-driven development for features and bug fixes.")
     (mkSkill "prototype" "${inputs.mattpocock-skills}/skills/engineering/prototype" "Build a throwaway prototype to validate data, state, or UI design choices.")
+    (mkSkill "socratic-tutor" "${inputs.janestreet-skills}/socratic-tutor" "Structured Socratic tutoring for explicit requests to teach, quiz, or drill a topic to mastery. Uses diagnostic placement, skill levels, and spaced review. Not for one-off explanations.")
   ];
   skillDependencies = {
     tdd = ["code-review"];
@@ -418,8 +423,8 @@
     if unresolvedSkillDependencies == []
     then declarativeSkills
     else throw "Codex skill catalog has unresolved workflow dependencies: ${builtins.concatStringsSep ", " unresolvedSkillDependencies}";
-  skillHomeFiles = builtins.listToAttrs (map skillHomeFile checkedDeclarativeSkills);
-  skillConfigToml = lib.concatMapStringsSep "\n" skillConfig checkedDeclarativeSkills;
+  skillHomeFiles = builtins.listToAttrs (map skillHomeFile sanitizedDeclarativeSkills);
+  skillConfigToml = lib.concatMapStringsSep "\n" skillConfig sanitizedDeclarativeSkills;
   codexConfigPython = pkgs.python3.withPackages (ps: [ps.tomli-w]);
   context7Mcp = pkgs.writeShellScriptBin "context7-mcp" ''
     api_key="''${CONTEXT7_API_KEY:-}"
@@ -459,13 +464,13 @@
     trust_level = "trusted"
 
     [agents]
+    enabled = true
     default_subagent_model = "gpt-6.1-sol"
     default_subagent_reasoning_effort = "medium"
 
     [features]
     hooks = true
     goals = true
-    multi_agent = true
     plugins = true
     realtime_conversation = true
     remote_plugin = false
@@ -500,12 +505,13 @@ in {
   _module.args = {
     codexCliPackage = codexCli;
     pinchtabConfigSeed = pinchtabConfigSeed;
+    agentSkills = sanitizedDeclarativeSkills;
+    context7McpPackage = context7Mcp;
   };
 
   home.packages = [
     pkgs.bubblewrap
     codexCli
-    pkgs.codeql
     pinchtab
     pkgs.python3Packages."sarif-tools"
     (import ./semgrep.nix {inherit pkgs;})
@@ -533,6 +539,7 @@ in {
     skillHomeFiles
     // {
       ".codex/AGENTS.md".text = builtins.readFile ./instructions.md;
+      ".codex/DELEGATION.md".text = builtins.readFile ./delegation.md;
       ".codex/diagrams/.keep".text = "";
     };
 

@@ -22,3 +22,7 @@ errors.log
 .ruff_cache/
 __pycache__/
 *.pyc
+
+# Compatibility transition symlink
+/main
+

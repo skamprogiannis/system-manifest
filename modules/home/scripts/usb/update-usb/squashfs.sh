@@ -37,6 +37,11 @@ prepare_generation_state() {
   PRESERVE_PREVIOUS_GENERATION=0
   PREVIOUS_SYSTEM_TOPLEVEL=""
 
+  if [ "${NO_ROLLBACK:-0}" -eq 1 ]; then
+    verbose_log "Rollback preservation disabled by --no-rollback; starting with clean Nix profile state."
+    return 0
+  fi
+
   if [ ! -f "$squashfs_path" ] || [ ! -L "$system_profile" ]; then
     verbose_log "No complete previous USB generation found; starting with clean Nix profile state."
     return 0
@@ -62,11 +67,15 @@ prepare_generation_state() {
 
 prune_usb_system_generations() {
   local profile="$MOUNT_POINT/nix/var/nix/profiles/system"
-  local chroot_bin
+  local chroot_bin keep_limit=2
   chroot_bin="$(command -v chroot)" || return 1
 
+  if [ "${NO_ROLLBACK:-0}" -eq 1 ]; then
+    keep_limit=1
+  fi
+
   # nixos-enter activates the target, so preparation uses the local store API.
-  nix-env --store "$MOUNT_POINT" --profile "$profile" --delete-generations +2 || return 1
+  nix-env --store "$MOUNT_POINT" --profile "$profile" --delete-generations "+$keep_limit" || return 1
   mkdir -p "$MOUNT_POINT/proc" || return 1
   # A host-side GC scans host /proc and retains unrelated matching store paths.
   # The target's Nix runs without activation, with only its own process tree

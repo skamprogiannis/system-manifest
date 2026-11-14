@@ -9,6 +9,7 @@
     "grilling"
     "impeccable"
     "prototype"
+    "socratic-tutor"
     "static-analysis"
     "tdd"
     "technical-debt"

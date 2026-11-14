@@ -30,12 +30,22 @@
     home.xdg.desktopEntries ? open-webui
     && home.xdg.desktopEntries.open-webui.exec == "ai-search launch"
     && !home.xdg.desktopEntries.open-webui.terminal;
-  guiOnAllHosts =
+  guiOnDesktop =
+    builtins.any (package: lib.getName package == "chatgpt-desktop")
+    (ctx.homeConfig "desktop").home.packages;
+  wallpaperToolsOnAllHosts = builtins.all (host: let
+    system = ctx.self.nixosConfigurations.${host}.config;
+    pkgs = ctx.self.nixosConfigurations.${host}.pkgs;
+    daemonPath = map toString system.systemd.user.services.skwd-walld.path;
+  in
+    builtins.all (package: builtins.elem (toString package) daemonPath)
+    [pkgs.bash pkgs.matugen pkgs.steamcmd pkgs.util-linux])
+  ctx.registry.host;
+  lockRestoreOnAllHosts =
     builtins.all
-    (host:
-      builtins.any (package: lib.getName package == "chatgpt-desktop")
-      (ctx.homeConfig host).home.packages)
+    (host: (ctx.homeConfig host).wayland.windowManager.hyprland.settings.config.misc.allow_session_lock_restore or false)
     ctx.registry.host;
+  usbDmsWatchdogRemoved = !((ctx.homeConfig "usb").systemd.user.services ? dms-hyprland-event-watchdog);
   filesOnAllHosts = builtins.all (host: let
     system = ctx.self.nixosConfigurations.${host}.config;
     home = ctx.homeConfig host;
@@ -68,8 +78,14 @@ in {
   "USB and laptop hosts must provide DMS battery telemetry.";
   assert lib.assertMsg usbLidIgnored
   "USB must ignore lid closure on battery, AC, and while docked.";
-  assert lib.assertMsg guiOnAllHosts
-  "The official ChatGPT desktop app with Codex must be installed on every host.";
+  assert lib.assertMsg guiOnDesktop
+  "The official ChatGPT desktop app with Codex must be installed on the desktop host.";
+  assert lib.assertMsg wallpaperToolsOnAllHosts
+  "The wallpaper daemon must retain its shell, Matugen, SteamCMD, and setsid tools on every host.";
+  assert lib.assertMsg lockRestoreOnAllHosts
+  "Every host must let a replacement locker restore a crashed session lock.";
+  assert lib.assertMsg usbDmsWatchdogRemoved
+  "USB must not restart the DMS locker in response to a Hyprland event-socket log message.";
     ctx.pkgs.runCommand "host-configuration-contracts-check" {} ''
       touch "$out"
     '';

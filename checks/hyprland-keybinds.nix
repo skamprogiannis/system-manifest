@@ -2,6 +2,7 @@
   inherit
     (ctx)
     desktopGreeterHyprlandLuaFile
+    desktopDmsPackage
     desktopHyprlandLuaFile
     desktopHyprlandPackage
     laptopHyprlandLuaFile
@@ -15,6 +16,7 @@ in {
         pkgs.findutils
         pkgs.gnugrep
         pkgs.gnused
+        pkgs.python3
       ];
     } ''
       set -euo pipefail
@@ -45,11 +47,12 @@ in {
       assert_contains 'hl.bind((mod .. " + f"), (hl.dsp.window.fullscreen({ mode = "fullscreen", action = "toggle" })))'
       assert_contains 'hl.bind((mod .. " + SHIFT + f"), (hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" })))'
       assert_contains 'hl.bind((mod .. " + g"), (hl.dsp.group.toggle()))'
-      assert_contains 'hl.bind((mod .. " + Tab"), (hl.dsp.group.next()))'
-      assert_contains 'hl.bind((mod .. " + SHIFT + Tab"), (hl.dsp.group.prev()))'
+      assert_contains 'hl.bind((mod .. " + bracketright"), (hl.dsp.group.next()))'
+      assert_contains 'hl.bind((mod .. " + bracketleft"), (hl.dsp.group.prev()))'
       assert_contains 'hl.bind((mod .. " + SHIFT + g"), (hl.dsp.window.move({ out_of_group = true })))'
-      assert_contains 'hl.bind((mod .. " + CTRL + g"), (hl.dsp.group.lock_active({ action = "toggle" })))'
-      assert_contains 'hl.bind((mod .. " + ALT + g"), (hl.dsp.group.lock({ action = "toggle" })))'
+      assert_contains 'hl.bind((mod .. " + CTRL + g"), (hl.dsp.group.lock({ action = "toggle" })))'
+      assert_contains 'hl.bind((mod .. " + ALT + g"), (hl.dsp.group.lock({ all = true, action = "toggle" })))'
+      assert_not_contains 'hl.dsp.group.lock_active('
       assert_contains 'hl.bind((mod .. " + CTRL + Tab"), (hl.dsp.group.move_window({ forward = true })))'
       assert_contains 'hl.bind((mod .. " + CTRL + SHIFT + Tab"), (hl.dsp.group.move_window({ forward = false })))'
       assert_contains '["auto_group"] = true'
@@ -69,6 +72,12 @@ in {
       assert_contains 'hl.get_monitor("r") == nil'
       assert_contains 'hl.dispatch(hl.dsp.window.move({ monitor = "l" }))'
       assert_contains 'hl.dispatch(hl.dsp.window.move({ monitor = "r" }))'
+      assert_contains 'hl.dsp.window.cycle_next({ next = true })'
+      assert_contains 'hl.dsp.window.cycle_next({ next = false })'
+      assert_contains 'hl.dsp.window.alter_zorder({ mode = "top" })'
+      assert_contains 'hl.bind((mod .. " + minus"), (hl.dsp.workspace.toggle_special("")))'
+      assert_contains 'hl.bind((mod .. " + SHIFT + minus"), (hl.dsp.window.move({ workspace = "special", follow = true })))'
+      assert_contains 'hl.bind((mod .. " + CTRL + minus"), (hl.dsp.window.move({ workspace = "special", follow = false })))'
       assert_contains 'hl.dsp.workspace.toggle_special("music")'
       assert_contains 'hl.dsp.window.move({ workspace = "special:music", follow = true })'
       assert_contains 'hl.dsp.window.move({ workspace = "special:music", follow = false })'
@@ -139,10 +148,12 @@ in {
         assert_contains_in_file 'hl.bind((mod .. " + SHIFT + l"), (hl.dsp.window.move({ direction = "right", group_aware = true })))'
         assert_contains_in_file 'hl.bind((mod .. " + SHIFT + k"), (hl.dsp.window.move({ direction = "up", group_aware = true })))'
         assert_contains_in_file 'hl.bind((mod .. " + SHIFT + j"), (hl.dsp.window.move({ direction = "down", group_aware = true })))'
-        assert_contains_in_file 'hl.bind((mod .. " + SHIFT + Tab"), (hl.dsp.group.prev()))'
+        assert_contains_in_file 'hl.bind((mod .. " + bracketleft"), (hl.dsp.group.prev()))'
+        assert_contains_in_file 'hl.bind((mod .. " + bracketright"), (hl.dsp.group.next()))'
         assert_contains_in_file 'hl.bind((mod .. " + SHIFT + g"), (hl.dsp.window.move({ out_of_group = true })))'
-        assert_contains_in_file 'hl.bind((mod .. " + CTRL + g"), (hl.dsp.group.lock_active({ action = "toggle" })))'
-        assert_contains_in_file 'hl.bind((mod .. " + ALT + g"), (hl.dsp.group.lock({ action = "toggle" })))'
+        assert_contains_in_file 'hl.bind((mod .. " + CTRL + g"), (hl.dsp.group.lock({ action = "toggle" })))'
+        assert_contains_in_file 'hl.bind((mod .. " + ALT + g"), (hl.dsp.group.lock({ all = true, action = "toggle" })))'
+        assert_not_contains_in_file 'hl.dsp.group.lock_active('
         assert_contains_in_file 'hl.bind((mod .. " + CTRL + Tab"), (hl.dsp.group.move_window({ forward = true })))'
         assert_contains_in_file 'hl.bind((mod .. " + CTRL + SHIFT + Tab"), (hl.dsp.group.move_window({ forward = false })))'
         assert_contains_in_file '["drag_into_group"] = 2'
@@ -193,6 +204,24 @@ in {
 
       verify_hyprland_lua ${desktopHyprlandLuaFile}
       verify_hyprland_lua ${desktopGreeterHyprlandLuaFile}
+
+      # The default launcher must keep the managed symlink reloadable. Hyprland
+      # canonicalizes --config at startup, unlike its HYPRLAND_CONFIG path.
+      managed_config_home="$TMPDIR/managed-config"
+      mkdir -p "$managed_config_home/hypr"
+      ln -s ${desktopHyprlandLuaFile} "$managed_config_home/hypr/hyprland.lua"
+      managed_verify_output="$(XDG_CONFIG_HOME="$managed_config_home" ${desktopHyprlandPackage}/bin/Hyprland --verify-config 2>&1)"
+      if ! grep -Fq 'config ok' <<< "$managed_verify_output" ||
+        grep -Fq 'User-specified config location:' <<< "$managed_verify_output"; then
+        echo "Expected the launcher to load the managed config without canonicalizing --config" >&2
+        echo "$managed_verify_output" >&2
+        exit 1
+      fi
+
+      # Read the actual generated Lua through DMS's CLI. This must discover
+      # declarative IPC bindings without creating DMS-owned duplicate binds.
+      python3 ${./hyprland-dms-keybinds-test.py} ${desktopDmsPackage}/bin/dms \
+        ${desktopHyprlandLuaFile} ${laptopHyprlandLuaFile} ${usbHyprlandLuaFile}
 
       touch "$out"
     '';

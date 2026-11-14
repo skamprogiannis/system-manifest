@@ -3,7 +3,6 @@
     ../../home.nix
     ../../modules/home/dms/laptop.nix
   ];
-  programs.zellij.settings.default_layout = "dev";
 
   wayland.windowManager.hyprland.settings = {
     monitor = {

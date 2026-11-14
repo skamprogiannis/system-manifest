@@ -390,7 +390,10 @@ in {
             installRustc = false;
           };
           pylsp.enable = true;
-          omnisharp.enable = true;
+          omnisharp = {
+            enable = true;
+            package = null;
+          };
           nil_ls.enable = true;
           clangd.enable = true;
         };

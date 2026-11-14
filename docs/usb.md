@@ -1,13 +1,13 @@
 # USB Operations and Recovery
 
-Update, boot, repair, and synchronize the portable NixOS installation. Start from a worktree containing `flake.nix`; for host configuration commands see the [README](../README.md).
+Update, boot, repair, and synchronize the portable NixOS installation. Start from a repository containing `flake.nix`; for host configuration commands see the [README](../README.md).
 
 ## Update USB Drive
 
 Run updates while booted from another system, with the USB root unmounted. The updater refuses a root already mounted outside its own workspace, including the USB you are currently running.
 
 ```bash
-sudo update-usb /path/to/system-manifest/main
+sudo update-usb /path/to/system-manifest
 ```
 
 `update-usb` builds the desired system in the host Nix store, then prepares an independent USB store on the desktop SSD. The previous USB squashfs stays compressed and read-only; a private OverlayFS directory holds added packages and deletions. Host store files are never hard-linked into staging. The final USB image remains one complete squashfs with the current and previous generations.
@@ -17,10 +17,10 @@ The space check reports missing packages, the estimated replacement image, safet
 Staging defaults to `/var/tmp/update-usb-stage`. To use another Linux drive with OverlayFS support:
 
 ```bash
-sudo update-usb --stage-dir /mnt/ssd/update-usb-stage /path/to/system-manifest/main
+sudo update-usb --stage-dir /mnt/ssd/update-usb-stage /path/to/system-manifest
 ```
 
-The staging directory must be empty or marked as owned by this updater. `--in-place` instead expands and stages on the USB, saving host space at the cost of slower USB I/O. `--force` rewrites an otherwise current installation. Always pass a worktree containing `flake.nix`, not the repository container.
+The staging directory must be empty or marked as owned by this updater. `--in-place` instead expands and stages on the USB, saving host space at the cost of slower USB I/O. `--force` rewrites an otherwise current installation. `--no-rollback` builds a single-generation image without preserving the previous rollback generation, saving staging and USB space. Always pass a repository containing `flake.nix`.
 
 Normal terminal output keeps a single updating progress line; redirected output prints updates once a minute. Copy progress shows percentage and elapsed time; `-v` also shows byte counts and average rate. Buffered writes make copy-time predictions unreliable, so copies do not display an ETA. Other phases use the last completed timing for the same USB, update mode, staging location, and image source when available; these estimates can vary with package changes and system load. A first run shows elapsed time only; an exceeded historical estimate reports remaining time as unknown. Estimates apply to the current phase, not the entire update; flushing and verification remain separate steps. Add `-v` for full command output and separate progress lines every ten seconds. The latest ten JSON reports in `/var/log/update-usb/` record timings, image sizes, available USB space, and tool versions.
 
@@ -41,6 +41,8 @@ The updater retains the current generation and one complete previous generation 
 ## DMS on Portable Hosts
 
 Desktop and USB share the committed DMS appearance and control-center settings. The USB adds automatic monitor selection, portable lock/power settings, and rendering compatibility. On unfamiliar displays it uses the Unified Bar rather than the desktop's two monitor-specific bars.
+
+USB permits a replacement locker to restore a crashed session lock and has no log-triggered DMS restart watchdog. Restarting DMS kills its active locker, so recover from an authenticated TTY by enabling lock restoration in the affected running instance, restarting DMS, and requesting the lock again. Follow [crashed lockscreen recovery](system.md#crashed-lockscreen-recovery) for the targeted Lua commands and the manual last-resort `hl.clear_crashed_lockscreen()` API. Recovery must not automatically unlock the session. Verify locking and authentication after a real USB update and boot.
 
 Changing or pulling the repository does not refresh the running session. Update the USB image from another booted system to make those settings part of the next USB generation. A temporary Home Manager refresh can update the current session, but packages built into the writable host-scratch store do not survive shutdown; the persistent image still needs its own update.
 
@@ -145,10 +147,10 @@ Close Codex before running `from-usb`; the command refuses to import while a loc
 The USB-specific invariants below complement the operational instructions above.
 
 - **Purpose:** Updates the bootable USB drive configuration from the `usb` flake output.
-- **Command:** `sudo update-usb /path/to/system-manifest/main`
+- **Command:** `sudo update-usb /path/to/system-manifest`
 - **Ownership:** The USB installer workflow lives under `modules/home/scripts/usb/`; keep Nix focused on constants/packaging and runtime behavior in the extracted `update-usb` shell fragments.
 - **Flow:** Validates labeled partitions and locks the updater; recovers its `/run/update-usb` mounts and any pending publication; builds the desired system in the host store; stages a private USB store and Nix database on the SSD. The prior squashfs is a read-only OverlayFS lower layer, cached on the SSD only when it fits alongside the estimated update; otherwise it stays on the USB. Changed files use a private upper directory. `--stage-dir PATH` selects another Linux drive; `--in-place` expands staging on USB. Installation defers activation and bootloader changes. Target-local garbage collection runs in a private PID/mount namespace without activation. Both retained closures are verified and stage mounts are released before publishing image, metadata, and boot configuration in order.
-- **Recovery:** The completed `nix-store.squashfs` is persistent boot data. A `.tmp` image belonging to `.update-usb-transaction` is also protected during cleanup and recovered before no-op detection. Private staging is disposable only after target bindings and stage mounts are released. Marker ownership protects unrelated staging files. GRUB retains current and previous generations; inconsistent profile/image metadata starts a clean private install. The image and Nix state each publish atomically, but the root and EFI partitions are not one atomic transaction. Reports retain the latest ten runs under `/var/log/update-usb`. Always pass a worktree containing `flake.nix`.
+- **Recovery:** The completed `nix-store.squashfs` is persistent boot data. A `.tmp` image belonging to `.update-usb-transaction` is also protected during cleanup and recovered before no-op detection. Private staging is disposable only after target bindings and stage mounts are released. Marker ownership protects unrelated staging files. GRUB retains current and previous generations; inconsistent profile/image metadata starts a clean private install. The image and Nix state each publish atomically, but the root and EFI partitions are not one atomic transaction. Reports retain the latest ten runs under `/var/log/update-usb`. Always pass a repository containing `flake.nix`.
 - **Boot Modes:** The USB keeps the default squashfs+tmpfs hybrid store path as native NixOS `fileSystems`, and also exposes manual `ram-store` and `host-auto-store` specialisations through small initrd preparation units. `ram-store` copies `nix-store.squashfs` into RAM before mounting `/nix/store`, uses USB-root scratch for the writable overlay backing directory, and falls back to the USB-backed lower layer if memory is tight. `host-auto-store` aggressively scans large non-removable host Linux partitions first, then `ntfs`/`ntfs3` and `exfat` fallbacks. When a host candidate works, it creates a per-boot encrypted sparse image under `.nixos-usb/session/<boot-id>/` and uses the decrypted `/nix/.host-scratch` mount for the copied squashfs lower image, writable overlay layer, Docker state, `~/.cache`, `~/.codex`, Brave profile, temporary Steam library at `~/games/SteamLibrary`, and temporary `repositories` directory. Clean shutdown syncs essential Codex and Brave state back to USB and removes host-side encrypted session files; a full `~/.cache` copy requires `usb-host-scratch checkpoint --include-cache`. Steam games are not checkpointed. Power loss can leave only ciphertext, which the next host-auto boot prunes. If host-auto setup fails, it falls back to the USB-backed lower layer and USB-root scratch. After boot, use `nixos-usb-store-status` and `nixos-usb-host-scratch-status` to inspect the selected mode, bind mounts, repositories path, and fallback diagnostics.
 - **Host Scratch Repositories:** On host-auto USB boots, use `cd "$(usb-host-scratch)"` before cloning repos for fast host-SSD I/O. The directory is named `repositories` inside encrypted host scratch.
 - **Runtime Validation:** `nix flake check` and `dry-build` do not prove USB-only runtime behavior. For cursor/rendering/DMS issues, update the stick and boot it on real target hardware before declaring the fix done.
@@ -169,4 +171,4 @@ At the lab: `codex resume` to pick up synced sessions.
 
 Linear MCP auth is local to each machine. If Codex says Linear is not logged in, run `codex mcp login linear` once on that machine; do not sync the resulting auth state through `codex-state-sync`.
 
-**Zellij sessions** are process-based (in-RAM) and cannot be shared across machines — this is fundamental. Config is declarative and identical on both systems.
+**tmux sessions** remain on the machine where their server is running; rebuilding or booting the USB elsewhere does not transfer running processes. A session can be reattached over SSH to that same running machine. The optional tmux configuration is shared across hosts.

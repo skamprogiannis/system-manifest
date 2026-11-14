@@ -33,7 +33,6 @@
     torrent = "torrent";
     transmission-port-sync = "transmission-port-sync";
     update-usb = "update-usb";
-    zellij-sessionizer = "zellij-sessionizer";
   };
   desktopHomeFiles = self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.file;
   desktopNvidiaDriverVersion = self.nixosConfigurations.desktop.config.hardware.nvidia.package.version;
@@ -79,9 +78,8 @@
     && !(home.systemd.user.services ? spotify-player)
     && !(home.home.activation ? spotifyUsbAuthMigration)) ["desktop" "usb" "laptop"];
   desktopTmpfilesRulesFile = pkgs.writeText "desktop-tmpfiles-rules" (builtins.concatStringsSep "\n" self.nixosConfigurations.desktop.config.systemd.tmpfiles.rules);
-  desktopZellijDevLayoutFile = pkgs.writeText "desktop-zellij-dev-layout" self.nixosConfigurations.desktop.config.home-manager.users.stefan.xdg.configFile."zellij/layouts/dev.kdl".text;
-  desktopZellijLegacyArgsScrubActivationFile = pkgs.writeText "desktop-zellij-legacy-args-scrub-activation" self.nixosConfigurations.desktop.config.home-manager.users.stefan.home.activation.scrubLegacyZellijContext7Args.data;
-  desktopZellijPostCommandDiscoveryHook = self.nixosConfigurations.desktop.config.home-manager.users.stefan.programs.zellij.settings.post_command_discovery_hook;
+  desktopTmuxPackage = (homeConfig "desktop").programs.tmux.package;
+  desktopTmuxConfigFile = pkgs.writeText "desktop-tmux.conf" (homeConfig "desktop").xdg.configFile."tmux/tmux.conf".text;
   updateUsbSourceDir = ../modules/home/scripts/usb/update-usb;
   usbScriptArtifacts = scriptArtifacts "usb" {
     nixos-usb-store-status = "nixos-usb-store-status";
@@ -188,9 +186,6 @@
       "${homePackage "desktop" "torrent"}/bin/torrent"
       "${homePackage "desktop" "transmission-port-sync"}/bin/transmission-port-sync"
       "${homePackage "desktop" "update-usb"}/bin/update-usb"
-      "${homePackage "desktop" "zellij-sessionizer"}/bin/zellij-sessionizer"
-      "${desktopZellijLegacyArgsScrubActivationFile}"
-      "${desktopZellijPostCommandDiscoveryHook}"
       "${updateUsbSourceDir}/args.sh"
       "${updateUsbSourceDir}/cleanup.sh"
       "${updateUsbSourceDir}/main.sh"

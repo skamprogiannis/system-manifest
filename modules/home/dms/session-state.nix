@@ -4,7 +4,9 @@
   ...
 }: let
   wallpaperContracts = import ../wallpaper/contracts.nix;
-  sessionDefaultsJson = builtins.toJSON wallpaperContracts.dmsSessionDefaults;
+  lockscreen = builtins.fromJSON (builtins.readFile ./lockscreen.json);
+  sessionDefaultsJson = builtins.toJSON (wallpaperContracts.dmsSessionDefaults // lockscreen.sessionDefaults);
+  launcherAppOverridesJson = builtins.toJSON (builtins.fromJSON (builtins.readFile ./launcher-app-overrides.json));
   allowedTransitionsJson = builtins.toJSON wallpaperContracts.wallpaperTransitions.allowed;
 in {
   xdg.configFile."dms/.firstlaunch".text = "";
@@ -32,6 +34,7 @@ in {
     output_path = Path(sys.argv[2])
     defaults = json.loads(${lib.escapeShellArg sessionDefaultsJson})
     allowed_transitions = set(json.loads(${lib.escapeShellArg allowedTransitionsJson}))
+    managed_app_overrides = json.loads(${lib.escapeShellArg launcherAppOverridesJson})
 
     try:
         data = json.loads(session_path.read_text()) if session_path.exists() else {}
@@ -55,6 +58,9 @@ in {
 
     if not isinstance(data.get("isLightMode"), bool):
         data["isLightMode"] = defaults["isLightMode"]
+
+    # Own the complete exception list, including deliberate removals.
+    data["appOverrides"] = managed_app_overrides
 
     output_path.write_text(json.dumps(data, separators=(",", ":")) + "\n")
     PY

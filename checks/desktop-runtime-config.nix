@@ -63,6 +63,7 @@ in {
         pkgs.binutils
         pkgs.gnugrep
         pkgs.gnused
+        pkgs.nodejs
       ];
     } ''
       set -euo pipefail
@@ -133,6 +134,11 @@ in {
       assert_file_contains ${desktopDmsPackage}/share/quickshell/dms/Widgets/ClockContent.qml 'SettingsData.getEffectiveTimeFormat(root.showSeconds)'
       assert_file_contains ${desktopDmsPackage}/share/quickshell/dms/Widgets/ClockContent.qml 'precision: root.showSeconds ? SystemClock.Seconds : SystemClock.Minutes'
       assert_file_contains ${desktopDmsPackage}/share/quickshell/dms/Modals/NotificationModal.qml 'NotificationService.clearHistory();'
+      node ${./desktop-runtime-config-dms-controls-test.mjs} ${desktopDmsPackage}/share/quickshell/dms
+      node ${./desktop-runtime-config-dms-focused-app-test.mjs} ${desktopDmsPackage}/share/quickshell/dms
+      node ${./desktop-runtime-config-dms-focused-app-test.mjs} ${usbDmsPackage}/share/quickshell/dms
+      node ${./desktop-runtime-config-dms-game-titles-test.mjs} ${desktopDmsPackage}/share/quickshell/dms
+      node ${./desktop-runtime-config-dms-game-titles-test.mjs} ${usbDmsPackage}/share/quickshell/dms
       assert_file_contains ${usbDmsPackage}/share/quickshell/dms/Modules/DBar/BarSurface.qml 'Shape.SoftwareRenderer : Shape.CurveRenderer'
       assert_file_contains ${usbDmsPackage}/share/quickshell/dms/DCommon/Widgets/CachingImage.qml 'if (!root._cacheTarget || Quickshell.env("QT_QUICK_BACKEND") === "software")'
       assert_file_contains ${usbDmsPackage}/share/quickshell/dms/Modules/Settings/WallpaperColorsTab.qml 'Quickshell.execDetached(["skwd-wall-v2"]);'

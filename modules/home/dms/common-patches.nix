@@ -43,8 +43,8 @@
   notificationModal = ''
     root / "Modals/NotificationModal.qml": [
         (
-            '        function clearAll(): string {\n            notificationModal.clearAll();\n            return "NOTIFICATION_MODAL_CLEAR_ALL_SUCCESS";\n        }',
-            '        function clearAll(): string {\n            notificationModal.clearAll();\n            return "NOTIFICATION_MODAL_CLEAR_ALL_SUCCESS";\n        }\n\n        function clearHistory(): string {\n            NotificationService.clearHistory();\n            return "NOTIFICATION_MODAL_CLEAR_HISTORY_SUCCESS";\n        }',
+            '        function clearAll(): string {\n            NotificationService.clearAllNotifications();\n            return "NOTIFICATION_MODAL_CLEAR_ALL_SUCCESS";\n        }',
+            '        function clearAll(): string {\n            NotificationService.clearAllNotifications();\n            return "NOTIFICATION_MODAL_CLEAR_ALL_SUCCESS";\n        }\n\n        function clearHistory(): string {\n            NotificationService.clearHistory();\n            return "NOTIFICATION_MODAL_CLEAR_HISTORY_SUCCESS";\n        }',
         ),
     ],
   '';
@@ -78,9 +78,39 @@
     ],
   '';
 
+  # Main-only bars may follow the focused output; popup geometry stays on parentScreen.
+  focusedAppFollowFocus = ''
+    root / "Common/settings/BarWidgetDefaults.js": [
+        (
+            "    focusedWindow: {\n        focusedWindowCompactMode: false,",
+            "    focusedWindow: {\n        focusedWindowFollowFocus: false,\n        focusedWindowCompactMode: false,",
+        ),
+    ],
+    root / "Modules/DBar/Widgets/FocusedApp.qml": [
+        (
+            '    property var widgetData: null',
+            '    property var widgetData: null\n    property bool followFocus: SettingsData.widgetOption("focusedWindow", widgetData, "focusedWindowFollowFocus")',
+        ),
+        (
+            '    readonly property string screenName: parentScreen?.name ?? ""',
+            '    readonly property string screenName: followFocus ? CompositorService.getFocusedScreenName() : (parentScreen?.name ?? "")\n\n    onScreenNameChanged: updateActiveWindow()',
+        ),
+        (
+            'CompositorService.activeWindowForScreen(parentScreen ? parentScreen.name : null, activeWindow, popoutVisible)',
+            'CompositorService.activeWindowForScreen(screenName || null, activeWindow, popoutVisible)',
+        ),
+    ],
+  '';
+
   # DMS unified its standalone and connected hosts; preserve local glass on both.
   # CalendarOverviewCard inherits Card, and upstream now includes locked idle wake.
   common = ''
+    root / "Services/CompositorService.qml": [
+        (
+            '    function workspaceUrgent(record, loadedUrgent) {\n        switch (compositor) {',
+            '    function workspaceUrgent(record, loadedUrgent) {\n        switch (compositor) {\n        case "hyprland":\n            // Ghostty BEL activation lacks the serial required by Hyprland 0.57.\n            // Its bell title clears on interaction, preserving attention lifetime.\n            return record?.urgent === true || windowsOnWorkspace(record).some(window =>\n                window.appId === "com.mitchellh.ghostty" && (window.title || "").startsWith("🔔"));',
+        ),
+    ],
     root / "Modules/DDash/Overview/Card.qml": [
         ("    restRadius: DashMetrics.cardRadius", "    restRadius: DashMetrics.cardRadius\n    color: Theme.withAlpha(surfaceColor, Math.max(0.0, Theme.popupTransparency - 0.22))"),
     ],
@@ -113,6 +143,7 @@
     ${appSearchService}
     ${wallpaperCyclingExternalSet}
     ${niriScreenshotDirectory}
+    ${focusedAppFollowFocus}
     root / "Modules/Notifications/Popup/NotificationPopup.qml": [
       ${notificationPopupBorderFallback}
     ],
@@ -132,10 +163,8 @@ in {
         ("precision: SettingsData.showSeconds ?", "precision: root.showSeconds ?"),
     ],
     root / "Common/SettingsData.qml": [
-        ("    function getEffectiveTimeFormat() {", "    function getEffectiveTimeFormat(seconds = showSeconds) {"),
-        ("return showSeconds ? \"hh:mm:ss\"", "return seconds ? \"hh:mm:ss\""),
-        ("return showSeconds ? \"hh:mm:ss AP\"", "return seconds ? \"hh:mm:ss AP\""),
-        ("return showSeconds ? \"h:mm:ss AP\"", "return seconds ? \"h:mm:ss AP\""),
+        ("    function getEffectiveTimeFormat() {", "    function getEffectiveTimeFormat(includeSeconds = showSeconds) {"),
+        ("        const seconds = showSeconds ? \":ss\" : \"\";", "        const seconds = includeSeconds ? \":ss\" : \"\";"),
     ],
   '';
 

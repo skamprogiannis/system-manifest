@@ -39,12 +39,18 @@
     };
 
     impeccable = {
-      url = "github:pbakaus/impeccable";
+      # Keep skill resources matched to the pinned 0.1.17 engine binary.
+      url = "github:pbakaus/impeccable/936867543ac2576920d663cc9803597f6044f3ac";
       flake = false;
     };
 
     mattpocock-skills = {
       url = "github:mattpocock/skills";
+      flake = false;
+    };
+
+    janestreet-skills = {
+      url = "github:janestreet/agent_skills/7c6715c29548a3b39d4a9545c698ee4fd17a7213";
       flake = false;
     };
 

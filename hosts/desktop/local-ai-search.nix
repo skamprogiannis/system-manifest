@@ -1,7 +1,16 @@
-{pkgs, lib, ...}: {
+{
+  pkgs,
+  lib,
+  ...
+}: let
+  # PostHog's test instrumentation requires MCP 1 in this Nixpkgs snapshot.
+  pythonPackages = pkgs.python3Packages.overrideScope (final: prev: {
+    posthog = prev.posthog.override {mcp = final.mcp_1;};
+  });
+in {
   services.open-webui = {
     enable = true;
-    package = import ./open-webui-package.nix {inherit pkgs;};
+    package = pkgs.open-webui.override {python3Packages = pythonPackages;};
     host = "127.0.0.1";
     port = 8080;
     openFirewall = false;

@@ -2,6 +2,7 @@
   host = ["desktop" "usb" "laptop"];
 
   support = [
+    "go-toolchain"
     "usb-initrd-ordering"
     "usb-steam"
     "usb-update-integration"
@@ -42,12 +43,19 @@
     unitGroups = {
       speech = ["bannerlord-speech-unit"];
       configuration = ["host-configuration-contracts"];
+      go = ["go-toolchain"];
     };
     alwaysUnitGroups = ["configuration"];
     hostCheckSources.installed-environment = ["desktop" "usb"];
 
     # Coarse source domains avoid maintaining a path list for every individual check.
     domains = {
+      go = {
+        prefixes = ["modules/home/go/"];
+        checkPrefixes = ["go-toolchain"];
+        support = [];
+        units = ["go"];
+      };
       desktop = {
         prefixes = ["modules/home/dms/" "modules/home/wallpaper/" "modules/home/vesktop" "modules/home/hyprland" "modules/home/glass" "modules/home/ghostty" "modules/home/gtk" "modules/home/spicetify" "modules/home/skwd-"];
         checkPrefixes = ["hyprland-keybinds" "desktop-glass" "spotify-runtime" "desktop-runtime-config" "wallpaper" "skwd-"];
@@ -61,7 +69,7 @@
         units = [];
       };
       codex = {
-        prefixes = ["modules/home/codex/" "modules/home/bannerlord-codex/" "modules/home/bannerlord/" "modules/home/player2-ai-influence/"];
+        prefixes = ["modules/home/codex/" "modules/home/antigravity/" "modules/home/bannerlord-codex/" "modules/home/bannerlord/" "modules/home/player2-ai-influence/"];
         checkPrefixes = ["codex-" "bannerlord-codex" "fixtures/codex-"];
         support = ["codex" "scripts"];
         units = [];

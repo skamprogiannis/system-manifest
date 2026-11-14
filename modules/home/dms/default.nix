@@ -15,6 +15,7 @@ in {
     inputs.dms.homeModules.dank-material-shell
     ./session-state.nix
     ./settings.nix
+    ./lockscreen.nix
   ];
 
   programs.dank-material-shell = {

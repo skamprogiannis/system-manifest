@@ -1,0 +1,134 @@
+{
+  "settings": {
+    "lockScreenWidgetInstances": [
+      {
+        "id": "lock_clock",
+        "widgetType": "desktopClock",
+        "enabled": true,
+        "config": {
+          "displayPreferences": [
+            "all"
+          ],
+          "syncPositionAcrossScreens": true,
+          "style": "expressive",
+          "transparency": 0,
+          "weight": 700,
+          "twoTone": true,
+          "showDate": false,
+          "showDigitalSeconds": false,
+          "showAnalogNumbers": false,
+          "showAnalogSeconds": true,
+          "autoPosition": true,
+          "colorMode": "default",
+          "customColor": "#ffffff",
+          "rounded": true,
+          "fontFamily": "JetBrainsMono Nerd Font"
+        }
+      },
+      {
+        "id": "lock_date",
+        "widgetType": "lockDate",
+        "enabled": false,
+        "config": {
+          "displayPreferences": [
+            "all"
+          ],
+          "syncPositionAcrossScreens": true,
+          "format": "short",
+          "colorMode": "default",
+          "customColor": "#ffffff"
+        }
+      },
+      {
+        "id": "lock_auth",
+        "widgetType": "lockAuth",
+        "enabled": true,
+        "config": {
+          "displayPreferences": [
+            "all"
+          ],
+          "syncPositionAcrossScreens": true,
+          "style": "ring",
+          "profileVisibility": "always",
+          "passwordVisibility": "always"
+        }
+      },
+      {
+        "id": "lock_notifications",
+        "widgetType": "lockNotifications",
+        "enabled": true,
+        "config": {
+          "displayPreferences": [
+            "all"
+          ],
+          "syncPositionAcrossScreens": true,
+          "mode": 2
+        }
+      },
+      {
+        "id": "lock_status",
+        "widgetType": "lockStatus",
+        "enabled": true,
+        "config": {
+          "displayPreferences": [
+            "all"
+          ],
+          "syncPositionAcrossScreens": true,
+          "showMediaPlayer": true,
+          "showWeather": true,
+          "background": false
+        }
+      },
+      {
+        "id": "lock_power",
+        "widgetType": "lockPower",
+        "enabled": false,
+        "config": {
+          "displayPreferences": [
+            "all"
+          ],
+          "syncPositionAcrossScreens": true,
+          "shape": "round"
+        }
+      },
+      {
+        "id": "lw_1793359227016_yrvzlehs5",
+        "widgetType": "lockDate",
+        "name": "Date",
+        "enabled": false,
+        "config": {
+          "syncPositionAcrossScreens": true,
+          "displayPreferences": [
+            "all"
+          ],
+          "format": "short",
+          "colorMode": "default",
+          "customColor": "#ffffff"
+        }
+      }
+    ],
+    "lockScreenShowWeather": true,
+    "greeterFollowLockScreen": true,
+    "lockScreenVideoEnabled": false
+  },
+  "sessionDefaults": {
+    "desktopWidgetInstancePositions": {
+      "lock_auth": {
+        "_synced": {
+          "width": 150,
+          "height": 150
+        }
+      },
+      "lw_1793359227016_yrvzlehs5": {
+        "_synced": {
+          "x": 0.109375,
+          "y": -0.23796296296296296,
+          "anchorY": "center"
+        }
+      },
+      "lock_notifications": {
+        "_synced": {}
+      }
+    }
+  }
+}

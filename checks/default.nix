@@ -9,6 +9,7 @@
     builtins.foldl' (checks: module: checks // import module {inherit ctx;}) {} modules;
 
   checks = mergeChecks [
+    ./go-toolchain.nix
     ./hosts.nix
     ./host-configuration-contracts.nix
     ./installed-environment.nix

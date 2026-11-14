@@ -22,13 +22,11 @@
       "https://cache.nixos.org"
       "https://hyprland.cachix.org"
       "https://nix-community.cachix.org"
-      "https://ghostty.cachix.org"
     ];
     trusted-public-keys = [
       "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
       "hyprland.cachix.org-1:a7pgxzMz7+chwVL3/pzj6jIBMioiJM7ypFP8PwtkuGc="
       "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
-      "ghostty.cachix.org-1:QB389yTa6gTyneehvqG58y0WnHjQOqgnA+wBnpWWxns="
     ];
   };
   nix.gc = {
@@ -76,11 +74,9 @@
     openssl
   ];
   programs.gpu-screen-recorder.enable = true;
-  services.skwd-deck = {
-    enable = true;
-    # The daemon invokes Matugen, SteamCMD, and shell/setsid integration hooks.
-    extraPackages = [pkgs.bash pkgs.matugen pkgs.steamcmd pkgs.util-linux];
-  };
+  services.skwd-deck.enable = true;
+  # Supply the daemon's tools without exposing private dependencies globally.
+  systemd.user.services.skwd-walld.path = [pkgs.bash pkgs.matugen pkgs.steamcmd pkgs.util-linux];
 
   # Allow the user to rebuild the system without a password
   security.sudo.extraRules = [
@@ -174,20 +170,8 @@
   # Required for Home Manager XDG portals
   environment.pathsToLink = ["/share/applications" "/share/xdg-desktop-portal"];
 
-  # List packages installed in system profile.
-  environment.systemPackages = with pkgs; [
-    adwaita-icon-theme
-    wget
-    git
-    inotify-tools
-    # GStreamer plugins for video playback and subtitles
-    gst_all_1.gstreamer
-    gst_all_1.gst-plugins-base
-    gst_all_1.gst-plugins-good
-    gst_all_1.gst-plugins-bad
-    gst_all_1.gst-plugins-ugly
-    gst_all_1.gst-libav
-  ];
+  # Keep Git available for flakes before the user environment is activated.
+  environment.systemPackages = [pkgs.git];
 
   # This value determines the NixOS release from which the default
   # settings for stateful data, like file locations and database versions

@@ -4,6 +4,7 @@
 }:
 pkgs.writeShellScriptBin "setup-persistent-usb" ''
   set -euo pipefail
+  # shellcheck disable=SC2034
 
   SCRIPT_NAME="$(basename "$0")"
   USB_MAPPER_NAME="${usb.mapperName}"
@@ -11,47 +12,102 @@ pkgs.writeShellScriptBin "setup-persistent-usb" ''
   NIX_SHELL_PACKAGES=(gptfdisk parted cryptsetup dosfstools e2fsprogs util-linux)
   REQUIRED_TOOLS=(lsblk wipefs sgdisk partprobe udevadm mkfs.vfat cryptsetup mkfs.ext4)
   OPENED_MAPPER=0
+  ASSUME_YES=0
+
+  # TTY & NO_COLOR aware ANSI palette
+  if [ -t 1 ] && [ "''${TERM:-}" != "dumb" ] && [ -z "''${NO_COLOR:-}" ]; then
+    BOLD="\033[1m"
+    GREEN="\033[0;32m"
+    BLUE="\033[0;34m"
+    YELLOW="\033[0;33m"
+    RED="\033[0;31m"
+    NC="\033[0m"
+  else
+    BOLD=""
+    GREEN=""
+    BLUE=""
+    YELLOW=""
+    RED=""
+    NC=""
+  fi
+
+  log_info() { printf "%b\n" "''${BLUE}''${BOLD}[INFO]''${NC} $*"; }
+  log_step() { printf "\n%b\n" "''${BOLD}==>''${NC} ''${BOLD}$*''${NC}"; }
+  log_ok()   { printf "%b\n" "''${GREEN}''${BOLD}[OK]''${NC} $*"; }
+  log_warn() { printf "%b\n" "''${YELLOW}''${BOLD}[WARN]''${NC} $*"; }
+  log_err()  { printf "%b\n" "''${RED}''${BOLD}[ERROR]''${NC} $*" >&2; }
 
   usage() {
     cat <<'EOF'
-  Usage:
-    sudo setup-persistent-usb /dev/sdX
-    sudo setup-persistent-usb sdX
+Usage:
+  sudo setup-persistent-usb [OPTIONS] /dev/sdX
+  sudo setup-persistent-usb [OPTIONS] sdX
 
-  Creates a fresh persistent NixOS USB with:
-    - GPT partition table
-    - 1 GiB EFI partition (label: ${usb.bootLabel})
-    - LUKS2 root partition (partlabel: ${usb.rootPartLabel})
-    - ext4 filesystem inside LUKS (label: ${usb.rootFsLabel})
-  EOF
+Creates a fresh persistent NixOS USB with:
+  - GPT partition table
+  - 1 GiB EFI partition (label: ${usb.bootLabel})
+  - LUKS2 root partition (partlabel: ${usb.rootPartLabel})
+  - ext4 filesystem inside LUKS (label: ${usb.rootFsLabel})
+
+Options:
+  -y, --yes          Bypass confirmation prompt (for automation)
+  -h, --help         Show this help message
+EOF
   }
 
   cleanup() {
     if [ "$OPENED_MAPPER" -eq 1 ]; then
       if ! cryptsetup close "$USB_MAPPER_NAME" 2>/dev/null; then
-        echo "Warning: failed to close $USB_MAPPER_NAME during cleanup; you may need to close it manually." >&2
+        log_warn "Failed to close $USB_MAPPER_NAME during cleanup; you may need to close it manually."
       fi
     fi
   }
   trap cleanup EXIT
 
-  if [ "''${1:-}" = "-h" ] || [ "''${1:-}" = "--help" ]; then
-    usage
-    exit 0
-  fi
+  USB_INPUT=""
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      -h|--help)
+        usage
+        exit 0
+        ;;
+      -y|--yes)
+        ASSUME_YES=1
+        shift
+        ;;
+      --)
+        shift
+        USB_INPUT="''${1:-}"
+        break
+        ;;
+      -*)
+        log_err "Unknown option '$1'."
+        usage
+        exit 1
+        ;;
+      *)
+        if [ -n "$USB_INPUT" ]; then
+          log_err "Unexpected argument '$1'. Only one target drive may be specified."
+          usage
+          exit 1
+        fi
+        USB_INPUT="$1"
+        shift
+        ;;
+    esac
+  done
 
-  if [ "$#" -ne 1 ]; then
+  if [ -z "$USB_INPUT" ]; then
     usage
     exit 1
   fi
 
   if [ "$EUID" -ne 0 ]; then
-    echo "Error: please run with sudo."
-    echo "Example: sudo setup-persistent-usb /dev/sdX"
+    log_err "Please run with sudo."
+    echo "Example: sudo setup-persistent-usb /dev/sdX" >&2
     exit 1
   fi
 
-  USB_INPUT="$1"
   if [[ "$USB_INPUT" != /dev/* ]]; then
     USB_DEV="/dev/$USB_INPUT"
   else
@@ -68,28 +124,28 @@ pkgs.writeShellScriptBin "setup-persistent-usb" ''
   if [ "''${#MISSING_TOOLS[@]}" -gt 0 ]; then
     if [ "''${USB_SETUP_IN_NIX_SHELL:-0}" != "1" ] && command -v nix-shell >/dev/null 2>&1; then
       REEXEC_ARGS=$(printf ' %q' "$@")
-      echo "Missing required tools (''${MISSING_TOOLS[*]}). Re-running inside nix-shell..."
+      log_info "Missing required tools (''${MISSING_TOOLS[*]}). Re-running inside nix-shell..."
       exec nix-shell -p "''${NIX_SHELL_PACKAGES[@]}" --run "USB_SETUP_IN_NIX_SHELL=1 bash \"$0\"''${REEXEC_ARGS}"
     fi
 
-    echo "Error: missing required tools: ''${MISSING_TOOLS[*]}"
-    echo "Run manually:"
-    echo "  sudo nix-shell -p ''${NIX_SHELL_PACKAGES[*]} --run '$SCRIPT_NAME /dev/sdX'"
+    log_err "Missing required tools: ''${MISSING_TOOLS[*]}"
+    echo "Run manually:" >&2
+    echo "  sudo nix-shell -p ''${NIX_SHELL_PACKAGES[*]} --run '$SCRIPT_NAME /dev/sdX'" >&2
     exit 1
   fi
 
   if [ ! -b "$USB_DEV" ]; then
-    echo "Error: $USB_DEV is not a block device."
+    log_err "$USB_DEV is not a block device."
     exit 1
   fi
 
   if [ "$(lsblk -ndo TYPE "$USB_DEV")" != "disk" ]; then
-    echo "Error: $USB_DEV is not a disk (expected TYPE=disk)."
+    log_err "$USB_DEV is not a disk (expected TYPE=disk)."
     exit 1
   fi
 
   if lsblk -nrpo MOUNTPOINT "$USB_DEV" | awk '$1 ~ "^/($|boot($|/)|nix($|/))" {found=1} END {exit found?0:1}'; then
-    echo "Error: $USB_DEV appears to host mounted system paths (/boot, /nix, or /). Refusing to continue."
+    log_err "$USB_DEV appears to host mounted system paths (/boot, /nix, or /). Refusing to continue."
     exit 1
   fi
 
@@ -102,30 +158,33 @@ pkgs.writeShellScriptBin "setup-persistent-usb" ''
   USB_BOOT_PART="''${USB_PART_PREFIX}1"
   USB_CRYPT_PART="''${USB_PART_PREFIX}2"
 
-  echo "Target disk:"
-  lsblk -dno NAME,SIZE,MODEL,TRAN "$USB_DEV" | sed 's/^/  /'
-  echo
-  echo "WARNING: THIS WILL COMPLETELY WIPE $USB_DEV AND DESTROY ALL DATA!"
-  read -r -p "Type the exact device path to confirm: " CONFIRM
-  if [ "$CONFIRM" != "$USB_DEV" ]; then
-    echo "Aborting."
-    exit 1
+  log_info "Target disk summary:"
+  lsblk -dno NAME,SIZE,MODEL,VENDOR,TRAN "$USB_DEV" 2>/dev/null | sed 's/^/  /' || lsblk -dno NAME,SIZE,MODEL,TRAN "$USB_DEV" | sed 's/^/  /'
+  
+  if [ "$ASSUME_YES" -eq 0 ]; then
+    echo
+    log_warn "THIS WILL COMPLETELY WIPE $USB_DEV AND DESTROY ALL DATA!"
+    read -r -p "Type 'YES' or the exact device path ($USB_DEV) to confirm: " CONFIRM
+    if [ "$CONFIRM" != "YES" ] && [ "$CONFIRM" != "$USB_DEV" ]; then
+      log_info "Aborting setup. Device was not modified."
+      exit 1
+    fi
   fi
 
-  echo "Unmounting existing partitions on $USB_DEV..."
+  log_step "Step 1/6: Unmounting existing partitions on $USB_DEV..."
   mapfile -t MOUNTED_PARTS < <(lsblk -nrpo NAME,MOUNTPOINT "$USB_DEV" | awk '$2 != "" {print $1}')
   for part in "''${MOUNTED_PARTS[@]}"; do
-    echo "  unmounting $part"
+    log_info "Unmounting $part"
     umount "$part"
   done
 
   cryptsetup close "$USB_MAPPER_NAME" 2>/dev/null || true
 
-  echo "Wiping partition table on $USB_DEV..."
+  log_step "Step 2/6: Wiping partition signatures and creating GPT table..."
   wipefs -af "$USB_DEV"
   sgdisk --zap-all "$USB_DEV"
 
-  echo "Creating new partitions..."
+  log_step "Step 3/6: Creating EFI and LUKS2 partitions..."
   sgdisk -n 1:0:+1G -t 1:ef00 -c 1:${usb.bootLabel} "$USB_DEV"
   sgdisk -n 2:0:0 -t 2:8309 -c 2:${usb.rootPartLabel} "$USB_DEV"
 
@@ -140,26 +199,26 @@ pkgs.writeShellScriptBin "setup-persistent-usb" ''
       sleep 1
     done
     if [ ! -b "$part" ]; then
-      echo "Error: partition device $part did not appear."
+      log_err "Partition device $part did not appear."
       exit 1
     fi
   done
 
-  echo "Formatting boot partition ($USB_BOOT_PART)..."
+  log_step "Step 4/6: Formatting boot partition ($USB_BOOT_PART) as FAT32..."
   mkfs.vfat -F 32 -n ${usb.bootLabel} "$USB_BOOT_PART"
 
-  echo "Formatting root partition ($USB_CRYPT_PART) with LUKS..."
-  echo "Please enter a passphrase for USB encryption when prompted."
+  log_step "Step 5/6: Initializing LUKS2 encryption on $USB_CRYPT_PART..."
+  log_info "Please enter a passphrase for USB encryption when prompted."
   cryptsetup luksFormat --type luks2 "$USB_CRYPT_PART"
-  echo "Opening LUKS container..."
+  log_info "Opening LUKS container..."
   cryptsetup open "$USB_CRYPT_PART" "$USB_MAPPER_NAME"
   OPENED_MAPPER=1
 
-  echo "Formatting internal ext4 filesystem..."
+  log_step "Step 6/6: Formatting internal ext4 filesystem..."
   mkfs.ext4 -L ${usb.rootFsLabel} "$USB_ROOT_DEV"
   cryptsetup close "$USB_MAPPER_NAME"
   OPENED_MAPPER=0
 
-  echo "USB is partitioned and formatted."
-  echo "Next step: sudo update-usb /path/to/system-manifest/main"
+  log_ok "USB partition and encryption setup complete!"
+  log_info "Next step: sudo update-usb /path/to/system-manifest"
 ''

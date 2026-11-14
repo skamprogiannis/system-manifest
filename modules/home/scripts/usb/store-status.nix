@@ -1,16 +1,44 @@
 {pkgs}:
 pkgs.writeShellScriptBin "nixos-usb-store-status" ''
   set -eu
+  # shellcheck disable=SC2034
+
+  # TTY & NO_COLOR aware ANSI palette
+  if [ -t 1 ] && [ "''${TERM:-}" != "dumb" ] && [ -z "''${NO_COLOR:-}" ]; then
+    BOLD="\033[1m"
+    GREEN="\033[0;32m"
+    BLUE="\033[0;34m"
+    YELLOW="\033[0;33m"
+    RED="\033[0;31m"
+    CYAN="\033[0;36m"
+    NC="\033[0m"
+  else
+    BOLD=""
+    GREEN=""
+    BLUE=""
+    YELLOW=""
+    RED=""
+    CYAN=""
+    NC=""
+  fi
 
   print_file() {
     local label="$1"
     local path="$2"
 
-    printf '== %s ==\n' "$label"
+    if [ -t 1 ] && [ -n "$BOLD" ]; then
+      printf '%b==> [%s]%b\n' "''${CYAN}''${BOLD}" "''${label^^}" "''${NC}"
+    else
+      printf '== %s ==\n' "$label"
+    fi
     if [ -e "$path" ]; then
       ${pkgs.coreutils}/bin/cat "$path"
     else
-      printf 'missing: %s\n' "$path"
+      if [ -t 1 ] && [ -n "$BOLD" ]; then
+        printf '  %bmissing:%b %s\n' "''${YELLOW}" "''${NC}" "$path"
+      else
+        printf 'missing: %s\n' "$path"
+      fi
     fi
     printf '\n'
   }
@@ -19,9 +47,18 @@ pkgs.writeShellScriptBin "nixos-usb-store-status" ''
     local path="$1"
 
     if ${pkgs.util-linux}/bin/findmnt -rn -M "$path" >/dev/null 2>&1; then
-      ${pkgs.util-linux}/bin/findmnt -M "$path"
+      if [ -t 1 ] && [ -n "$BOLD" ]; then
+        printf '  %b[MOUNTED]%b   ' "''${GREEN}" "''${NC}"
+        ${pkgs.util-linux}/bin/findmnt -rn -M "$path"
+      else
+        ${pkgs.util-linux}/bin/findmnt -M "$path"
+      fi
     else
-      printf 'not mounted: %s\n' "$path"
+      if [ -t 1 ] && [ -n "$BOLD" ]; then
+        printf '  %b[NOT MOUNTED]%b %s\n' "''${YELLOW}" "''${NC}" "$path"
+      else
+        printf 'not mounted: %s\n' "$path"
+      fi
     fi
   }
 

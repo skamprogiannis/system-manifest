@@ -22,7 +22,10 @@
         "https://platform.zone01.gr".helper = ["" "store"]; # Clear global helper (manager) to force local store
       };
 
-      safe.directory = "/home/stefan/system_manifest";
+      safe.directory = [
+        "/home/stefan/system-manifest"
+        "/home/stefan/system_manifest"
+      ];
 
       init = {
         defaultBranch = "main";
@@ -30,22 +33,6 @@
 
       push = {
         autoSetupRemote = true;
-      };
-    };
-  };
-
-  # Enable ssh-agent service for persistent authentication
-  services.ssh-agent.enable = true;
-
-  # SSH configuration for multi-host support
-  programs.ssh = {
-    enable = true;
-    enableDefaultConfig = false;
-    settings = {
-      "github.com" = {
-        AddKeysToAgent = "yes";
-        IdentityFile = ["~/.ssh/id_ed25519_github"];
-        IdentitiesOnly = true;
       };
     };
   };

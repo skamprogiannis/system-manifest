@@ -12,6 +12,7 @@
     inputs.spicetify-nix.homeManagerModules.spicetify
     ./modules/home/catppuccin.nix
     ./modules/home/git.nix
+    ./modules/home/ssh.nix
     ./modules/home/ghostty.nix
     ./modules/home/neovim.nix
     ./modules/home/hyprland.nix
@@ -21,11 +22,12 @@
     ./modules/home/dux-files.nix
     ./modules/home/brave.nix
     ./modules/home/codex
+    ./modules/home/antigravity
     ./modules/home/firefox.nix
     ./modules/home/theme.nix
     ./modules/home/obsidian.nix
     ./modules/home/spicetify.nix
-    ./modules/home/zellij.nix
+    ./modules/home/tmux.nix
     ./modules/home/scripts
     ./modules/home/cursors.nix
     ./modules/home/vesktop.nix
@@ -36,16 +38,12 @@
   # --- PACKAGES ---
   home.packages = with pkgs; [
     # GUI
-    (pkgs.callPackage ./modules/home/codex/desktop-package.nix {})
     gpu-screen-recorder-gtk
     imv
-    libreoffice-qt
-    linux-wallpaperengine
     mpv
     pkgs.mailspring
     obsidian
     (pkgs.callPackage ./modules/home/proton-vpn/package.nix {})
-    vesktop
 
     # CLI / Tools
     _7zz
@@ -59,19 +57,15 @@
     eslint
     fastfetch
     fd
-    ffmpegthumbnailer
     file
-    gcr_3
     glow
     gnumake
-    go
+    (pkgs.callPackage ./modules/home/go/package.nix {})
     gopls
     imagemagick
     jq
-    libsecret
     nil
     nodejs_24
-    omnisharp-roslyn
     pacvim
     pandoc
     playwright-test
@@ -191,22 +185,17 @@
             fg = "#00bcd4";
           }
           {
-            url = "**/system-manifest/.bare/";
-            text = "";
-            fg = "#00bcd4";
-          }
-          {
-            url = "**/system-manifest/*/";
+            url = "**/system-manifest/";
             text = "";
             fg = "#00bcd4";
           }
           {
-            url = "**/system-manifest/*/hosts/";
+            url = "**/system-manifest/hosts/";
             text = "";
             fg = "#00bcd4";
           }
           {
-            url = "**/system-manifest/*/modules/";
+            url = "**/system-manifest/modules/";
             text = "";
             fg = "#00bcd4";
           }
@@ -372,11 +361,6 @@
       "application/pdf" = ["org.pwmt.zathura.desktop"];
       "application/msword" = ["libreoffice-writer.desktop"];
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document" = ["libreoffice-writer.desktop"];
-      "text/plain" = ["nvim-text.desktop"];
-      "text/markdown" = ["nvim-text.desktop"];
-      "text/css" = ["nvim-text.desktop"];
-      "application/json" = ["nvim-text.desktop"];
-      "application/x-shellscript" = ["nvim-text.desktop"];
     };
   };
 }
