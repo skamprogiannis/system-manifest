@@ -156,3 +156,11 @@ the PipeWire defaults and output volume if devices open but audio is inaudible.
 - [Subagents and model selection](https://learn.chatgpt.com/docs/agent-configuration/subagents)
 - [Hook contracts](https://learn.chatgpt.com/docs/hooks)
 - [Model guidance](https://learn.chatgpt.com/docs/models)
+
+### Modern Web Guidance
+
+Codex and Antigravity share a pinned Modern Web Guidance skill. It supplies
+browser API and compatibility guidance alongside the project's design
+system and Impeccable. The bundled command uses local data and disables
+telemetry and file logging. Use `modern-web-guidance legacy-scan . --json`
+for a broad modernization audit.

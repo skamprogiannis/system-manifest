@@ -1,5 +1,6 @@
 {ctx}: let
   inherit (ctx) desktopPinchtabPackage desktopCodexSkillsRoot desktopPinchtabConfigActivationFile pkgs;
+  inherit (ctx) desktopModernWebGuidancePackage desktopAntigravityModernWebGuidance;
   expectedSkills = [
     "browser-automation"
     "code-review"
@@ -8,6 +9,7 @@
     "domain-modeling"
     "grilling"
     "impeccable"
+    "modern-web-guidance"
     "prototype"
     "socratic-tutor"
     "static-analysis"
@@ -20,6 +22,7 @@ in {
   codex-skills =
     pkgs.runCommand "codex-skills-check" {
       nativeBuildInputs = [
+        pkgs.git
         pkgs.nodejs
         pkgs.python3
       ];
@@ -113,6 +116,75 @@ in {
       for reference in codeql semgrep sarif-parsing; do
         test -s "$skills_root/static-analysis/references/$reference/SKILL.md"
       done
+
+      package="${desktopModernWebGuidancePackage}"
+      cli="$package/bin/modern-web-guidance"
+      entrypoint="$package/lib/modern-web-guidance/skills/modern-web-guidance/modern-web.mjs"
+      test "$(readlink "$skills_root/modern-web-guidance")" = "${desktopAntigravityModernWebGuidance}"
+      grep -F "$cli search" "$skills_root/modern-web-guidance/SKILL.md"
+
+      export HOME="$PWD/test-home" XDG_CONFIG_HOME="$PWD/test-home/.config"
+      mkdir -p "$HOME" scan-fixture
+      cd scan-fixture
+      git init -q
+      echo 'document.querySelectorAll(".example");' > index.js
+
+      cat > "$PWD/tripwire.cjs" <<'JS'
+      const assert = require('node:assert/strict');
+      const childProcess = require('node:child_process');
+      const { syncBuiltinESMExports } = require('node:module');
+      const { promisify } = require('node:util');
+      const fail = () => process.exit(97);
+
+      globalThis.fetch = fail;
+      for (const name of ['node:http', 'node:https']) {
+        const module = require(name);
+        module.get = module.request = fail;
+      }
+      for (const method of ['exec', 'execSync', 'execFileSync', 'spawn', 'spawnSync', 'fork']) {
+        childProcess[method] = fail;
+      }
+      const execFile = childProcess.execFile;
+      childProcess.execFile = (file, args, ...rest) => {
+        if (process.env.TEST_LEGACY_SCAN !== '1' || file !== 'git' || args[0] !== 'ls-files') fail();
+        return execFile(file, args, ...rest);
+      };
+      childProcess.execFile[promisify.custom] = (file, args, ...rest) => {
+        if (process.env.TEST_LEGACY_SCAN !== '1' || file !== 'git' || args[0] !== 'ls-files') fail();
+        return promisify(execFile)(file, args, ...rest);
+      };
+      syncBuiltinESMExports();
+      process.on('exit', () => {
+        assert.equal(process.env.DISABLE_TELEMETRY, '1');
+        assert.equal(process.env.ENABLE_FILE_LOGGING, 'false');
+      });
+      JS
+
+      export NODE_OPTIONS="--require=$PWD/tripwire.cjs"
+      export DISABLE_TELEMETRY=0 ENABLE_FILE_LOGGING=true
+      test "$("$cli" --version)" = "${desktopModernWebGuidancePackage.version}"
+      "$cli" search "animate dialog backdrop" > search.json
+      "$cli" list > list.json
+      node "$entrypoint" retrieve animate-to-from-top-layer > guide.md
+      TEST_LEGACY_SCAN=1 "$cli" legacy-scan . --json > scan.json
+      for command in install update uninstall set-baseline set-allow-origin-trials set-allow-volatile-features; do
+        status=0
+        node "$entrypoint" "$command" > rejected.log 2>&1 || status=$?
+        test "$status" -eq 1
+        grep -F "Unknown command: $command" rejected.log
+      done
+      unset NODE_OPTIONS
+      test ! -e modern-web.log
+      test ! -e .mwgrc
+      grep -F 'Guide for animate-to-from-top-layer' guide.md
+      python3 - <<'PY'
+      import json
+      from pathlib import Path
+
+      assert json.loads(Path("search.json").read_text())
+      assert json.loads(Path("list.json").read_text())
+      assert isinstance(json.loads(Path("scan.json").read_text()), dict)
+      PY
 
       CODEX_SKILLS_TEST_ROOT="$skills_root" node --input-type=module <<'JS'
       import assert from 'node:assert/strict';

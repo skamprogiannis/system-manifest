@@ -390,12 +390,14 @@
     install -Dm755 ${impeccableEngine} "$out/scripts/bin/linux-x64/impeccable"
     test "$(IMPECCABLE_LAUNCHER_PROBE=1 "$out/scripts/impeccable" engine-probe)" = "impeccable-engine ${impeccableEngineVersion}"
   '';
+  modernWebGuidance = import ./modern-web-guidance.nix {inherit pkgs;};
   declarativeSkills = [
     (mkSkill "visual-explainer" visualExplainerSkill "Generate visual diagrams and HTML explainers for architecture, plans, diffs, and complex tables.")
     (mkSkill "technical-debt" ./skills/technical-debt "Audit code health, quantify technical debt, and produce focused refactoring roadmaps.")
     (mkSkill "browser-automation" "${inputs.pinchtab-src}/plugins/grok/skills/pinchtab" "Control Chrome with PinchTab for web UI testing, scraping, form filling, and browser workflows.")
     (mkSkill "static-analysis" staticAnalysisSkill "Run scanner-backed security analysis with CodeQL, Semgrep, and SARIF interpretation.")
     (mkSkill "impeccable" impeccableSkill "Design, audit, and polish frontend interfaces, layouts, typography, motion, and UX details.")
+    (mkSkill "modern-web-guidance" modernWebGuidance.skill "Consult local web-platform guides when choosing a browser API, native UI primitive, accessibility implementation, or compatibility fallback, or when asked to scan for legacy web patterns.")
     (mkSkill "diagnose" "${inputs.mattpocock-skills}/skills/engineering/diagnosing-bugs" "Use a disciplined reproduce-minimize-hypothesize-instrument-fix loop for bugs and regressions.")
     (mkSkill "grilling" "${inputs.mattpocock-skills}/skills/productivity/grilling" "Grill users one decision at a time to stress-test plans and designs.")
     (mkSkill "domain-modeling" "${inputs.mattpocock-skills}/skills/engineering/domain-modeling" "Build and sharpen a project's domain vocabulary and architectural decisions.")
@@ -513,6 +515,7 @@ in {
     pkgs.bubblewrap
     codexCli
     pinchtab
+    modernWebGuidance.package
     pkgs.python3Packages."sarif-tools"
     (import ./semgrep.nix {inherit pkgs;})
   ];

@@ -55,6 +55,7 @@ Deployment is manual. `nix flake check` validates configured host and support ch
 | `nixos-usb-store-status` | Inspect USB store mode and host-partition fallback diagnostics |
 | `usb-host-scratch status` | Inspect portable host-scratch state |
 | `codex-state-sync to-usb\|from-usb` | Sync active Codex sessions with the USB |
+| `modern-web-guidance` | Local web-platform guidance and on-demand legacy scans with telemetry disabled |
 
 On the desktop, `services.ollama.syncModels = true` removes **every undeclared Ollama model**, including manually downloaded models. The declared inventory lives in `hosts/desktop/default.nix`.
 

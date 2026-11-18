@@ -46,6 +46,8 @@
   desktopPinchtabPackage = homePackage "desktop" "pinchtab";
   codexConfigActivationFile = host:
     pkgs.writeText "${host}-codex-config-activation" (homeConfig host).home.activation.ensureWritableCodexConfig.data;
+  desktopModernWebGuidancePackage = homePackage "desktop" "modern-web-guidance";
+  desktopAntigravityModernWebGuidance = desktopHomeFiles.".gemini/config/skills/modern-web-guidance".source;
   desktopCodexConfigActivationFile = codexConfigActivationFile "desktop";
   desktopCodexSkillsRoot = pkgs.linkFarm "desktop-codex-skills" (
     map
