@@ -18,6 +18,7 @@ from unittest.mock import patch
 
 SOURCE = Path(sys.argv.pop(1)).resolve()
 TIMEOUT = "Error: account/read failed during TUI bootstrap: account/read failed: workspace routing discovery timed out (code -32603)"
+RESUME_PICKER_TIMEOUT = "Error: account/read failed: account/read failed: workspace routing discovery timed out (code -32603)"
 
 
 class StartupTests(unittest.TestCase):
@@ -205,6 +206,14 @@ print('KEY:'+sys.stdin.readline().strip(),flush=True)
     def test_ordinary_path_failure_is_final(self):
         status, count, _, _, _ = self.exercise("exhaust", fallback=True)
         self.assertEqual((status, count), (1, 2))
+
+    def test_resume_picker_timeout_uses_ordinary_fallback(self):
+        status, count, output, observed, _ = self.exercise(
+            "fallback", error=RESUME_PICKER_TIMEOUT, fallback=True
+        )
+        self.assertEqual((status, count), (0, 2))
+        self.assertEqual(observed["enabled"], "0")
+        self.assertIn("trying ordinary Codex", output)
 
     def test_unverified_daemon_keeps_assisted_retries(self):
         status, count, output, observed, _ = self.exercise(

@@ -118,16 +118,17 @@ def launch_context(arguments: list[str]) -> LaunchContext:
     return LaunchContext(True, no_daemon)
 
 
-BOOTSTRAP_TIMEOUT = (
-    "Error: account/read failed during TUI bootstrap: account/read failed: "
-    "workspace routing discovery timed out (code -32603)"
-)
+_ACCOUNT_ROUTING_TIMEOUT = "account/read failed: workspace routing discovery timed out (code -32603)"
+_STARTUP_TIMEOUTS = {
+    f"Error: account/read failed during TUI bootstrap: {_ACCOUNT_ROUTING_TIMEOUT}",
+    f"Error: account/read failed: {_ACCOUNT_ROUTING_TIMEOUT}",  # Startup login-status check.
+}
 _ANSI = re.compile(rb"\x1b\[[0-?]*[ -/]*[@-~]")
 
 
 def _routing_timeout(status: int, stderr: bytes) -> bool:
     lines = _ANSI.sub(b"", stderr).decode("utf-8", errors="replace").splitlines()
-    return status == 1 and bool(lines) and lines[-1].strip() == BOOTSTRAP_TIMEOUT
+    return status == 1 and bool(lines) and lines[-1].strip() in _STARTUP_TIMEOUTS
 
 
 def _ordinary_daemon_safe(env: dict) -> bool:

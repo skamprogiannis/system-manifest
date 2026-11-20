@@ -41,10 +41,11 @@ No prompts, source, tool output or transcripts are stored by these hooks.
 
 Assisted interactive launches use `--no-daemon` to isolate their hook environment
 from ordinary daemon sessions. Noninteractive commands and remote connections
-pass through to native Codex without enabling local delegation. The existing
-account-routing timeout recovery remains: an assisted launch can try ordinary
-Codex once when the daemon environment is verifiably unassisted. Explicit
-`--no-daemon` keeps bounded assisted retries. Other errors are not retried.
+pass through to native Codex without enabling local delegation. Account-routing
+timeout recovery covers both TUI bootstrap and startup login checks, including
+the session picker. An assisted launch can try ordinary Codex once when the
+daemon environment is verifiably unassisted. Explicit `--no-daemon` keeps
+bounded assisted retries. Other errors are not retried.
 
 Disable the launcher and remove its owned hooks with
 `system_manifest.codex.auto.enable = false` and rebuild. Hook migration preserves
