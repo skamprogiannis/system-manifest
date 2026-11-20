@@ -20,7 +20,7 @@ without loading the full policy for every task.
 ```bash
 codex-auto -- "task"
 codex-auto resume --last
-codex-auto -- --model gpt-6-astra -c 'model_reasoning_effort="xhigh"' "task"
+codex-auto -- --model gpt-6.2-astra -c 'model_reasoning_effort="xhigh"' "task"
 codex-auto status
 codex-auto status --json
 ```

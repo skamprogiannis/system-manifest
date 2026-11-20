@@ -90,10 +90,10 @@ in {
     assert config["approvals_reviewer"] == "auto_review"
     assert config["approval_policy"] == "on-request"
     assert config["sandbox_mode"] == "workspace-write"
-    assert config["model"] == "gpt-6.1-sol"
+    assert config["model"] == "gpt-6.2-sol"
     assert config["model_reasoning_effort"] == "medium"
     assert config["plan_mode_reasoning_effort"] == "xhigh"
-    assert config["agents"]["default_subagent_model"] == "gpt-6.1-sol"
+    assert config["agents"]["default_subagent_model"] == "gpt-6.2-sol"
     assert config["agents"]["enabled"] is True
     assert "multi_agent" not in config["features"]
     assert config["agents"]["default_subagent_reasoning_effort"] == "medium"

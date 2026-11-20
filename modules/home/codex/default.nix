@@ -441,7 +441,7 @@
     exec ${pkgs.nodejs}/bin/npx -y @upstash/context7-mcp
   '';
   codexConfigText = ''
-    model = "gpt-6.1-sol"
+    model = "gpt-6.2-sol"
     model_reasoning_effort = "medium"
     plan_mode_reasoning_effort = "xhigh"
     approval_policy = "on-request"
@@ -467,7 +467,7 @@
 
     [agents]
     enabled = true
-    default_subagent_model = "gpt-6.1-sol"
+    default_subagent_model = "gpt-6.2-sol"
     default_subagent_reasoning_effort = "medium"
 
     [features]

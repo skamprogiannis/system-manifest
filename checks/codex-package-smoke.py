@@ -137,10 +137,10 @@ def check_account_read(codex, root, env, check_config=False):
         if check_config:
             send({"id": 3, "method": "config/read", "params": {"includeLayers": False}})
             config = response(3)["config"]
-            assert config["model"] == "gpt-6.1-sol", config
+            assert config["model"] == "gpt-6.2-sol", config
             assert config["model_reasoning_effort"] == "medium", config
             assert config["plan_mode_reasoning_effort"] == "xhigh", config
-            assert config["agents"]["default_subagent_model"] == "gpt-6.1-sol", config["agents"]
+            assert config["agents"]["default_subagent_model"] == "gpt-6.2-sol", config["agents"]
             assert config["agents"]["default_subagent_reasoning_effort"] == "medium", config["agents"]
             assert config["features"]["realtime_conversation"] is True, config["features"]
             assert config["realtime"]["voice"] == "vale", config["realtime"]

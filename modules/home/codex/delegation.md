@@ -14,15 +14,15 @@ Choose explicit native `model` and `reasoning_effort` for independent assignment
 
 | Assignment | Model | Effort |
 | --- | --- | --- |
-| Narrow implementation or focused lookup with clear requirements, adequate context, and straightforward verification | gpt-6-luna | high |
-| Routine implementation with an established approach | gpt-6.1-sol | medium |
-| Ambiguous implementation, difficult debugging, substantial or demanding security review | gpt-6.1-sol | high |
-| Consequential architecture and demanding planning | gpt-6.1-sol | xhigh |
-| Hardest problems requiring broader analysis | gpt-6-astra | xhigh |
+| Narrow implementation or focused lookup with clear requirements, adequate context, and straightforward verification | gpt-6.2-sol | low |
+| Routine implementation with an established approach | gpt-6.2-sol | medium |
+| Ambiguous implementation, difficult debugging, substantial or demanding security review | gpt-6.2-sol | high |
+| Consequential architecture and demanding planning | gpt-6.2-sol | xhigh |
+| Hardest problems requiring broader analysis | gpt-6.2-astra | xhigh |
 
 Manual model, effort, and speed choices win. Role files remain unpinned. Main coding and the independent-agent fallback use Sol/medium; main Plan mode uses Sol/xhigh. Instructions do not change an active selection.
 
-Start Nix activation/module wiring and Nix/store/USB contract work on at least Sol, even for small edits. Choose stronger settings upfront for clearly difficult work. If a Luna assignment expands, lacks important context, or one focused repair fails, return evidence to the lead for a Sol assignment. Avoid speculative retry loops. Higher effort still requires tests and review.
+Start Nix activation/module wiring and Nix/store/USB contract work on at least Sol/medium, even for small edits. Choose stronger settings upfront for clearly difficult work. If a narrow assignment expands, lacks important context, or one focused repair fails, return evidence to the lead for reassessment. Avoid speculative retry loops. Higher effort still requires tests and review.
 
 ## Review and evidence
 
