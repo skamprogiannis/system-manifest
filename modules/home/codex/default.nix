@@ -382,7 +382,7 @@
   impeccableEngineVersion = lib.strings.trim (builtins.readFile "${impeccableSource}/scripts/VERSION");
   impeccableEngine = pkgs.fetchurl {
     url = "https://github.com/pbakaus/impeccable/releases/download/engine-v${impeccableEngineVersion}/impeccable-linux-x64";
-    hash = "sha256-RMDWAemFmAqcOXGP7hW0io98vmd3n2rgXv6RJIF6tik=";
+    hash = "sha256-vwUk07RKGZlT1wuhBUi6SMWrUNatJg7qqE7YlFwQpyE=";
   };
   impeccableSkill = pkgs.runCommand "impeccable-skill-with-engine-${impeccableEngineVersion}" {} ''
     cp -r ${impeccableSource} "$out"

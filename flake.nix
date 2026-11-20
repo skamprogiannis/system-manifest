@@ -39,8 +39,8 @@
     };
 
     impeccable = {
-      # Keep skill resources matched to the pinned 0.1.17 engine binary.
-      url = "github:pbakaus/impeccable/936867543ac2576920d663cc9803597f6044f3ac";
+      # Keep skill resources matched to the pinned 0.1.28 engine binary.
+      url = "github:pbakaus/impeccable/80f576894c6157cd895f749565e8755f8406bce2";
       flake = false;
     };
 

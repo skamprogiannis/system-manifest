@@ -193,17 +193,17 @@
     "impeccable": {
       "flake": false,
       "locked": {
-        "lastModified": 1792806379,
-        "narHash": "sha256-npARJG21iGscxuqpcFalSxRjEl8/I+/nGLqzOebhtVU=",
+        "lastModified": 1795043359,
+        "narHash": "sha256-Oe6bsIJqTjfk3BWA+tm10qj+u3zkBzCJ7eIpzsgKtL0=",
         "owner": "pbakaus",
         "repo": "impeccable",
-        "rev": "936867543ac2576920d663cc9803597f6044f3ac",
+        "rev": "80f576894c6157cd895f749565e8755f8406bce2",
         "type": "github"
       },
       "original": {
         "owner": "pbakaus",
         "repo": "impeccable",
-        "rev": "936867543ac2576920d663cc9803597f6044f3ac",
+        "rev": "80f576894c6157cd895f749565e8755f8406bce2",
         "type": "github"
       }
     },
