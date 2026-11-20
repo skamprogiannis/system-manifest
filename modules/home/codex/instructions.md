@@ -8,6 +8,10 @@ This machine normally uses NixOS, Hyprland, Ghostty, Neovim, Bash, and Greek/US 
 - Keep global instructions useful across repositories. Put project architecture, build commands, troubleshooting, and deployment rules in the owning repository's instructions and guides.
 - Use installed skills when they clearly match the task. Use their native discovery descriptions rather than maintaining a second catalog here. Impeccable is the default authority for frontend design; follow the project's established design system.
 
+## Final replies
+
+Make the final reply stand on its own and lead with the outcome. If you need my input, state the decision or approval and recommend a course of action. Link evidence for consequential claims and flag any inference or verification gap that could change the conclusion.
+
 ## Maintainer-facing prose and commits
 
 - Keep conversation, prompt, and iteration history out of code comments, commit messages, PR descriptions, and other maintainer-facing prose unless explicitly requested. Describe the resulting behavior, constraints, and technical rationale.
