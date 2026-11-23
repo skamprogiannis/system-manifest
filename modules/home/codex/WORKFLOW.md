@@ -40,8 +40,10 @@ unreadable state deny delegation while work can continue in the main session.
 No prompts, source, tool output or transcripts are stored by these hooks.
 
 Assisted interactive launches use `--no-daemon` to isolate their hook environment
-from ordinary daemon sessions. Noninteractive commands and remote connections
-pass through to native Codex without enabling local delegation. Account-routing
+from ordinary daemon sessions. Local starts, resumes, forks, and startup recovery
+also use `--disable tui_workspace` to turn off the workspace sidebar.
+Noninteractive commands and remote connections pass through to native Codex
+without enabling local delegation. Account-routing
 timeout recovery covers both TUI bootstrap and startup login checks, including
 the session picker. An assisted launch can try ordinary Codex once when the
 daemon environment is verifiably unassisted. Explicit `--no-daemon` keeps

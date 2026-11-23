@@ -33,13 +33,14 @@ def launch(binary, arguments):
     env.pop("CODEX_AUTO_ENABLED", None)
     if not context.interactive:
         os.execvpe(binary, [binary, *arguments], env)
+    native_arguments = ["--disable", "tui_workspace", *arguments]
     env["CODEX_AUTO_ENABLED"] = "1"
     fallback = None
     if not context.no_daemon:
-        fallback = ([binary, *arguments], dict(env, CODEX_AUTO_ENABLED="0"))
+        fallback = ([binary, *native_arguments], dict(env, CODEX_AUTO_ENABLED="0"))
     return launch_interactive(
         binary,
-        [binary, *([] if context.no_daemon else ["--no-daemon"]), *arguments],
+        [binary, *([] if context.no_daemon else ["--no-daemon"]), *native_arguments],
         env,
         fallback=fallback,
     )

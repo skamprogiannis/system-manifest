@@ -49,6 +49,7 @@ Deployment is manual. `nix flake check` validates configured host and support ch
 | `searxngctl start\|stop\|status` | Control SearXNG (normally starts at boot) |
 | `torrent gui` | Open Transmission's local interface |
 | `tmux new -As work` | Create or reattach to an optional terminal session (`Ctrl+B`, then `D` detaches) |
+| `codex-auto` | Start a local Codex session with bounded delegation and the workspace sidebar disabled |
 | `codex-auto status` | Inspect native workflow ownership and local delegation limits (offline) |
 | `agy` | Launch the official Antigravity CLI; authenticate interactively with a Google account |
 | `wallpaper-sync status --json` | Inspect desktop wallpaper synchronization |

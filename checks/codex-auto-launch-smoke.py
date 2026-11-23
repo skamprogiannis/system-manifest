@@ -101,6 +101,8 @@ def main():
                         break
                 assert native_arguments is not None, "launcher did not reach native Codex"
                 assert b"--no-daemon" in native_arguments, "assisted launch attached to shared daemon"
+                option = native_arguments.index(b"--disable")
+                assert native_arguments[option + 1] == b"tui_workspace", "workspace preview was not disabled"
                 assert b"unexpected argument" not in output, "native CLI rejected launcher arguments"
             finally:
                 if process.poll() is None:

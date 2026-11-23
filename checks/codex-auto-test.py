@@ -146,14 +146,15 @@ class LauncherTests(Base):
                     self.assertEqual(auto.launch("/native", arguments), 17)
                 actual = launch.call_args
                 explicit = arguments[:1] == ["--no-daemon"]
-                self.assertEqual(actual.args[1], ["/native", *([] if explicit else ["--no-daemon"]), *arguments])
+                native = ["--disable", "tui_workspace", *arguments]
+                self.assertEqual(actual.args[1], ["/native", *([] if explicit else ["--no-daemon"]), *native])
                 self.assertEqual(actual.args[2]["CODEX_AUTO_ENABLED"], "1")
                 self.assertNotIn("CODEX_CLEF_ENABLED", actual.args[2])
                 fallback = actual.kwargs["fallback"]
                 if explicit:
                     self.assertIsNone(fallback)
                 else:
-                    self.assertEqual(fallback[0], ["/native", *arguments])
+                    self.assertEqual(fallback[0], ["/native", *native])
                     self.assertEqual(fallback[1]["CODEX_AUTO_ENABLED"], "0")
                     self.assertNotIn("CODEX_CLEF_ENABLED", fallback[1])
 
